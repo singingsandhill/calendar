@@ -86,15 +86,24 @@
 <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
 
 <script th:inline="javascript">
-    const scheduleData = [[${schedule}]];
-    const scheduleId = [[${schedule.id()}]];  // Explicit access for record
+    // Thymeleaf Java Record 직렬화 이슈로 명시적 속성 추출
+    const scheduleId = [[${schedule.id()}]];
     const ownerId = [[${ownerId}]];
-
-    // Debug logging
-    console.log('scheduleData:', scheduleData);
-    console.log('scheduleId:', scheduleId);
-    console.log('daysInMonth from data:', scheduleData.daysInMonth);
-    console.log('firstDayOfWeek from data:', scheduleData.firstDayOfWeek);
+    const year = [[${schedule.year()}]];
+    const month = [[${schedule.month()}]];
+    const daysInMonth = [[${schedule.daysInMonth()}]];
+    const firstDayOfWeek = [[${schedule.firstDayOfWeek()}]];
+    // Thymeleaf 반복문으로 중첩 Record 속성 명시적 추출
+    const participants = [
+        [# th:each="p, stat : ${schedule.participants()}"]
+        {
+            id: [[${p.id()}]],
+            name: [[${p.name()}]],
+            color: [[${p.color()}]],
+            selections: [[${p.selections()}]]
+        }[# th:unless="${stat.last}"],[/]
+        [/]
+    ];
 
     let currentParticipantId = null;
     let selectedDays = new Set();
@@ -106,16 +115,6 @@
     function renderCalendar() {
         const calendarBody = document.getElementById('calendarBody');
         calendarBody.innerHTML = '';
-
-        const year = scheduleData.year || [[${year}]];
-        const month = scheduleData.month || [[${month}]];
-
-        // Use calendar.js utility functions as fallback
-        const daysInMonth = scheduleData.daysInMonth || getDaysInMonth(year, month);
-        const firstDayOfWeek = scheduleData.firstDayOfWeek !== undefined
-            ? scheduleData.firstDayOfWeek
-            : getFirstDayOfWeek(year, month);
-        const participants = scheduleData.participants || [];
 
         // Create empty cells for days before the first day of the month
         for (let i = 0; i < firstDayOfWeek; i++) {
@@ -164,7 +163,6 @@
         // Load current selections for this participant
         selectedDays.clear();
         if (currentParticipantId) {
-            const participants = scheduleData.participants || [];
             const participant = participants.find(p => p.id === currentParticipantId);
             if (participant && participant.selections) {
                 participant.selections.forEach(day => selectedDays.add(day));

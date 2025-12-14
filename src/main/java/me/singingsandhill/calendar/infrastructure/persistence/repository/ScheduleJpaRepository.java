@@ -11,7 +11,10 @@ import me.singingsandhill.calendar.infrastructure.persistence.entity.ScheduleJpa
 
 public interface ScheduleJpaRepository extends JpaRepository<ScheduleJpaEntity, Long> {
 
-    @Query("SELECT s FROM ScheduleJpaEntity s WHERE s.owner.ownerId = :ownerId AND s.year = :year AND s.month = :month")
+    @Query("SELECT s FROM ScheduleJpaEntity s LEFT JOIN FETCH s.participants WHERE s.id = :id")
+    Optional<ScheduleJpaEntity> findByIdWithParticipants(@Param("id") Long id);
+
+    @Query("SELECT s FROM ScheduleJpaEntity s LEFT JOIN FETCH s.participants WHERE s.owner.ownerId = :ownerId AND s.year = :year AND s.month = :month")
     Optional<ScheduleJpaEntity> findByOwnerIdAndYearMonth(
             @Param("ownerId") String ownerId,
             @Param("year") int year,

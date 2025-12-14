@@ -31,7 +31,7 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
 
     @Override
     public Optional<Schedule> findById(Long id) {
-        return scheduleJpaRepository.findById(id)
+        return scheduleJpaRepository.findByIdWithParticipants(id)
                 .map(this::toDomain);
     }
 
