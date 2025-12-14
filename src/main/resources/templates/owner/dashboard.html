@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/header :: head(${ownerId} + ' - Dashboard')}"></head>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/header :: header}"></div>
 
 <main class="container">
     <div class="dashboard-header">
-        <h1><span th:text="${ownerId}">user</span>'s Dashboard</h1>
-        <button class="btn btn-primary" onclick="openCreateModal()">+ New Schedule</button>
+        <h1><span th:text="${ownerId}">user</span>님의 대시보드</h1>
+        <button class="btn btn-primary" onclick="openCreateModal()">+ 새 일정</button>
     </div>
 
     <div class="schedules-grid" th:if="${!schedules.isEmpty()}">
@@ -18,31 +18,31 @@
             <div class="schedule-card-body">
                 <p>
                     <span class="participant-count" th:text="${schedule.participantCount()}">0</span>
-                    participants
+                    명 참여
                 </p>
             </div>
             <div class="schedule-card-actions">
                 <a th:href="@{'/' + ${ownerId} + '/' + ${schedule.year()} + '/' + ${schedule.month()}}"
-                   class="btn btn-secondary">View</a>
+                   class="btn btn-secondary">보기</a>
                 <button class="btn btn-outline copy-link-btn"
                         th:data-owner="${ownerId}"
                         th:data-year="${schedule.year()}"
                         th:data-month="${schedule.month()}">
-                    Copy Link
+                    링크 복사
                 </button>
                 <button class="btn btn-danger delete-btn"
                         th:data-owner="${ownerId}"
                         th:data-year="${schedule.year()}"
                         th:data-month="${schedule.month()}">
-                    Delete
+                    삭제
                 </button>
             </div>
         </div>
     </div>
 
     <div class="empty-state" th:if="${schedules.isEmpty()}">
-        <p>No schedules yet. Create your first schedule!</p>
-        <button class="btn btn-primary" onclick="openCreateModal()">+ New Schedule</button>
+        <p>아직 일정이 없습니다. 첫 번째 일정을 만들어보세요!</p>
+        <button class="btn btn-primary" onclick="openCreateModal()">+ 새 일정</button>
     </div>
 </main>
 
@@ -50,13 +50,13 @@
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>New Schedule</h2>
+            <h2>새 일정</h2>
             <button class="modal-close" onclick="closeCreateModal()">&times;</button>
         </div>
         <div class="modal-body">
             <form id="createScheduleForm">
                 <div class="form-group">
-                    <label for="year">Year</label>
+                    <label for="year">연도</label>
                     <select id="year" name="year" required>
                         <option value="2024">2024</option>
                         <option value="2025" selected>2025</option>
@@ -65,7 +65,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="month">Month</label>
+                    <label for="month">월</label>
                     <select id="month" name="month" required>
                         <option th:each="m : ${#numbers.sequence(1, 12)}"
                                 th:value="${m}"
@@ -74,8 +74,8 @@
                     </select>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">취소</button>
+                    <button type="submit" class="btn btn-primary">만들기</button>
                 </div>
             </form>
         </div>
@@ -112,12 +112,12 @@
     function copyLink(ownerId, year, month) {
         const url = `${window.location.origin}/${ownerId}/${year}/${month}`;
         navigator.clipboard.writeText(url).then(() => {
-            alert('Link copied to clipboard!');
+            alert('링크가 클립보드에 복사되었습니다!');
         });
     }
 
     async function deleteSchedule(ownerId, year, month) {
-        if (!confirm('Are you sure you want to delete this schedule?')) {
+        if (!confirm('이 일정을 삭제하시겠습니까?')) {
             return;
         }
         try {

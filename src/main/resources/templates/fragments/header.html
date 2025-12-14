@@ -1,15 +1,63 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:fragment="head(title)">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:fragment="head(seo)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${title}">Schedule Picker</title>
+
+    <!-- Title -->
+    <title th:text="${seo.title()}">DateDate - 약속 잡기</title>
+
+    <!-- Basic Meta Tags -->
+    <meta name="description" th:content="${seo.description()}">
+    <meta name="keywords" th:content="${seo.keywords()}">
+    <meta name="author" content="DateDate">
+    <meta name="language" content="ko-KR">
+    <meta http-equiv="content-language" content="ko-KR">
+
+    <!-- Robots -->
+    <meta name="robots" th:content="${seo.robots()}">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" th:href="${seo.canonical()}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" th:content="${seo.ogType()}">
+    <meta property="og:site_name" content="DateDate">
+    <meta property="og:title" th:content="${seo.ogTitle()}">
+    <meta property="og:description" th:content="${seo.ogDescription()}">
+    <meta property="og:url" th:content="${seo.canonical()}">
+    <meta property="og:image" th:content="${seo.ogImage()}">
+    <meta property="og:locale" content="ko_KR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" th:content="${seo.ogTitle()}">
+    <meta name="twitter:description" th:content="${seo.ogDescription()}">
+    <meta name="twitter:image" th:content="${seo.ogImage()}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="alternate icon" type="image/x-icon" th:href="@{/favicon.ico}">
+    <link rel="apple-touch-icon" sizes="180x180" th:href="@{/apple-touch-icon.png}">
+
+    <!-- PWA -->
+    <link rel="manifest" th:href="@{/manifest.json}">
+    <meta name="theme-color" content="#3498db">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="DateDate">
+
+    <!-- JSON-LD Structured Data -->
+    <script th:if="${seo.jsonLd() != null}" type="application/ld+json" th:utext="${seo.jsonLd()}"></script>
+
+    <!-- CSS -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <header th:fragment="header">
     <nav class="navbar">
-        <a th:href="@{/}" class="logo">Schedule Picker</a>
+        <a th:href="@{/}" class="logo">DateDate</a>
     </nav>
 </header>
 </body>

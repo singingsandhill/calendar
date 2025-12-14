@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import me.singingsandhill.calendar.application.service.OwnerService;
 import me.singingsandhill.calendar.application.service.ScheduleService;
+import me.singingsandhill.calendar.application.service.SeoService;
 import me.singingsandhill.calendar.domain.schedule.Schedule;
 import me.singingsandhill.calendar.presentation.dto.response.ScheduleDetailResponse;
 
@@ -15,10 +16,12 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
     private final OwnerService ownerService;
+    private final SeoService seoService;
 
-    public ScheduleController(ScheduleService scheduleService, OwnerService ownerService) {
+    public ScheduleController(ScheduleService scheduleService, OwnerService ownerService, SeoService seoService) {
         this.scheduleService = scheduleService;
         this.ownerService = ownerService;
+        this.seoService = seoService;
     }
 
     @GetMapping("/{ownerId}/{year}/{month}")
@@ -42,6 +45,7 @@ public class ScheduleController {
         model.addAttribute("schedule", response);
         model.addAttribute("year", year);
         model.addAttribute("month", month);
+        model.addAttribute("seo", seoService.getScheduleSeo(ownerId, year, month));
 
         return "schedule/view";
     }

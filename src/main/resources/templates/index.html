@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/header :: head('Schedule Picker')}"></head>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/header :: header}"></div>
 
 <main class="container">
     <div class="hero">
-        <h1>Schedule Picker</h1>
-        <p class="subtitle">Group scheduling made simple</p>
+        <h1>DateDate</h1>
+        <p class="subtitle">여러명이서 쉽게 날짜 조율하기</p>
     </div>
 
     <div class="start-form-container">
         <div class="start-form-box">
-            <h2>Create your schedule page</h2>
+            <h2>나만의 페이지 만들기</h2>
             <form th:action="@{/start}" method="post" class="start-form" id="startForm">
                 <div class="input-group">
-                    <span class="input-prefix">schedulepicker.com/</span>
+                    <span class="input-prefix">datedate.site/</span>
                     <input type="text" name="ownerId" id="ownerId"
                            placeholder="your-id"
                            pattern="^[a-z0-9-]+$"
@@ -23,29 +23,29 @@
                            maxlength="20"
                            required>
                 </div>
-                <p class="input-hint">2-20 characters, lowercase letters, numbers, and hyphens only</p>
-                <button type="submit" class="btn btn-primary">Get Started</button>
+                <p class="input-hint">2-20자, 소문자, 숫자, 하이픈만 사용 가능</p>
+                <button type="submit" class="btn btn-primary">시작하기</button>
             </form>
         </div>
     </div>
 
     <div class="how-it-works">
-        <h2>How it works</h2>
+        <h2>이용 방법</h2>
         <div class="steps">
             <div class="step">
                 <div class="step-number">1</div>
-                <h3>Create your page</h3>
-                <p>Enter a unique ID to create your scheduling page</p>
+                <h3>페이지 만들기</h3>
+                <p>고유한 ID를 입력하여 일정 페이지를 만드세요</p>
             </div>
             <div class="step">
                 <div class="step-number">2</div>
-                <h3>Add participants</h3>
-                <p>Add up to 8 participants to your schedule</p>
+                <h3>참여자 추가</h3>
+                <p>최대 8명의 참여자를 추가하세요</p>
             </div>
             <div class="step">
                 <div class="step-number">3</div>
-                <h3>Share & pick dates</h3>
-                <p>Share the link and let everyone select available dates</p>
+                <h3>공유 및 날짜 선택</h3>
+                <p>링크를 공유하고 모두가 가능한 날짜를 선택하세요</p>
             </div>
         </div>
     </div>

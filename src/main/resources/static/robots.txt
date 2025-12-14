@@ -1,0 +1,16 @@
+# robots.txt for datedate.site
+# Group scheduling application
+
+User-agent: *
+Allow: /$
+Disallow: /api/
+Disallow: /h2-console/
+
+# Block user-generated content pages (infinite URL space)
+Disallow: /*/*
+
+# Crawl-delay to prevent overwhelming the server
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: http://datedate.site/sitemap.xml

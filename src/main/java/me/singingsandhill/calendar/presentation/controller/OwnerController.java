@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import me.singingsandhill.calendar.application.service.OwnerService;
+import me.singingsandhill.calendar.application.service.SeoService;
 import me.singingsandhill.calendar.domain.owner.Owner;
 import me.singingsandhill.calendar.domain.schedule.Schedule;
 import me.singingsandhill.calendar.presentation.dto.response.ScheduleResponse;
@@ -17,9 +18,11 @@ import me.singingsandhill.calendar.presentation.dto.response.ScheduleResponse;
 public class OwnerController {
 
     private final OwnerService ownerService;
+    private final SeoService seoService;
 
-    public OwnerController(OwnerService ownerService) {
+    public OwnerController(OwnerService ownerService, SeoService seoService) {
         this.ownerService = ownerService;
+        this.seoService = seoService;
     }
 
     @GetMapping("/{ownerId}")
@@ -34,6 +37,7 @@ public class OwnerController {
         model.addAttribute("ownerId", ownerId);
         model.addAttribute("owner", owner);
         model.addAttribute("schedules", scheduleResponses);
+        model.addAttribute("seo", seoService.getDashboardSeo(ownerId));
 
         return "owner/dashboard";
     }
