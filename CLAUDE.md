@@ -16,6 +16,18 @@ Group scheduling web application (약속 잡기) built with Spring Boot 4.0.0 an
 ./gradlew test --tests "*ServiceTest"       # Run pattern-matched tests
 ```
 
+### WSL Environment
+
+```bash
+# WSL에서 Windows JDK를 사용하여 빌드/실행
+cmd.exe /c "set JAVA_HOME=C:\\jdk-21&& .\\gradlew.bat build"
+cmd.exe /c "set JAVA_HOME=C:\\jdk-21&& .\\gradlew.bat bootRun"
+cmd.exe /c "set JAVA_HOME=C:\\jdk-21&& .\\gradlew.bat test"
+
+# Java 프로세스 종료 (H2 DB 잠금 해제 시 필요)
+cmd.exe /c "taskkill /F /IM java.exe"
+```
+
 ## Architecture
 
 The project follows **Hexagonal Architecture** (Ports & Adapters) with four layers:
