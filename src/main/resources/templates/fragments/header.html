@@ -51,6 +51,10 @@
     <!-- JSON-LD Structured Data -->
     <script th:if="${seo.jsonLd() != null}" type="application/ld+json" th:utext="${seo.jsonLd()}"></script>
 
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7334667748813914"
+         crossorigin="anonymous"></script>
+
     <!-- CSS -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
