@@ -164,7 +164,8 @@
         // Load current selections for this participant
         selectedDays.clear();
         if (currentParticipantId) {
-            const participant = scheduleData.participants.find(p => p.id === currentParticipantId);
+            const participants = scheduleData.participants || [];
+            const participant = participants.find(p => p.id === currentParticipantId);
             if (participant && participant.selections) {
                 participant.selections.forEach(day => selectedDays.add(day));
             }
