@@ -1,0 +1,40 @@
+package me.singingsandhill.calendar.presentation.controller;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import me.singingsandhill.calendar.application.service.OwnerService;
+import me.singingsandhill.calendar.domain.owner.Owner;
+import me.singingsandhill.calendar.domain.schedule.Schedule;
+import me.singingsandhill.calendar.presentation.dto.response.ScheduleResponse;
+
+@Controller
+public class OwnerController {
+
+    private final OwnerService ownerService;
+
+    public OwnerController(OwnerService ownerService) {
+        this.ownerService = ownerService;
+    }
+
+    @GetMapping("/{ownerId}")
+    public String dashboard(@PathVariable String ownerId, Model model) {
+        Owner owner = ownerService.getOrCreateOwner(ownerId);
+        List<Schedule> schedules = ownerService.getOwnerSchedules(ownerId);
+
+        List<ScheduleResponse> scheduleResponses = schedules.stream()
+                .map(ScheduleResponse::from)
+                .collect(Collectors.toList());
+
+        model.addAttribute("ownerId", ownerId);
+        model.addAttribute("owner", owner);
+        model.addAttribute("schedules", scheduleResponses);
+
+        return "owner/dashboard";
+    }
+}
