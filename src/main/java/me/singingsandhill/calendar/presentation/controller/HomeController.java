@@ -28,7 +28,8 @@ public class HomeController {
 
     @PostMapping("/start")
     public String start(@RequestParam String ownerId) {
-        ownerService.getOrCreateOwner(ownerId);
-        return "redirect:/" + ownerId;
+        String normalizedId = ownerId.toLowerCase();
+        ownerService.getOrCreateOwner(normalizedId);
+        return "redirect:/" + normalizedId;
     }
 }

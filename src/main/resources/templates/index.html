@@ -21,9 +21,11 @@
                            pattern="^[a-z0-9-]+$"
                            minlength="2"
                            maxlength="20"
-                           required>
+                           required
+                           style="text-transform: lowercase;"
+                           oninput="this.value = this.value.toLowerCase()">
                 </div>
-                <p class="input-hint">2-20자, 소문자, 숫자, 하이픈만 사용 가능</p>
+                <p class="input-hint">2-20자, 영어, 숫자, - 만 사용 가능 (대소문자 구분 없음)</p>
                 <button type="submit" class="btn btn-primary">시작하기</button>
             </form>
         </div>
