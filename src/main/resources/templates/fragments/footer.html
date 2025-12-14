@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<footer th:fragment="footer">
+    <div class="footer-content">
+        <p>Schedule Picker - Group scheduling made simple</p>
+    </div>
+</footer>
+<th:block th:fragment="scripts">
+    <script th:src="@{/js/api.js}"></script>
+    <script th:src="@{/js/calendar.js}"></script>
+</th:block>
+</body>
+</html>
