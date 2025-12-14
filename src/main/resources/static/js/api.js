@@ -1,3 +1,16 @@
+const errorMessages = {
+    'VALIDATION_ERROR': '입력값이 올바르지 않습니다',
+    'INVALID_ARGUMENT': '잘못된 요청입니다',
+    'INVALID_OWNER_ID': '사용자 ID 형식이 올바르지 않습니다',
+    'OWNER_NOT_FOUND': '사용자를 찾을 수 없습니다',
+    'SCHEDULE_NOT_FOUND': '일정을 찾을 수 없습니다',
+    'DUPLICATE_SCHEDULE': '이미 존재하는 일정입니다',
+    'PARTICIPANT_NOT_FOUND': '참여자를 찾을 수 없습니다',
+    'MAX_PARTICIPANTS_EXCEEDED': '참여자는 최대 8명까지 가능합니다',
+    'DUPLICATE_PARTICIPANT': '이미 같은 이름의 참여자가 있습니다',
+    'INTERNAL_ERROR': '서버 오류가 발생했습니다'
+};
+
 const api = {
     async request(url, options = {}) {
         const defaultOptions = {
@@ -9,8 +22,9 @@ const api = {
         const response = await fetch(url, { ...defaultOptions, ...options });
 
         if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'An error occurred' }));
-            throw new Error(error.message || 'Request failed');
+            const error = await response.json().catch(() => ({ code: 'UNKNOWN', message: '오류가 발생했습니다' }));
+            const koreanMessage = errorMessages[error.code] || error.message || '오류가 발생했습니다';
+            throw new Error(koreanMessage);
         }
 
         if (response.status === 204) {

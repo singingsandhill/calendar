@@ -214,10 +214,10 @@
 
         try {
             await api.updateSelections(currentParticipantId, Array.from(selectedDays));
-            alert('저장되었습니다!');
+            toast.success('저장되었습니다!');
             window.location.reload();
         } catch (error) {
-            alert(error.message);
+            toast.error(error.message);
         }
     }
 
@@ -237,7 +237,7 @@
             await api.addParticipant(scheduleId, name);
             window.location.reload();
         } catch (error) {
-            alert(error.message);
+            toast.error(error.message);
         }
     });
 </script>
