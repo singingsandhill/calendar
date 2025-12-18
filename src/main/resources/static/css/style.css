@@ -967,3 +967,317 @@ footer {
         max-width: none;
     }
 }
+
+/* ======================================
+   HERO DESCRIPTION
+   ====================================== */
+.hero-description {
+    max-width: 600px;
+    margin: 1rem auto 0;
+    color: var(--text-light);
+    line-height: 1.7;
+}
+
+/* ======================================
+   FEATURES SECTION
+   ====================================== */
+.features-section {
+    padding: 4rem 0;
+    text-align: center;
+}
+
+.features-section h2 {
+    font-size: 1.75rem;
+    margin-bottom: 2.5rem;
+    color: var(--text-color);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.feature-card {
+    background: var(--bg-white);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    text-align: left;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.feature-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.feature-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: white;
+}
+
+.feature-card h3 {
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.feature-card p {
+    color: var(--text-light);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* ======================================
+   SCENARIOS SECTION
+   ====================================== */
+.scenarios-section {
+    padding: 4rem 0;
+    background: var(--bg-white);
+    margin: 0 -2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+
+.scenarios-section h2 {
+    font-size: 1.75rem;
+    margin-bottom: 2.5rem;
+    text-align: center;
+    color: var(--text-color);
+}
+
+.scenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.scenario-card {
+    background: var(--bg-light);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.scenario-emoji {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.scenario-card h3 {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-color);
+}
+
+.scenario-card p {
+    color: var(--text-light);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.scenario-example {
+    background: var(--bg-white);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.875rem;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.scenario-label {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: inherit;
+}
+
+/* ======================================
+   FAQ SECTION
+   ====================================== */
+.faq-section {
+    padding: 4rem 0;
+}
+
+.faq-section h2 {
+    font-size: 1.75rem;
+    margin-bottom: 2.5rem;
+    text-align: center;
+    color: var(--text-color);
+}
+
+.faq-list {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faq-item {
+    background: var(--bg-white);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.faq-question {
+    width: 100%;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color);
+    transition: background 0.2s;
+}
+
+.faq-question:hover {
+    background: var(--bg-light);
+}
+
+.faq-toggle {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    transition: transform 0.3s;
+}
+
+.faq-item.open .faq-toggle {
+    transform: rotate(45deg);
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.faq-item.open .faq-answer {
+    max-height: 500px;
+}
+
+.faq-answer p {
+    padding: 0 1.5rem 1.25rem;
+    color: var(--text-light);
+    line-height: 1.7;
+}
+
+/* ======================================
+   RESPONSIVE - Landing Page Sections
+   ====================================== */
+@media (max-width: 768px) {
+    .hero-description {
+        font-size: 0.95rem;
+        padding: 0 1rem;
+    }
+
+    .features-section,
+    .scenarios-section,
+    .faq-section {
+        padding: 3rem 0;
+    }
+
+    .features-section h2,
+    .scenarios-section h2,
+    .faq-section h2 {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .features-grid,
+    .scenarios-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .scenarios-section {
+        margin: 0 -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-description {
+        font-size: 0.875rem;
+    }
+
+    .features-section,
+    .scenarios-section,
+    .faq-section {
+        padding: 2rem 0;
+    }
+
+    .feature-card,
+    .scenario-card {
+        padding: 1.25rem;
+    }
+
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .feature-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .faq-question {
+        padding: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .faq-answer p {
+        padding: 0 1rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .scenario-emoji {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 320px) {
+    .features-grid,
+    .scenarios-grid {
+        gap: 1rem;
+    }
+
+    .feature-card,
+    .scenario-card {
+        padding: 1rem;
+    }
+
+    .scenario-emoji {
+        font-size: 1.75rem;
+    }
+
+    .scenario-example {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+        font-size: 0.8rem;
+    }
+}
