@@ -19,6 +19,11 @@ public class StaticResourceController {
         return new ClassPathResource("static/robots.txt");
     }
 
+    @GetMapping(value = "/ads.txt", produces = MediaType.TEXT_PLAIN_VALUE)
+    public Resource adsTxt() {
+        return new ClassPathResource("static/ads.txt");
+    }
+
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
     public Resource sitemapXml() {
         return new ClassPathResource("static/sitemap.xml");
