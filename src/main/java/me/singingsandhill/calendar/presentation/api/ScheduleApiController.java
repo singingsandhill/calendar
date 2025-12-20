@@ -1,5 +1,7 @@
 package me.singingsandhill.calendar.presentation.api;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import me.singingsandhill.calendar.application.service.LocationService;
 import me.singingsandhill.calendar.application.service.ScheduleService;
+import me.singingsandhill.calendar.domain.location.Location;
 import me.singingsandhill.calendar.domain.schedule.Schedule;
 import me.singingsandhill.calendar.presentation.dto.request.ScheduleCreateRequest;
 import me.singingsandhill.calendar.presentation.dto.request.ScheduleUpdateRequest;
@@ -24,9 +28,11 @@ import me.singingsandhill.calendar.presentation.dto.response.ScheduleResponse;
 public class ScheduleApiController {
 
     private final ScheduleService scheduleService;
+    private final LocationService locationService;
 
-    public ScheduleApiController(ScheduleService scheduleService) {
+    public ScheduleApiController(ScheduleService scheduleService, LocationService locationService) {
         this.scheduleService = scheduleService;
+        this.locationService = locationService;
     }
 
     @GetMapping("/{year}/{month}")
@@ -35,7 +41,8 @@ public class ScheduleApiController {
             @PathVariable int year,
             @PathVariable int month) {
         Schedule schedule = scheduleService.getScheduleByOwnerAndYearMonth(ownerId, year, month);
-        return ResponseEntity.ok(ScheduleDetailResponse.from(schedule));
+        List<Location> locations = locationService.getLocationsByScheduleId(schedule.getId());
+        return ResponseEntity.ok(ScheduleDetailResponse.from(schedule, locations));
     }
 
     @PostMapping

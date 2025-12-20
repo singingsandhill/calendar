@@ -58,6 +58,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button class="btn btn-secondary" onclick="resetSelections()">초기화</button>
         <button class="btn btn-primary" onclick="saveSelections()">저장</button>
     </div>
+
+    <!-- Location Voting Section -->
+    <div class="location-section">
+        <h3>장소 투표</h3>
+        <div class="location-add">
+            <input type="text" id="locationInput" placeholder="장소 입력" maxlength="100">
+            <button class="btn btn-outline btn-sm" onclick="addLocation()">추가</button>
+        </div>
+        <div class="location-list" id="locationList">
+            <div class="location-item" th:each="loc : ${schedule.locations()}">
+                <div class="location-info">
+                    <span class="location-name" th:text="${loc.name()}">장소명</span>
+                    <span class="location-votes" th:text="${loc.voteCount() + '표'}">0표</span>
+                </div>
+                <div class="location-voters">
+                    <span class="voter-tag" th:each="voter : ${loc.voters()}" th:text="${voter}">투표자</span>
+                </div>
+                <div class="location-actions">
+                    <button class="btn btn-sm btn-primary vote-btn"
+                            th:data-location-id="${loc.id()}"
+                            onclick="toggleVote(this)">투표</button>
+                </div>
+            </div>
+            <p th:if="${schedule.locations().isEmpty()}" class="empty-locations">아직 제안된 장소가 없습니다.</p>
+        </div>
+    </div>
 </main>
 
 <!-- Add Participant Modal -->
@@ -106,6 +132,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             name: [[${p.name()}]],
             color: [[${p.color()}]],
             selections: [[${p.selections()}]]
+        }[# th:unless="${stat.last}"],[/]
+        [/]
+    ];
+
+    const locations = [
+        [# th:each="loc, stat : ${schedule.locations()}"]
+        {
+            id: [[${loc.id()}]],
+            name: [[${loc.name()}]],
+            voters: [[${loc.voters()}]],
+            voteCount: [[${loc.voteCount()}]]
         }[# th:unless="${stat.last}"],[/]
         [/]
     ];
@@ -273,6 +310,58 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         }
         document.body.removeChild(textarea);
     }
+
+    // Location voting functions
+    async function addLocation() {
+        const input = document.getElementById('locationInput');
+        const name = input.value.trim();
+
+        if (!name) {
+            alert('장소를 입력하세요');
+            return;
+        }
+
+        try {
+            await api.addLocation(scheduleId, name);
+            window.location.reload();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    }
+
+    async function toggleVote(button) {
+        const locationId = parseInt(button.dataset.locationId);
+        const select = document.getElementById('participantSelect');
+        const selectedOption = select.options[select.selectedIndex];
+
+        if (!select.value) {
+            alert('먼저 이름을 선택하세요');
+            return;
+        }
+
+        const voterName = selectedOption.text;
+        const location = locations.find(l => l.id === locationId);
+        const hasVoted = location && location.voters.some(v => v.toLowerCase() === voterName.toLowerCase());
+
+        try {
+            if (hasVoted) {
+                await api.unvoteLocation(locationId, voterName);
+            } else {
+                await api.voteLocation(locationId, voterName);
+            }
+            window.location.reload();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    }
+
+    // Handle Enter key for location input
+    document.getElementById('locationInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addLocation();
+        }
+    });
 </script>
 </body>
 </html>

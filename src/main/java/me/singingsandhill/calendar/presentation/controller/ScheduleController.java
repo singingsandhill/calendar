@@ -1,13 +1,17 @@
 package me.singingsandhill.calendar.presentation.controller;
 
+import java.util.List;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import me.singingsandhill.calendar.application.service.LocationService;
 import me.singingsandhill.calendar.application.service.OwnerService;
 import me.singingsandhill.calendar.application.service.ScheduleService;
 import me.singingsandhill.calendar.application.service.SeoService;
+import me.singingsandhill.calendar.domain.location.Location;
 import me.singingsandhill.calendar.domain.schedule.Schedule;
 import me.singingsandhill.calendar.presentation.dto.response.ScheduleDetailResponse;
 
@@ -16,11 +20,14 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
     private final OwnerService ownerService;
+    private final LocationService locationService;
     private final SeoService seoService;
 
-    public ScheduleController(ScheduleService scheduleService, OwnerService ownerService, SeoService seoService) {
+    public ScheduleController(ScheduleService scheduleService, OwnerService ownerService,
+                               LocationService locationService, SeoService seoService) {
         this.scheduleService = scheduleService;
         this.ownerService = ownerService;
+        this.locationService = locationService;
         this.seoService = seoService;
     }
 
@@ -39,7 +46,8 @@ public class ScheduleController {
             schedule = scheduleService.createSchedule(ownerId, year, month, null);
         }
 
-        ScheduleDetailResponse response = ScheduleDetailResponse.from(schedule);
+        List<Location> locations = locationService.getLocationsByScheduleId(schedule.getId());
+        ScheduleDetailResponse response = ScheduleDetailResponse.from(schedule, locations);
 
         model.addAttribute("ownerId", ownerId);
         model.addAttribute("schedule", response);
