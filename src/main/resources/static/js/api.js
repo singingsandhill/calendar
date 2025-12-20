@@ -10,6 +10,8 @@ const errorMessages = {
     'DUPLICATE_PARTICIPANT': '이미 같은 이름의 참여자가 있습니다',
     'LOCATION_NOT_FOUND': '장소를 찾을 수 없습니다',
     'DUPLICATE_LOCATION': '이미 같은 장소가 있습니다',
+    'MENU_NOT_FOUND': '메뉴를 찾을 수 없습니다',
+    'DUPLICATE_MENU': '이미 같은 메뉴가 있습니다',
     'INTERNAL_ERROR': '서버 오류가 발생했습니다'
 };
 
@@ -133,6 +135,37 @@ const api = {
 
     async unvoteLocation(locationId, voterName) {
         return this.request(`/api/locations/${locationId}/votes/${encodeURIComponent(voterName)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // Menu API
+    async getMenus(scheduleId) {
+        return this.request(`/api/schedules/${scheduleId}/menus`);
+    },
+
+    async addMenu(scheduleId, name) {
+        return this.request(`/api/schedules/${scheduleId}/menus`, {
+            method: 'POST',
+            body: JSON.stringify({ name })
+        });
+    },
+
+    async deleteMenu(menuId) {
+        return this.request(`/api/menus/${menuId}`, {
+            method: 'DELETE'
+        });
+    },
+
+    async voteMenu(menuId, voterName) {
+        return this.request(`/api/menus/${menuId}/votes`, {
+            method: 'POST',
+            body: JSON.stringify({ voterName })
+        });
+    },
+
+    async unvoteMenu(menuId, voterName) {
+        return this.request(`/api/menus/${menuId}/votes/${encodeURIComponent(voterName)}`, {
             method: 'DELETE'
         });
     }

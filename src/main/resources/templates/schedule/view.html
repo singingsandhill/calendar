@@ -84,6 +84,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <p th:if="${schedule.locations().isEmpty()}" class="empty-locations">아직 제안된 장소가 없습니다.</p>
         </div>
     </div>
+
+    <!-- Menu Voting Section -->
+    <div class="location-section">
+        <h3>메뉴 투표</h3>
+        <div class="location-add">
+            <input type="text" id="menuInput" placeholder="메뉴 입력" maxlength="100">
+            <button class="btn btn-outline btn-sm" onclick="addMenu()">추가</button>
+        </div>
+        <div class="location-list" id="menuList">
+            <div class="location-item" th:each="menu : ${schedule.menus()}">
+                <div class="location-info">
+                    <span class="location-name" th:text="${menu.name()}">메뉴명</span>
+                    <span class="location-votes" th:text="${menu.voteCount() + '표'}">0표</span>
+                </div>
+                <div class="location-voters">
+                    <span class="voter-tag" th:each="voter : ${menu.voters()}" th:text="${voter}">투표자</span>
+                </div>
+                <div class="location-actions">
+                    <button class="btn btn-sm btn-primary menu-vote-btn"
+                            th:data-menu-id="${menu.id()}"
+                            onclick="toggleMenuVote(this)">투표</button>
+                </div>
+            </div>
+            <p th:if="${schedule.menus().isEmpty()}" class="empty-locations">아직 제안된 메뉴가 없습니다.</p>
+        </div>
+    </div>
 </main>
 
 <!-- Add Participant Modal -->
@@ -143,6 +169,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             name: [[${loc.name()}]],
             voters: [[${loc.voters()}]],
             voteCount: [[${loc.voteCount()}]]
+        }[# th:unless="${stat.last}"],[/]
+        [/]
+    ];
+
+    const menus = [
+        [# th:each="menu, stat : ${schedule.menus()}"]
+        {
+            id: [[${menu.id()}]],
+            name: [[${menu.name()}]],
+            voters: [[${menu.voters()}]],
+            voteCount: [[${menu.voteCount()}]]
         }[# th:unless="${stat.last}"],[/]
         [/]
     ];
@@ -360,6 +397,58 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         if (e.key === 'Enter') {
             e.preventDefault();
             addLocation();
+        }
+    });
+
+    // Menu voting functions
+    async function addMenu() {
+        const input = document.getElementById('menuInput');
+        const name = input.value.trim();
+
+        if (!name) {
+            alert('메뉴를 입력하세요');
+            return;
+        }
+
+        try {
+            await api.addMenu(scheduleId, name);
+            window.location.reload();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    }
+
+    async function toggleMenuVote(button) {
+        const menuId = parseInt(button.dataset.menuId);
+        const select = document.getElementById('participantSelect');
+        const selectedOption = select.options[select.selectedIndex];
+
+        if (!select.value) {
+            alert('먼저 이름을 선택하세요');
+            return;
+        }
+
+        const voterName = selectedOption.text;
+        const menu = menus.find(m => m.id === menuId);
+        const hasVoted = menu && menu.voters.some(v => v.toLowerCase() === voterName.toLowerCase());
+
+        try {
+            if (hasVoted) {
+                await api.unvoteMenu(menuId, voterName);
+            } else {
+                await api.voteMenu(menuId, voterName);
+            }
+            window.location.reload();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    }
+
+    // Handle Enter key for menu input
+    document.getElementById('menuInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addMenu();
         }
     });
 </script>

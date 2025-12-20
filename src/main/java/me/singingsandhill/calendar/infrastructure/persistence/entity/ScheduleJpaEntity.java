@@ -48,6 +48,9 @@ public class ScheduleJpaEntity {
     @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LocationJpaEntity> locations = new ArrayList<>();
 
+    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MenuJpaEntity> menus = new ArrayList<>();
+
     protected ScheduleJpaEntity() {
     }
 
@@ -111,5 +114,14 @@ public class ScheduleJpaEntity {
     public void addLocation(LocationJpaEntity location) {
         locations.add(location);
         location.setSchedule(this);
+    }
+
+    public List<MenuJpaEntity> getMenus() {
+        return menus;
+    }
+
+    public void addMenu(MenuJpaEntity menu) {
+        menus.add(menu);
+        menu.setSchedule(this);
     }
 }

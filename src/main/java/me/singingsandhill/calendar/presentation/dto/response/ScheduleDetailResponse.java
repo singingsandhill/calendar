@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import me.singingsandhill.calendar.domain.location.Location;
+import me.singingsandhill.calendar.domain.menu.Menu;
 import me.singingsandhill.calendar.domain.schedule.Schedule;
 
 public record ScheduleDetailResponse(
@@ -17,13 +18,14 @@ public record ScheduleDetailResponse(
         int firstDayOfWeek,
         List<ParticipantResponse> participants,
         List<LocationResponse> locations,
+        List<MenuResponse> menus,
         LocalDateTime createdAt
 ) {
     public static ScheduleDetailResponse from(Schedule schedule) {
-        return from(schedule, List.of());
+        return from(schedule, List.of(), List.of());
     }
 
-    public static ScheduleDetailResponse from(Schedule schedule, List<Location> locations) {
+    public static ScheduleDetailResponse from(Schedule schedule, List<Location> locations, List<Menu> menus) {
         return new ScheduleDetailResponse(
                 schedule.getId(),
                 schedule.getOwnerId(),
@@ -37,6 +39,9 @@ public record ScheduleDetailResponse(
                         .collect(Collectors.toList()),
                 locations.stream()
                         .map(LocationResponse::from)
+                        .collect(Collectors.toList()),
+                menus.stream()
+                        .map(MenuResponse::from)
                         .collect(Collectors.toList()),
                 schedule.getCreatedAt()
         );

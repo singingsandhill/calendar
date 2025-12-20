@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import me.singingsandhill.calendar.application.service.LocationService;
+import me.singingsandhill.calendar.application.service.MenuService;
 import me.singingsandhill.calendar.application.service.ScheduleService;
 import me.singingsandhill.calendar.domain.location.Location;
+import me.singingsandhill.calendar.domain.menu.Menu;
 import me.singingsandhill.calendar.domain.schedule.Schedule;
 import me.singingsandhill.calendar.presentation.dto.request.ScheduleCreateRequest;
 import me.singingsandhill.calendar.presentation.dto.request.ScheduleUpdateRequest;
@@ -29,10 +31,13 @@ public class ScheduleApiController {
 
     private final ScheduleService scheduleService;
     private final LocationService locationService;
+    private final MenuService menuService;
 
-    public ScheduleApiController(ScheduleService scheduleService, LocationService locationService) {
+    public ScheduleApiController(ScheduleService scheduleService, LocationService locationService,
+                                  MenuService menuService) {
         this.scheduleService = scheduleService;
         this.locationService = locationService;
+        this.menuService = menuService;
     }
 
     @GetMapping("/{year}/{month}")
@@ -42,7 +47,8 @@ public class ScheduleApiController {
             @PathVariable int month) {
         Schedule schedule = scheduleService.getScheduleByOwnerAndYearMonth(ownerId, year, month);
         List<Location> locations = locationService.getLocationsByScheduleId(schedule.getId());
-        return ResponseEntity.ok(ScheduleDetailResponse.from(schedule, locations));
+        List<Menu> menus = menuService.getMenusByScheduleId(schedule.getId());
+        return ResponseEntity.ok(ScheduleDetailResponse.from(schedule, locations, menus));
     }
 
     @PostMapping
