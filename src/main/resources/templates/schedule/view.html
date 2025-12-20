@@ -300,8 +300,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         try {
             await api.updateSelections(currentParticipantId, Array.from(selectedDays));
+            // 로컬 데이터 업데이트
+            const participant = participants.find(p => p.id === currentParticipantId);
+            if (participant) {
+                participant.selections = Array.from(selectedDays);
+            }
+            // 캘린더 다시 렌더링
+            renderCalendar();
+            updateCalendarDisplay();
             toast.success('저장되었습니다!');
-            window.location.reload();
         } catch (error) {
             toast.error(error.message);
         }
@@ -366,11 +373,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         }
 
         try {
-            await api.addLocation(scheduleId, name);
-            window.location.reload();
+            const newLocation = await api.addLocation(scheduleId, name);
+            // 로컬 데이터에 추가
+            locations.push(newLocation);
+            // UI에 추가
+            addLocationToList(newLocation);
+            // 입력 필드 초기화
+            input.value = '';
         } catch (error) {
             toast.error(error.message);
         }
+    }
+
+    function addLocationToList(location) {
+        const list = document.getElementById('locationList');
+        // "아직 제안된 장소가 없습니다" 메시지 제거
+        const emptyMsg = list.querySelector('.empty-locations');
+        if (emptyMsg) emptyMsg.remove();
+
+        const item = document.createElement('div');
+        item.className = 'location-item';
+        item.innerHTML = `
+            <div class="location-info">
+                <span class="location-name">${location.name}</span>
+                <span class="location-votes">${location.voteCount}표</span>
+            </div>
+            <div class="location-voters"></div>
+            <div class="location-actions">
+                <button class="btn btn-sm btn-primary vote-btn"
+                        data-location-id="${location.id}"
+                        onclick="toggleVote(this)">투표</button>
+            </div>
+        `;
+        list.appendChild(item);
     }
 
     async function toggleVote(button) {
@@ -390,13 +425,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         try {
             if (hasVoted) {
                 await api.unvoteLocation(locationId, voterName);
+                // 로컬 데이터에서 투표 제거
+                location.voters = location.voters.filter(v => v.toLowerCase() !== voterName.toLowerCase());
+                location.voteCount--;
             } else {
                 await api.voteLocation(locationId, voterName);
+                // 로컬 데이터에 투표 추가
+                location.voters.push(voterName);
+                location.voteCount++;
             }
-            window.location.reload();
+            // UI 업데이트
+            updateLocationItemUI(button.closest('.location-item'), location);
         } catch (error) {
             toast.error(error.message);
         }
+    }
+
+    function updateLocationItemUI(itemElement, location) {
+        // 투표 수 업데이트
+        const votesSpan = itemElement.querySelector('.location-votes');
+        votesSpan.textContent = location.voteCount + '표';
+
+        // 투표자 태그 업데이트
+        const votersDiv = itemElement.querySelector('.location-voters');
+        votersDiv.innerHTML = location.voters.map(v =>
+            `<span class="voter-tag">${v}</span>`
+        ).join('');
     }
 
     // Handle Enter key for location input
@@ -420,11 +474,42 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         }
 
         try {
-            await api.addMenu(scheduleId, name, url);
-            window.location.reload();
+            const newMenu = await api.addMenu(scheduleId, name, url);
+            // 로컬 데이터에 추가
+            menus.push(newMenu);
+            // UI에 추가
+            addMenuToList(newMenu);
+            // 입력 필드 초기화
+            nameInput.value = '';
+            urlInput.value = '';
         } catch (error) {
             toast.error(error.message);
         }
+    }
+
+    function addMenuToList(menu) {
+        const list = document.getElementById('menuList');
+        // "아직 제안된 메뉴가 없습니다" 메시지 제거
+        const emptyMsg = list.querySelector('.empty-locations');
+        if (emptyMsg) emptyMsg.remove();
+
+        const item = document.createElement('div');
+        item.className = 'location-item';
+        const urlLink = menu.url ? `<a href="${menu.url}" target="_blank" rel="noopener noreferrer" class="menu-link">🔗</a>` : '';
+        item.innerHTML = `
+            <div class="location-info">
+                <span class="location-name">${menu.name}</span>
+                ${urlLink}
+                <span class="location-votes">${menu.voteCount}표</span>
+            </div>
+            <div class="location-voters"></div>
+            <div class="location-actions">
+                <button class="btn btn-sm btn-primary menu-vote-btn"
+                        data-menu-id="${menu.id}"
+                        onclick="toggleMenuVote(this)">투표</button>
+            </div>
+        `;
+        list.appendChild(item);
     }
 
     async function toggleMenuVote(button) {
@@ -444,13 +529,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         try {
             if (hasVoted) {
                 await api.unvoteMenu(menuId, voterName);
+                // 로컬 데이터에서 투표 제거
+                menu.voters = menu.voters.filter(v => v.toLowerCase() !== voterName.toLowerCase());
+                menu.voteCount--;
             } else {
                 await api.voteMenu(menuId, voterName);
+                // 로컬 데이터에 투표 추가
+                menu.voters.push(voterName);
+                menu.voteCount++;
             }
-            window.location.reload();
+            // UI 업데이트
+            updateMenuItemUI(button.closest('.location-item'), menu);
         } catch (error) {
             toast.error(error.message);
         }
+    }
+
+    function updateMenuItemUI(itemElement, menu) {
+        // 투표 수 업데이트
+        const votesSpan = itemElement.querySelector('.location-votes');
+        votesSpan.textContent = menu.voteCount + '표';
+
+        // 투표자 태그 업데이트
+        const votersDiv = itemElement.querySelector('.location-voters');
+        votersDiv.innerHTML = menu.voters.map(v =>
+            `<span class="voter-tag">${v}</span>`
+        ).join('');
     }
 
     // Handle Enter key for menu input
