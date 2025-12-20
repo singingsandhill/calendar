@@ -10,9 +10,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <main class="container">
     <div class="schedule-header">
-        <a th:href="@{'/' + ${ownerId}}" class="back-link">&larr; 대시보드로 돌아가기</a>
+        <p class="owner-info"><span th:text="${ownerId}">user</span>님의 일정</p>
         <h1 th:text="${year + '년 ' + month + '월'}">2025년 12월</h1>
         <p class="subtitle">참여 가능한 날짜를 선택하세요</p>
+        <button class="btn btn-outline copy-link-btn" onclick="copyLink()">링크 복사</button>
     </div>
 
     <div class="participant-section">
@@ -244,6 +245,34 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             toast.error(error.message);
         }
     });
+
+    function copyLink() {
+        const url = window.location.href;
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url)
+                .then(() => alert('링크가 클립보드에 복사되었습니다!'))
+                .catch(() => fallbackCopy(url));
+        } else {
+            fallbackCopy(url);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            alert('링크가 클립보드에 복사되었습니다!');
+        } catch (err) {
+            prompt('아래 링크를 복사하세요:', text);
+        }
+        document.body.removeChild(textarea);
+    }
 </script>
 </body>
 </html>
