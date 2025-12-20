@@ -90,12 +90,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <h3>메뉴 투표</h3>
         <div class="location-add">
             <input type="text" id="menuInput" placeholder="메뉴 입력" maxlength="100">
+            <input type="url" id="menuUrlInput" placeholder="URL (선택사항)" maxlength="500">
             <button class="btn btn-outline btn-sm" onclick="addMenu()">추가</button>
         </div>
         <div class="location-list" id="menuList">
             <div class="location-item" th:each="menu : ${schedule.menus()}">
                 <div class="location-info">
                     <span class="location-name" th:text="${menu.name()}">메뉴명</span>
+                    <a th:if="${menu.url() != null and !menu.url().isEmpty()}"
+                       th:href="${menu.url()}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="menu-link">🔗</a>
                     <span class="location-votes" th:text="${menu.voteCount() + '표'}">0표</span>
                 </div>
                 <div class="location-voters">
@@ -178,6 +184,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         {
             id: [[${menu.id()}]],
             name: [[${menu.name()}]],
+            url: [[${menu.url()}]],
             voters: [[${menu.voters()}]],
             voteCount: [[${menu.voteCount()}]]
         }[# th:unless="${stat.last}"],[/]
@@ -402,8 +409,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     // Menu voting functions
     async function addMenu() {
-        const input = document.getElementById('menuInput');
-        const name = input.value.trim();
+        const nameInput = document.getElementById('menuInput');
+        const urlInput = document.getElementById('menuUrlInput');
+        const name = nameInput.value.trim();
+        const url = urlInput.value.trim() || null;
 
         if (!name) {
             alert('메뉴를 입력하세요');
@@ -411,7 +420,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         }
 
         try {
-            await api.addMenu(scheduleId, name);
+            await api.addMenu(scheduleId, name, url);
             window.location.reload();
         } catch (error) {
             toast.error(error.message);

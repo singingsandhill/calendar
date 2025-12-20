@@ -8,6 +8,7 @@ import me.singingsandhill.calendar.domain.menu.Menu;
 public record MenuResponse(
         Long id,
         String name,
+        String url,
         List<String> voters,
         int voteCount,
         LocalDateTime createdAt
@@ -16,6 +17,7 @@ public record MenuResponse(
         return new MenuResponse(
                 menu.getId(),
                 menu.getName(),
+                menu.getUrl(),
                 menu.getVoters(),
                 menu.getVoteCount(),
                 menu.getCreatedAt()

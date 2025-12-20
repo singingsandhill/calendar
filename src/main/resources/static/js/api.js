@@ -144,10 +144,10 @@ const api = {
         return this.request(`/api/schedules/${scheduleId}/menus`);
     },
 
-    async addMenu(scheduleId, name) {
+    async addMenu(scheduleId, name, url = null) {
         return this.request(`/api/schedules/${scheduleId}/menus`, {
             method: 'POST',
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, url })
         });
     },
 

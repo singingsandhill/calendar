@@ -43,7 +43,7 @@ public class MenuApiController {
     public ResponseEntity<MenuResponse> addMenu(
             @PathVariable Long scheduleId,
             @Valid @RequestBody MenuCreateRequest request) {
-        Menu menu = menuService.addMenu(scheduleId, request.name());
+        Menu menu = menuService.addMenu(scheduleId, request.name(), request.url());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(MenuResponse.from(menu));
     }

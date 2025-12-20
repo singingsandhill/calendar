@@ -35,7 +35,7 @@ public class MenuService {
     }
 
     @Transactional
-    public Menu addMenu(Long scheduleId, String name) {
+    public Menu addMenu(Long scheduleId, String name, String url) {
         scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ScheduleNotFoundException(scheduleId));
 
@@ -43,7 +43,7 @@ public class MenuService {
             throw new DuplicateMenuException(name);
         }
 
-        Menu menu = new Menu(scheduleId, name);
+        Menu menu = new Menu(scheduleId, name, url);
         return menuRepository.save(menu);
     }
 

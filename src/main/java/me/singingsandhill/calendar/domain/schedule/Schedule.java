@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import lombok.Data;
 import me.singingsandhill.calendar.domain.participant.Participant;
 
 public class Schedule {

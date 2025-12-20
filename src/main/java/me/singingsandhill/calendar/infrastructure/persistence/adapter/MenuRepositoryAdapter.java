@@ -55,7 +55,7 @@ public class MenuRepositoryAdapter implements MenuRepository {
             ScheduleJpaEntity schedule = scheduleJpaRepository.findById(menu.getScheduleId())
                     .orElseThrow(() -> new IllegalStateException("Schedule not found: " + menu.getScheduleId()));
 
-            entity = new MenuJpaEntity(schedule, menu.getName(), menu.getCreatedAt());
+            entity = new MenuJpaEntity(schedule, menu.getName(), menu.getUrl(), menu.getCreatedAt());
 
             for (String voter : menu.getVoters()) {
                 entity.addVote(new MenuVoteJpaEntity(entity, voter));
@@ -87,6 +87,7 @@ public class MenuRepositoryAdapter implements MenuRepository {
                 entity.getId(),
                 entity.getScheduleId(),
                 entity.getName(),
+                entity.getUrl(),
                 voters,
                 entity.getCreatedAt()
         );

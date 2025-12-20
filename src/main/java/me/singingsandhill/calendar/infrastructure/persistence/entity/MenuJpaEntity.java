@@ -31,6 +31,9 @@ public class MenuJpaEntity {
     @Column(length = 100, nullable = false)
     private String name;
 
+    @Column(length = 500)
+    private String url;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -40,9 +43,10 @@ public class MenuJpaEntity {
     protected MenuJpaEntity() {
     }
 
-    public MenuJpaEntity(ScheduleJpaEntity schedule, String name, LocalDateTime createdAt) {
+    public MenuJpaEntity(ScheduleJpaEntity schedule, String name, String url, LocalDateTime createdAt) {
         this.schedule = schedule;
         this.name = name;
+        this.url = url;
         this.createdAt = createdAt;
     }
 
@@ -64,6 +68,10 @@ public class MenuJpaEntity {
 
     public String getName() {
         return name;
+    }
+
+    public String getUrl() {
+        return url;
     }
 
     public LocalDateTime getCreatedAt() {
