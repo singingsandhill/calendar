@@ -112,6 +112,21 @@ body {
     outline: none;
 }
 
+.btn-random {
+    padding: 0.75rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.btn-random:hover {
+    background: var(--primary-dark);
+}
+
 .input-hint {
     font-size: 0.85rem;
     color: var(--text-light);
@@ -669,6 +684,11 @@ footer {
     .input-prefix {
         width: 100%;
         text-align: center;
+    }
+
+    .btn-random {
+        width: 100%;
+        padding: 0.75rem;
     }
 
     .schedule-card-actions {

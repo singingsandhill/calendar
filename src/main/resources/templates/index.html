@@ -14,7 +14,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <p class="subtitle">여러명이서 쉽게 날짜 조율하기</p>
         <p class="hero-description">
             모임, 회의, 여행 일정을 잡을 때 더 이상 카톡방에서 헤매지 마세요.<br>
-            링크 하나로 모든 참여자의 가능한 날짜를 한눈에 확인하세요.
+            날짜는 물론, 장소와 메뉴까지 한번에 정하세요.
         </p>
     </div>
 
@@ -32,6 +32,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                            required
                            style="text-transform: lowercase;"
                            oninput="this.value = this.value.toLowerCase()">
+                    <button type="button" class="btn-random" onclick="generateRandomId()">랜덤 생성</button>
                 </div>
                 <p class="input-hint">2-20자, 영어, 숫자, - 만 사용 가능 (대소문자 구분 없음)</p>
                 <button type="submit" class="btn btn-primary">시작하기</button>
@@ -49,13 +50,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
             <div class="step">
                 <div class="step-number">2</div>
-                <h3>참여자 추가</h3>
-                <p>최대 8명의 참여자를 추가하세요</p>
+                <h3>링크 공유</h3>
+                <p>생성된 링크를 참여자들에게 공유하세요</p>
             </div>
             <div class="step">
                 <div class="step-number">3</div>
-                <h3>공유 및 날짜 선택</h3>
-                <p>링크를 공유하고 모두가 가능한 날짜를 선택하세요</p>
+                <h3>날짜 선택</h3>
+                <p>각자 가능한 날짜를 캘린더에서 선택하세요</p>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>장소·메뉴 투표</h3>
+                <p>장소와 메뉴를 제안하고 투표하세요</p>
             </div>
         </div>
     </div>
@@ -122,6 +128,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <h3>완전 무료</h3>
                 <p>DateDate의 모든 기능은 무료입니다. 숨겨진 비용이나 프리미엄 기능 없이 마음껏 사용하세요.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                </div>
+                <h3>장소 투표</h3>
+                <p>어디서 만날지도 투표로 정하세요. 참여자들이 직접 장소를 제안하고 마음에 드는 곳에 투표할 수 있습니다.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+                    </svg>
+                </div>
+                <h3>메뉴 투표</h3>
+                <p>뭘 먹을지 고민될 때, 메뉴도 투표하세요. 배달 링크를 함께 첨부하면 주문까지 간편하게 할 수 있습니다.</p>
             </div>
         </div>
     </section>
@@ -238,6 +264,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
             <div class="faq-item">
                 <button class="faq-question">
+                    <span>장소나 메뉴 투표는 어떻게 하나요?</span>
+                    <span class="faq-toggle">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>일정 페이지 하단에서 장소나 메뉴를 직접 제안할 수 있습니다. 참여자들은 마음에 드는 항목에 투표할 수 있으며, 여러 개에 중복 투표도 가능합니다. 메뉴의 경우 배달앱 링크를 함께 첨부할 수 있어 주문까지 편리합니다.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question">
                     <span>일정 데이터는 얼마나 보관되나요?</span>
                     <span class="faq-toggle">+</span>
                 </button>
@@ -280,6 +316,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </main>
 
 <script>
+// 랜덤 아이디 생성
+function generateRandomId() {
+    const adjectives = ['happy', 'cool', 'fast', 'lucky', 'sunny', 'cozy',
+                        'brave', 'calm', 'kind', 'smart', 'sweet', 'wild'];
+    const nouns = ['cat', 'dog', 'star', 'moon', 'sun', 'tree',
+                   'bird', 'fish', 'bear', 'wolf', 'lion', 'fox'];
+
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const num = Math.floor(Math.random() * 100);
+
+    document.getElementById('ownerId').value = `${adj}-${noun}-${num}`;
+}
+
 // FAQ 토글 기능
 document.querySelectorAll('.faq-question').forEach(button => {
     button.addEventListener('click', () => {
