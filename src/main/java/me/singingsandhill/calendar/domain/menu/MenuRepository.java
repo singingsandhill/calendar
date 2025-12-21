@@ -14,4 +14,6 @@ public interface MenuRepository {
     void delete(Menu menu);
 
     boolean existsByScheduleIdAndName(Long scheduleId, String name);
+
+    List<Menu> findAllOrderByPopularity();
 }

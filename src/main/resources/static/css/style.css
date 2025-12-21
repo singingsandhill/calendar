@@ -1397,3 +1397,181 @@ footer {
         font-size: 0.8rem;
     }
 }
+
+/* ======================================
+   POPULAR SECTION
+   ====================================== */
+.popular-section {
+    padding: 3rem 0;
+    text-align: center;
+}
+
+.popular-section h2 {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.section-subtitle {
+    color: var(--text-light);
+    margin-bottom: 2rem;
+}
+
+.popular-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.popular-card {
+    background: var(--bg-white);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.popular-card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.popular-card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.popular-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.popular-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.popular-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.popular-item:last-child {
+    border-bottom: none;
+}
+
+.popular-name {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.popular-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.popular-link:hover {
+    text-decoration: underline;
+}
+
+.popular-votes {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* ======================================
+   HERO CTA BUTTON
+   ====================================== */
+.btn-lg {
+    padding: 1rem 2.5rem;
+    font-size: 1.125rem;
+}
+
+.hero .btn-lg {
+    margin-top: 1.5rem;
+}
+
+/* ======================================
+   START BENEFITS (start.html)
+   ====================================== */
+.start-benefits {
+    max-width: 500px;
+    margin: 3rem auto;
+    text-align: center;
+}
+
+.start-benefits h2 {
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+}
+
+.benefits-list {
+    list-style: none;
+    padding: 0;
+}
+
+.benefits-list li {
+    padding: 0.75rem 0;
+    color: var(--text-light);
+    position: relative;
+    padding-left: 1.5rem;
+    text-align: left;
+}
+
+.benefits-list li::before {
+    content: "\2713";
+    position: absolute;
+    left: 0;
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+/* ======================================
+   RESPONSIVE - Popular Section
+   ====================================== */
+@media (max-width: 768px) {
+    .popular-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .popular-section h2 {
+        font-size: 1.5rem;
+    }
+
+    .btn-lg {
+        padding: 0.875rem 2rem;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .popular-section {
+        padding: 2rem 0;
+    }
+
+    .popular-card-header {
+        padding: 0.875rem 1rem;
+    }
+
+    .popular-item {
+        padding: 0.875rem 1rem;
+    }
+
+    .start-benefits {
+        margin: 2rem auto;
+    }
+}

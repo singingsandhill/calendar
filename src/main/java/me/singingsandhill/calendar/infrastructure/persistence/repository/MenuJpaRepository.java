@@ -15,4 +15,7 @@ public interface MenuJpaRepository extends JpaRepository<MenuJpaEntity, Long> {
 
     @Query("SELECT COUNT(m) > 0 FROM MenuJpaEntity m WHERE m.schedule.id = :scheduleId AND LOWER(m.name) = LOWER(:name)")
     boolean existsByScheduleIdAndName(@Param("scheduleId") Long scheduleId, @Param("name") String name);
+
+    @Query("SELECT m FROM MenuJpaEntity m LEFT JOIN FETCH m.votes ORDER BY SIZE(m.votes) DESC, m.createdAt DESC")
+    List<MenuJpaEntity> findAllOrderByPopularity();
 }

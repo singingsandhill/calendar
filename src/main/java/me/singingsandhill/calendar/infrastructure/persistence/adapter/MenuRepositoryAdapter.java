@@ -78,6 +78,13 @@ public class MenuRepositoryAdapter implements MenuRepository {
         return menuJpaRepository.existsByScheduleIdAndName(scheduleId, name);
     }
 
+    @Override
+    public List<Menu> findAllOrderByPopularity() {
+        return menuJpaRepository.findAllOrderByPopularity().stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private Menu toDomain(MenuJpaEntity entity) {
         List<String> voters = entity.getVotes().stream()
                 .map(MenuVoteJpaEntity::getVoterName)

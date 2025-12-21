@@ -14,4 +14,6 @@ public interface LocationRepository {
     void delete(Location location);
 
     boolean existsByScheduleIdAndName(Long scheduleId, String name);
+
+    List<Location> findAllOrderByPopularity();
 }

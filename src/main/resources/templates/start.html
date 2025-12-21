@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div th:replace="~{fragments/header :: header}"></div>
+
+<main class="container">
+    <div class="hero">
+        <h1>나만의 페이지 만들기</h1>
+        <p class="subtitle">간편하게 약속 조율 페이지를 만드세요</p>
+    </div>
+
+    <div class="start-form-container">
+        <div class="start-form-box">
+            <h2>페이지 ID 입력</h2>
+            <form th:action="@{/start}" method="post" class="start-form" id="startForm">
+                <div class="input-group">
+                    <span class="input-prefix">datedate.site/</span>
+                    <input type="text" name="ownerId" id="ownerId"
+                           placeholder="your-id"
+                           pattern="^[a-z0-9-]+$"
+                           minlength="2"
+                           maxlength="20"
+                           required
+                           style="text-transform: lowercase;"
+                           oninput="this.value = this.value.toLowerCase()">
+                    <button type="button" class="btn-random" onclick="generateRandomId()">랜덤 생성</button>
+                </div>
+                <p class="input-hint">2-20자, 영어, 숫자, - 만 사용 가능 (대소문자 구분 없음)</p>
+                <button type="submit" class="btn btn-primary">시작하기</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="start-benefits">
+        <h2>DateDate의 장점</h2>
+        <ul class="benefits-list">
+            <li>회원가입 없이 바로 사용</li>
+            <li>직관적인 캘린더 인터페이스</li>
+            <li>장소와 메뉴 투표 기능</li>
+            <li>완전 무료 서비스</li>
+        </ul>
+    </div>
+</main>
+
+<script>
+// 랜덤 아이디 생성
+function generateRandomId() {
+    const adjectives = ['happy', 'cool', 'fast', 'lucky', 'sunny', 'cozy',
+                        'brave', 'calm', 'kind', 'smart', 'sweet', 'wild'];
+    const nouns = ['cat', 'dog', 'star', 'moon', 'sun', 'tree',
+                   'bird', 'fish', 'bear', 'wolf', 'lion', 'fox'];
+
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const num = Math.floor(Math.random() * 100);
+
+    document.getElementById('ownerId').value = `${adj}-${noun}-${num}`;
+}
+</script>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

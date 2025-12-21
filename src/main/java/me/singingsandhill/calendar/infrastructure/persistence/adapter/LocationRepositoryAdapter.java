@@ -79,6 +79,13 @@ public class LocationRepositoryAdapter implements LocationRepository {
         return locationJpaRepository.existsByScheduleIdAndName(scheduleId, name);
     }
 
+    @Override
+    public List<Location> findAllOrderByPopularity() {
+        return locationJpaRepository.findAllOrderByPopularity().stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private Location toDomain(LocationJpaEntity entity) {
         List<String> voters = entity.getVotes().stream()
                 .map(LocationVoteJpaEntity::getVoterName)

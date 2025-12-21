@@ -15,4 +15,7 @@ public interface LocationJpaRepository extends JpaRepository<LocationJpaEntity, 
 
     @Query("SELECT COUNT(l) > 0 FROM LocationJpaEntity l WHERE l.schedule.id = :scheduleId AND LOWER(l.name) = LOWER(:name)")
     boolean existsByScheduleIdAndName(@Param("scheduleId") Long scheduleId, @Param("name") String name);
+
+    @Query("SELECT l FROM LocationJpaEntity l LEFT JOIN FETCH l.votes ORDER BY SIZE(l.votes) DESC, l.createdAt DESC")
+    List<LocationJpaEntity> findAllOrderByPopularity();
 }

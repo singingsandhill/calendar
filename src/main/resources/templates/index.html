@@ -16,29 +16,61 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             모임, 회의, 여행 일정을 잡을 때 더 이상 카톡방에서 헤매지 마세요.<br>
             날짜는 물론, 장소와 메뉴까지 한번에 정하세요.
         </p>
+        <a href="/start" class="btn btn-primary btn-lg">시작하기</a>
     </div>
 
-    <div class="start-form-container">
-        <div class="start-form-box">
-            <h2>나만의 페이지 만들기</h2>
-            <form th:action="@{/start}" method="post" class="start-form" id="startForm">
-                <div class="input-group">
-                    <span class="input-prefix">datedate.site/</span>
-                    <input type="text" name="ownerId" id="ownerId"
-                           placeholder="your-id"
-                           pattern="^[a-z0-9-]+$"
-                           minlength="2"
-                           maxlength="20"
-                           required
-                           style="text-transform: lowercase;"
-                           oninput="this.value = this.value.toLowerCase()">
-                    <button type="button" class="btn-random" onclick="generateRandomId()">랜덤 생성</button>
+    <!-- 인기 장소/메뉴 섹션 -->
+    <section class="popular-section" th:if="${!popularLocations.isEmpty() or !popularMenus.isEmpty()}">
+        <h2>지금 인기있는 선택</h2>
+        <p class="section-subtitle">다른 사용자들이 많이 선택한 장소와 메뉴를 확인해보세요</p>
+
+        <div class="popular-grid">
+            <!-- 인기 장소 -->
+            <div class="popular-card" th:if="${!popularLocations.isEmpty()}">
+                <div class="popular-card-header">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="popular-icon">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    <h3>인기 장소</h3>
                 </div>
-                <p class="input-hint">2-20자, 영어, 숫자, - 만 사용 가능 (대소문자 구분 없음)</p>
-                <button type="submit" class="btn btn-primary">시작하기</button>
-            </form>
+                <ul class="popular-list">
+                    <li th:each="location : ${popularLocations}" class="popular-item">
+                        <span class="popular-name" th:text="${location.name}">장소명</span>
+                        <span class="popular-votes">
+                            <span th:text="${location.totalVotes}">0</span>표
+                        </span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 인기 메뉴 -->
+            <div class="popular-card" th:if="${!popularMenus.isEmpty()}">
+                <div class="popular-card-header">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="popular-icon">
+                        <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+                    </svg>
+                    <h3>인기 메뉴</h3>
+                </div>
+                <ul class="popular-list">
+                    <li th:each="menu : ${popularMenus}" class="popular-item">
+                        <span class="popular-name">
+                            <a th:if="${menu.url != null and !menu.url.isEmpty()}"
+                               th:href="${menu.url}"
+                               th:text="${menu.name}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="popular-link">메뉴명</a>
+                            <span th:if="${menu.url == null or menu.url.isEmpty()}"
+                                  th:text="${menu.name}">메뉴명</span>
+                        </span>
+                        <span class="popular-votes">
+                            <span th:text="${menu.totalVotes}">0</span>표
+                        </span>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
+    </section>
 
     <div class="how-it-works">
         <h2>이용 방법</h2>
@@ -316,20 +348,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </main>
 
 <script>
-// 랜덤 아이디 생성
-function generateRandomId() {
-    const adjectives = ['happy', 'cool', 'fast', 'lucky', 'sunny', 'cozy',
-                        'brave', 'calm', 'kind', 'smart', 'sweet', 'wild'];
-    const nouns = ['cat', 'dog', 'star', 'moon', 'sun', 'tree',
-                   'bird', 'fish', 'bear', 'wolf', 'lion', 'fox'];
-
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const num = Math.floor(Math.random() * 100);
-
-    document.getElementById('ownerId').value = `${adj}-${noun}-${num}`;
-}
-
 // FAQ 토글 기능
 document.querySelectorAll('.faq-question').forEach(button => {
     button.addEventListener('click', () => {

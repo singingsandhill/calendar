@@ -62,6 +62,24 @@ public class SeoService {
     }
 
     /**
+     * 시작 페이지 SEO 메타데이터.
+     * 나만의 페이지 만들기 전용 페이지입니다.
+     */
+    public SeoMetadata getStartPageSeo() {
+        return SeoMetadata.builder()
+            .title("나만의 페이지 만들기 | " + BRAND_NAME)
+            .description("DateDate에서 나만의 약속 조율 페이지를 만드세요. 회원가입 없이 간편하게 시작할 수 있습니다.")
+            .keywords("약속 페이지 만들기, 일정 조율 페이지, 그룹 스케줄링, 무료 일정 관리")
+            .robots("index, follow")
+            .canonical(baseUrl + "/start")
+            .ogType("website")
+            .ogTitle("나만의 페이지 만들기 | " + BRAND_NAME)
+            .ogDescription("DateDate로 그룹 일정을 쉽게 조율하세요. 무료로 간편하게!")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .build();
+    }
+
+    /**
      * 대시보드 페이지 SEO 메타데이터.
      * 사용자 생성 콘텐츠이므로 noindex 처리됩니다.
      */
