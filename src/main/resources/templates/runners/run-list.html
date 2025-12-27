@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{runners/fragments/header :: head}"></head>
+<body class="runners-body">
+    <nav th:replace="~{runners/fragments/header :: navbar}"></nav>
+
+    <main class="runners-container">
+        <section class="runners-run-list">
+            <div class="runners-section-header">
+                <h1>런 목록</h1>
+                <a th:href="@{/runners/admin/runs/new}" class="runners-btn runners-btn-primary">
+                    + 런 추가
+                </a>
+            </div>
+
+            <div class="runners-run-grid" th:if="${!runs.isEmpty()}">
+                <article class="runners-run-card" th:each="run : ${runs}">
+                    <div class="runners-run-card-header">
+                        <span class="runners-run-category"
+                              th:classappend="${run.category() == 'REGULAR' ? 'regular' : 'lightning'}"
+                              th:text="${run.categoryDisplayName()}">정규런</span>
+                    </div>
+                    <div class="runners-run-card-body">
+                        <div class="runners-run-date" th:text="${run.formattedDate()}">2024년 12월 15일 (일)</div>
+                        <div class="runners-run-time" th:text="${run.formattedTime()}">09:00</div>
+                        <div class="runners-run-location">
+                            <span>📍</span>
+                            <span th:text="${run.location()}">잠실 종합운동장</span>
+                        </div>
+                    </div>
+                    <div class="runners-run-card-footer">
+                        <a th:href="@{/runners/runs/{id}(id=${run.id()})}" class="runners-btn runners-btn-primary runners-btn-sm">
+                            출석하기
+                        </a>
+                    </div>
+                </article>
+            </div>
+
+            <div class="runners-empty" th:if="${runs.isEmpty()}">
+                <div class="runners-empty-icon">🏃</div>
+                <p>아직 등록된 런이 없습니다</p>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+</body>
+</html>

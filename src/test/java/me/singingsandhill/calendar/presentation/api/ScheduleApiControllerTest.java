@@ -15,15 +15,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import me.singingsandhill.calendar.application.exception.DuplicateScheduleException;
 import me.singingsandhill.calendar.application.exception.ScheduleNotFoundException;
+import me.singingsandhill.calendar.application.service.LocationService;
+import me.singingsandhill.calendar.application.service.MenuService;
 import me.singingsandhill.calendar.application.service.ScheduleService;
+import me.singingsandhill.calendar.domain.runner.AdminRepository;
 import me.singingsandhill.calendar.domain.schedule.Schedule;
 
 @WebMvcTest(ScheduleApiController.class)
+@WithMockUser
 class ScheduleApiControllerTest {
 
     @Autowired
@@ -31,6 +37,18 @@ class ScheduleApiControllerTest {
 
     @MockitoBean
     private ScheduleService scheduleService;
+
+    @MockitoBean
+    private LocationService locationService;
+
+    @MockitoBean
+    private MenuService menuService;
+
+    @MockitoBean
+    private AdminRepository adminRepository;
+
+    @MockitoBean
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("GET /api/owners/{ownerId}/schedules/{year}/{month} should return schedule")

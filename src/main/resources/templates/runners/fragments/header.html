@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="head">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title != null ? title + ' - 97 Runners' : '97 Runners'}">97 Runners</title>
+    <link rel="stylesheet" th:href="@{/css/runners.css}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<nav th:fragment="navbar" class="runners-navbar">
+    <div class="runners-navbar-content">
+        <a th:href="@{/runners}" class="runners-logo">
+            <img th:src="@{/image/crew_logo.png}" alt="Running Crew Logo" onerror="this.style.display='none'">
+            <span class="runners-logo-text">97 Runners</span>
+        </a>
+        <div class="runners-nav">
+            <a th:href="@{/runners}">홈</a>
+            <a th:href="@{/runners/runs}">런 목록</a>
+            <a th:href="@{/runners/members}">출석 현황</a>
+        </div>
+    </div>
+</nav>
+
+</html>

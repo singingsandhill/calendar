@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{runners/fragments/header :: head}"></head>
+<body class="runners-body">
+    <nav th:replace="~{runners/fragments/header :: navbar}"></nav>
+
+    <main class="runners-container">
+        <!-- Hero Section -->
+        <section class="runners-hero">
+            <div class="runners-hero-content">
+                <h1>97 Runners</h1>
+                <p class="tagline">함께 달리는 즐거움</p>
+                <a th:href="@{/runners/runs}" class="runners-btn runners-btn-primary runners-btn-lg">
+                    출석 체크하기
+                </a>
+            </div>
+        </section>
+
+        <!-- Rankings Section -->
+        <section class="runners-rankings">
+            <h2>명예의 전당</h2>
+            <div class="runners-rankings-grid">
+                <!-- Attendance Ranking -->
+                <div class="runners-ranking-card">
+                    <h3><span class="icon">🏃</span> 출석 TOP 10</h3>
+                    <ul class="runners-ranking-list" th:if="${!attendanceRankings.isEmpty()}">
+                        <li class="runners-ranking-item" th:each="ranking, stat : ${attendanceRankings}">
+                            <span class="runners-ranking-position"
+                                  th:classappend="${stat.index == 0 ? 'gold' : (stat.index == 1 ? 'silver' : (stat.index == 2 ? 'bronze' : 'regular'))}"
+                                  th:text="${stat.index + 1}">1</span>
+                            <span class="runners-ranking-name" th:text="${ranking.participantName()}">러너</span>
+                            <span class="runners-ranking-value" th:text="${ranking.attendanceCount()} + '회'">0회</span>
+                        </li>
+                    </ul>
+                    <div class="runners-empty" th:if="${attendanceRankings.isEmpty()}">
+                        <p>아직 출석 기록이 없습니다</p>
+                    </div>
+                </div>
+
+                <!-- Distance Ranking -->
+                <div class="runners-ranking-card">
+                    <h3><span class="icon">📏</span> 거리 TOP 10</h3>
+                    <ul class="runners-ranking-list" th:if="${!distanceRankings.isEmpty()}">
+                        <li class="runners-ranking-item" th:each="ranking, stat : ${distanceRankings}">
+                            <span class="runners-ranking-position"
+                                  th:classappend="${stat.index == 0 ? 'gold' : (stat.index == 1 ? 'silver' : (stat.index == 2 ? 'bronze' : 'regular'))}"
+                                  th:text="${stat.index + 1}">1</span>
+                            <span class="runners-ranking-name" th:text="${ranking.participantName()}">러너</span>
+                            <span class="runners-ranking-value" th:text="${ranking.totalDistance()} + 'km'">0km</span>
+                        </li>
+                    </ul>
+                    <div class="runners-empty" th:if="${distanceRankings.isEmpty()}">
+                        <p>아직 거리 기록이 없습니다</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+</body>
+</html>

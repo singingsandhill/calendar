@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{runners/fragments/header :: head}"></head>
+<body class="runners-body">
+    <nav th:replace="~{runners/fragments/header :: navbar}"></nav>
+
+    <main class="runners-container">
+        <section class="runners-member-list">
+            <div class="runners-section-header">
+                <h1>출석 현황</h1>
+                <p class="runners-section-subtitle" th:text="'총 ' + ${members.size()} + '명의 러너'">총 N명의 러너</p>
+            </div>
+
+            <div class="runners-member-table-wrapper" th:if="${!members.isEmpty()}">
+                <table class="runners-member-table">
+                    <thead>
+                        <tr>
+                            <th class="rank">#</th>
+                            <th class="name">이름</th>
+                            <th class="regular">정규런</th>
+                            <th class="lightning">번개런</th>
+                            <th class="total">합계</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="member, stat : ${members}">
+                            <td class="rank">
+                                <span class="runners-ranking-position"
+                                      th:classappend="${stat.index == 0 ? 'gold' : (stat.index == 1 ? 'silver' : (stat.index == 2 ? 'bronze' : 'regular'))}"
+                                      th:text="${stat.index + 1}">1</span>
+                            </td>
+                            <td class="name">
+                                <a th:href="@{/runners/members/{name}(name=${member.name()})}"
+                                   class="runners-member-link"
+                                   th:text="${member.name()}">러너</a>
+                            </td>
+                            <td class="regular" th:text="${member.regularCount()} + '회'">0회</td>
+                            <td class="lightning" th:text="${member.lightningCount()} + '회'">0회</td>
+                            <td class="total" th:text="${member.totalCount()} + '회'">0회</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="runners-empty" th:if="${members.isEmpty()}">
+                <div class="runners-empty-icon">👥</div>
+                <p>아직 출석 기록이 없습니다</p>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+</body>
+</html>

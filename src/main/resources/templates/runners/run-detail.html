@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{runners/fragments/header :: head}"></head>
+<body class="runners-body">
+    <nav th:replace="~{runners/fragments/header :: navbar}"></nav>
+
+    <main class="runners-container">
+        <section class="runners-run-detail">
+            <!-- Run Detail Header -->
+            <div class="runners-run-detail-header">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <span class="runners-run-category"
+                              th:classappend="${run.category() == 'REGULAR' ? 'regular' : 'lightning'}"
+                              th:text="${run.categoryDisplayName()}">정규런</span>
+                        <h1 th:text="${run.formattedDate()}">2024년 12월 15일 (일)</h1>
+                    </div>
+                    <a th:href="@{/runners/runs}" class="runners-btn runners-btn-secondary">
+                        ← 목록으로
+                    </a>
+                </div>
+                <div class="runners-run-detail-info">
+                    <div class="runners-run-detail-info-item">
+                        <span class="label">시간</span>
+                        <span class="value" th:text="${run.formattedTime()}">09:00</span>
+                    </div>
+                    <div class="runners-run-detail-info-item">
+                        <span class="label">장소</span>
+                        <span class="value" th:text="${run.location()}">잠실 종합운동장</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Section -->
+            <div class="runners-attendance">
+                <!-- Attendance Form -->
+                <div class="runners-attendance-form-card">
+                    <h2>출석 등록</h2>
+                    <form id="attendanceForm">
+                        <div class="runners-form-group">
+                            <label for="participantName">이름</label>
+                            <input type="text" id="participantName" name="participantName"
+                                   class="runners-input" placeholder="이름을 입력하세요" required maxlength="50">
+                        </div>
+                        <div class="runners-form-group">
+                            <label for="distance">달린 거리 (km)</label>
+                            <input type="number" id="distance" name="distance"
+                                   class="runners-input" placeholder="5.0" required
+                                   min="0.1" max="100" step="0.1">
+                        </div>
+                        <button type="submit" class="runners-btn runners-btn-primary" style="width: 100%;">
+                            출석 등록
+                        </button>
+                    </form>
+                    <div id="formMessage" class="runners-message" style="display: none; margin-top: 1rem;"></div>
+                </div>
+
+                <!-- Attendance List -->
+                <div class="runners-attendance-list-card">
+                    <h2>출석 현황 (<span id="attendanceCount" th:text="${attendances.size()}">0</span>명)</h2>
+                    <ul class="runners-attendance-list" id="attendanceList">
+                        <li class="runners-attendance-item" th:each="attendance : ${attendances}">
+                            <span class="runners-attendance-name" th:text="${attendance.participantName()}">러너</span>
+                            <span class="runners-attendance-distance" th:text="${attendance.distance()} + 'km'">5.0km</span>
+                        </li>
+                    </ul>
+                    <div class="runners-empty" th:if="${attendances.isEmpty()}" id="emptyState">
+                        <p>아직 출석한 러너가 없습니다</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+
+    <script th:inline="javascript">
+        const runId = [[${run.id()}]];
+
+        document.getElementById('attendanceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const participantName = document.getElementById('participantName').value.trim();
+            const distance = parseFloat(document.getElementById('distance').value);
+            const messageDiv = document.getElementById('formMessage');
+
+            if (!participantName || !distance) {
+                showMessage('모든 필드를 입력해주세요.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/runners/runs/${runId}/attendance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        participantName: participantName,
+                        distance: distance
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage('출석이 등록되었습니다!', 'success');
+                    addAttendanceToList(data.participantName, data.distance);
+                    document.getElementById('attendanceForm').reset();
+                } else {
+                    const error = await response.json();
+                    if (error.code === 'DUPLICATE_ATTENDANCE') {
+                        showMessage('이미 출석 등록된 이름입니다.', 'error');
+                    } else {
+                        showMessage(error.message || '출석 등록에 실패했습니다.', 'error');
+                    }
+                }
+            } catch (error) {
+                showMessage('네트워크 오류가 발생했습니다.', 'error');
+            }
+        });
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('formMessage');
+            messageDiv.textContent = message;
+            messageDiv.className = 'runners-message ' + (type === 'success' ? 'runners-message-success' : 'runners-message-error');
+            messageDiv.style.display = 'block';
+
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function addAttendanceToList(name, distance) {
+            const list = document.getElementById('attendanceList');
+            const emptyState = document.getElementById('emptyState');
+            const countSpan = document.getElementById('attendanceCount');
+
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+
+            const li = document.createElement('li');
+            li.className = 'runners-attendance-item';
+            li.innerHTML = `
+                <span class="runners-attendance-name">${escapeHtml(name)}</span>
+                <span class="runners-attendance-distance">${distance}km</span>
+            `;
+            list.appendChild(li);
+
+            const currentCount = parseInt(countSpan.textContent) || 0;
+            countSpan.textContent = currentCount + 1;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,921 @@
+/* runners.css - Sports/Dynamic Theme */
+
+/* ==================== CSS Variables ==================== */
+:root {
+    --runners-bg-primary: #0f0f1a;
+    --runners-bg-secondary: #1a1a2e;
+    --runners-bg-card: rgba(255, 255, 255, 0.05);
+    --runners-accent-primary: #00ff88;
+    --runners-accent-secondary: #ff6b35;
+    --runners-accent-tertiary: #00d4ff;
+    --runners-text-primary: #ffffff;
+    --runners-text-secondary: #a0a0a0;
+    --runners-text-muted: #666666;
+    --runners-border: rgba(255, 255, 255, 0.1);
+    --runners-shadow: 0 4px 20px rgba(0, 255, 136, 0.15);
+    --runners-shadow-lg: 0 8px 40px rgba(0, 255, 136, 0.2);
+    --runners-gradient: linear-gradient(135deg, var(--runners-accent-primary), var(--runners-accent-secondary));
+    --runners-font: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ==================== Reset & Base ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.runners-body {
+    font-family: var(--runners-font);
+    background: var(--runners-bg-primary);
+    color: var(--runners-text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+/* ==================== Layout ==================== */
+.runners-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* ==================== Header / Navbar ==================== */
+.runners-navbar {
+    background: rgba(15, 15, 26, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--runners-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 1rem 2rem;
+}
+
+.runners-navbar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.runners-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: var(--runners-text-primary);
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+.runners-logo img {
+    height: 40px;
+    width: auto;
+}
+
+.runners-logo-text {
+    background: var(--runners-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.runners-nav {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.runners-nav a {
+    color: var(--runners-text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.runners-nav a:hover {
+    color: var(--runners-accent-primary);
+}
+
+/* ==================== Hero Section ==================== */
+.runners-hero {
+    text-align: center;
+    padding: 6rem 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.runners-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/image/crew_logo.png') center/contain no-repeat;
+    opacity: 0.1;
+    pointer-events: none;
+}
+
+.runners-hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.runners-hero h1 {
+    font-size: 4rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    background: var(--runners-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 60px rgba(0, 255, 136, 0.5);
+}
+
+.runners-hero .tagline {
+    font-size: 1.5rem;
+    color: var(--runners-text-secondary);
+    margin-bottom: 2rem;
+}
+
+/* ==================== Rankings Section ==================== */
+.runners-rankings {
+    padding: 4rem 0;
+}
+
+.runners-rankings h2 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 3rem;
+    color: var(--runners-accent-primary);
+}
+
+.runners-rankings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.runners-ranking-card {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 2rem;
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.runners-ranking-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--runners-shadow-lg);
+}
+
+.runners-ranking-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.runners-ranking-card h3 .icon {
+    font-size: 1.5rem;
+}
+
+.runners-ranking-list {
+    list-style: none;
+}
+
+.runners-ranking-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--runners-border);
+}
+
+.runners-ranking-item:last-child {
+    border-bottom: none;
+}
+
+.runners-ranking-position {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 700;
+    margin-right: 1rem;
+}
+
+.runners-ranking-position.gold {
+    background: linear-gradient(135deg, #ffd700, #ffb700);
+    color: #1a1a2e;
+}
+
+.runners-ranking-position.silver {
+    background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+    color: #1a1a2e;
+}
+
+.runners-ranking-position.bronze {
+    background: linear-gradient(135deg, #cd7f32, #a66628);
+    color: #1a1a2e;
+}
+
+.runners-ranking-position.regular {
+    background: var(--runners-bg-secondary);
+    color: var(--runners-text-secondary);
+}
+
+.runners-ranking-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.runners-ranking-value {
+    font-weight: 700;
+    color: var(--runners-accent-primary);
+}
+
+/* ==================== Run List ==================== */
+.runners-run-list {
+    padding: 2rem 0;
+}
+
+.runners-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.runners-section-header h1 {
+    font-size: 2rem;
+    color: var(--runners-accent-primary);
+}
+
+.runners-run-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.runners-run-card {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.runners-run-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--runners-shadow);
+}
+
+.runners-run-card-header {
+    padding: 1rem 1.5rem;
+    background: var(--runners-bg-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.runners-run-category {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.runners-run-category.regular {
+    background: var(--runners-accent-primary);
+    color: var(--runners-bg-primary);
+}
+
+.runners-run-category.lightning {
+    background: var(--runners-accent-secondary);
+    color: white;
+}
+
+.runners-run-card-body {
+    padding: 1.5rem;
+}
+
+.runners-run-date {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.runners-run-time {
+    color: var(--runners-accent-tertiary);
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+
+.runners-run-location {
+    color: var(--runners-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.runners-run-card-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--runners-border);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ==================== Run Detail ==================== */
+.runners-run-detail {
+    padding: 2rem 0;
+}
+
+.runners-run-detail-header {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.runners-run-detail-header h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.runners-run-detail-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.runners-run-detail-info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.runners-run-detail-info-item .label {
+    color: var(--runners-text-secondary);
+}
+
+.runners-run-detail-info-item .value {
+    font-weight: 600;
+    color: var(--runners-accent-primary);
+}
+
+/* ==================== Attendance Section ==================== */
+.runners-attendance {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.runners-attendance-form-card,
+.runners-attendance-list-card {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+.runners-attendance-form-card h2,
+.runners-attendance-list-card h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+    color: var(--runners-accent-primary);
+}
+
+.runners-attendance-list {
+    list-style: none;
+}
+
+.runners-attendance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 8px;
+    background: var(--runners-bg-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.runners-attendance-item:last-child {
+    margin-bottom: 0;
+}
+
+.runners-attendance-name {
+    font-weight: 500;
+}
+
+.runners-attendance-distance {
+    color: var(--runners-accent-tertiary);
+    font-weight: 600;
+}
+
+/* ==================== Forms ==================== */
+.runners-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.runners-form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--runners-text-secondary);
+    font-weight: 500;
+}
+
+.runners-input,
+.runners-select {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: var(--runners-bg-secondary);
+    border: 2px solid var(--runners-border);
+    border-radius: 8px;
+    color: var(--runners-text-primary);
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.runners-input:focus,
+.runners-select:focus {
+    outline: none;
+    border-color: var(--runners-accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.2);
+}
+
+.runners-input::placeholder {
+    color: var(--runners-text-muted);
+}
+
+/* ==================== Buttons ==================== */
+.runners-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+}
+
+.runners-btn:hover {
+    transform: translateY(-2px);
+}
+
+.runners-btn-primary {
+    background: var(--runners-gradient);
+    color: var(--runners-bg-primary);
+}
+
+.runners-btn-primary:hover {
+    box-shadow: 0 8px 30px rgba(0, 255, 136, 0.3);
+}
+
+.runners-btn-secondary {
+    background: var(--runners-bg-secondary);
+    color: var(--runners-text-primary);
+    border: 1px solid var(--runners-border);
+}
+
+.runners-btn-secondary:hover {
+    border-color: var(--runners-accent-primary);
+}
+
+.runners-btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.runners-btn-danger:hover {
+    box-shadow: 0 8px 30px rgba(231, 76, 60, 0.3);
+}
+
+.runners-btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.runners-btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+}
+
+/* ==================== Admin Dashboard ==================== */
+.runners-admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.runners-admin-header h1 {
+    font-size: 2rem;
+    color: var(--runners-accent-primary);
+}
+
+.runners-admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--runners-bg-card);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.runners-admin-table th,
+.runners-admin-table td {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--runners-border);
+}
+
+.runners-admin-table th {
+    background: var(--runners-bg-secondary);
+    color: var(--runners-text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.runners-admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+.runners-admin-table tr:hover td {
+    background: rgba(0, 255, 136, 0.05);
+}
+
+.runners-admin-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ==================== Login Page ==================== */
+.runners-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.runners-login-card {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 3rem;
+    width: 100%;
+    max-width: 400px;
+    backdrop-filter: blur(10px);
+}
+
+.runners-login-card h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    background: var(--runners-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.runners-login-error {
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    color: #e74c3c;
+    text-align: center;
+}
+
+/* ==================== Messages ==================== */
+.runners-message {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.runners-message-success {
+    background: rgba(0, 255, 136, 0.2);
+    border: 1px solid var(--runners-accent-primary);
+    color: var(--runners-accent-primary);
+}
+
+.runners-message-error {
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+}
+
+/* ==================== Empty State ==================== */
+.runners-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--runners-text-secondary);
+}
+
+.runners-empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.runners-empty p {
+    font-size: 1.25rem;
+}
+
+/* ==================== Member List ==================== */
+.runners-member-list {
+    padding: 2rem 0;
+}
+
+.runners-section-subtitle {
+    color: var(--runners-text-secondary);
+    margin-top: 0.5rem;
+}
+
+.runners-member-table-wrapper {
+    overflow-x: auto;
+}
+
+.runners-member-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--runners-bg-card);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.runners-member-table th,
+.runners-member-table td {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--runners-border);
+}
+
+.runners-member-table th {
+    background: var(--runners-bg-secondary);
+    color: var(--runners-text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.runners-member-table th.rank,
+.runners-member-table td.rank {
+    width: 60px;
+    text-align: center;
+}
+
+.runners-member-table th.regular,
+.runners-member-table td.regular {
+    color: var(--runners-accent-primary);
+}
+
+.runners-member-table th.lightning,
+.runners-member-table td.lightning {
+    color: var(--runners-accent-secondary);
+}
+
+.runners-member-table th.total,
+.runners-member-table td.total {
+    font-weight: 700;
+    color: var(--runners-accent-tertiary);
+}
+
+.runners-member-table tr:last-child td {
+    border-bottom: none;
+}
+
+.runners-member-table tr:hover td {
+    background: rgba(0, 255, 136, 0.05);
+}
+
+.runners-member-link {
+    color: var(--runners-text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.runners-member-link:hover {
+    color: var(--runners-accent-primary);
+    text-decoration: underline;
+}
+
+/* ==================== Member Detail ==================== */
+.runners-member-detail {
+    padding: 2rem 0;
+}
+
+.runners-member-detail-header {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.runners-member-detail-header h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: var(--runners-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.runners-member-subtitle {
+    color: var(--runners-text-secondary);
+}
+
+.runners-member-stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.runners-member-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.runners-member-stat-item .stat-label {
+    font-size: 0.875rem;
+    color: var(--runners-text-secondary);
+}
+
+.runners-member-stat-item .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.runners-member-stat-item .stat-value.regular {
+    color: var(--runners-accent-primary);
+}
+
+.runners-member-stat-item .stat-value.lightning {
+    color: var(--runners-accent-secondary);
+}
+
+.runners-member-stat-item .stat-value.total {
+    color: var(--runners-accent-tertiary);
+}
+
+/* ==================== Attendance History ==================== */
+.runners-attendance-history {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+.runners-attendance-history h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+    color: var(--runners-accent-primary);
+}
+
+.runners-attendance-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.runners-attendance-history-item {
+    background: var(--runners-bg-secondary);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.runners-attendance-history-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    grid-column: 1 / -1;
+}
+
+.runners-attendance-history-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.runners-attendance-date {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.runners-attendance-info {
+    display: flex;
+    gap: 1rem;
+    color: var(--runners-text-secondary);
+    font-size: 0.875rem;
+}
+
+.runners-attendance-history-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ==================== Footer ==================== */
+.runners-footer {
+    background: var(--runners-bg-secondary);
+    border-top: 1px solid var(--runners-border);
+    padding: 2rem;
+    text-align: center;
+    color: var(--runners-text-secondary);
+    margin-top: 4rem;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+    .runners-container {
+        padding: 1rem;
+    }
+
+    .runners-hero h1 {
+        font-size: 2.5rem;
+    }
+
+    .runners-hero .tagline {
+        font-size: 1.125rem;
+    }
+
+    .runners-rankings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .runners-run-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .runners-attendance {
+        grid-template-columns: 1fr;
+    }
+
+    .runners-navbar-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .runners-section-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .runners-admin-table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    .runners-member-table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    .runners-member-stats {
+        gap: 1rem;
+    }
+
+    .runners-attendance-history-item {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .runners-hero h1 {
+        font-size: 2rem;
+    }
+
+    .runners-ranking-card {
+        padding: 1.5rem;
+    }
+
+    .runners-login-card {
+        padding: 2rem;
+    }
+
+    .runners-btn {
+        width: 100%;
+    }
+}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ko">
+<head th:replace="~{runners/fragments/header :: head}"></head>
+<body class="runners-body">
+    <nav class="runners-navbar">
+        <div class="runners-navbar-content">
+            <a th:href="@{/runners}" class="runners-logo">
+                <img th:src="@{/image/crew_logo.png}" alt="Running Crew Logo" onerror="this.style.display='none'">
+                <span class="runners-logo-text">Running Crew</span>
+            </a>
+            <div class="runners-nav">
+                <a th:href="@{/runners}">홈</a>
+                <a th:href="@{/runners/runs}">런 목록</a>
+                <span style="color: var(--runners-text-secondary);">|</span>
+                <span style="color: var(--runners-accent-primary);">관리자</span>
+                <form th:action="@{/runners/admin/logout}" method="post" style="display: inline;">
+                    <button type="submit" class="runners-btn runners-btn-secondary runners-btn-sm">
+                        로그아웃
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="runners-container">
+        <div class="runners-admin-header">
+            <h1>런 관리</h1>
+            <a th:href="@{/runners/admin/runs/new}" class="runners-btn runners-btn-primary">
+                + 새 런 만들기
+            </a>
+        </div>
+
+        <div th:if="${message}" class="runners-message runners-message-success">
+            <span th:text="${message}">메시지</span>
+        </div>
+
+        <table class="runners-admin-table" th:if="${!runs.isEmpty()}">
+            <thead>
+                <tr>
+                    <th>날짜</th>
+                    <th>시간</th>
+                    <th>장소</th>
+                    <th>유형</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="run : ${runs}">
+                    <td th:text="${run.formattedDate()}">2024년 12월 15일</td>
+                    <td th:text="${run.formattedTime()}">09:00</td>
+                    <td th:text="${run.location()}">잠실</td>
+                    <td>
+                        <span class="runners-run-category"
+                              th:classappend="${run.category() == 'REGULAR' ? 'regular' : 'lightning'}"
+                              th:text="${run.categoryDisplayName()}">정규런</span>
+                    </td>
+                    <td>
+                        <div class="runners-admin-actions">
+                            <a th:href="@{/runners/runs/{id}(id=${run.id()})}"
+                               class="runners-btn runners-btn-secondary runners-btn-sm">보기</a>
+                            <a th:href="@{/runners/admin/runs/{id}/edit(id=${run.id()})}"
+                               class="runners-btn runners-btn-secondary runners-btn-sm">수정</a>
+                            <form th:action="@{/runners/admin/runs/{id}/delete(id=${run.id()})}"
+                                  method="post" style="display: inline;"
+                                  onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                <button type="submit" class="runners-btn runners-btn-danger runners-btn-sm">
+                                    삭제
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="runners-empty" th:if="${runs.isEmpty()}">
+            <div class="runners-empty-icon">📅</div>
+            <p>아직 등록된 런이 없습니다</p>
+            <a th:href="@{/runners/admin/runs/new}" class="runners-btn runners-btn-primary" style="margin-top: 1rem;">
+                첫 런 만들기
+            </a>
+        </div>
+    </main>
+
+    <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+</body>
+</html>
