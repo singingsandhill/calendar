@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ko">
-<head th:replace="~{runners/fragments/header :: head}"></head>
+<head th:replace="~{runners/fragments/header :: head(${seo})}"></head>
 <body class="runners-body">
     <nav class="runners-navbar">
         <div class="runners-navbar-content">

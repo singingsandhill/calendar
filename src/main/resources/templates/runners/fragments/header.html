@@ -1,14 +1,65 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 
-<head th:fragment="head">
+<head th:fragment="head(seo)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${title != null ? title + ' - 97 Runners' : '97 Runners'}">97 Runners</title>
-    <link rel="stylesheet" th:href="@{/css/runners.css}">
+
+    <!-- Title -->
+    <title th:text="${seo.title()}">97 Runners</title>
+
+    <!-- Basic Meta Tags -->
+    <meta name="description" th:content="${seo.description()}">
+    <meta name="keywords" th:content="${seo.keywords()}">
+    <meta name="author" content="97 Runners">
+    <meta name="language" content="ko-KR">
+    <meta http-equiv="content-language" content="ko-KR">
+
+    <!-- Google Site Verification -->
+    <meta name="google-site-verification" content="YVK_KclWiLH24rqy7kAI9iNYSA5No9ljXbnSOvsQB4k" />
+
+    <!-- Robots -->
+    <meta name="robots" th:content="${seo.robots()}">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" th:href="${seo.canonical()}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" th:content="${seo.ogType()}">
+    <meta property="og:site_name" content="97 Runners">
+    <meta property="og:title" th:content="${seo.ogTitle()}">
+    <meta property="og:description" th:content="${seo.ogDescription()}">
+    <meta property="og:url" th:content="${seo.canonical()}">
+    <meta property="og:image" th:content="${seo.ogImage()}">
+    <meta property="og:locale" content="ko_KR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" th:content="${seo.ogTitle()}">
+    <meta name="twitter:description" th:content="${seo.ogDescription()}">
+    <meta name="twitter:image" th:content="${seo.ogImage()}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" th:href="@{/image/crew_logo.png}">
+
+    <!-- JSON-LD Structured Data -->
+    <script th:if="${seo.jsonLd() != null}" type="application/ld+json" th:utext="${seo.jsonLd()}"></script>
+
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-PFPKQT7W');</script>
+    <!-- End Google Tag Manager -->
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" th:href="@{/css/runners.css}">
 </head>
 
 <nav th:fragment="navbar" class="runners-navbar">
