@@ -16,6 +16,8 @@ public record ScheduleDetailResponse(
         int weeks,
         int daysInMonth,
         int firstDayOfWeek,
+        int totalDays,
+        boolean isExtendedMode,
         List<ParticipantResponse> participants,
         List<LocationResponse> locations,
         List<MenuResponse> menus,
@@ -34,6 +36,8 @@ public record ScheduleDetailResponse(
                 schedule.getWeeks(),
                 schedule.getDaysInMonth(),
                 schedule.getFirstDayOfWeek(),
+                schedule.getTotalDays(),
+                schedule.isExtendedMode(),
                 schedule.getParticipants().stream()
                         .map(ParticipantResponse::from)
                         .collect(Collectors.toList()),

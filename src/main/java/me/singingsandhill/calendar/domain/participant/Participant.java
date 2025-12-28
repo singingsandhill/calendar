@@ -76,19 +76,19 @@ public class Participant {
         return updatedAt;
     }
 
-    public void updateSelections(List<Integer> newSelections, int daysInMonth) {
-        validateSelections(newSelections, daysInMonth);
+    public void updateSelections(List<Integer> newSelections, int totalDays) {
+        validateSelections(newSelections, totalDays);
         this.selections = new ArrayList<>(newSelections);
         this.updatedAt = LocalDateTime.now();
     }
 
-    private void validateSelections(List<Integer> selections, int daysInMonth) {
+    private void validateSelections(List<Integer> selections, int totalDays) {
         if (selections == null) {
             return;
         }
         for (Integer day : selections) {
-            if (day < 1 || day > daysInMonth) {
-                throw new IllegalArgumentException("Invalid day selection: " + day + ". Must be between 1 and " + daysInMonth);
+            if (day < 1 || day > totalDays) {
+                throw new IllegalArgumentException("Invalid day selection: " + day + ". Must be between 1 and " + totalDays);
             }
         }
     }

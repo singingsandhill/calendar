@@ -72,17 +72,17 @@ public class ParticipantService {
         Schedule schedule = scheduleRepository.findById(participant.getScheduleId())
                 .orElseThrow(() -> new ScheduleNotFoundException(participant.getScheduleId()));
 
-        int daysInMonth = schedule.getDaysInMonth();
+        int totalDays = schedule.getTotalDays();
 
         if (selections != null) {
             for (Integer day : selections) {
-                if (day < 1 || day > daysInMonth) {
-                    throw new InvalidSelectionException(day, daysInMonth);
+                if (day < 1 || day > totalDays) {
+                    throw new InvalidSelectionException(day, totalDays);
                 }
             }
         }
 
-        participant.updateSelections(selections != null ? selections : List.of(), daysInMonth);
+        participant.updateSelections(selections != null ? selections : List.of(), totalDays);
         return participantRepository.save(participant);
     }
 }

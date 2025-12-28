@@ -15,8 +15,8 @@ public record ScheduleCreateRequest(
         @Max(value = 12, message = "Month must be between 1 and 12")
         Integer month,
 
-        @Min(value = 4, message = "Weeks must be between 4 and 6")
-        @Max(value = 6, message = "Weeks must be between 4 and 6")
+        @Min(value = 4, message = "Weeks must be between 4 and 7")
+        @Max(value = 7, message = "Weeks must be between 4 and 7")
         Integer weeks
 ) {
 }

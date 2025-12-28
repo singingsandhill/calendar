@@ -11,6 +11,7 @@ import me.singingsandhill.calendar.domain.participant.Participant;
 public class Schedule {
 
     private static final int MAX_PARTICIPANTS = 8;
+    private static final int EXTENDED_WEEKS = 7;
 
     private Long id;
     private final String ownerId;
@@ -20,11 +21,11 @@ public class Schedule {
     private final List<Participant> participants;
 
     public Schedule(String ownerId, int year, int month) {
-        this(null, ownerId, year, month, null, LocalDateTime.now(), new ArrayList<>());
+        this(null, ownerId, year, month, EXTENDED_WEEKS, LocalDateTime.now(), new ArrayList<>());
     }
 
     public Schedule(String ownerId, int year, int month, Integer weeks) {
-        this(null, ownerId, year, month, weeks, LocalDateTime.now(), new ArrayList<>());
+        this(null, ownerId, year, month, weeks != null ? weeks : EXTENDED_WEEKS, LocalDateTime.now(), new ArrayList<>());
     }
 
     public Schedule(Long id, String ownerId, int year, int month, Integer weeks,
@@ -32,7 +33,7 @@ public class Schedule {
         this.id = id;
         this.ownerId = ownerId;
         this.yearMonth = YearMonth.of(year, month);
-        this.weeks = weeks != null ? weeks : this.yearMonth.calculateWeeks();
+        this.weeks = weeks != null ? weeks : EXTENDED_WEEKS;
         this.createdAt = createdAt;
         this.participants = new ArrayList<>(participants);
     }
@@ -83,6 +84,24 @@ public class Schedule {
 
     public int getFirstDayOfWeek() {
         return yearMonth.getFirstDayOfWeek();
+    }
+
+    /**
+     * 총 표시 일수를 반환합니다.
+     * 7주 확장 모드면 49일, 기존 모드면 daysInMonth를 반환합니다.
+     */
+    public int getTotalDays() {
+        if (isExtendedMode()) {
+            return YearMonth.FIXED_TOTAL_DAYS;
+        }
+        return getDaysInMonth();
+    }
+
+    /**
+     * 7주 확장 모드인지 확인합니다.
+     */
+    public boolean isExtendedMode() {
+        return weeks == EXTENDED_WEEKS;
     }
 
     public boolean canAddParticipant() {

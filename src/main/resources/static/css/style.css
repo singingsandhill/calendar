@@ -517,6 +517,20 @@ body {
     cursor: default;
 }
 
+.calendar-day.other-month {
+    background-color: #f8f9fa;
+    color: #999;
+}
+
+.calendar-day.other-month .day-number {
+    font-size: 0.85em;
+}
+
+.calendar-day.other-month.selected {
+    background-color: #cce5ff;
+    color: #666;
+}
+
 .calendar-day.selected {
     background-color: var(--primary-color);
     color: white;

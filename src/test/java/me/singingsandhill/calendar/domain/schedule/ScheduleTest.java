@@ -16,8 +16,9 @@ class ScheduleTest {
         assertThat(schedule.getOwnerId()).isEqualTo("test-user");
         assertThat(schedule.getYear()).isEqualTo(2025);
         assertThat(schedule.getMonth()).isEqualTo(12);
-        assertThat(schedule.getWeeks()).isGreaterThanOrEqualTo(4);
-        assertThat(schedule.getWeeks()).isLessThanOrEqualTo(6);
+        assertThat(schedule.getWeeks()).isEqualTo(7); // 새 일정은 7주 확장 모드
+        assertThat(schedule.isExtendedMode()).isTrue();
+        assertThat(schedule.getTotalDays()).isEqualTo(49);
         assertThat(schedule.getParticipants()).isEmpty();
     }
 
@@ -30,12 +31,12 @@ class ScheduleTest {
     }
 
     @Test
-    @DisplayName("Schedule should auto-calculate weeks when not provided")
-    void nullWeeks_autoCalculates() {
+    @DisplayName("Schedule should use 7 weeks when not provided")
+    void nullWeeks_uses7Weeks() {
         Schedule schedule = new Schedule("test-user", 2025, 12, null);
 
-        assertThat(schedule.getWeeks()).isNotNull();
-        assertThat(schedule.getWeeks()).isGreaterThanOrEqualTo(4);
+        assertThat(schedule.getWeeks()).isEqualTo(7); // 기본값은 7주 확장 모드
+        assertThat(schedule.isExtendedMode()).isTrue();
     }
 
     @Test

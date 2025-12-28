@@ -156,6 +156,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     const month = [[${schedule.month()}]];
     const daysInMonth = [[${schedule.daysInMonth()}]];
     const firstDayOfWeek = [[${schedule.firstDayOfWeek()}]];
+    const totalDays = [[${schedule.totalDays()}]];
+    const isExtendedMode = [[${schedule.isExtendedMode()}]];
     // Thymeleaf 반복문으로 중첩 Record 속성 명시적 추출
     const participants = [
         [# th:each="p, stat : ${schedule.participants()}"]
@@ -202,6 +204,67 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         const calendarBody = document.getElementById('calendarBody');
         calendarBody.innerHTML = '';
 
+        if (isExtendedMode) {
+            renderExtendedCalendar(calendarBody);
+        } else {
+            renderLegacyCalendar(calendarBody);
+        }
+    }
+
+    // 7주 확장 달력 렌더링
+    function renderExtendedCalendar(calendarBody) {
+        // 월 1일의 날짜 객체
+        const firstOfMonth = new Date(year, month - 1, 1);
+        // 그리드 시작점 (월 첫날 이전 주의 일요일)
+        const gridStart = new Date(firstOfMonth);
+        gridStart.setDate(gridStart.getDate() - firstDayOfWeek);
+
+        for (let index = 1; index <= totalDays; index++) {
+            const currentDate = new Date(gridStart);
+            currentDate.setDate(gridStart.getDate() + (index - 1));
+
+            const dayCell = document.createElement('div');
+            dayCell.className = 'calendar-day';
+            dayCell.dataset.day = index;
+
+            const dayNumber = document.createElement('span');
+            dayNumber.className = 'day-number';
+
+            const displayDay = currentDate.getDate();
+            const displayMonth = currentDate.getMonth() + 1;
+
+            // 선택된 월이 아닌 경우 스타일 변경
+            if (displayMonth !== month) {
+                dayCell.classList.add('other-month');
+                dayNumber.textContent = `${displayMonth}/${displayDay}`;
+            } else {
+                dayNumber.textContent = displayDay;
+            }
+
+            dayCell.appendChild(dayNumber);
+
+            // 참여자 dots 추가
+            const dotsContainer = document.createElement('div');
+            dotsContainer.className = 'participant-dots';
+
+            participants.forEach(p => {
+                if (p.selections && p.selections.includes(index)) {
+                    const dot = document.createElement('span');
+                    dot.className = 'participant-dot';
+                    dot.style.backgroundColor = p.color;
+                    dot.title = p.name;
+                    dotsContainer.appendChild(dot);
+                }
+            });
+
+            dayCell.appendChild(dotsContainer);
+            dayCell.addEventListener('click', () => toggleDay(index, dayCell));
+            calendarBody.appendChild(dayCell);
+        }
+    }
+
+    // 기존 월 단위 달력 렌더링 (하위 호환)
+    function renderLegacyCalendar(calendarBody) {
         // Create empty cells for days before the first day of the month
         for (let i = 0; i < firstDayOfWeek; i++) {
             const emptyCell = document.createElement('div');

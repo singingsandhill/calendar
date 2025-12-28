@@ -135,7 +135,8 @@ class ParticipantServiceTest {
         when(participantRepository.findById(1L)).thenReturn(Optional.of(participant));
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
 
-        assertThatThrownBy(() -> participantService.updateSelections(1L, List.of(32)))
+        // 7주 확장 모드에서 totalDays는 49이므로 50 이상은 유효하지 않음
+        assertThatThrownBy(() -> participantService.updateSelections(1L, List.of(50)))
                 .isInstanceOf(InvalidSelectionException.class);
     }
 
