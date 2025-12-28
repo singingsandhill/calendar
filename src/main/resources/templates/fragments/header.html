@@ -68,11 +68,30 @@
 
     <!-- CSS -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
+
+    <!-- Navbar Script -->
+    <script defer th:src="@{/js/navbar.js}"></script>
 </head>
 <body>
 <header th:fragment="header">
     <nav class="navbar">
-        <a th:href="@{/}" class="logo">DateDate</a>
+        <div class="navbar-content">
+            <a th:href="@{/}" class="logo">DateDate</a>
+
+            <!-- Hamburger Button (Mobile) -->
+            <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+
+            <!-- Navigation Menu -->
+            <div class="nav-menu" id="navMenu">
+                <a th:href="@{/}" class="nav-link">홈</a>
+                <a th:href="@{/start}" class="nav-link">일정 만들기</a>
+                <a href="#how-it-works" class="nav-link">사용 방법</a>
+            </div>
+        </div>
     </nav>
 </header>
 </body>
