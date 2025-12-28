@@ -7,10 +7,13 @@
 
         if (!navbarToggle || !navMenu) return;
 
-        // Create overlay element
-        var overlay = document.createElement('div');
-        overlay.className = 'nav-overlay';
-        document.body.appendChild(overlay);
+        // Use existing overlay or create one
+        var overlay = document.getElementById('navOverlay') || document.querySelector('.nav-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'nav-overlay';
+            document.body.appendChild(overlay);
+        }
 
         function toggleMenu() {
             var isOpen = navMenu.classList.toggle('open');

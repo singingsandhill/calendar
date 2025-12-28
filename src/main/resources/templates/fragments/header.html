@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
+
+<!-- Head Fragment -->
 <head th:fragment="head(seo)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,33 +68,71 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7334667748813914"
          crossorigin="anonymous"></script>
 
+    <!-- Google Fonts - Garriock Style -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
+
     <!-- CSS -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
 
     <!-- Navbar Script -->
     <script defer th:src="@{/js/navbar.js}"></script>
+    <!-- Animations Script -->
+    <script defer th:src="@{/js/animations.js}"></script>
 </head>
-<body>
-<header th:fragment="header">
-    <nav class="navbar">
-        <div class="navbar-content">
-            <a th:href="@{/}" class="logo">DateDate</a>
 
-            <!-- Hamburger Button (Mobile) -->
-            <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
+<!-- Default Header Fragment -->
+<th:block th:fragment="header">
+    <header>
+        <nav class="navbar">
+            <div class="navbar-content">
+                <a th:href="@{/}" class="logo">DateDate</a>
 
-            <!-- Navigation Menu -->
-            <div class="nav-menu" id="navMenu">
-                <a th:href="@{/}" class="nav-link">홈</a>
-                <a th:href="@{/start}" class="nav-link">일정 만들기</a>
-                <a href="#how-it-works" class="nav-link">사용 방법</a>
+                <!-- Hamburger Button (Mobile) -->
+                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                </button>
+
+                <!-- Navigation Menu -->
+                <div class="nav-menu" id="navMenu">
+                    <a th:href="@{/}" class="nav-link">홈</a>
+                    <a th:href="@{/start}" class="nav-link">일정 만들기</a>
+                    <a href="#how-it-works" class="nav-link">사용 방법</a>
+                </div>
             </div>
-        </div>
-    </nav>
-</header>
-</body>
+        </nav>
+    </header>
+</th:block>
+
+<!-- Minimal Header Fragment (Garriock Style) -->
+<th:block th:fragment="header-minimal">
+    <header>
+        <nav class="navbar-minimal" id="navbarMinimal">
+            <div class="navbar-content">
+                <a th:href="@{/}" class="logo logo-serif">DateDate</a>
+
+                <!-- Hamburger Button (Mobile) -->
+                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                </button>
+
+                <!-- Navigation Menu -->
+                <div class="nav-menu" id="navMenu">
+                    <a th:href="@{/}" class="nav-link-animated">홈</a>
+                    <a th:href="@{/start}" class="nav-link-animated">일정 만들기</a>
+                    <a href="#how-it-works" class="nav-link-animated">더 알아보기</a>
+                </div>
+            </div>
+        </nav>
+        <!-- Overlay for mobile menu -->
+        <div class="nav-overlay" id="navOverlay"></div>
+    </header>
+</th:block>
+
 </html>

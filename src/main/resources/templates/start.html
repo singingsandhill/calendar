@@ -6,46 +6,113 @@
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
-<div th:replace="~{fragments/header :: header}"></div>
 
-<main class="container">
-    <div class="hero">
-        <h1>나만의 페이지 만들기</h1>
-        <p class="subtitle">간편하게 약속 조율 페이지를 만드세요</p>
+<!-- Minimal Header (Garriock Style) -->
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<!-- Hero Section - Fullscreen -->
+<section class="hero-fullscreen">
+    <h1 class="fade-in-up">나만의 페이지 만들기</h1>
+    <p class="subtitle fade-in-up" style="--delay: 0.15s">
+        간편하게 약속 조율 페이지를 만드세요
+    </p>
+
+    <!-- Minimal Form -->
+    <div class="start-form-minimal fade-in-up" style="--delay: 0.3s">
+        <form th:action="@{/start}" method="post" id="startForm">
+            <div class="input-group-minimal">
+                <span class="input-prefix">datedate.site/</span>
+                <input type="text" name="ownerId" id="ownerId"
+                       placeholder="your-id"
+                       pattern="^[a-z0-9-]+$"
+                       minlength="2"
+                       maxlength="20"
+                       required
+                       style="text-transform: lowercase;"
+                       oninput="this.value = this.value.toLowerCase()">
+            </div>
+            <p class="input-hint" style="text-align: center; margin-top: 0.75rem;">
+                2-20자, 영어, 숫자, - 만 사용 가능
+            </p>
+            <div class="form-actions-minimal">
+                <button type="button" class="btn-text" onclick="generateRandomId()">
+                    랜덤 생성
+                </button>
+                <button type="submit" class="btn-spring">
+                    시작하기
+                </button>
+            </div>
+        </form>
     </div>
 
-    <div class="start-form-container">
-        <div class="start-form-box">
-            <h2>페이지 ID 입력</h2>
-            <form th:action="@{/start}" method="post" class="start-form" id="startForm">
-                <div class="input-group">
-                    <span class="input-prefix">datedate.site/</span>
-                    <input type="text" name="ownerId" id="ownerId"
-                           placeholder="your-id"
-                           pattern="^[a-z0-9-]+$"
-                           minlength="2"
-                           maxlength="20"
-                           required
-                           style="text-transform: lowercase;"
-                           oninput="this.value = this.value.toLowerCase()">
-                    <button type="button" class="btn-random" onclick="generateRandomId()">랜덤 생성</button>
-                </div>
-                <p class="input-hint">2-20자, 영어, 숫자, - 만 사용 가능 (대소문자 구분 없음)</p>
-                <button type="submit" class="btn btn-primary">시작하기</button>
-            </form>
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator">
+        <span>스크롤하여 더 알아보기</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+</section>
+
+<!-- Benefits Section -->
+<section class="benefits-section" id="how-it-works">
+    <h2 class="section-title animate-on-scroll">DateDate의 장점</h2>
+    <div class="benefits-grid">
+        <!-- Benefit 1 -->
+        <div class="benefit-item animate-on-scroll">
+            <div class="benefit-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <h3 class="benefit-title">회원가입 불필요</h3>
+            <p class="benefit-desc">복잡한 가입 절차 없이 바로 시작하세요. 링크만 공유하면 됩니다.</p>
+        </div>
+
+        <!-- Benefit 2 -->
+        <div class="benefit-item animate-on-scroll">
+            <div class="benefit-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+            </div>
+            <h3 class="benefit-title">직관적인 캘린더</h3>
+            <p class="benefit-desc">터치 한 번으로 가능한 날짜를 선택하세요. 모바일에서도 편리합니다.</p>
+        </div>
+
+        <!-- Benefit 3 -->
+        <div class="benefit-item animate-on-scroll">
+            <div class="benefit-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+            </div>
+            <h3 class="benefit-title">장소 & 메뉴 투표</h3>
+            <p class="benefit-desc">만날 장소와 먹을 메뉴를 함께 투표하세요. 결정이 쉬워집니다.</p>
+        </div>
+
+        <!-- Benefit 4 -->
+        <div class="benefit-item animate-on-scroll">
+            <div class="benefit-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+            </div>
+            <h3 class="benefit-title">완전 무료</h3>
+            <p class="benefit-desc">모든 기능을 무료로 사용하세요. 숨겨진 비용이 없습니다.</p>
         </div>
     </div>
+</section>
 
-    <div class="start-benefits" id="how-it-works">
-        <h2>DateDate의 장점</h2>
-        <ul class="benefits-list">
-            <li>회원가입 없이 바로 사용</li>
-            <li>직관적인 캘린더 인터페이스</li>
-            <li>장소와 메뉴 투표 기능</li>
-            <li>완전 무료 서비스</li>
-        </ul>
-    </div>
-</main>
+<!-- Footer Minimal -->
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
 
 <script>
 // 랜덤 아이디 생성
@@ -62,7 +129,5 @@ function generateRandomId() {
     document.getElementById('ownerId').value = `${adj}-${noun}-${num}`;
 }
 </script>
-
-<div th:replace="~{fragments/footer :: footer}"></div>
 </body>
 </html>

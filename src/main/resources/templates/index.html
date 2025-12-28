@@ -6,27 +6,36 @@
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
-<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<!-- Hero Section - Fullscreen (Garriock Style) -->
+<section class="hero-fullscreen">
+    <h1 class="fade-in-up">DateDate</h1>
+    <p class="subtitle fade-in-up" style="--delay: 0.15s">여러명이서 쉽게 날짜 조율하기</p>
+    <p class="hero-description fade-in-up" style="--delay: 0.25s">
+        모임, 회의, 여행 일정을 잡을 때 더 이상 카톡방에서 헤매지 마세요.<br>
+        날짜는 물론, 장소와 메뉴까지 한번에 정하세요.
+    </p>
+    <a href="/start" class="btn-spring fade-in-up" style="--delay: 0.35s">시작하기</a>
+
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator">
+        <span>스크롤하여 더 알아보기</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </div>
+</section>
 
 <main class="container">
-    <div class="hero">
-        <h1>DateDate</h1>
-        <p class="subtitle">여러명이서 쉽게 날짜 조율하기</p>
-        <p class="hero-description">
-            모임, 회의, 여행 일정을 잡을 때 더 이상 카톡방에서 헤매지 마세요.<br>
-            날짜는 물론, 장소와 메뉴까지 한번에 정하세요.
-        </p>
-        <a href="/start" class="btn btn-primary btn-lg">시작하기</a>
-    </div>
-
     <!-- 인기 장소/메뉴 섹션 -->
     <section class="popular-section" th:if="${!popularLocations.isEmpty() or !popularMenus.isEmpty()}">
-        <h2>지금 인기있는 선택</h2>
-        <p class="section-subtitle">다른 사용자들이 많이 선택한 장소와 메뉴를 확인해보세요</p>
+        <h2 class="animate-on-scroll">지금 인기있는 선택</h2>
+        <p class="section-subtitle animate-on-scroll">다른 사용자들이 많이 선택한 장소와 메뉴를 확인해보세요</p>
 
         <div class="popular-grid">
             <!-- 인기 장소 -->
-            <div class="popular-card" th:if="${!popularLocations.isEmpty()}">
+            <div class="popular-card animate-on-scroll" th:if="${!popularLocations.isEmpty()}">
                 <div class="popular-card-header">
                     <svg viewBox="0 0 24 24" fill="currentColor" class="popular-icon">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -44,7 +53,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
 
             <!-- 인기 메뉴 -->
-            <div class="popular-card" th:if="${!popularMenus.isEmpty()}">
+            <div class="popular-card animate-on-scroll" th:if="${!popularMenus.isEmpty()}">
                 <div class="popular-card-header">
                     <svg viewBox="0 0 24 24" fill="currentColor" class="popular-icon">
                         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
@@ -73,24 +82,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
 
     <div class="how-it-works">
-        <h2>이용 방법</h2>
+        <h2 class="animate-on-scroll">이용 방법</h2>
         <div class="steps">
-            <div class="step">
+            <div class="step animate-on-scroll">
                 <div class="step-number">1</div>
                 <h3>페이지 만들기</h3>
                 <p>고유한 ID를 입력하여 일정 페이지를 만드세요</p>
             </div>
-            <div class="step">
+            <div class="step animate-on-scroll">
                 <div class="step-number">2</div>
                 <h3>링크 공유</h3>
                 <p>생성된 링크를 참여자들에게 공유하세요</p>
             </div>
-            <div class="step">
+            <div class="step animate-on-scroll">
                 <div class="step-number">3</div>
                 <h3>날짜 선택</h3>
                 <p>각자 가능한 날짜를 캘린더에서 선택하세요</p>
             </div>
-            <div class="step">
+            <div class="step animate-on-scroll">
                 <div class="step-number">4</div>
                 <h3>장소·메뉴 투표</h3>
                 <p>장소와 메뉴를 제안하고 투표하세요</p>
@@ -100,9 +109,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Features Section -->
     <section class="features-section">
-        <h2>DateDate가 특별한 이유</h2>
+        <h2 class="animate-on-scroll">DateDate가 특별한 이유</h2>
         <div class="features-grid">
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
@@ -112,7 +121,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p>datedate.site/my-team 처럼 기억하기 쉬운 나만의 URL을 만드세요. 팀, 모임, 프로젝트별로 관리할 수 있습니다.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z"/>
@@ -122,7 +131,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p>복잡한 설정 없이 달력에서 가능한 날짜를 클릭하면 끝. 누구나 쉽게 사용할 수 있습니다.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
@@ -132,7 +141,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p>한 일정에 최대 8명까지 참여할 수 있습니다. 각 참여자는 고유한 색상으로 구분되어 한눈에 확인 가능합니다.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
@@ -142,7 +151,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p>버튼 하나로 링크를 복사하고 카톡, 슬랙, 이메일로 공유하세요. 앱 설치나 회원가입이 필요 없습니다.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -152,7 +161,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p>모든 참여자의 선택이 캘린더에 색상 점으로 표시됩니다. 점이 많은 날짜가 최적의 약속 날짜입니다.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -162,7 +171,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p>DateDate의 모든 기능은 무료입니다. 숨겨진 비용이나 프리미엄 기능 없이 마음껏 사용하세요.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -172,23 +181,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p>어디서 만날지도 투표로 정하세요. 참여자들이 직접 장소를 제안하고 마음에 드는 곳에 투표할 수 있습니다.</p>
             </div>
 
-            <div class="feature-card">
+            <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
                     </svg>
                 </div>
                 <h3>메뉴 투표</h3>
-                <p>뭘 먹을지 고민될 때, 메뉴도 투표하세요. 배달 링크를 함께 첨부하면 주문까지 간편하게 할 수 있습니다.</p>
+                <p>뭘 먹을지 고민될 때, 메뉴도 투표하세요. 링크도 함께 첨부 할 수 있습니다.</p>
             </div>
         </div>
     </section>
 
     <!-- Scenarios Section -->
     <section class="scenarios-section">
-        <h2>이럴 때 DateDate를 사용하세요</h2>
+        <h2 class="animate-on-scroll">이럴 때 DateDate를 사용하세요</h2>
         <div class="scenarios-grid">
-            <div class="scenario-card">
+            <div class="scenario-card animate-on-scroll">
                 <div class="scenario-emoji">👥</div>
                 <h3>친구 모임</h3>
                 <p>"언제 되세요?" 대신 DateDate 링크 하나 보내세요. 오랜만에 만나는 친구들, 동창 모임, 정기 모임 날짜를 쉽게 정할 수 있습니다.</p>
@@ -198,7 +207,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="scenario-card">
+            <div class="scenario-card animate-on-scroll">
                 <div class="scenario-emoji">💼</div>
                 <h3>팀 회의</h3>
                 <p>프로젝트 킥오프, 정기 회의, 리뷰 미팅 일정을 조율하세요. 바쁜 팀원들의 스케줄을 한눈에 파악할 수 있습니다.</p>
@@ -208,7 +217,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="scenario-card">
+            <div class="scenario-card animate-on-scroll">
                 <div class="scenario-emoji">✈️</div>
                 <h3>여행 계획</h3>
                 <p>가족 여행, 친구들과의 해외여행 날짜를 맞춰보세요. 각자의 휴가 일정을 공유하고 겹치는 날짜를 찾을 수 있습니다.</p>
@@ -218,7 +227,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="scenario-card">
+            <div class="scenario-card animate-on-scroll">
                 <div class="scenario-emoji">📚</div>
                 <h3>스터디 그룹</h3>
                 <p>시험 대비 스터디, 독서 모임, 취미 동아리의 정기 모임 일정을 정하세요. 각자 가능한 요일과 시간을 쉽게 확인할 수 있습니다.</p>
@@ -228,7 +237,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="scenario-card">
+            <div class="scenario-card animate-on-scroll">
                 <div class="scenario-emoji">🎉</div>
                 <h3>이벤트 기획</h3>
                 <p>생일 파티, 송년회, 워크샵 등 특별한 이벤트 날짜를 정하세요. 참석자들의 가능한 날짜를 미리 파악하고 계획을 세울 수 있습니다.</p>
@@ -238,7 +247,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="scenario-card">
+            <div class="scenario-card animate-on-scroll">
                 <div class="scenario-emoji">🏠</div>
                 <h3>가족 행사</h3>
                 <p>명절 모임, 가족 나들이, 기념일 행사 날짜를 조율하세요. 바쁜 가족들의 스케줄을 맞추기가 한결 수월해집니다.</p>
@@ -252,9 +261,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- FAQ Section -->
     <section class="faq-section">
-        <h2>자주 묻는 질문</h2>
+        <h2 class="animate-on-scroll">자주 묻는 질문</h2>
         <div class="faq-list">
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>DateDate는 무료인가요?</span>
                     <span class="faq-toggle">+</span>
@@ -264,7 +273,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>회원가입이 필요한가요?</span>
                     <span class="faq-toggle">+</span>
@@ -274,7 +283,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>한 일정에 몇 명까지 참여할 수 있나요?</span>
                     <span class="faq-toggle">+</span>
@@ -284,7 +293,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>참여자가 날짜를 수정할 수 있나요?</span>
                     <span class="faq-toggle">+</span>
@@ -294,7 +303,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>장소나 메뉴 투표는 어떻게 하나요?</span>
                     <span class="faq-toggle">+</span>
@@ -304,7 +313,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>일정 데이터는 얼마나 보관되나요?</span>
                     <span class="faq-toggle">+</span>
@@ -314,7 +323,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>모바일에서도 사용할 수 있나요?</span>
                     <span class="faq-toggle">+</span>
@@ -324,7 +333,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>내 페이지 ID가 이미 사용 중이면 어떻게 하나요?</span>
                     <span class="faq-toggle">+</span>
@@ -334,7 +343,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
             </div>
 
-            <div class="faq-item">
+            <div class="faq-item animate-on-scroll">
                 <button class="faq-question">
                     <span>링크를 공유하면 누구나 참여할 수 있나요?</span>
                     <span class="faq-toggle">+</span>
@@ -357,6 +366,6 @@ document.querySelectorAll('.faq-question').forEach(button => {
 });
 </script>
 
-<div th:replace="~{fragments/footer :: footer}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
 </body>
 </html>
