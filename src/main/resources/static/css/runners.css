@@ -846,6 +846,49 @@
     margin-top: 4rem;
 }
 
+/* ==================== Announce Generator ==================== */
+.runners-announce {
+    padding: 2rem 0;
+}
+
+.runners-announce-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.runners-announce-form-card,
+.runners-announce-preview-card {
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+.runners-announce-form-card h2,
+.runners-announce-preview-card h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+    color: var(--runners-accent-primary);
+}
+
+.runners-announce-canvas-wrapper {
+    background: #FFFFFF;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.runners-announce-canvas-wrapper canvas {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    display: block;
+}
+
 /* ==================== Responsive ==================== */
 @media (max-width: 768px) {
     .runners-container {
@@ -898,6 +941,10 @@
     }
 
     .runners-attendance-history-item {
+        grid-template-columns: 1fr;
+    }
+
+    .runners-announce-grid {
         grid-template-columns: 1fr;
     }
 }

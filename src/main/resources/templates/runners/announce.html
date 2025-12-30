@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{runners/fragments/header :: head(${seo})}"></head>
+<body class="runners-body">
+    <nav th:replace="~{runners/fragments/header :: navbar}"></nav>
+
+    <main class="runners-container">
+        <section class="runners-announce">
+            <div class="runners-section-header">
+                <h1 class="runners-hero-title">
+                    <span class="runners-gradient-text">공지 이미지</span> 생성기
+                </h1>
+                <p class="runners-section-subtitle">러닝 공지 이미지를 만들어보세요</p>
+            </div>
+
+            <div class="runners-announce-grid">
+                <!-- 입력 폼 카드 -->
+                <div class="runners-announce-form-card">
+                    <h2>정보 입력</h2>
+                    <form id="announceForm">
+                        <div class="runners-form-group">
+                            <label for="announceDate">날짜</label>
+                            <input type="date" id="announceDate"
+                                   class="runners-input" required>
+                        </div>
+                        <div class="runners-form-group">
+                            <label for="announceTime">시간</label>
+                            <input type="time" id="announceTime"
+                                   class="runners-input" required>
+                        </div>
+                        <div class="runners-form-group">
+                            <label for="announceLocation">장소</label>
+                            <input type="text" id="announceLocation"
+                                   class="runners-input"
+                                   placeholder="예: 잠실 종합운동장"
+                                   required maxlength="50">
+                        </div>
+                        <button type="button" id="generateBtn"
+                                class="runners-btn runners-btn-primary"
+                                style="width: 100%;">
+                            이미지 생성
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 미리보기 카드 -->
+                <div class="runners-announce-preview-card">
+                    <h2>미리보기</h2>
+                    <div class="runners-announce-canvas-wrapper">
+                        <canvas id="announceCanvas" width="1080" height="1080"></canvas>
+                    </div>
+                    <button type="button" id="downloadBtn"
+                            class="runners-btn runners-btn-secondary"
+                            style="width: 100%; margin-top: 1rem;"
+                            disabled>
+                        이미지 다운로드
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+    <script th:src="@{/js/announce-generator.js}"></script>
+</body>
+</html>

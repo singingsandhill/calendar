@@ -145,4 +145,16 @@ public class RunnerController {
 
         return "runners/member-detail";
     }
+
+    @GetMapping("/announce")
+    public String announcePage(Model model) {
+        model.addAttribute("seo", SeoMetadata.builder()
+                .title("공지 이미지 생성기 - 97 Runners")
+                .description("97 Runners 러닝 크루 공지 이미지를 쉽게 만들어보세요. 날짜, 시간, 장소를 입력하면 공유 가능한 이미지가 생성됩니다.")
+                .keywords(KEYWORDS)
+                .canonical(BASE_URL + "/runners/announce")
+                .ogImage(OG_IMAGE)
+                .build());
+        return "runners/announce";
+    }
 }

@@ -24,6 +24,7 @@ public class SecurityConfig {
 
                 // 러너 공개 경로
                 .requestMatchers("/runners").permitAll()
+                .requestMatchers("/runners/announce").permitAll()
                 .requestMatchers("/runners/runs", "/runners/runs/**").permitAll()
                 .requestMatchers("/runners/members", "/runners/members/**").permitAll()
                 .requestMatchers("/runners/css/**", "/runners/js/**", "/runners/images/**").permitAll()
