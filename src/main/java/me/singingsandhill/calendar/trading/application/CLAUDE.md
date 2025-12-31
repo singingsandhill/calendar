@@ -1,0 +1,136 @@
+# Trading Application Layer
+
+Business logic services for trading bot operation.
+
+## Core Services
+
+### TradingBotService
+Main orchestrator for the trading bot.
+
+| Method | Description |
+|--------|-------------|
+| `start()` | Start the trading bot |
+| `stop()` | Stop the bot |
+| `pause()` | Pause execution (keep state) |
+| `resume()` | Resume from paused state |
+| `executeTradeLoop()` | Main 1-minute execution loop |
+| `executeBuy(amount)` | Place market buy order |
+| `executeSell(volume)` | Place market sell order |
+| `manualBuy(amount)` | Manual buy override |
+| `manualSell(volume)` | Manual sell override |
+| `emergencyClose()` | Liquidate all positions |
+
+**Trade Loop**:
+1. Update candle data
+2. Check risk rules (stop-loss/take-profit)
+3. Check rebalancing conditions
+4. Generate technical signals
+5. Execute trades based on signals
+
+### CandleService
+Candle data management.
+
+| Method | Description |
+|--------|-------------|
+| `fetchAndSaveCandles()` | Fetch 1-min candles from API |
+| `initializeCandles()` | Load initial 200 candles on startup |
+| `cleanupOldCandles()` | Delete candles older than 7 days |
+| `getLatestCandles(count)` | Get recent candles for analysis |
+
+### IndicatorService
+Technical indicator calculation.
+
+| Method | Description |
+|--------|-------------|
+| `calculate(candles)` | Calculate all indicators |
+
+**Indicators Calculated**:
+- SMA: 5, 20, 60-period moving averages
+- RSI: 14-period Relative Strength Index
+- Stochastic: %K and %D (Slow)
+- Volume MA: 20-period average volume
+
+Returns `IndicatorResult` record.
+
+### SignalService
+Trading signal generation.
+
+| Method | Description |
+|--------|-------------|
+| `generateSignal()` | Generate signal from current market data |
+
+**Signal Logic**:
+- Score >= 50 AND bullish divergence AND price > MA60 → BUY
+- Score <= -50 AND bearish divergence AND price < MA60 → SELL
+- Otherwise → HOLD
+
+### DivergenceService
+Divergence pattern detection.
+
+| Method | Description |
+|--------|-------------|
+| `detect(candles, indicator)` | Detect divergence for indicator |
+
+**Divergence Types**:
+- Bullish: Price Lower Low + Indicator Higher Low
+- Bearish: Price Higher High + Indicator Lower High
+
+Detects RSI, Stochastic, and Volume divergences.
+
+### RiskManagementService
+Risk rule enforcement.
+
+| Method | Description |
+|--------|-------------|
+| `checkAndExecuteRiskRules()` | Check stop-loss/take-profit |
+| `closePosition(reason)` | Close position with reason |
+| `emergencyClose()` | Liquidate all + cancel orders |
+
+**Default Levels**:
+- Stop-loss: -10%
+- Take-profit: +20%
+
+### RebalanceService
+Portfolio rebalancing.
+
+| Method | Description |
+|--------|-------------|
+| `checkAndExecute()` | Check and execute rebalancing |
+
+**Dynamic Target Ratio**:
+- Bullish (price > MA60): 70% coins / 30% KRW
+- Bearish (price < MA60): 30% coins / 70% KRW
+- Trigger: 10% deviation from target
+
+### ProfitService
+P&L statistics and reporting.
+
+| Method | Description |
+|--------|-------------|
+| `getProfitSummary()` | Aggregate P&L statistics |
+| `saveAccountSnapshot()` | Record current account state |
+| `generateDailySummary()` | Create daily stats |
+| `getDailySummaries(days)` | Historical daily P&L |
+| `getAccountSnapshots(hours)` | Account value history |
+
+## DTOs
+
+### IndicatorResult (Record)
+```java
+BigDecimal currentPrice
+BigDecimal ma5, ma20, ma60
+BigDecimal rsi
+BigDecimal stochK, stochD
+BigDecimal volumeMa, currentVolume
+```
+
+Helper methods: `isGoldenCross()`, `isDeathCross()`, `isPriceAboveMa60()`
+
+### DivergenceResult (Record)
+```java
+DivergenceType rsiDivergence
+DivergenceType stochDivergence
+DivergenceType volumeDivergence
+```
+
+Helper methods: `hasBullishDivergence()`, `hasBearishDivergence()`

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{trading/fragments/header :: header}"></head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+
+<nav th:replace="~{trading/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold mb-6 dark:text-white">Trade History</h1>
+
+    <!-- Profit Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="card">
+            <div class="stat-label">Realized P&L</div>
+            <div class="stat-value" id="realized-pnl">Loading...</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">Total Trades</div>
+            <div class="stat-value" id="total-trades">-</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value" id="win-rate">-</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">Avg P&L</div>
+            <div class="stat-value" id="avg-pnl">-</div>
+        </div>
+    </div>
+
+    <!-- Daily P&L Chart -->
+    <div class="card mb-6">
+        <h2 class="text-lg font-semibold mb-4 dark:text-white">Daily P&L</h2>
+        <div id="daily-chart" style="height: 200px;"></div>
+    </div>
+
+    <!-- Trades Table -->
+    <div class="card">
+        <h2 class="text-lg font-semibold mb-4 dark:text-white">Recent Trades</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-gray-500 border-b border-gray-700">
+                    <tr>
+                        <th class="text-left py-3 px-2">Time</th>
+                        <th class="text-left py-3 px-2">Type</th>
+                        <th class="text-right py-3 px-2">Price</th>
+                        <th class="text-right py-3 px-2">Volume</th>
+                        <th class="text-right py-3 px-2">Amount</th>
+                        <th class="text-left py-3 px-2">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-table" class="dark:text-gray-300">
+                    <tr><td colspan="6" class="text-center py-8">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex justify-center mt-4 space-x-2">
+            <button onclick="loadTrades(currentPage - 1)" id="prev-btn"
+                    class="px-4 py-2 bg-gray-700 text-white rounded disabled:opacity-50" disabled>
+                Previous
+            </button>
+            <span class="px-4 py-2 text-gray-500" id="page-info">Page 1</span>
+            <button onclick="loadTrades(currentPage + 1)" id="next-btn"
+                    class="px-4 py-2 bg-gray-700 text-white rounded">
+                Next
+            </button>
+        </div>
+    </div>
+
+    <!-- Positions Table -->
+    <div class="card mt-6">
+        <h2 class="text-lg font-semibold mb-4 dark:text-white">Position History</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-gray-500 border-b border-gray-700">
+                    <tr>
+                        <th class="text-left py-3 px-2">Opened</th>
+                        <th class="text-left py-3 px-2">Closed</th>
+                        <th class="text-right py-3 px-2">Entry Price</th>
+                        <th class="text-right py-3 px-2">Exit Price</th>
+                        <th class="text-right py-3 px-2">P&L</th>
+                        <th class="text-left py-3 px-2">Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="positions-table" class="dark:text-gray-300">
+                    <tr><td colspan="6" class="text-center py-8">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script>
+    let currentPage = 0;
+    const pageSize = 20;
+    let dailyChart;
+
+    // Load profit summary
+    async function loadProfitSummary() {
+        try {
+            const response = await fetch('/api/trading/profit/summary');
+            const data = await response.json();
+
+            const pnlClass = data.realizedPnl >= 0 ? 'positive' : 'negative';
+            document.getElementById('realized-pnl').innerHTML =
+                `<span class="${pnlClass}">${data.realizedPnl.toLocaleString()} KRW</span>`;
+            document.getElementById('total-trades').textContent = data.totalTrades;
+            document.getElementById('win-rate').textContent = data.winRate.toFixed(1) + '%';
+            document.getElementById('avg-pnl').innerHTML =
+                `<span class="${data.avgPnlPct >= 0 ? 'positive' : 'negative'}">${data.avgPnlPct.toFixed(2)}%</span>`;
+        } catch (error) {
+            console.error('Failed to load profit summary:', error);
+        }
+    }
+
+    // Load trades
+    async function loadTrades(page = 0) {
+        if (page < 0) return;
+        currentPage = page;
+
+        try {
+            const response = await fetch(`/api/trading/trades?page=${page}&size=${pageSize}`);
+            const trades = await response.json();
+
+            const tbody = document.getElementById('trades-table');
+            if (trades.length === 0 && page === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-500">No trades found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = trades.map(t => `
+                <tr class="border-t border-gray-700 hover:bg-gray-800">
+                    <td class="py-3 px-2">${formatDateTime(t.createdAt)}</td>
+                    <td class="py-3 px-2">
+                        <span class="px-2 py-1 rounded text-xs font-medium
+                            ${t.type === 'BUY' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+                            ${t.type}
+                        </span>
+                    </td>
+                    <td class="py-3 px-2 text-right">${t.price ? t.price.toLocaleString() : '-'}</td>
+                    <td class="py-3 px-2 text-right">${t.volume ? t.volume.toFixed(4) : '-'}</td>
+                    <td class="py-3 px-2 text-right">${t.amount ? t.amount.toLocaleString() : '-'}</td>
+                    <td class="py-3 px-2">
+                        <span class="px-2 py-1 rounded text-xs
+                            ${t.status === 'DONE' ? 'bg-green-900 text-green-300' :
+                              t.status === 'CANCEL' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'}">
+                            ${t.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('page-info').textContent = `Page ${page + 1}`;
+            document.getElementById('prev-btn').disabled = page === 0;
+            document.getElementById('next-btn').disabled = trades.length < pageSize;
+        } catch (error) {
+            console.error('Failed to load trades:', error);
+        }
+    }
+
+    // Load positions
+    async function loadPositions() {
+        try {
+            const response = await fetch('/api/trading/positions?size=50');
+            const positions = await response.json();
+
+            const tbody = document.getElementById('positions-table');
+            if (positions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-500">No positions found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = positions.map(p => `
+                <tr class="border-t border-gray-700 hover:bg-gray-800">
+                    <td class="py-3 px-2">${p.openedAt ? formatDateTime(p.openedAt) : '-'}</td>
+                    <td class="py-3 px-2">${p.closedAt ? formatDateTime(p.closedAt) : '-'}</td>
+                    <td class="py-3 px-2 text-right">${p.entryPrice ? p.entryPrice.toLocaleString() : '-'}</td>
+                    <td class="py-3 px-2 text-right">${p.exitPrice ? p.exitPrice.toLocaleString() : '-'}</td>
+                    <td class="py-3 px-2 text-right ${p.realizedPnlPct >= 0 ? 'positive' : 'negative'}">
+                        ${p.realizedPnl ? p.realizedPnl.toLocaleString() + ' (' + p.realizedPnlPct.toFixed(2) + '%)' : '-'}
+                    </td>
+                    <td class="py-3 px-2">${p.closeReason || p.status}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load positions:', error);
+        }
+    }
+
+    // Load daily P&L chart
+    async function loadDailyChart() {
+        try {
+            const response = await fetch('/api/trading/profit/daily?days=30');
+            const data = await response.json();
+
+            if (data.length === 0) return;
+
+            const container = document.getElementById('daily-chart');
+            dailyChart = LightweightCharts.createChart(container, {
+                layout: {
+                    background: { type: 'solid', color: '#1f2937' },
+                    textColor: '#d1d5db',
+                },
+                grid: {
+                    vertLines: { color: '#374151' },
+                    horzLines: { color: '#374151' },
+                },
+                rightPriceScale: { borderColor: '#374151' },
+                timeScale: { borderColor: '#374151' },
+            });
+
+            const histogramSeries = dailyChart.addHistogramSeries({
+                priceFormat: { type: 'volume' },
+            });
+
+            const chartData = data.map(d => ({
+                time: d.date,
+                value: d.realizedPnl,
+                color: d.realizedPnl >= 0 ? '#22c55e' : '#ef4444',
+            })).reverse();
+
+            histogramSeries.setData(chartData);
+        } catch (error) {
+            console.error('Failed to load daily chart:', error);
+        }
+    }
+
+    // Format datetime
+    function formatDateTime(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProfitSummary();
+        loadTrades();
+        loadPositions();
+        loadDailyChart();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{trading/fragments/header :: header}"></head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+
+<nav th:replace="~{trading/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold dark:text-white mb-6">Trading Bot Settings</h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Bot Settings -->
+        <div class="card">
+            <h2 class="text-lg font-semibold dark:text-white mb-4">Bot Configuration</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Enabled</span>
+                    <span class="font-medium dark:text-white" th:text="${tradingProperties.bot.enabled} ? 'Yes' : 'No'">No</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Market</span>
+                    <span class="font-medium dark:text-white" th:text="${tradingProperties.bot.market}">KRW-ADA</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="card">
+            <h2 class="text-lg font-semibold dark:text-white mb-4">API Configuration</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Base URL</span>
+                    <span class="font-medium dark:text-white text-sm" th:text="${tradingProperties.bithumb.baseUrl}">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Access Key</span>
+                    <span class="font-medium dark:text-white text-sm"
+                          th:text="${tradingProperties.bithumb.accessKey != null} ? '****' + ${#strings.substring(tradingProperties.bithumb.accessKey, #strings.length(tradingProperties.bithumb.accessKey) - 4)} : 'Not configured'">****</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicator Settings -->
+        <div class="card">
+            <h2 class="text-lg font-semibold dark:text-white mb-4">Indicator Parameters</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">MA Short</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.maShort}">5</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">MA Mid</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.maMid}">20</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">MA Long</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.maLong}">60</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">RSI Period</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.rsiPeriod}">14</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Stoch K</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.stochK}">14</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Stoch D</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.stochD}">3</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Stoch Slow</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.stochSlow}">3</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Volume MA</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.indicators.volumeMa}">20</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Threshold Settings -->
+        <div class="card">
+            <h2 class="text-lg font-semibold dark:text-white mb-4">Signal Thresholds</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Buy Signal</span>
+                    <div class="font-medium positive" th:text="${tradingProperties.thresholds.signalBuy}">50</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Sell Signal</span>
+                    <div class="font-medium negative" th:text="${tradingProperties.thresholds.signalSell}">-50</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">RSI Oversold</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.thresholds.rsiOversold}">30</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">RSI Overbought</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.thresholds.rsiOverbought}">70</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Stoch Oversold</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.thresholds.stochOversold}">20</div>
+                </div>
+                <div>
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Stoch Overbought</span>
+                    <div class="font-medium dark:text-white" th:text="${tradingProperties.thresholds.stochOverbought}">80</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Management -->
+        <div class="card">
+            <h2 class="text-lg font-semibold dark:text-white mb-4">Risk Management</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Stop Loss</span>
+                    <span class="font-medium negative" th:text="${#numbers.formatPercent(tradingProperties.risk.stopLoss, 1, 0)}">-10%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Take Profit</span>
+                    <span class="font-medium positive" th:text="${#numbers.formatPercent(tradingProperties.risk.takeProfit, 1, 0)}">+20%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Trailing Stop</span>
+                    <span class="font-medium dark:text-white" th:text="${#numbers.formatPercent(tradingProperties.risk.trailingStop, 1, 0)}">5%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rebalancing Settings -->
+        <div class="card">
+            <h2 class="text-lg font-semibold dark:text-white mb-4">Rebalancing</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Enabled</span>
+                    <span class="font-medium dark:text-white" th:text="${tradingProperties.rebalancing.enabled} ? 'Yes' : 'No'">Yes</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Default Ratio</span>
+                    <span class="font-medium dark:text-white" th:text="${#numbers.formatPercent(tradingProperties.rebalancing.defaultRatio, 1, 0)}">50%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Bull Ratio</span>
+                    <span class="font-medium positive" th:text="${#numbers.formatPercent(tradingProperties.rebalancing.bullRatio, 1, 0)}">70%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Bear Ratio</span>
+                    <span class="font-medium negative" th:text="${#numbers.formatPercent(tradingProperties.rebalancing.bearRatio, 1, 0)}">30%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Deviation Trigger</span>
+                    <span class="font-medium dark:text-white" th:text="${#numbers.formatPercent(tradingProperties.rebalancing.deviationTrigger, 1, 0)}">10%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 text-sm text-gray-500 dark:text-gray-400">
+        Settings are configured in <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">application.yaml</code> or environment variables. Restart required to apply changes.
+    </div>
+</main>
+
+</body>
+</html>

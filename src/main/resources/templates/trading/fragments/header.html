@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="header">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADA Trading Bot</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        .card {
+            @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-4;
+        }
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition;
+        }
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition;
+        }
+        .btn-success {
+            @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition;
+        }
+        .stat-value {
+            @apply text-2xl font-bold;
+        }
+        .stat-label {
+            @apply text-gray-500 dark:text-gray-400 text-sm;
+        }
+        .positive { color: #22c55e; }
+        .negative { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<nav th:fragment="navbar" class="bg-gray-900 text-white">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center space-x-8">
+                <a href="/trading" class="text-xl font-bold">ADA Trading Bot</a>
+                <div class="hidden md:flex space-x-4">
+                    <a href="/trading" class="hover:text-blue-400 transition">Dashboard</a>
+                    <a href="/trading/trades" class="hover:text-blue-400 transition">Trades</a>
+                    <a href="/trading/settings" class="hover:text-blue-400 transition">Settings</a>
+                </div>
+            </div>
+            <div id="bot-status-indicator" class="flex items-center space-x-2">
+                <span class="w-3 h-3 rounded-full bg-gray-500" id="status-dot"></span>
+                <span id="status-text">Loading...</span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+</body>
+</html>

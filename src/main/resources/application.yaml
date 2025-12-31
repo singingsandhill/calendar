@@ -58,6 +58,42 @@ logging:
     me.singingsandhill.calendar: DEBUG
     org.hibernate.SQL: DEBUG
 
+# Trading Bot Configuration
+trading:
+  bithumb:
+    base-url: https://api.bithumb.com
+    access-key: ${BITHUMB_ACCESS_KEY:}
+    secret-key: ${BITHUMB_SECRET_KEY:}
+  bot:
+    enabled: ${TRADING_BOT_ENABLED:false}
+    market: KRW-ADA
+  indicators:
+    ma-short: 5
+    ma-mid: 20
+    ma-long: 60
+    rsi-period: 14
+    stoch-k: 14
+    stoch-d: 3
+    stoch-slow: 3
+    volume-ma: 20
+  thresholds:
+    signal-buy: 50
+    signal-sell: -50
+    rsi-oversold: 30
+    rsi-overbought: 70
+    stoch-oversold: 20
+    stoch-overbought: 80
+  risk:
+    stop-loss: -0.10
+    take-profit: 0.20
+    trailing-stop: 0.05
+  rebalancing:
+    enabled: true
+    default-ratio: 0.50
+    bull-ratio: 0.70
+    bear-ratio: 0.30
+    deviation-trigger: 0.10
+
 ---
 spring:
   config:

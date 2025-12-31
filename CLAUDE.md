@@ -45,10 +45,11 @@ src/main/java/me/singingsandhill/calendar/
 │   ├── infrastructure/  # JpaConfig, WebConfig, SecurityConfig
 │   └── presentation/    # GlobalExceptionHandler, ErrorResponse, SeoMetadata
 │
-├── domain/              # Schedule module (legacy structure)
-├── application/         # Schedule module services
-├── infrastructure/      # Schedule module JPA
-├── presentation/        # Schedule module controllers
+├── datedate/            # Schedule module (datedate 패키지로 이동됨)
+│   ├── domain/          # Schedule domain entities
+│   ├── application/     # Schedule services
+│   ├── infrastructure/  # Schedule JPA
+│   └── presentation/    # Schedule controllers
 │
 ├── runner/              # Runner module (self-contained hexagonal)
 │   ├── domain/          # Run, Attendance, Admin entities
@@ -98,9 +99,9 @@ Base path: `/api/trading/`
 ## Testing
 
 Tests use JUnit 5 with Mockito. Test structure mirrors main source:
-- `domain/` - Domain model unit tests
-- `application/service/` - Service layer tests with mocked repositories
-- `presentation/api/` - API controller tests
+- `datedate/domain/` - Domain model unit tests
+- `datedate/application/service/` - Service layer tests with mocked repositories
+- `datedate/presentation/api/` - API controller tests
 
 ## Package Documentation
 
@@ -111,13 +112,14 @@ Each package has its own CLAUDE.md with detailed guidance:
 |---------|------|-------------|
 | common | `common/CLAUDE.md` | Shared exceptions, config, utilities |
 
-### Schedule Module (Legacy)
+### Schedule Module (datedate)
 | Package | Path | Description |
 |---------|------|-------------|
-| application | `application/CLAUDE.md` | Services, exceptions, transaction patterns |
-| domain | `domain/CLAUDE.md` | Aggregates, value objects, repository interfaces |
-| infrastructure | `infrastructure/CLAUDE.md` | JPA entities, adapters, converters |
-| presentation | `presentation/CLAUDE.md` | Controllers, DTOs, endpoints |
+| datedate | `datedate/CLAUDE.md` | Module overview |
+| datedate/application | `datedate/application/CLAUDE.md` | Services, exceptions, transaction patterns |
+| datedate/domain | `datedate/domain/CLAUDE.md` | Aggregates, value objects, repository interfaces |
+| datedate/infrastructure | `datedate/infrastructure/CLAUDE.md` | JPA entities, adapters, converters |
+| datedate/presentation | `datedate/presentation/CLAUDE.md` | Controllers, DTOs, endpoints |
 
 ### Runner Module
 | Package | Path | Description |
