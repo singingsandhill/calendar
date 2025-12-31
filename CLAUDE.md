@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Group scheduling web application (약속 잡기) built with Spring Boot 4.0.0 and Java 21. Allows owners to create schedules and participants to mark their availability.
+Multi-domain web application built with Spring Boot 4.0.0 and Java 21. Contains three independent domain modules:
+
+| Module | Description | Base Path |
+|--------|-------------|-----------|
+| **Schedule** | Group scheduling (약속 잡기) - owners create schedules, participants mark availability | `/api/`, `/owner/` |
+| **Runner** | Running crew management (97 Runners) - run tracking, attendance, rankings | `/runners/` |
+| **Trading** | Cryptocurrency trading bot - Bithumb integration, technical analysis, automated trading | `/trading/`, `/api/trading/` |
 
 ## Build Commands
 
@@ -30,44 +36,58 @@ cmd.exe /c "taskkill /F /IM java.exe"
 
 ## Architecture
 
-The project follows **Hexagonal Architecture** (Ports & Adapters) with four layers:
+The project uses **Hexagonal Architecture** (Ports & Adapters) with domain-based modular structure:
 
 ```
-presentation/          # Controllers (MVC + REST API), DTOs
-  ├── controller/      # Thymeleaf template controllers
-  ├── api/             # REST API controllers
-  └── dto/             # Request/Response DTOs
-
-application/           # Business logic orchestration
-  ├── service/         # OwnerService, ScheduleService, ParticipantService
-  └── exception/       # Custom business exceptions
-
-domain/                # Pure domain models (no framework dependencies)
-  ├── owner/           # Owner aggregate
-  ├── schedule/        # Schedule aggregate
-  └── participant/     # Participant aggregate
-
-infrastructure/        # External concerns
-  ├── config/          # JpaConfig, WebConfig
-  └── persistence/     # JPA entities, repository adapters, converters
+src/main/java/me/singingsandhill/calendar/
+├── common/              # Shared components (exceptions, config, utilities)
+│   ├── application/     # BusinessException base class
+│   ├── infrastructure/  # JpaConfig, WebConfig, SecurityConfig
+│   └── presentation/    # GlobalExceptionHandler, ErrorResponse, SeoMetadata
+│
+├── domain/              # Schedule module (legacy structure)
+├── application/         # Schedule module services
+├── infrastructure/      # Schedule module JPA
+├── presentation/        # Schedule module controllers
+│
+├── runner/              # Runner module (self-contained hexagonal)
+│   ├── domain/          # Run, Attendance, Admin entities
+│   ├── application/     # RunService, AttendanceService
+│   ├── infrastructure/  # JPA, Security
+│   └── presentation/    # Controllers, DTOs
+│
+└── trading/             # Trading module (self-contained hexagonal)
+    ├── domain/          # Candle, Trade, Position, Signal entities
+    ├── application/     # TradingBotService, IndicatorService, etc.
+    ├── infrastructure/  # Bithumb API, JPA, Schedulers
+    └── presentation/    # Dashboard, REST API
 ```
 
-**Key Pattern:** Domain layer defines repository interfaces (ports); infrastructure layer implements them (adapters).
-
-## Domain Model
-
-Three aggregates:
-- **Owner** - Creates and manages schedules (validated ID: 2-20 chars, lowercase/numbers/hyphens)
-- **Schedule** - Calendar for a specific year/month with participant availability
-- **Participant** - Marks availability on a schedule (max 8 per schedule)
+**Key Pattern:** Each module follows hexagonal architecture. Domain layer defines repository interfaces (ports); infrastructure layer implements them (adapters).
 
 ## REST API
 
+### Schedule API
 Base path: `/api/`
 
 - `GET/POST /api/owners/{ownerId}` - Owner operations
 - `GET/POST/PATCH/DELETE /api/owners/{ownerId}/schedules/{year}/{month}` - Schedule CRUD
 - `POST/PATCH/DELETE /api/schedules/{scheduleId}/participants/{participantId}` - Participant operations
+
+### Runner API
+Base path: `/runners/`
+
+- `POST /runners/runs/{runId}/attendance` - Register attendance
+
+### Trading API
+Base path: `/api/trading/`
+
+- `GET/POST /api/trading/bot/*` - Bot control (start/stop/pause)
+- `GET /api/trading/candles` - Candle data for charts
+- `GET /api/trading/ticker` - Real-time price and indicators
+- `GET /api/trading/trades` - Trade history
+- `GET /api/trading/positions` - Position history
+- `GET /api/trading/profit/*` - P&L statistics
 
 ## Database
 
@@ -86,23 +106,48 @@ Tests use JUnit 5 with Mockito. Test structure mirrors main source:
 
 Each package has its own CLAUDE.md with detailed guidance:
 
-### Java Packages
+### Common Package
 | Package | Path | Description |
 |---------|------|-------------|
-| application | `src/main/java/.../application/CLAUDE.md` | Services, exceptions, transaction patterns |
-| domain | `src/main/java/.../domain/CLAUDE.md` | Aggregates, value objects, repository interfaces |
-| infrastructure | `src/main/java/.../infrastructure/CLAUDE.md` | JPA entities, adapters, converters |
-| presentation | `src/main/java/.../presentation/CLAUDE.md` | Controllers, DTOs, endpoints |
+| common | `common/CLAUDE.md` | Shared exceptions, config, utilities |
+
+### Schedule Module (Legacy)
+| Package | Path | Description |
+|---------|------|-------------|
+| application | `application/CLAUDE.md` | Services, exceptions, transaction patterns |
+| domain | `domain/CLAUDE.md` | Aggregates, value objects, repository interfaces |
+| infrastructure | `infrastructure/CLAUDE.md` | JPA entities, adapters, converters |
+| presentation | `presentation/CLAUDE.md` | Controllers, DTOs, endpoints |
+
+### Runner Module
+| Package | Path | Description |
+|---------|------|-------------|
+| runner | `runner/CLAUDE.md` | Module overview, API summary |
+| runner/domain | `runner/domain/CLAUDE.md` | Run, Attendance, Admin entities |
+| runner/application | `runner/application/CLAUDE.md` | Services, exceptions |
+| runner/infrastructure | `runner/infrastructure/CLAUDE.md` | JPA, security, config |
+| runner/presentation | `runner/presentation/CLAUDE.md` | Controllers, DTOs |
+
+### Trading Module
+| Package | Path | Description |
+|---------|------|-------------|
+| trading | `trading/CLAUDE.md` | Module overview, trading flow |
+| trading/domain | `trading/domain/CLAUDE.md` | Candle, Trade, Position, Signal entities |
+| trading/application | `trading/application/CLAUDE.md` | Bot, indicator, signal services |
+| trading/infrastructure | `trading/infrastructure/CLAUDE.md` | Bithumb API, JPA, schedulers |
+| trading/presentation | `trading/presentation/CLAUDE.md` | Dashboard, REST API |
 
 ### Static Resources
 | Directory | Path | Description |
 |-----------|------|-------------|
-| css | `src/main/resources/static/css/CLAUDE.md` | CSS variables, components, responsive |
-| js | `src/main/resources/static/js/CLAUDE.md` | API client, calendar utilities |
+| css | `static/css/CLAUDE.md` | CSS variables, components, responsive |
+| js | `static/js/CLAUDE.md` | API client, calendar utilities |
 
 ### Templates
 | Directory | Path | Description |
 |-----------|------|-------------|
-| fragments | `src/main/resources/templates/fragments/CLAUDE.md` | Header, footer fragments |
-| owner | `src/main/resources/templates/owner/CLAUDE.md` | Dashboard template |
-| schedule | `src/main/resources/templates/schedule/CLAUDE.md` | Calendar view template |
+| fragments | `templates/fragments/CLAUDE.md` | Header, footer fragments |
+| owner | `templates/owner/CLAUDE.md` | Schedule dashboard template |
+| schedule | `templates/schedule/CLAUDE.md` | Calendar view template |
+| runners | `templates/runners/CLAUDE.md` | Runner crew templates |
+| trading | `templates/trading/CLAUDE.md` | Trading dashboard templates |
