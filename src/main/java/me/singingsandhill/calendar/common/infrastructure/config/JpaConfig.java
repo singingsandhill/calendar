@@ -7,7 +7,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableJpaRepositories(basePackages = {
     "me.singingsandhill.calendar.datedate.infrastructure.persistence.repository",
     "me.singingsandhill.calendar.runner.infrastructure.persistence.repository",
-    "me.singingsandhill.calendar.trading.infrastructure.persistence.repository"
+    "me.singingsandhill.calendar.trading.infrastructure.persistence.repository",
+    "me.singingsandhill.calendar.stock.infrastructure.persistence.repository"
 })
 public class JpaConfig {
 }

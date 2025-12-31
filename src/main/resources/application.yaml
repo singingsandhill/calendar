@@ -77,8 +77,8 @@ trading:
     stoch-slow: 3
     volume-ma: 20
   thresholds:
-    signal-buy: 50
-    signal-sell: -50
+    signal-buy: 30
+    signal-sell: -30
     rsi-oversold: 30
     rsi-overbought: 70
     stoch-oversold: 20
@@ -93,6 +93,51 @@ trading:
     bull-ratio: 0.70
     bear-ratio: 0.30
     deviation-trigger: 0.10
+
+# Stock Trading Bot Configuration (Gap & Pullback Strategy)
+stock:
+  kis:
+    base-url: https://openapi.koreainvestment.com:9443
+    app-key: ${KIS_APP_KEY:}
+    app-secret: ${KIS_APP_SECRET:}
+    account-number: ${KIS_ACCOUNT_NUMBER:}
+    account-product-code: "01"
+    production: true
+  bot:
+    enabled: ${STOCK_BOT_ENABLED:false}
+    max-positions: 5
+    max-position-size: 5000000
+  screening:
+    min-gap-percent: 1.0
+    max-gap-percent: 10.0
+    min-market-cap: 100000000000
+    min-trade-value: 500000000
+    min-trade-strength: 110
+    max-spread-percent: 0.3
+    max-watchlist-size: 10
+  entry:
+    high-threshold-percent: 1.5
+    pullback-min-percent: 1.0
+    pullback-max-percent: 5.0
+    bounce-threshold-percent: 0.2
+    min-pullback-minutes: 3
+    max-pullback-minutes: 15
+  exit:
+    tp1-percent: 5.0
+    tp1-ratio: 0.5
+    tp2-ratio: 0.6
+    tp3-percent: 10.0
+    final-exit-time: "15:20"
+  risk:
+    stop-loss-percent: 5.0
+    trailing-stop-percent: 3.8
+    position-size-ratio: 0.1
+  trading:
+    pre-market-start: "08:30"
+    market-open: "09:00"
+    screening-end: "09:10"
+    trading-end: "11:30"
+    polling-interval-seconds: 5
 
 ---
 spring:

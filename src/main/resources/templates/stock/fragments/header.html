@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="header">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Trading Bot - Gap & Pullback</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card {
+            @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-4;
+        }
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition;
+        }
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition;
+        }
+        .btn-success {
+            @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition;
+        }
+        .btn-warning {
+            @apply bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg transition;
+        }
+        .stat-value {
+            @apply text-2xl font-bold;
+        }
+        .stat-label {
+            @apply text-gray-500 dark:text-gray-400 text-sm;
+        }
+        .positive { color: #22c55e; }
+        .negative { color: #ef4444; }
+        .state-badge {
+            @apply px-2 py-1 rounded-full text-xs font-medium;
+        }
+        .state-watching { @apply bg-blue-100 text-blue-800; }
+        .state-high_formed { @apply bg-purple-100 text-purple-800; }
+        .state-pullback { @apply bg-orange-100 text-orange-800; }
+        .state-entry_ready { @apply bg-green-100 text-green-800; }
+        .state-entered { @apply bg-green-500 text-white; }
+        .state-exited { @apply bg-gray-100 text-gray-800; }
+        .state-filtered_out { @apply bg-red-100 text-red-800; }
+    </style>
+</head>
+<body>
+
+<nav th:fragment="navbar" class="bg-gray-900 text-white">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center space-x-8">
+                <a href="/stock" class="text-xl font-bold">Gap & Pullback Bot</a>
+                <div class="hidden md:flex space-x-4">
+                    <a href="/stock" class="hover:text-blue-400 transition">Dashboard</a>
+                    <a href="/stock/history" class="hover:text-blue-400 transition">History</a>
+                    <a href="/stock/settings" class="hover:text-blue-400 transition">Settings</a>
+                </div>
+            </div>
+            <div id="bot-status-indicator" class="flex items-center space-x-2">
+                <span class="w-3 h-3 rounded-full bg-gray-500" id="status-dot"></span>
+                <span id="status-text">Loading...</span>
+                <span class="ml-2 text-sm text-gray-400" id="trading-phase"></span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+</body>
+</html>

@@ -197,8 +197,8 @@ public class TradingBotService {
             return;
         }
 
-        // 가용 자금의 90% 사용 (수수료 여유)
-        BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(0.9))
+        // 가용 자금의 20% 사용 (분할 매수)
+        BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(0.2))
                 .setScale(0, RoundingMode.DOWN);
 
         log.info("Executing BUY order: {} KRW", orderAmount);

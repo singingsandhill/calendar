@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{stock/fragments/header :: header}"></head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+
+<nav th:replace="~{stock/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold dark:text-white mb-6">Bot Settings</h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Bot Configuration -->
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4 dark:text-white">Bot Configuration</h2>
+            <table class="w-full text-sm">
+                <tbody class="dark:text-gray-300">
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Enabled</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.bot.enabled} ? 'Yes' : 'No'">No</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Max Positions</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.bot.maxPositions}">5</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-500">Max Position Size</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${#numbers.formatDecimal(stockProperties.bot.maxPositionSize, 0, 0)} + ' KRW'">5,000,000 KRW</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Trading Hours -->
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4 dark:text-white">Trading Hours</h2>
+            <table class="w-full text-sm">
+                <tbody class="dark:text-gray-300">
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Pre-Market Start</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.trading.preMarketStart}">08:30</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Market Open</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.trading.marketOpen}">09:00</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Screening End</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.trading.screeningEnd}">09:10</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Trading End</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.trading.tradingEnd}">11:30</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-500">Polling Interval</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${stockProperties.trading.pollingIntervalSeconds} + 's'">5s</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Screening Parameters -->
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4 dark:text-white">Screening Parameters</h2>
+            <table class="w-full text-sm">
+                <tbody class="dark:text-gray-300">
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Gap Range</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${stockProperties.screening.minGapPercent + '% ~ ' + stockProperties.screening.maxGapPercent + '%'}">2% ~ 7%</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Min Market Cap</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${#numbers.formatDecimal(stockProperties.screening.minMarketCap.divide(T(java.math.BigDecimal).valueOf(100000000L)), 0, 0)} + ' billion KRW'">1,500 billion KRW</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Min Trade Value</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${#numbers.formatDecimal(stockProperties.screening.minTradeValue.divide(T(java.math.BigDecimal).valueOf(100000000L)), 0, 0)} + ' billion KRW'">5 billion KRW</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Min Trade Strength</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.screening.minTradeStrength}">110</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Max Spread</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${stockProperties.screening.maxSpreadPercent + '%'}">0.3%</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-500">Max Watchlist Size</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.screening.maxWatchlistSize}">10</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Entry Parameters -->
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4 dark:text-white">Entry Parameters</h2>
+            <table class="w-full text-sm">
+                <tbody class="dark:text-gray-300">
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">High Threshold</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${'+' + stockProperties.entry.highThresholdPercent + '% from open'}">+1.5% from open</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Pullback Range</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${'-' + stockProperties.entry.pullbackMinPercent + '% ~ -' + stockProperties.entry.pullbackMaxPercent + '%'}">-1.5% ~ -3.0%</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Bounce Threshold</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${'+' + stockProperties.entry.bounceThresholdPercent + '% from low'}">+0.3% from low</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-500">Pullback Duration</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${stockProperties.entry.minPullbackMinutes + ' ~ ' + stockProperties.entry.maxPullbackMinutes + ' min'}">3 ~ 15 min</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Exit Parameters -->
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4 dark:text-white">Exit Parameters (Take Profit)</h2>
+            <table class="w-full text-sm">
+                <tbody class="dark:text-gray-300">
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">TP1</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${'+' + stockProperties.exit.tp1Percent + '% → Sell ' + stockProperties.exit.tp1Ratio.multiply(T(java.math.BigDecimal).valueOf(100L)) + '%'}">+1.5% → Sell 50%</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">TP2</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${'At day high → Sell ' + stockProperties.exit.tp2Ratio.multiply(T(java.math.BigDecimal).valueOf(100L)) + '% of remaining'}">At day high → Sell 60% of remaining</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">TP3</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${'+' + stockProperties.exit.tp3Percent + '% above high → Sell remaining'}">+1.0% above high → Sell remaining</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-500">Final Exit Time</td>
+                        <td class="py-2 text-right font-medium" th:text="${stockProperties.exit.finalExitTime}">11:20</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Risk Parameters -->
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4 dark:text-white">Risk Parameters</h2>
+            <table class="w-full text-sm">
+                <tbody class="dark:text-gray-300">
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Stop Loss</td>
+                        <td class="py-2 text-right font-medium negative"
+                            th:text="${'-' + stockProperties.risk.stopLossPercent + '%'}">-1.5%</td>
+                    </tr>
+                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                        <td class="py-2 text-gray-500">Trailing Stop</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${'-' + stockProperties.risk.trailingStopPercent + '% from trailing high'}">-0.8% from trailing high</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 text-gray-500">Position Size Ratio</td>
+                        <td class="py-2 text-right font-medium"
+                            th:text="${stockProperties.risk.positionSizeRatio.multiply(T(java.math.BigDecimal).valueOf(100L)) + '% of available cash'}">10% of available cash</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-6 text-sm text-gray-500 dark:text-gray-400">
+        <p>Settings are configured in application.yaml. Restart the application to apply changes.</p>
+    </div>
+</main>
+
+<script>
+    // Update bot status indicator
+    async function updateBotStatus() {
+        try {
+            const response = await fetch('/api/stock/bot/status');
+            const status = await response.json();
+
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const phase = document.getElementById('trading-phase');
+
+            if (status.running) {
+                dot.className = status.paused ? 'w-3 h-3 rounded-full bg-yellow-500' : 'w-3 h-3 rounded-full bg-green-500';
+                text.textContent = status.paused ? 'Paused' : 'Running';
+            } else {
+                dot.className = 'w-3 h-3 rounded-full bg-red-500';
+                text.textContent = 'Stopped';
+            }
+
+            phase.textContent = status.tradingPhase;
+        } catch (error) {
+            console.error('Failed to update bot status:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateBotStatus();
+        setInterval(updateBotStatus, 5000);
+    });
+</script>
+
+</body>
+</html>

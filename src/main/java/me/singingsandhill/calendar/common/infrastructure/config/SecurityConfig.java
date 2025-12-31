@@ -33,6 +33,10 @@ public class SecurityConfig {
                 // 러너 관리자 경로 - ADMIN 역할 필요
                 .requestMatchers("/runners/admin", "/runners/admin/**").hasRole("ADMIN")
 
+                // 주식 트레이딩 봇 경로
+                .requestMatchers("/stock", "/stock/**").permitAll()
+                .requestMatchers("/api/stock/**").permitAll()
+
                 // 기존 동적 경로 (owner 페이지 등)
                 .requestMatchers("/{ownerId}").permitAll()
                 .requestMatchers("/{ownerId}/{year}/{month}").permitAll()

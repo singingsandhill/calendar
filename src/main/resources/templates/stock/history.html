@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{stock/fragments/header :: header}"></head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+
+<nav th:replace="~{stock/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold dark:text-white">Position History</h1>
+        <div class="text-gray-500" th:text="${#temporals.format(tradingDate, 'yyyy-MM-dd')}">2024-01-01</div>
+    </div>
+
+    <!-- All Positions Table -->
+    <div class="card">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="text-left py-3">Code</th>
+                        <th class="text-left py-3">Status</th>
+                        <th class="text-right py-3">Entry Price</th>
+                        <th class="text-right py-3">Qty (Entry)</th>
+                        <th class="text-right py-3">Qty (Remain)</th>
+                        <th class="text-right py-3">Avg Exit</th>
+                        <th class="text-right py-3">Realized P&L</th>
+                        <th class="text-left py-3">Close Reason</th>
+                        <th class="text-center py-3">TP</th>
+                        <th class="text-left py-3">Entry Time</th>
+                        <th class="text-left py-3">Close Time</th>
+                    </tr>
+                </thead>
+                <tbody class="dark:text-gray-300">
+                    <tr th:each="pos : ${positions}"
+                        class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="py-3 font-mono" th:text="${pos.stockCode}">005930</td>
+                        <td class="py-3">
+                            <span class="state-badge"
+                                  th:classappend="${pos.status.name() == 'OPEN'} ? 'bg-green-100 text-green-800' : (${pos.status.name() == 'PARTIAL'} ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800')"
+                                  th:text="${pos.status.name()}">OPEN</span>
+                        </td>
+                        <td class="py-3 text-right" th:text="${#numbers.formatDecimal(pos.entryPrice, 0, 0)}">75,000</td>
+                        <td class="py-3 text-right" th:text="${pos.entryQuantity}">100</td>
+                        <td class="py-3 text-right" th:text="${pos.remainingQuantity}">50</td>
+                        <td class="py-3 text-right"
+                            th:text="${pos.avgExitPrice != null} ? ${#numbers.formatDecimal(pos.avgExitPrice, 0, 0)} : '-'">76,000</td>
+                        <td class="py-3 text-right"
+                            th:classappend="${pos.realizedPnl != null && pos.realizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
+                            th:text="${pos.realizedPnl != null} ? ${#numbers.formatDecimal(pos.realizedPnl, 0, 0)} : '0'">+100,000</td>
+                        <td class="py-3" th:text="${pos.closeReason != null} ? ${pos.closeReason.name()} : '-'">TP1</td>
+                        <td class="py-3 text-center">
+                            <span th:class="${pos.tp1Executed} ? 'text-green-500' : 'text-gray-400'" title="TP1">1</span>
+                            <span th:class="${pos.tp2Executed} ? 'text-green-500' : 'text-gray-400'" title="TP2">2</span>
+                            <span th:class="${pos.tp3Executed} ? 'text-green-500' : 'text-gray-400'" title="TP3">3</span>
+                        </td>
+                        <td class="py-3 text-sm text-gray-500"
+                            th:text="${pos.enteredAt != null} ? ${#temporals.format(pos.enteredAt, 'HH:mm:ss')} : '-'">09:15:30</td>
+                        <td class="py-3 text-sm text-gray-500"
+                            th:text="${pos.closedAt != null} ? ${#temporals.format(pos.closedAt, 'HH:mm:ss')} : '-'">10:30:45</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(positions)}">
+                        <td colspan="11" class="py-8 text-center text-gray-500">No positions found</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Update bot status indicator
+    async function updateBotStatus() {
+        try {
+            const response = await fetch('/api/stock/bot/status');
+            const status = await response.json();
+
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const phase = document.getElementById('trading-phase');
+
+            if (status.running) {
+                dot.className = status.paused ? 'w-3 h-3 rounded-full bg-yellow-500' : 'w-3 h-3 rounded-full bg-green-500';
+                text.textContent = status.paused ? 'Paused' : 'Running';
+            } else {
+                dot.className = 'w-3 h-3 rounded-full bg-red-500';
+                text.textContent = 'Stopped';
+            }
+
+            phase.textContent = status.tradingPhase;
+        } catch (error) {
+            console.error('Failed to update bot status:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateBotStatus();
+        setInterval(updateBotStatus, 5000);
+    });
+</script>
+
+</body>
+</html>

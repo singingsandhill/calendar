@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{stock/fragments/header :: header}"></head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+
+<nav th:replace="~{stock/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-6">
+    <!-- Bot Status Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <!-- Trading Phase -->
+        <div class="card">
+            <div class="stat-label">Trading Phase</div>
+            <div class="stat-value text-lg" th:text="${botStatus.tradingPhase()}">STOPPED</div>
+        </div>
+
+        <!-- Watching Count -->
+        <div class="card">
+            <div class="stat-label">Watching Stocks</div>
+            <div class="stat-value" th:text="${botStatus.watchingCount()}">0</div>
+        </div>
+
+        <!-- Open Positions -->
+        <div class="card">
+            <div class="stat-label">Open Positions</div>
+            <div class="stat-value" th:text="${botStatus.positionCount()}">0</div>
+        </div>
+
+        <!-- Win/Lose -->
+        <div class="card">
+            <div class="stat-label">Win / Lose</div>
+            <div class="stat-value">
+                <span class="positive" th:text="${winCount}">0</span>
+                <span class="text-gray-400"> / </span>
+                <span class="negative" th:text="${loseCount}">0</span>
+            </div>
+        </div>
+
+        <!-- Realized P&L -->
+        <div class="card">
+            <div class="stat-label">Realized P&L</div>
+            <div class="stat-value"
+                 th:classappend="${totalRealizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'">
+                <span th:text="${#numbers.formatDecimal(totalRealizedPnl, 0, 0)}">0</span> KRW
+            </div>
+        </div>
+    </div>
+
+    <!-- Bot Control -->
+    <div class="card mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <h2 class="text-lg font-semibold dark:text-white">Bot Control</h2>
+                <div class="flex items-center space-x-2">
+                    <span class="w-4 h-4 rounded-full"
+                          th:classappend="${botStatus.running()} ? (${botStatus.paused()} ? 'bg-yellow-500' : 'bg-green-500') : 'bg-red-500'"></span>
+                    <span class="font-medium dark:text-white"
+                          th:text="${botStatus.running()} ? (${botStatus.paused()} ? 'Paused' : 'Running') : 'Stopped'">Stopped</span>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="toggleBot()" class="btn-primary" id="toggle-btn">
+                    <span th:text="${botStatus.running()} ? 'Stop' : 'Start'">Start</span>
+                </button>
+                <button onclick="pauseResumeBot()" class="btn-warning" id="pause-btn"
+                        th:disabled="${!botStatus.running()}">
+                    <span th:text="${botStatus.paused()} ? 'Resume' : 'Pause'">Pause</span>
+                </button>
+                <button onclick="emergencyClose()" class="btn-danger">Emergency Close</button>
+            </div>
+        </div>
+        <div class="mt-2 text-sm text-gray-500" th:if="${botStatus.startedAt()}">
+            Started at: <span th:text="${#temporals.format(botStatus.startedAt(), 'yyyy-MM-dd HH:mm:ss')}"></span>
+        </div>
+    </div>
+
+    <!-- Watchlist Table -->
+    <div class="card mb-6">
+        <h3 class="text-lg font-semibold mb-4 dark:text-white">Watching Stocks (Gap Screening)</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="text-left py-3">Code</th>
+                        <th class="text-left py-3">Name</th>
+                        <th class="text-left py-3">State</th>
+                        <th class="text-right py-3">Gap %</th>
+                        <th class="text-right py-3">Current</th>
+                        <th class="text-right py-3">From Open</th>
+                        <th class="text-right py-3">High</th>
+                        <th class="text-right py-3">Pullback Low</th>
+                    </tr>
+                </thead>
+                <tbody class="dark:text-gray-300">
+                    <tr th:each="stock : ${watchlist}"
+                        class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="py-3 font-mono" th:text="${stock.stockCode}">005930</td>
+                        <td class="py-3" th:text="${stock.stockName}">Samsung</td>
+                        <td class="py-3">
+                            <span class="state-badge"
+                                  th:classappend="'state-' + ${stock.state.name().toLowerCase()}"
+                                  th:text="${stock.state.name()}">WATCHING</span>
+                        </td>
+                        <td class="py-3 text-right positive"
+                            th:text="${stock.gapPercent != null} ? ${#numbers.formatDecimal(stock.gapPercent, 1, 2) + '%'} : '-'">3.5%</td>
+                        <td class="py-3 text-right"
+                            th:text="${stock.currentPrice != null} ? ${#numbers.formatDecimal(stock.currentPrice, 0, 0)} : '-'">75,000</td>
+                        <td class="py-3 text-right"
+                            th:classappend="${stock.calculateReturnFromOpen() != null && stock.calculateReturnFromOpen().compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
+                            th:text="${stock.calculateReturnFromOpen() != null} ? ${#numbers.formatDecimal(stock.calculateReturnFromOpen(), 1, 2) + '%'} : '-'">+1.5%</td>
+                        <td class="py-3 text-right"
+                            th:text="${stock.highAfterOpen != null} ? ${#numbers.formatDecimal(stock.highAfterOpen, 0, 0)} : '-'">76,000</td>
+                        <td class="py-3 text-right"
+                            th:text="${stock.pullbackLow != null} ? ${#numbers.formatDecimal(stock.pullbackLow, 0, 0)} : '-'">74,500</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(watchlist)}">
+                        <td colspan="8" class="py-8 text-center text-gray-500">No stocks in watchlist</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Open Positions -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4 dark:text-white">Open Positions</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-gray-500 dark:text-gray-400">
+                        <tr>
+                            <th class="text-left py-2">Code</th>
+                            <th class="text-right py-2">Entry</th>
+                            <th class="text-right py-2">Qty</th>
+                            <th class="text-right py-2">SL</th>
+                            <th class="text-center py-2">TP</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300">
+                        <tr th:each="pos : ${openPositions}"
+                            class="border-t border-gray-200 dark:border-gray-700">
+                            <td class="py-2 font-mono" th:text="${pos.stockCode}">005930</td>
+                            <td class="py-2 text-right" th:text="${#numbers.formatDecimal(pos.entryPrice, 0, 0)}">75,000</td>
+                            <td class="py-2 text-right" th:text="${pos.remainingQuantity}">100</td>
+                            <td class="py-2 text-right negative" th:text="${#numbers.formatDecimal(pos.stopLossPrice, 0, 0)}">73,875</td>
+                            <td class="py-2 text-center">
+                                <span th:class="${pos.tp1Executed} ? 'text-green-500' : 'text-gray-400'">1</span>
+                                <span th:class="${pos.tp2Executed} ? 'text-green-500' : 'text-gray-400'">2</span>
+                                <span th:class="${pos.tp3Executed} ? 'text-green-500' : 'text-gray-400'">3</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(openPositions)}">
+                            <td colspan="5" class="py-4 text-center text-gray-500">No open positions</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Closed Positions -->
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4 dark:text-white">Recent Closed Positions</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-gray-500 dark:text-gray-400">
+                        <tr>
+                            <th class="text-left py-2">Code</th>
+                            <th class="text-right py-2">Entry</th>
+                            <th class="text-right py-2">Exit</th>
+                            <th class="text-right py-2">P&L</th>
+                            <th class="text-left py-2">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300">
+                        <tr th:each="pos : ${closedPositions}"
+                            class="border-t border-gray-200 dark:border-gray-700">
+                            <td class="py-2 font-mono" th:text="${pos.stockCode}">005930</td>
+                            <td class="py-2 text-right" th:text="${#numbers.formatDecimal(pos.entryPrice, 0, 0)}">75,000</td>
+                            <td class="py-2 text-right" th:text="${pos.avgExitPrice != null} ? ${#numbers.formatDecimal(pos.avgExitPrice, 0, 0)} : '-'">76,500</td>
+                            <td class="py-2 text-right"
+                                th:classappend="${pos.realizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
+                                th:text="${#numbers.formatDecimal(pos.realizedPnl, 0, 0)}">+150,000</td>
+                            <td class="py-2" th:text="${pos.closeReason}">TP1</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(closedPositions)}">
+                            <td colspan="5" class="py-4 text-center text-gray-500">No closed positions today</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:inline="javascript">
+    // Bot control
+    async function toggleBot() {
+        const response = await fetch('/api/stock/bot/status');
+        const status = await response.json();
+
+        const endpoint = status.running ? '/api/stock/bot/stop' : '/api/stock/bot/start';
+        await fetch(endpoint, { method: 'POST' });
+        location.reload();
+    }
+
+    async function pauseResumeBot() {
+        const response = await fetch('/api/stock/bot/status');
+        const status = await response.json();
+
+        const endpoint = status.paused ? '/api/stock/bot/resume' : '/api/stock/bot/pause';
+        await fetch(endpoint, { method: 'POST' });
+        location.reload();
+    }
+
+    async function emergencyClose() {
+        if (confirm('Are you sure you want to execute emergency close for all positions?')) {
+            await fetch('/api/stock/bot/emergency-close', { method: 'POST' });
+            location.reload();
+        }
+    }
+
+    // Update bot status
+    async function updateBotStatus() {
+        try {
+            const response = await fetch('/api/stock/bot/status');
+            const status = await response.json();
+
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const phase = document.getElementById('trading-phase');
+            const toggleBtn = document.getElementById('toggle-btn');
+            const pauseBtn = document.getElementById('pause-btn');
+
+            if (status.running) {
+                dot.className = status.paused ? 'w-3 h-3 rounded-full bg-yellow-500' : 'w-3 h-3 rounded-full bg-green-500';
+                text.textContent = status.paused ? 'Paused' : 'Running';
+                toggleBtn.textContent = 'Stop';
+                pauseBtn.disabled = false;
+                pauseBtn.textContent = status.paused ? 'Resume' : 'Pause';
+            } else {
+                dot.className = 'w-3 h-3 rounded-full bg-red-500';
+                text.textContent = 'Stopped';
+                toggleBtn.textContent = 'Start';
+                pauseBtn.disabled = true;
+            }
+
+            phase.textContent = status.tradingPhase;
+        } catch (error) {
+            console.error('Failed to update bot status:', error);
+        }
+    }
+
+    // Auto-refresh
+    document.addEventListener('DOMContentLoaded', () => {
+        setInterval(updateBotStatus, 5000);
+        setInterval(() => location.reload(), 30000); // Full page refresh every 30s
+    });
+</script>
+
+</body>
+</html>
