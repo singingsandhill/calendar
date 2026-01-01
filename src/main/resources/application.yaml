@@ -67,6 +67,8 @@ trading:
   bot:
     enabled: ${TRADING_BOT_ENABLED:false}
     market: KRW-ADA
+    max-positions: 2
+    order-ratio: 0.25
   indicators:
     ma-short: 5
     ma-mid: 20
@@ -77,16 +79,21 @@ trading:
     stoch-slow: 3
     volume-ma: 20
   thresholds:
-    signal-buy: 30
-    signal-sell: -30
-    rsi-oversold: 30
-    rsi-overbought: 70
-    stoch-oversold: 20
-    stoch-overbought: 80
+    signal-buy: 40
+    signal-sell: -40
+    rsi-oversold: 35
+    rsi-overbought: 65
+    stoch-oversold: 25
+    stoch-overbought: 75
+    buy-rsi-max: 70
+    buy-stoch-k-max: 85
+    sell-rsi-min: 30
+    sell-stoch-k-min: 15
   risk:
-    stop-loss: -0.10
-    take-profit: 0.20
-    trailing-stop: 0.05
+    stop-loss: -0.08
+    take-profit: 0.15
+    trailing-stop: 0.03
+    trailing-activation: 0.10
   rebalancing:
     enabled: true
     default-ratio: 0.50
