@@ -13,7 +13,8 @@ public record IndicatorResult(
     BigDecimal stochK,
     BigDecimal stochD,
     BigDecimal volumeMa,
-    BigDecimal currentVolume
+    BigDecimal currentVolume,
+    int rsiTrend
 ) {
     public Map<String, BigDecimal> toMap() {
         Map<String, BigDecimal> map = new HashMap<>();
@@ -47,5 +48,13 @@ public record IndicatorResult(
     public boolean isPriceBelowMa60() {
         if (currentPrice == null || ma60 == null) return false;
         return currentPrice.compareTo(ma60) < 0;
+    }
+
+    public boolean isRsiUptrend() {
+        return rsiTrend > 0;
+    }
+
+    public boolean isRsiDowntrend() {
+        return rsiTrend < 0;
     }
 }

@@ -22,10 +22,10 @@ Main orchestrator for the trading bot.
 
 **Trade Loop**:
 1. Update candle data
-2. Check risk rules (stop-loss/take-profit)
+2. Check risk rules (stop-loss/take-profit/trailing stop)
 3. Check rebalancing conditions
 4. Generate technical signals
-5. Execute trades based on signals
+5. Execute trades based on signals (max 2 positions, 25% order ratio)
 
 ### CandleService
 Candle data management.
@@ -47,6 +47,7 @@ Technical indicator calculation.
 **Indicators Calculated**:
 - SMA: 5, 20, 60-period moving averages
 - RSI: 14-period Relative Strength Index
+- RSI Trend: 현재 RSI vs 이전 RSI 비교 (+1/-1/0)
 - Stochastic: %K and %D (Slow)
 - Volume MA: 20-period average volume
 
@@ -60,9 +61,14 @@ Trading signal generation.
 | `generateSignal()` | Generate signal from current market data |
 
 **Signal Logic**:
-- Score >= 50 AND bullish divergence AND price > MA60 → BUY
-- Score <= -50 AND bearish divergence AND price < MA60 → SELL
+- Score >= 40 AND price > MA60 AND RSI < 70 AND StochK < 85 → BUY
+- Score <= -40 AND price < MA60 AND RSI > 30 AND StochK > 15 → SELL
 - Otherwise → HOLD
+
+**Score Components**:
+- MA Cross: ±25 | MA Trend: ±15 | RSI Divergence: ±20
+- RSI Level: ±15 | Stoch Divergence: ±15 | Stoch Level: ±15
+- Volume Divergence: ±20 | RSI Trend: ±10
 
 ### DivergenceService
 Divergence pattern detection.
@@ -78,17 +84,18 @@ Divergence pattern detection.
 Detects RSI, Stochastic, and Volume divergences.
 
 ### RiskManagementService
-Risk rule enforcement.
+Risk rule enforcement with trailing stop.
 
 | Method | Description |
 |--------|-------------|
-| `checkAndExecuteRiskRules()` | Check stop-loss/take-profit |
+| `checkAndExecuteRiskRules()` | Check stop-loss/take-profit/trailing stop |
 | `closePosition(reason)` | Close position with reason |
 | `emergencyClose()` | Liquidate all + cancel orders |
 
-**Default Levels**:
-- Stop-loss: -10%
-- Take-profit: +20%
+**Risk Levels**:
+- Stop-loss: -8%
+- Take-profit: +15%
+- Trailing Stop: +10% 도달 시 활성화, -3% 추적
 
 ### RebalanceService
 Portfolio rebalancing.
@@ -122,9 +129,10 @@ BigDecimal ma5, ma20, ma60
 BigDecimal rsi
 BigDecimal stochK, stochD
 BigDecimal volumeMa, currentVolume
+int rsiTrend  // +1: 상승, -1: 하락, 0: 중립
 ```
 
-Helper methods: `isGoldenCross()`, `isDeathCross()`, `isPriceAboveMa60()`
+Helper methods: `isGoldenCross()`, `isDeathCross()`, `isPriceAboveMa60()`, `isRsiUptrend()`, `isRsiDowntrend()`
 
 ### DivergenceResult (Record)
 ```java

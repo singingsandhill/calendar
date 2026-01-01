@@ -19,6 +19,9 @@ public class Position {
     private BigDecimal realizedPnlPct;
     private BigDecimal stopLossPrice;
     private BigDecimal takeProfitPrice;
+    private BigDecimal trailingStopPrice;
+    private BigDecimal highWaterMark;
+    private boolean trailingStopActive;
     private CloseReason closeReason;
     private final LocalDateTime openedAt;
     private LocalDateTime closedAt;
@@ -29,6 +32,7 @@ public class Position {
                     BigDecimal exitPrice, BigDecimal exitVolume, BigDecimal exitAmount,
                     BigDecimal realizedPnl, BigDecimal realizedPnlPct,
                     BigDecimal stopLossPrice, BigDecimal takeProfitPrice,
+                    BigDecimal trailingStopPrice, BigDecimal highWaterMark, boolean trailingStopActive,
                     CloseReason closeReason, LocalDateTime openedAt, LocalDateTime closedAt,
                     LocalDateTime createdAt) {
         this.id = id;
@@ -44,6 +48,9 @@ public class Position {
         this.realizedPnlPct = realizedPnlPct;
         this.stopLossPrice = stopLossPrice;
         this.takeProfitPrice = takeProfitPrice;
+        this.trailingStopPrice = trailingStopPrice;
+        this.highWaterMark = highWaterMark;
+        this.trailingStopActive = trailingStopActive;
         this.closeReason = closeReason;
         this.openedAt = openedAt;
         this.closedAt = closedAt;
@@ -56,7 +63,7 @@ public class Position {
         return new Position(null, market, PositionStatus.OPEN,
                 entryPrice, entryVolume, entryAmount,
                 null, null, null, null, null,
-                stopLossPrice, takeProfitPrice, null,
+                stopLossPrice, takeProfitPrice, null, entryPrice, false, null,
                 LocalDateTime.now(), null, LocalDateTime.now());
     }
 
@@ -95,6 +102,28 @@ public class Position {
         return status == PositionStatus.OPEN;
     }
 
+    public void updateHighWaterMark(BigDecimal currentPrice) {
+        if (this.highWaterMark == null || currentPrice.compareTo(this.highWaterMark) > 0) {
+            this.highWaterMark = currentPrice;
+        }
+    }
+
+    public void activateTrailingStop(BigDecimal trailingStopPrice) {
+        this.trailingStopActive = true;
+        this.trailingStopPrice = trailingStopPrice;
+    }
+
+    public void updateTrailingStop(BigDecimal newTrailingStopPrice) {
+        if (this.trailingStopPrice == null || newTrailingStopPrice.compareTo(this.trailingStopPrice) > 0) {
+            this.trailingStopPrice = newTrailingStopPrice;
+        }
+    }
+
+    public boolean shouldTrailingStop(BigDecimal currentPrice) {
+        return trailingStopActive && trailingStopPrice != null &&
+               currentPrice.compareTo(trailingStopPrice) <= 0;
+    }
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -112,6 +141,12 @@ public class Position {
     public void setStopLossPrice(BigDecimal stopLossPrice) { this.stopLossPrice = stopLossPrice; }
     public BigDecimal getTakeProfitPrice() { return takeProfitPrice; }
     public void setTakeProfitPrice(BigDecimal takeProfitPrice) { this.takeProfitPrice = takeProfitPrice; }
+    public BigDecimal getTrailingStopPrice() { return trailingStopPrice; }
+    public void setTrailingStopPrice(BigDecimal trailingStopPrice) { this.trailingStopPrice = trailingStopPrice; }
+    public BigDecimal getHighWaterMark() { return highWaterMark; }
+    public void setHighWaterMark(BigDecimal highWaterMark) { this.highWaterMark = highWaterMark; }
+    public boolean isTrailingStopActive() { return trailingStopActive; }
+    public void setTrailingStopActive(boolean trailingStopActive) { this.trailingStopActive = trailingStopActive; }
     public CloseReason getCloseReason() { return closeReason; }
     public LocalDateTime getOpenedAt() { return openedAt; }
     public LocalDateTime getClosedAt() { return closedAt; }

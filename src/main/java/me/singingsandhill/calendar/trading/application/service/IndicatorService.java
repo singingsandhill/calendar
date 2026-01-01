@@ -37,6 +37,7 @@ public class IndicatorService {
 
         BigDecimal currentPrice = candles.get(0).getTradePrice();
         BigDecimal currentVolume = candles.get(0).getVolume();
+        int rsiTrend = calculateRsiTrend(candles, tradingProperties.getIndicators().getRsiPeriod());
 
         return new IndicatorResult(
                 currentPrice,
@@ -52,7 +53,8 @@ public class IndicatorService {
                                 c.getVolume(), c.getVolume(), c.getVolume(), c.getVolume(),
                                 c.getVolume(), c.getAccTradePrice(), c.getCreatedAt()))
                         .toList(), tradingProperties.getIndicators().getVolumeMa()),
-                currentVolume
+                currentVolume,
+                rsiTrend
         );
     }
 
@@ -166,6 +168,32 @@ public class IndicatorService {
         }
 
         return sumK.divide(BigDecimal.valueOf(validCount), 8, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * RSI 추세 계산
+     * 현재 RSI가 이전 RSI보다 상승 중이면 상승 추세
+     */
+    public int calculateRsiTrend(List<Candle> candles, int period) {
+        if (candles.size() < period + 3) {
+            return 0;
+        }
+
+        BigDecimal currentRsi = calculateRSI(candles, period);
+        List<Candle> prevCandles = candles.subList(1, candles.size());
+        BigDecimal prevRsi = calculateRSI(prevCandles, period);
+
+        if (currentRsi == null || prevRsi == null) {
+            return 0;
+        }
+
+        int comparison = currentRsi.compareTo(prevRsi);
+        if (comparison > 0) {
+            return 1;  // 상승 추세
+        } else if (comparison < 0) {
+            return -1; // 하락 추세
+        }
+        return 0;
     }
 
     /**

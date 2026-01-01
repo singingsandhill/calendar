@@ -17,6 +17,7 @@ public class Signal {
     private final Integer stochDivergenceScore;
     private final Integer stochLevelScore;
     private final Integer volumeDivergenceScore;
+    private final Integer rsiTrendScore;
     private final BigDecimal ma5;
     private final BigDecimal ma20;
     private final BigDecimal ma60;
@@ -34,7 +35,7 @@ public class Signal {
                   int totalScore, Integer maCrossScore, Integer maTrendScore,
                   Integer rsiDivergenceScore, Integer rsiLevelScore,
                   Integer stochDivergenceScore, Integer stochLevelScore,
-                  Integer volumeDivergenceScore,
+                  Integer volumeDivergenceScore, Integer rsiTrendScore,
                   BigDecimal ma5, BigDecimal ma20, BigDecimal ma60,
                   BigDecimal rsi, BigDecimal stochK, BigDecimal stochD,
                   DivergenceType rsiDivergence, DivergenceType stochDivergence, DivergenceType volumeDivergence,
@@ -51,6 +52,7 @@ public class Signal {
         this.stochDivergenceScore = stochDivergenceScore;
         this.stochLevelScore = stochLevelScore;
         this.volumeDivergenceScore = volumeDivergenceScore;
+        this.rsiTrendScore = rsiTrendScore;
         this.ma5 = ma5;
         this.ma20 = ma20;
         this.ma60 = ma60;
@@ -105,6 +107,7 @@ public class Signal {
     public Integer getStochDivergenceScore() { return stochDivergenceScore; }
     public Integer getStochLevelScore() { return stochLevelScore; }
     public Integer getVolumeDivergenceScore() { return volumeDivergenceScore; }
+    public Integer getRsiTrendScore() { return rsiTrendScore; }
     public BigDecimal getMa5() { return ma5; }
     public BigDecimal getMa20() { return ma20; }
     public BigDecimal getMa60() { return ma60; }

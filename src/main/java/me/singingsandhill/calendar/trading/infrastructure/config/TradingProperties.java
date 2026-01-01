@@ -30,11 +30,17 @@ public class TradingProperties {
     public static class Bot {
         private boolean enabled = false;
         private String market = "KRW-ADA";
+        private int maxPositions = 2;
+        private double orderRatio = 0.25;
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
         public String getMarket() { return market; }
         public void setMarket(String market) { this.market = market; }
+        public int getMaxPositions() { return maxPositions; }
+        public void setMaxPositions(int maxPositions) { this.maxPositions = maxPositions; }
+        public double getOrderRatio() { return orderRatio; }
+        public void setOrderRatio(double orderRatio) { this.orderRatio = orderRatio; }
     }
 
     public static class Indicators {
@@ -66,12 +72,16 @@ public class TradingProperties {
     }
 
     public static class Thresholds {
-        private int signalBuy = 50;
-        private int signalSell = -50;
-        private int rsiOversold = 30;
-        private int rsiOverbought = 70;
-        private int stochOversold = 20;
-        private int stochOverbought = 80;
+        private int signalBuy = 40;
+        private int signalSell = -40;
+        private int rsiOversold = 35;
+        private int rsiOverbought = 65;
+        private int stochOversold = 25;
+        private int stochOverbought = 75;
+        private int buyRsiMax = 70;
+        private int buyStochKMax = 85;
+        private int sellRsiMin = 30;
+        private int sellStochKMin = 15;
 
         public int getSignalBuy() { return signalBuy; }
         public void setSignalBuy(int signalBuy) { this.signalBuy = signalBuy; }
@@ -85,12 +95,21 @@ public class TradingProperties {
         public void setStochOversold(int stochOversold) { this.stochOversold = stochOversold; }
         public int getStochOverbought() { return stochOverbought; }
         public void setStochOverbought(int stochOverbought) { this.stochOverbought = stochOverbought; }
+        public int getBuyRsiMax() { return buyRsiMax; }
+        public void setBuyRsiMax(int buyRsiMax) { this.buyRsiMax = buyRsiMax; }
+        public int getBuyStochKMax() { return buyStochKMax; }
+        public void setBuyStochKMax(int buyStochKMax) { this.buyStochKMax = buyStochKMax; }
+        public int getSellRsiMin() { return sellRsiMin; }
+        public void setSellRsiMin(int sellRsiMin) { this.sellRsiMin = sellRsiMin; }
+        public int getSellStochKMin() { return sellStochKMin; }
+        public void setSellStochKMin(int sellStochKMin) { this.sellStochKMin = sellStochKMin; }
     }
 
     public static class Risk {
-        private double stopLoss = -0.10;
-        private double takeProfit = 0.20;
-        private double trailingStop = 0.05;
+        private double stopLoss = -0.08;
+        private double takeProfit = 0.15;
+        private double trailingStop = 0.03;
+        private double trailingActivation = 0.10;
 
         public double getStopLoss() { return stopLoss; }
         public void setStopLoss(double stopLoss) { this.stopLoss = stopLoss; }
@@ -98,6 +117,8 @@ public class TradingProperties {
         public void setTakeProfit(double takeProfit) { this.takeProfit = takeProfit; }
         public double getTrailingStop() { return trailingStop; }
         public void setTrailingStop(double trailingStop) { this.trailingStop = trailingStop; }
+        public double getTrailingActivation() { return trailingActivation; }
+        public void setTrailingActivation(double trailingActivation) { this.trailingActivation = trailingActivation; }
     }
 
     public static class Rebalancing {

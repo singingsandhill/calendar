@@ -45,6 +45,9 @@ public class SignalJpaEntity {
     @Column(name = "volume_divergence_score")
     private Integer volumeDivergenceScore;
 
+    @Column(name = "rsi_trend_score")
+    private Integer rsiTrendScore;
+
     @Column(precision = 20, scale = 8)
     private BigDecimal ma5;
 
@@ -108,6 +111,8 @@ public class SignalJpaEntity {
     public void setStochLevelScore(Integer stochLevelScore) { this.stochLevelScore = stochLevelScore; }
     public Integer getVolumeDivergenceScore() { return volumeDivergenceScore; }
     public void setVolumeDivergenceScore(Integer volumeDivergenceScore) { this.volumeDivergenceScore = volumeDivergenceScore; }
+    public Integer getRsiTrendScore() { return rsiTrendScore; }
+    public void setRsiTrendScore(Integer rsiTrendScore) { this.rsiTrendScore = rsiTrendScore; }
     public BigDecimal getMa5() { return ma5; }
     public void setMa5(BigDecimal ma5) { this.ma5 = ma5; }
     public BigDecimal getMa20() { return ma20; }

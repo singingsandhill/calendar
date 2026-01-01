@@ -35,7 +35,7 @@ public class RiskManagementService {
 
     /**
      * 리스크 체크 및 청산 실행
-     * 손절/익절 조건 충족 시 즉시 시장가 청산
+     * 손절/익절/트레일링스탑 조건 충족 시 즉시 시장가 청산
      */
     @Transactional
     public CloseReason checkAndExecuteRiskRules(String market) {
@@ -59,7 +59,7 @@ public class RiskManagementService {
         log.debug("Risk check - Entry: {}, Current: {}, PnL%: {}",
                 position.getEntryPrice(), currentPriceBD, pnlPct);
 
-        // 손절 체크 (-10%)
+        // 1. 손절 체크 (-8%)
         double stopLoss = tradingProperties.getRisk().getStopLoss();
         if (pnlPct.compareTo(BigDecimal.valueOf(stopLoss * 100)) <= 0) {
             log.warn("Stop-loss triggered! PnL: {}%", pnlPct);
@@ -67,13 +67,51 @@ public class RiskManagementService {
             return CloseReason.STOP_LOSS;
         }
 
-        // 익절 체크 (+20%)
+        // 2. High Water Mark 업데이트
+        position.updateHighWaterMark(currentPriceBD);
+
+        // 3. 트레일링 스탑 활성화 체크 (+10% 도달 시)
+        double trailingActivation = tradingProperties.getRisk().getTrailingActivation();
+        if (!position.isTrailingStopActive() &&
+            pnlPct.compareTo(BigDecimal.valueOf(trailingActivation * 100)) >= 0) {
+
+            // 트레일링 스탑 가격 설정 (-3% 추적)
+            double trailingPct = tradingProperties.getRisk().getTrailingStop();
+            BigDecimal trailingStopPrice = currentPriceBD.multiply(
+                    BigDecimal.ONE.subtract(BigDecimal.valueOf(trailingPct)))
+                    .setScale(0, RoundingMode.DOWN);
+            position.activateTrailingStop(trailingStopPrice);
+            log.info("Trailing stop activated at price: {} (current: {}, PnL: {}%)",
+                    trailingStopPrice, currentPriceBD, pnlPct);
+        }
+
+        // 4. 트레일링 스탑 가격 업데이트 (상승만)
+        if (position.isTrailingStopActive()) {
+            double trailingPct = tradingProperties.getRisk().getTrailingStop();
+            BigDecimal newTrailingStop = position.getHighWaterMark().multiply(
+                    BigDecimal.ONE.subtract(BigDecimal.valueOf(trailingPct)))
+                    .setScale(0, RoundingMode.DOWN);
+            position.updateTrailingStop(newTrailingStop);
+
+            // 5. 트레일링 스탑 트리거 체크
+            if (position.shouldTrailingStop(currentPriceBD)) {
+                log.info("Trailing stop triggered! Price: {}, Stop: {}, PnL: {}%",
+                        currentPriceBD, position.getTrailingStopPrice(), pnlPct);
+                closePosition(position, currentPriceBD, CloseReason.TRAILING_STOP);
+                return CloseReason.TRAILING_STOP;
+            }
+        }
+
+        // 6. 익절 체크 (+15%)
         double takeProfit = tradingProperties.getRisk().getTakeProfit();
         if (pnlPct.compareTo(BigDecimal.valueOf(takeProfit * 100)) >= 0) {
             log.info("Take-profit triggered! PnL: {}%", pnlPct);
             closePosition(position, currentPriceBD, CloseReason.TAKE_PROFIT);
             return CloseReason.TAKE_PROFIT;
         }
+
+        // 7. Position 저장 (trailing stop 상태 유지)
+        positionRepository.save(position);
 
         return null;
     }

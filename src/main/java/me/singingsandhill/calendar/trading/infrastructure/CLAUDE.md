@@ -41,6 +41,8 @@ trading:
   bot:
     enabled: true
     market: KRW-ADA
+    maxPositions: 2      # 최대 동시 포지션 수
+    orderRatio: 0.25     # 주문 금액 비율 (25%)
   indicators:
     maShort: 5
     maMid: 20
@@ -50,16 +52,21 @@ trading:
     stochD: 3
     volumeMa: 20
   thresholds:
-    signalBuy: 50
-    signalSell: -50
-    rsiOversold: 30
-    rsiOverbought: 70
-    stochOversold: 20
-    stochOverbought: 80
+    signalBuy: 40        # 매수 신호 점수
+    signalSell: -40      # 매도 신호 점수
+    rsiOversold: 35      # RSI 과매도
+    rsiOverbought: 65    # RSI 과매수
+    stochOversold: 25    # Stochastic 과매도
+    stochOverbought: 75  # Stochastic 과매수
+    buyRsiMax: 70        # 매수 시 RSI 상한
+    buyStochKMax: 85     # 매수 시 StochK 상한
+    sellRsiMin: 30       # 매도 시 RSI 하한
+    sellStochKMin: 15    # 매도 시 StochK 하한
   risk:
-    stopLoss: -0.10
-    takeProfit: 0.20
-    trailingStop: 0.05
+    stopLoss: -0.08      # -8%
+    takeProfit: 0.15     # +15%
+    trailingStop: 0.03   # -3% 추적
+    trailingActivation: 0.10  # +10% 도달 시 활성화
   rebalancing:
     enabled: true
     defaultRatio: 0.50

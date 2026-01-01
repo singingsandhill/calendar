@@ -16,8 +16,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -165,16 +168,22 @@ public class TradingBotService {
     }
 
     /**
-     * 신호에 따른 매매 실행
+     * 신호에 따른 매매 실행 - 다중 포지션 지원
      */
     @Transactional
     public void executeTradeBySignal(String market, Signal signal) {
-        Optional<Position> openPosition = positionRepository.findOpenPositionByMarket(market);
+        // 최대 포지션 수 체크
+        int maxPositions = tradingProperties.getBot().getMaxPositions();
+        long openPositionCount = positionRepository.countByMarketAndStatus(market, PositionStatus.OPEN);
 
-        if (signal.getSignalType() == SignalType.BUY && openPosition.isEmpty()) {
+        if (signal.getSignalType() == SignalType.BUY && openPositionCount < maxPositions) {
             executeBuy(market, signal);
-        } else if (signal.getSignalType() == SignalType.SELL && openPosition.isPresent()) {
-            executeSell(market, signal, openPosition.get());
+        } else if (signal.getSignalType() == SignalType.SELL) {
+            // 모든 열린 포지션 청산
+            List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
+            for (Position position : openPositions) {
+                executeSell(market, signal, position);
+            }
         }
     }
 
@@ -197,8 +206,9 @@ public class TradingBotService {
             return;
         }
 
-        // 가용 자금의 20% 사용 (분할 매수)
-        BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(0.2))
+        // 가용 자금의 25% 사용 (분할 매수)
+        double orderRatio = tradingProperties.getBot().getOrderRatio();
+        BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(orderRatio))
                 .setScale(0, RoundingMode.DOWN);
 
         log.info("Executing BUY order: {} KRW", orderAmount);

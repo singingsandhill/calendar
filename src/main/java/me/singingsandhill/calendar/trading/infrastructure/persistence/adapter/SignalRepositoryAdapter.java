@@ -88,6 +88,7 @@ public class SignalRepositoryAdapter implements SignalRepository {
         entity.setStochDivergenceScore(signal.getStochDivergenceScore());
         entity.setStochLevelScore(signal.getStochLevelScore());
         entity.setVolumeDivergenceScore(signal.getVolumeDivergenceScore());
+        entity.setRsiTrendScore(signal.getRsiTrendScore());
         entity.setMa5(signal.getMa5());
         entity.setMa20(signal.getMa20());
         entity.setMa60(signal.getMa60());
@@ -117,6 +118,7 @@ public class SignalRepositoryAdapter implements SignalRepository {
                 entity.getStochDivergenceScore(),
                 entity.getStochLevelScore(),
                 entity.getVolumeDivergenceScore(),
+                entity.getRsiTrendScore(),
                 entity.getMa5(),
                 entity.getMa20(),
                 entity.getMa60(),

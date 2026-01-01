@@ -48,6 +48,15 @@ public class PositionJpaEntity {
     @Column(name = "take_profit_price", precision = 20, scale = 8)
     private BigDecimal takeProfitPrice;
 
+    @Column(name = "trailing_stop_price", precision = 20, scale = 8)
+    private BigDecimal trailingStopPrice;
+
+    @Column(name = "high_water_mark", precision = 20, scale = 8)
+    private BigDecimal highWaterMark;
+
+    @Column(name = "trailing_stop_active")
+    private boolean trailingStopActive;
+
     @Column(name = "close_reason", length = 50)
     private String closeReason;
 
@@ -65,7 +74,8 @@ public class PositionJpaEntity {
     public PositionJpaEntity(String market, String status, BigDecimal entryPrice, BigDecimal entryVolume,
                               BigDecimal entryAmount, BigDecimal exitPrice, BigDecimal exitVolume, BigDecimal exitAmount,
                               BigDecimal realizedPnl, BigDecimal realizedPnlPct, BigDecimal stopLossPrice,
-                              BigDecimal takeProfitPrice, String closeReason, LocalDateTime openedAt,
+                              BigDecimal takeProfitPrice, BigDecimal trailingStopPrice, BigDecimal highWaterMark,
+                              boolean trailingStopActive, String closeReason, LocalDateTime openedAt,
                               LocalDateTime closedAt, LocalDateTime createdAt) {
         this.market = market;
         this.status = status;
@@ -79,6 +89,9 @@ public class PositionJpaEntity {
         this.realizedPnlPct = realizedPnlPct;
         this.stopLossPrice = stopLossPrice;
         this.takeProfitPrice = takeProfitPrice;
+        this.trailingStopPrice = trailingStopPrice;
+        this.highWaterMark = highWaterMark;
+        this.trailingStopActive = trailingStopActive;
         this.closeReason = closeReason;
         this.openedAt = openedAt;
         this.closedAt = closedAt;
@@ -112,6 +125,12 @@ public class PositionJpaEntity {
     public void setStopLossPrice(BigDecimal stopLossPrice) { this.stopLossPrice = stopLossPrice; }
     public BigDecimal getTakeProfitPrice() { return takeProfitPrice; }
     public void setTakeProfitPrice(BigDecimal takeProfitPrice) { this.takeProfitPrice = takeProfitPrice; }
+    public BigDecimal getTrailingStopPrice() { return trailingStopPrice; }
+    public void setTrailingStopPrice(BigDecimal trailingStopPrice) { this.trailingStopPrice = trailingStopPrice; }
+    public BigDecimal getHighWaterMark() { return highWaterMark; }
+    public void setHighWaterMark(BigDecimal highWaterMark) { this.highWaterMark = highWaterMark; }
+    public boolean isTrailingStopActive() { return trailingStopActive; }
+    public void setTrailingStopActive(boolean trailingStopActive) { this.trailingStopActive = trailingStopActive; }
     public String getCloseReason() { return closeReason; }
     public void setCloseReason(String closeReason) { this.closeReason = closeReason; }
     public LocalDateTime getOpenedAt() { return openedAt; }

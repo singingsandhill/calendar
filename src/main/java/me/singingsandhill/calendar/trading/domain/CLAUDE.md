@@ -48,7 +48,7 @@ Individual buy/sell order.
 | signalInfo | String | Signal details |
 
 ### Position (position/)
-Trading position with P&L tracking.
+Trading position with P&L tracking and trailing stop.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -62,8 +62,11 @@ Trading position with P&L tracking.
 | realizedPnl | BigDecimal | Realized P&L amount |
 | realizedPnlPercent | BigDecimal | Realized P&L % |
 | closeReason | CloseReason | Why position was closed |
-| stopLossPrice | BigDecimal | Stop-loss level |
-| takeProfitPrice | BigDecimal | Take-profit level |
+| stopLossPrice | BigDecimal | Stop-loss level (-8%) |
+| takeProfitPrice | BigDecimal | Take-profit level (+15%) |
+| trailingStopPrice | BigDecimal | Current trailing stop price |
+| highWaterMark | BigDecimal | Highest price since entry |
+| trailingStopActive | boolean | Trailing stop activation status |
 
 ### Signal (signal/)
 Trading signal from technical analysis.
@@ -81,15 +84,21 @@ Trading signal from technical analysis.
 | rsiDivergence | DivergenceType | RSI divergence |
 | stochDivergence | DivergenceType | Stochastic divergence |
 | volumeDivergence | DivergenceType | Volume divergence |
+| rsiTrendScore | Integer | RSI trend score (±10) |
 
 **Score Components**:
-- MA Cross: ±30 (golden/death cross)
-- MA Trend: ±10 (price vs MA60)
-- RSI Divergence: ±25
-- RSI Level: ±10 (oversold/overbought)
-- Stochastic Divergence: ±20
-- Stochastic Level: ±10
-- Volume Divergence: ±15
+- MA Cross: ±25 (golden/death cross)
+- MA Trend: ±15 (price vs MA60)
+- RSI Divergence: ±20
+- RSI Level: ±15 (oversold < 35 / overbought > 65)
+- Stochastic Divergence: ±15
+- Stochastic Level: ±15 (oversold < 25 / overbought > 75)
+- Volume Divergence: ±20
+- RSI Trend: ±10 (RSI 상승/하락 추세)
+
+**Signal Conditions**:
+- BUY: score >= 40 AND price > MA60 AND RSI < 70 AND StochK < 85
+- SELL: score <= -40 AND price < MA60 AND RSI > 30 AND StochK > 15
 
 ### Account Models (account/)
 
@@ -107,7 +116,7 @@ Trading signal from technical analysis.
 | TradeType | BUY, SELL |
 | TradeStatus | WAIT, DONE, CANCEL |
 | PositionStatus | OPEN, CLOSED |
-| CloseReason | STOP_LOSS, TAKE_PROFIT, SIGNAL, MANUAL, REBALANCE |
+| CloseReason | STOP_LOSS, TAKE_PROFIT, TRAILING_STOP, SIGNAL, MANUAL, REBALANCE |
 | SignalType | BUY, SELL, HOLD |
 | DivergenceType | BULLISH, BEARISH, NONE |
 
