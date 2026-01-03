@@ -211,4 +211,31 @@ public class IndicatorService {
 
         return sum.divide(BigDecimal.valueOf(period), 8, RoundingMode.HALF_UP);
     }
+
+    /**
+     * 이전 캔들 기준 MA 계산 (크로스 이벤트 감지용)
+     * @param market 마켓
+     * @return 이전 캔들 기준 MA5, MA20 배열 [prevMa5, prevMa20], 계산 불가시 null
+     */
+    public BigDecimal[] calculatePreviousMAs(String market) {
+        int requiredCandles = Math.max(tradingProperties.getIndicators().getMaLong(),
+                tradingProperties.getIndicators().getRsiPeriod()) + 21; // 1개 더 필요
+        List<Candle> candles = candleRepository.findByMarketOrderByDateTimeDesc(market, requiredCandles);
+
+        if (candles.size() < 2) {
+            return null;
+        }
+
+        // 이전 캔들 기준 (인덱스 1부터 시작하는 부분 리스트)
+        List<Candle> prevCandles = candles.subList(1, candles.size());
+
+        BigDecimal prevMa5 = calculateMA(prevCandles, tradingProperties.getIndicators().getMaShort());
+        BigDecimal prevMa20 = calculateMA(prevCandles, tradingProperties.getIndicators().getMaMid());
+
+        if (prevMa5 == null || prevMa20 == null) {
+            return null;
+        }
+
+        return new BigDecimal[]{prevMa5, prevMa20};
+    }
 }

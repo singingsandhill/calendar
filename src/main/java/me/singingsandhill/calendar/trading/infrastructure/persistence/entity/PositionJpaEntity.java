@@ -60,6 +60,15 @@ public class PositionJpaEntity {
     @Column(name = "close_reason", length = 50)
     private String closeReason;
 
+    @Column(name = "entry_fee", precision = 20, scale = 8)
+    private BigDecimal entryFee;
+
+    @Column(name = "exit_fee", precision = 20, scale = 8)
+    private BigDecimal exitFee;
+
+    @Column(name = "total_fees", precision = 20, scale = 8)
+    private BigDecimal totalFees;
+
     @Column(name = "opened_at", nullable = false)
     private LocalDateTime openedAt;
 
@@ -76,7 +85,8 @@ public class PositionJpaEntity {
                               BigDecimal realizedPnl, BigDecimal realizedPnlPct, BigDecimal stopLossPrice,
                               BigDecimal takeProfitPrice, BigDecimal trailingStopPrice, BigDecimal highWaterMark,
                               boolean trailingStopActive, String closeReason, LocalDateTime openedAt,
-                              LocalDateTime closedAt, LocalDateTime createdAt) {
+                              LocalDateTime closedAt, LocalDateTime createdAt,
+                              BigDecimal entryFee, BigDecimal exitFee, BigDecimal totalFees) {
         this.market = market;
         this.status = status;
         this.entryPrice = entryPrice;
@@ -96,6 +106,9 @@ public class PositionJpaEntity {
         this.openedAt = openedAt;
         this.closedAt = closedAt;
         this.createdAt = createdAt;
+        this.entryFee = entryFee;
+        this.exitFee = exitFee;
+        this.totalFees = totalFees;
     }
 
     // Getters and Setters
@@ -139,4 +152,10 @@ public class PositionJpaEntity {
     public void setClosedAt(LocalDateTime closedAt) { this.closedAt = closedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public BigDecimal getEntryFee() { return entryFee; }
+    public void setEntryFee(BigDecimal entryFee) { this.entryFee = entryFee; }
+    public BigDecimal getExitFee() { return exitFee; }
+    public void setExitFee(BigDecimal exitFee) { this.exitFee = exitFee; }
+    public BigDecimal getTotalFees() { return totalFees; }
+    public void setTotalFees(BigDecimal totalFees) { this.totalFees = totalFees; }
 }

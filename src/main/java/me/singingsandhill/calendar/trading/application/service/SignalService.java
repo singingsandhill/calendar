@@ -49,8 +49,11 @@ public class SignalService {
 
         DivergenceResult divergence = divergenceService.detect(market);
 
+        // 이전 캔들의 MA 값 조회 (실제 크로스 이벤트 감지용)
+        BigDecimal[] prevMAs = indicatorService.calculatePreviousMAs(market);
+
         // 점수 계산
-        int maCrossScore = calculateMaCrossScore(indicators);
+        int maCrossScore = calculateMaCrossScore(indicators, prevMAs);
         int maTrendScore = calculateMaTrendScore(indicators);
         int rsiDivergenceScore = calculateRsiDivergenceScore(divergence);
         int rsiLevelScore = calculateRsiLevelScore(indicators);
@@ -83,17 +86,38 @@ public class SignalService {
 
     /**
      * MA 크로스오버 점수 계산
-     * 골든크로스: +25, 데드크로스: -25
+     * 실제 골든크로스 이벤트: +25, 실제 데드크로스 이벤트: -25
+     * MA5 > MA20 상태 유지: +10, MA5 < MA20 상태 유지: -10
      */
-    private int calculateMaCrossScore(IndicatorResult indicators) {
+    private int calculateMaCrossScore(IndicatorResult indicators, BigDecimal[] prevMAs) {
         if (indicators.ma5() == null || indicators.ma20() == null) {
             return 0;
         }
 
-        if (indicators.isGoldenCross()) {
-            return 25;
-        } else if (indicators.isDeathCross()) {
-            return -25;
+        // 이전 MA 값이 있으면 실제 크로스 이벤트 감지
+        if (prevMAs != null && prevMAs.length == 2) {
+            BigDecimal prevMa5 = prevMAs[0];
+            BigDecimal prevMa20 = prevMAs[1];
+
+            // 실제 골든크로스 이벤트 (이전 MA5 <= MA20 → 현재 MA5 > MA20)
+            if (indicators.isGoldenCross(prevMa5, prevMa20)) {
+                log.debug("Golden cross event detected! prevMa5={}, prevMa20={}, ma5={}, ma20={}",
+                        prevMa5, prevMa20, indicators.ma5(), indicators.ma20());
+                return 25;
+            }
+            // 실제 데드크로스 이벤트 (이전 MA5 >= MA20 → 현재 MA5 < MA20)
+            if (indicators.isDeathCross(prevMa5, prevMa20)) {
+                log.debug("Death cross event detected! prevMa5={}, prevMa20={}, ma5={}, ma20={}",
+                        prevMa5, prevMa20, indicators.ma5(), indicators.ma20());
+                return -25;
+            }
+        }
+
+        // 크로스 이벤트가 아니면 현재 상태에 따라 낮은 점수 부여
+        if (indicators.isMa5AboveMa20()) {
+            return 10;  // MA5 > MA20 상태 유지 (기존 25 → 10으로 완화)
+        } else if (indicators.isMa5BelowMa20()) {
+            return -10; // MA5 < MA20 상태 유지 (기존 -25 → -10으로 완화)
         }
         return 0;
     }

@@ -26,6 +26,9 @@ public class Position {
     private final LocalDateTime openedAt;
     private LocalDateTime closedAt;
     private final LocalDateTime createdAt;
+    private BigDecimal entryFee;
+    private BigDecimal exitFee;
+    private BigDecimal totalFees;
 
     public Position(Long id, String market, PositionStatus status,
                     BigDecimal entryPrice, BigDecimal entryVolume, BigDecimal entryAmount,
@@ -34,7 +37,7 @@ public class Position {
                     BigDecimal stopLossPrice, BigDecimal takeProfitPrice,
                     BigDecimal trailingStopPrice, BigDecimal highWaterMark, boolean trailingStopActive,
                     CloseReason closeReason, LocalDateTime openedAt, LocalDateTime closedAt,
-                    LocalDateTime createdAt) {
+                    LocalDateTime createdAt, BigDecimal entryFee, BigDecimal exitFee, BigDecimal totalFees) {
         this.id = id;
         this.market = market;
         this.status = status;
@@ -55,23 +58,40 @@ public class Position {
         this.openedAt = openedAt;
         this.closedAt = closedAt;
         this.createdAt = createdAt != null ? createdAt : LocalDateTime.now();
+        this.entryFee = entryFee;
+        this.exitFee = exitFee;
+        this.totalFees = totalFees;
     }
 
     public static Position open(String market, BigDecimal entryPrice, BigDecimal entryVolume,
                                  BigDecimal stopLossPrice, BigDecimal takeProfitPrice) {
+        return open(market, entryPrice, entryVolume, stopLossPrice, takeProfitPrice, BigDecimal.ZERO);
+    }
+
+    public static Position open(String market, BigDecimal entryPrice, BigDecimal entryVolume,
+                                 BigDecimal stopLossPrice, BigDecimal takeProfitPrice, BigDecimal entryFee) {
         BigDecimal entryAmount = entryPrice.multiply(entryVolume);
         return new Position(null, market, PositionStatus.OPEN,
                 entryPrice, entryVolume, entryAmount,
                 null, null, null, null, null,
                 stopLossPrice, takeProfitPrice, null, entryPrice, false, null,
-                LocalDateTime.now(), null, LocalDateTime.now());
+                LocalDateTime.now(), null, LocalDateTime.now(),
+                entryFee != null ? entryFee : BigDecimal.ZERO, null, null);
     }
 
     public void close(BigDecimal exitPrice, BigDecimal exitVolume, CloseReason reason) {
+        close(exitPrice, exitVolume, reason, BigDecimal.ZERO);
+    }
+
+    public void close(BigDecimal exitPrice, BigDecimal exitVolume, CloseReason reason, BigDecimal exitFee) {
         this.exitPrice = exitPrice;
         this.exitVolume = exitVolume;
         this.exitAmount = exitPrice.multiply(exitVolume);
-        this.realizedPnl = exitAmount.subtract(entryAmount);
+        this.exitFee = exitFee != null ? exitFee : BigDecimal.ZERO;
+        this.totalFees = (this.entryFee != null ? this.entryFee : BigDecimal.ZERO)
+                .add(this.exitFee);
+        // P&L 계산 시 수수료 차감
+        this.realizedPnl = exitAmount.subtract(entryAmount).subtract(totalFees);
         this.realizedPnlPct = realizedPnl.divide(entryAmount, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
         this.closeReason = reason;
@@ -151,4 +171,7 @@ public class Position {
     public LocalDateTime getOpenedAt() { return openedAt; }
     public LocalDateTime getClosedAt() { return closedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public BigDecimal getEntryFee() { return entryFee; }
+    public BigDecimal getExitFee() { return exitFee; }
+    public BigDecimal getTotalFees() { return totalFees; }
 }

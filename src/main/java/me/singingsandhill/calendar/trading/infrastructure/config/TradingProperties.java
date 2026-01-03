@@ -110,6 +110,8 @@ public class TradingProperties {
         private double takeProfit = 0.15;
         private double trailingStop = 0.03;
         private double trailingActivation = 0.10;
+        private double takerFeeRate = 0.0025;        // 0.25% Bithumb taker fee
+        private double minProfitThreshold = 0.006;   // 0.6% (왕복 수수료 0.5% + 마진 0.1%)
 
         public double getStopLoss() { return stopLoss; }
         public void setStopLoss(double stopLoss) { this.stopLoss = stopLoss; }
@@ -119,6 +121,10 @@ public class TradingProperties {
         public void setTrailingStop(double trailingStop) { this.trailingStop = trailingStop; }
         public double getTrailingActivation() { return trailingActivation; }
         public void setTrailingActivation(double trailingActivation) { this.trailingActivation = trailingActivation; }
+        public double getTakerFeeRate() { return takerFeeRate; }
+        public void setTakerFeeRate(double takerFeeRate) { this.takerFeeRate = takerFeeRate; }
+        public double getMinProfitThreshold() { return minProfitThreshold; }
+        public void setMinProfitThreshold(double minProfitThreshold) { this.minProfitThreshold = minProfitThreshold; }
     }
 
     public static class Rebalancing {

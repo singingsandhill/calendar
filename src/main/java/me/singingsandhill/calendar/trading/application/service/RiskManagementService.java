@@ -3,6 +3,7 @@ package me.singingsandhill.calendar.trading.application.service;
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
+import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
 import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbOrderResponse;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,41 +36,57 @@ public class RiskManagementService {
     }
 
     /**
-     * 리스크 체크 및 청산 실행
+     * 리스크 체크 및 청산 실행 (다중 포지션 지원)
      * 손절/익절/트레일링스탑 조건 충족 시 즉시 시장가 청산
      */
     @Transactional
     public CloseReason checkAndExecuteRiskRules(String market) {
-        Optional<Position> openPositionOpt = positionRepository.findOpenPositionByMarket(market);
+        // 모든 열린 포지션 조회
+        List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
 
-        if (openPositionOpt.isEmpty()) {
+        if (openPositions.isEmpty()) {
             return null;
         }
 
-        Position position = openPositionOpt.get();
-        Double currentPrice = bithumbApiClient.getCurrentPrice();
-
-        if (currentPrice == null) {
+        Double currentPriceDouble = bithumbApiClient.getCurrentPrice();
+        if (currentPriceDouble == null) {
             log.warn("Cannot get current price for risk check");
             return null;
         }
 
-        BigDecimal currentPriceBD = BigDecimal.valueOf(currentPrice);
-        BigDecimal pnlPct = position.calculateUnrealizedPnlPct(currentPriceBD);
+        BigDecimal currentPrice = BigDecimal.valueOf(currentPriceDouble);
+        CloseReason lastCloseReason = null;
 
-        log.debug("Risk check - Entry: {}, Current: {}, PnL%: {}",
-                position.getEntryPrice(), currentPriceBD, pnlPct);
+        // 각 포지션에 대해 리스크 체크 수행
+        for (Position position : openPositions) {
+            CloseReason reason = checkPositionRisk(position, currentPrice);
+            if (reason != null) {
+                lastCloseReason = reason;
+            }
+        }
+
+        return lastCloseReason;
+    }
+
+    /**
+     * 단일 포지션 리스크 체크
+     */
+    private CloseReason checkPositionRisk(Position position, BigDecimal currentPrice) {
+        BigDecimal pnlPct = position.calculateUnrealizedPnlPct(currentPrice);
+
+        log.debug("Risk check - Position {}: Entry={}, Current={}, PnL%={}",
+                position.getId(), position.getEntryPrice(), currentPrice, pnlPct);
 
         // 1. 손절 체크 (-8%)
         double stopLoss = tradingProperties.getRisk().getStopLoss();
         if (pnlPct.compareTo(BigDecimal.valueOf(stopLoss * 100)) <= 0) {
-            log.warn("Stop-loss triggered! PnL: {}%", pnlPct);
-            closePosition(position, currentPriceBD, CloseReason.STOP_LOSS);
+            log.warn("Stop-loss triggered for position {}! PnL: {}%", position.getId(), pnlPct);
+            closePosition(position, currentPrice, CloseReason.STOP_LOSS);
             return CloseReason.STOP_LOSS;
         }
 
         // 2. High Water Mark 업데이트
-        position.updateHighWaterMark(currentPriceBD);
+        position.updateHighWaterMark(currentPrice);
 
         // 3. 트레일링 스탑 활성화 체크 (+10% 도달 시)
         double trailingActivation = tradingProperties.getRisk().getTrailingActivation();
@@ -77,12 +95,12 @@ public class RiskManagementService {
 
             // 트레일링 스탑 가격 설정 (-3% 추적)
             double trailingPct = tradingProperties.getRisk().getTrailingStop();
-            BigDecimal trailingStopPrice = currentPriceBD.multiply(
+            BigDecimal trailingStopPrice = currentPrice.multiply(
                     BigDecimal.ONE.subtract(BigDecimal.valueOf(trailingPct)))
                     .setScale(0, RoundingMode.DOWN);
             position.activateTrailingStop(trailingStopPrice);
-            log.info("Trailing stop activated at price: {} (current: {}, PnL: {}%)",
-                    trailingStopPrice, currentPriceBD, pnlPct);
+            log.info("Trailing stop activated for position {}: {} (current: {}, PnL: {}%)",
+                    position.getId(), trailingStopPrice, currentPrice, pnlPct);
         }
 
         // 4. 트레일링 스탑 가격 업데이트 (상승만)
@@ -94,10 +112,10 @@ public class RiskManagementService {
             position.updateTrailingStop(newTrailingStop);
 
             // 5. 트레일링 스탑 트리거 체크
-            if (position.shouldTrailingStop(currentPriceBD)) {
-                log.info("Trailing stop triggered! Price: {}, Stop: {}, PnL: {}%",
-                        currentPriceBD, position.getTrailingStopPrice(), pnlPct);
-                closePosition(position, currentPriceBD, CloseReason.TRAILING_STOP);
+            if (position.shouldTrailingStop(currentPrice)) {
+                log.info("Trailing stop triggered for position {}! Price: {}, Stop: {}, PnL: {}%",
+                        position.getId(), currentPrice, position.getTrailingStopPrice(), pnlPct);
+                closePosition(position, currentPrice, CloseReason.TRAILING_STOP);
                 return CloseReason.TRAILING_STOP;
             }
         }
@@ -105,8 +123,8 @@ public class RiskManagementService {
         // 6. 익절 체크 (+15%)
         double takeProfit = tradingProperties.getRisk().getTakeProfit();
         if (pnlPct.compareTo(BigDecimal.valueOf(takeProfit * 100)) >= 0) {
-            log.info("Take-profit triggered! PnL: {}%", pnlPct);
-            closePosition(position, currentPriceBD, CloseReason.TAKE_PROFIT);
+            log.info("Take-profit triggered for position {}! PnL: {}%", position.getId(), pnlPct);
+            closePosition(position, currentPrice, CloseReason.TAKE_PROFIT);
             return CloseReason.TAKE_PROFIT;
         }
 
@@ -130,17 +148,34 @@ public class RiskManagementService {
             if (orderResponse != null) {
                 log.info("Close order placed: {}", orderResponse.uuid());
 
-                // 포지션 상태 업데이트
-                position.close(exitPrice, position.getEntryVolume(), reason);
+                // 수수료 추출
+                BigDecimal fee = extractFee(orderResponse);
+
+                // 포지션 상태 업데이트 (수수료 포함)
+                position.close(exitPrice, position.getEntryVolume(), reason, fee);
                 positionRepository.save(position);
 
-                log.info("Position closed - Entry: {}, Exit: {}, PnL: {} ({}%)",
+                log.info("Position closed - Entry: {}, Exit: {}, PnL: {} ({}%), Fee: {}",
                         position.getEntryPrice(), exitPrice,
-                        position.getRealizedPnl(), position.getRealizedPnlPct());
+                        position.getRealizedPnl(), position.getRealizedPnlPct(), fee);
             }
         } catch (Exception e) {
             log.error("Failed to close position", e);
         }
+    }
+
+    /**
+     * BithumbOrderResponse에서 수수료 추출
+     */
+    private BigDecimal extractFee(BithumbOrderResponse response) {
+        if (response.paidFee() != null && !response.paidFee().isEmpty()) {
+            try {
+                return new BigDecimal(response.paidFee());
+            } catch (NumberFormatException e) {
+                log.warn("Failed to parse fee: {}", response.paidFee());
+            }
+        }
+        return BigDecimal.ZERO;
     }
 
     /**
@@ -168,18 +203,26 @@ public class RiskManagementService {
     public void emergencyClose(String market) {
         log.warn("Emergency close triggered for {}", market);
 
-        Optional<Position> openPositionOpt = positionRepository.findOpenPositionByMarket(market);
+        // 모든 열린 포지션 조회
+        List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
 
-        if (openPositionOpt.isEmpty()) {
-            log.info("No open position to close");
+        if (openPositions.isEmpty()) {
+            log.info("No open positions to close");
             return;
         }
 
-        Position position = openPositionOpt.get();
-        Double currentPrice = bithumbApiClient.getCurrentPrice();
+        Double currentPriceDouble = bithumbApiClient.getCurrentPrice();
+        if (currentPriceDouble == null) {
+            log.error("Cannot get current price for emergency close");
+            return;
+        }
 
-        if (currentPrice != null) {
-            closePosition(position, BigDecimal.valueOf(currentPrice), CloseReason.MANUAL);
+        BigDecimal currentPrice = BigDecimal.valueOf(currentPriceDouble);
+
+        // 모든 포지션 청산
+        for (Position position : openPositions) {
+            log.warn("Emergency closing position {}", position.getId());
+            closePosition(position, currentPrice, CloseReason.MANUAL);
         }
 
         // 대기 중인 주문도 모두 취소

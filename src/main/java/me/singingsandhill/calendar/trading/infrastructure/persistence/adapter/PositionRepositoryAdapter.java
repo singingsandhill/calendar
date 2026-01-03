@@ -109,7 +109,10 @@ public class PositionRepositoryAdapter implements PositionRepository {
                 position.getCloseReason() != null ? position.getCloseReason().name() : null,
                 position.getOpenedAt(),
                 position.getClosedAt(),
-                position.getCreatedAt()
+                position.getCreatedAt(),
+                position.getEntryFee(),
+                position.getExitFee(),
+                position.getTotalFees()
         );
         if (position.getId() != null) {
             entity.setId(position.getId());
@@ -138,7 +141,10 @@ public class PositionRepositoryAdapter implements PositionRepository {
                 entity.getCloseReason() != null ? CloseReason.valueOf(entity.getCloseReason()) : null,
                 entity.getOpenedAt(),
                 entity.getClosedAt(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getEntryFee(),
+                entity.getExitFee(),
+                entity.getTotalFees()
         );
     }
 }

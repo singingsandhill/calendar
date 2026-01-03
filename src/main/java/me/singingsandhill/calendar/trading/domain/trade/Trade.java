@@ -73,6 +73,17 @@ public class Trade {
         this.status = TradeStatus.CANCEL;
     }
 
+    public void markFailed(String errorMessage) {
+        this.status = TradeStatus.FAILED;
+        if (errorMessage != null && !errorMessage.isEmpty()) {
+            String truncatedError = errorMessage.length() > 100
+                    ? errorMessage.substring(0, 100) + "..."
+                    : errorMessage;
+            this.signalReason = (this.signalReason != null ? this.signalReason : "")
+                    + " | FAILED: " + truncatedError;
+        }
+    }
+
     public BigDecimal getTotalAmount() {
         if (executedPrice != null && executedVolume != null) {
             return executedPrice.multiply(executedVolume);

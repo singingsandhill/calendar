@@ -179,9 +179,34 @@
                 const lastCandle = candleData[candleData.length - 1];
                 document.getElementById('current-price').textContent =
                     lastCandle.close.toLocaleString() + ' KRW';
+
+                // Load trade markers after candles
+                await loadTradeMarkers();
             }
         } catch (error) {
             console.error('Failed to load chart data:', error);
+        }
+    }
+
+    // Load trade markers for chart
+    async function loadTradeMarkers() {
+        try {
+            const response = await fetch('/api/trading/chart/trades?minutes=200');
+            const trades = await response.json();
+
+            if (trades && trades.length > 0) {
+                const markers = trades.map(t => ({
+                    time: new Date(t.time).getTime() / 1000,
+                    position: t.type === 'BUY' ? 'belowBar' : 'aboveBar',
+                    color: t.type === 'BUY' ? '#22c55e' : '#ef4444',
+                    shape: t.type === 'BUY' ? 'arrowUp' : 'arrowDown',
+                    text: t.type + ' ' + t.price.toLocaleString()
+                }));
+
+                candleSeries.setMarkers(markers);
+            }
+        } catch (error) {
+            console.error('Failed to load trade markers:', error);
         }
     }
 
@@ -287,6 +312,7 @@
         // Auto-refresh
         setInterval(loadIndicators, 10000);
         setInterval(updateBotStatus, 5000);
+        setInterval(loadTradeMarkers, 30000);  // Refresh trade markers every 30 seconds
     });
 
     // Handle window resize

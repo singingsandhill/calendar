@@ -82,6 +82,13 @@ public class ProfitService {
         List<Position> closedPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.CLOSED);
         BigDecimal realizedPnl = closedPositions.stream()
                 .map(Position::getRealizedPnl)
+                .filter(p -> p != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 수수료 총액 계산
+        BigDecimal totalFeesPaid = closedPositions.stream()
+                .map(Position::getTotalFees)
+                .filter(f -> f != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 승률 계산
@@ -104,7 +111,7 @@ public class ProfitService {
         return new ProfitSummary(
                 totalValue, krwBalance, coinBalance, currentPriceBD,
                 unrealizedPnl, unrealizedPnlPct,
-                realizedPnl, (int) totalTrades, winRate, avgPnlPct
+                realizedPnl, totalFeesPaid, (int) totalTrades, winRate, avgPnlPct
         );
     }
 
@@ -218,6 +225,7 @@ public class ProfitService {
             BigDecimal unrealizedPnl,
             BigDecimal unrealizedPnlPct,
             BigDecimal realizedPnl,
+            BigDecimal totalFeesPaid,
             int totalTrades,
             double winRate,
             BigDecimal avgPnlPct

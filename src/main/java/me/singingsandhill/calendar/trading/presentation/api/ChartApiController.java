@@ -4,11 +4,15 @@ import me.singingsandhill.calendar.trading.application.dto.IndicatorResult;
 import me.singingsandhill.calendar.trading.application.service.CandleService;
 import me.singingsandhill.calendar.trading.application.service.IndicatorService;
 import me.singingsandhill.calendar.trading.domain.candle.Candle;
+import me.singingsandhill.calendar.trading.domain.trade.Trade;
+import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
+import me.singingsandhill.calendar.trading.domain.trade.TradeStatus;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,15 +25,18 @@ public class ChartApiController {
     private final IndicatorService indicatorService;
     private final BithumbApiClient bithumbApiClient;
     private final TradingProperties tradingProperties;
+    private final TradeRepository tradeRepository;
 
     public ChartApiController(CandleService candleService,
                               IndicatorService indicatorService,
                               BithumbApiClient bithumbApiClient,
-                              TradingProperties tradingProperties) {
+                              TradingProperties tradingProperties,
+                              TradeRepository tradeRepository) {
         this.candleService = candleService;
         this.indicatorService = indicatorService;
         this.bithumbApiClient = bithumbApiClient;
         this.tradingProperties = tradingProperties;
+        this.tradeRepository = tradeRepository;
     }
 
     /**
@@ -90,6 +97,34 @@ public class ChartApiController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 차트 오버레이용 거래 마커 데이터 조회
+     */
+    @GetMapping("/chart/trades")
+    public ResponseEntity<List<TradeMarkerDto>> getTradesForChart(
+            @RequestParam(defaultValue = "200") int minutes) {
+        String market = tradingProperties.getBot().getMarket();
+        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime start = end.minusMinutes(minutes);
+
+        List<Trade> trades = tradeRepository.findByMarketAndCreatedAtBetween(market, start, end);
+
+        List<TradeMarkerDto> markers = trades.stream()
+                .filter(t -> t.getStatus() == TradeStatus.DONE)
+                .map(t -> new TradeMarkerDto(
+                        t.getCreatedAt().toString(),
+                        t.getTradeType().name(),
+                        t.getExecutedPrice() != null ? t.getExecutedPrice().doubleValue()
+                                : (t.getPrice() != null ? t.getPrice().doubleValue() : 0),
+                        t.getExecutedVolume() != null ? t.getExecutedVolume().doubleValue()
+                                : (t.getVolume() != null ? t.getVolume().doubleValue() : 0),
+                        t.getFee() != null ? t.getFee().doubleValue() : 0
+                ))
+                .toList();
+
+        return ResponseEntity.ok(markers);
+    }
+
     // Response DTOs
     public record CandleDataResponse(List<CandleDto> candles, IndicatorDto indicators) {}
 
@@ -109,5 +144,13 @@ public class ChartApiController {
             Double rsi,
             Double stochK,
             Double stochD
+    ) {}
+
+    public record TradeMarkerDto(
+            String time,
+            String type,
+            double price,
+            double volume,
+            double fee
     ) {}
 }
