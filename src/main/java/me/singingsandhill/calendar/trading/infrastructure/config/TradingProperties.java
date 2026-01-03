@@ -32,6 +32,8 @@ public class TradingProperties {
         private String market = "KRW-ADA";
         private int maxPositions = 2;
         private double orderRatio = 0.25;
+        private double orderRatioMin = 0.15;  // 변동성 높을 때 최소 비율
+        private double orderRatioMax = 0.35;  // 변동성 낮을 때 최대 비율
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -41,6 +43,10 @@ public class TradingProperties {
         public void setMaxPositions(int maxPositions) { this.maxPositions = maxPositions; }
         public double getOrderRatio() { return orderRatio; }
         public void setOrderRatio(double orderRatio) { this.orderRatio = orderRatio; }
+        public double getOrderRatioMin() { return orderRatioMin; }
+        public void setOrderRatioMin(double orderRatioMin) { this.orderRatioMin = orderRatioMin; }
+        public double getOrderRatioMax() { return orderRatioMax; }
+        public void setOrderRatioMax(double orderRatioMax) { this.orderRatioMax = orderRatioMax; }
     }
 
     public static class Indicators {
@@ -52,6 +58,7 @@ public class TradingProperties {
         private int stochD = 3;
         private int stochSlow = 3;
         private int volumeMa = 20;
+        private int atrPeriod = 14;  // ATR 계산 기간
 
         public int getMaShort() { return maShort; }
         public void setMaShort(int maShort) { this.maShort = maShort; }
@@ -69,6 +76,8 @@ public class TradingProperties {
         public void setStochSlow(int stochSlow) { this.stochSlow = stochSlow; }
         public int getVolumeMa() { return volumeMa; }
         public void setVolumeMa(int volumeMa) { this.volumeMa = volumeMa; }
+        public int getAtrPeriod() { return atrPeriod; }
+        public void setAtrPeriod(int atrPeriod) { this.atrPeriod = atrPeriod; }
     }
 
     public static class Thresholds {

@@ -14,8 +14,11 @@ Main orchestrator for the trading bot.
 | `pause()` | Pause execution (keep state) |
 | `resume()` | Resume from paused state |
 | `executeTradeLoop()` | Main 1-minute execution loop |
-| `executeBuy(amount)` | Place market buy order |
-| `executeSell(volume)` | Place market sell order |
+| `executeTradeBySignal()` | Execute buy/sell with multi-position support |
+| `executeBuy(market, signal)` | Place market buy order with ATR-based sizing |
+| `executeSell(market, signal, position)` | Close position with fee-adjusted P&L check |
+| `extractExecutedPrice()` | Calculate weighted average price from partial fills |
+| `calculateDynamicOrderRatio()` | ATR-based dynamic order ratio (15-35%) |
 | `manualBuy(amount)` | Manual buy override |
 | `manualSell(volume)` | Manual sell override |
 | `emergencyClose()` | Liquidate all positions |
@@ -25,7 +28,13 @@ Main orchestrator for the trading bot.
 2. Check risk rules (stop-loss/take-profit/trailing stop)
 3. Check rebalancing conditions
 4. Generate technical signals
-5. Execute trades based on signals (max 2 positions, 25% order ratio)
+5. Execute trades based on signals (max 2 positions, dynamic 15-35% order ratio)
+
+**Recent Changes**:
+- Fee-included P&L calculation (`calculateUnrealizedPnlPctWithFee`)
+- Weighted average price for partial fills (`extractExecutedPrice`)
+- ATR-based dynamic order sizing (high volatility: 15%, low: 35%)
+- Minimum profit threshold: 0.6% before selling
 
 ### CandleService
 Candle data management.
@@ -60,10 +69,12 @@ Trading signal generation.
 |--------|-------------|
 | `generateSignal()` | Generate signal from current market data |
 
-**Signal Logic**:
-- Score >= 40 AND price > MA60 AND RSI < 70 AND StochK < 85 → BUY
-- Score <= -40 AND price < MA60 AND RSI > 30 AND StochK > 15 → SELL
+**Signal Logic** (Updated):
+- Score >= 40 AND RSI < 70 AND StochK < 85 → BUY
+- Score <= -40 AND RSI > 30 AND StochK > 15 → SELL
 - Otherwise → HOLD
+
+*Note: MA60 requirement removed to allow low-point buying opportunities*
 
 **Score Components**:
 - MA Cross: ±25 | MA Trend: ±15 | RSI Divergence: ±20

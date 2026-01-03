@@ -70,11 +70,14 @@ public class RiskManagementService {
 
     /**
      * 단일 포지션 리스크 체크
+     * 수수료를 포함한 정확한 손익률로 리스크 판단
      */
     private CloseReason checkPositionRisk(Position position, BigDecimal currentPrice) {
-        BigDecimal pnlPct = position.calculateUnrealizedPnlPct(currentPrice);
+        // 수수료를 포함한 정확한 손익률 계산
+        BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
+        BigDecimal pnlPct = position.calculateUnrealizedPnlPctWithFee(currentPrice, feeRate);
 
-        log.debug("Risk check - Position {}: Entry={}, Current={}, PnL%={}",
+        log.debug("Risk check - Position {}: Entry={}, Current={}, PnL%={} (fee-adjusted)",
                 position.getId(), position.getEntryPrice(), currentPrice, pnlPct);
 
         // 1. 손절 체크 (-8%)

@@ -36,6 +36,7 @@ public class TradingBotService {
 
     private final CandleService candleService;
     private final SignalService signalService;
+    private final IndicatorService indicatorService;
     private final RiskManagementService riskManagementService;
     private final RebalanceService rebalanceService;
     private final BithumbApiClient bithumbApiClient;
@@ -45,6 +46,7 @@ public class TradingBotService {
 
     public TradingBotService(CandleService candleService,
                              SignalService signalService,
+                             IndicatorService indicatorService,
                              RiskManagementService riskManagementService,
                              RebalanceService rebalanceService,
                              BithumbApiClient bithumbApiClient,
@@ -53,6 +55,7 @@ public class TradingBotService {
                              TradingProperties tradingProperties) {
         this.candleService = candleService;
         this.signalService = signalService;
+        this.indicatorService = indicatorService;
         this.riskManagementService = riskManagementService;
         this.rebalanceService = rebalanceService;
         this.bithumbApiClient = bithumbApiClient;
@@ -187,7 +190,9 @@ public class TradingBotService {
 
             for (Position position : openPositions) {
                 if (currentPrice != null) {
-                    BigDecimal pnlPct = position.calculateUnrealizedPnlPct(BigDecimal.valueOf(currentPrice));
+                    // 수수료를 포함한 실제 수익률로 판단
+                    BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
+                    BigDecimal pnlPct = position.calculateUnrealizedPnlPctWithFee(BigDecimal.valueOf(currentPrice), feeRate);
                     // 최소 수익률(0.6%) 이상일 때만 매도 실행
                     if (pnlPct.doubleValue() >= minProfitThreshold * 100) {
                         executeSell(market, signal, position);
@@ -222,12 +227,12 @@ public class TradingBotService {
             return;
         }
 
-        // 가용 자금의 25% 사용 (분할 매수)
-        double orderRatio = tradingProperties.getBot().getOrderRatio();
+        // ATR 기반 동적 비율 계산 (변동성에 따라 15~35% 조정)
+        double orderRatio = calculateDynamicOrderRatio(market);
         BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(orderRatio))
                 .setScale(0, RoundingMode.DOWN);
 
-        log.info("Executing BUY order: {} KRW", orderAmount);
+        log.info("Executing BUY order: {} KRW (ratio: {}%)", orderAmount, orderRatio * 100);
 
         // Trade 먼저 생성 (WAIT 상태)
         String uuid = UUID.randomUUID().toString();
@@ -322,20 +327,31 @@ public class TradingBotService {
 
     /**
      * BithumbOrderResponse에서 체결가 추출
-     * trades 리스트의 첫 번째 체결 정보에서 price 가져옴
+     * trades 리스트 전체의 가중평균 가격 계산 (부분 체결 대응)
      */
     private BigDecimal extractExecutedPrice(BithumbOrderResponse response) {
         if (response.trades() != null && !response.trades().isEmpty()) {
-            // 첫 번째 체결 정보에서 가격 추출
-            BithumbOrderResponse.TradeDetail firstTrade = response.trades().get(0);
-            if (firstTrade.price() != null && !firstTrade.price().isEmpty()) {
-                try {
-                    BigDecimal price = new BigDecimal(firstTrade.price());
-                    log.debug("Extracted executed price from trades: {}", price);
-                    return price;
-                } catch (NumberFormatException e) {
-                    log.warn("Failed to parse trade price: {}", firstTrade.price());
+            BigDecimal totalValue = BigDecimal.ZERO;
+            BigDecimal totalVolume = BigDecimal.ZERO;
+
+            for (BithumbOrderResponse.TradeDetail trade : response.trades()) {
+                if (trade.price() != null && trade.volume() != null
+                        && !trade.price().isEmpty() && !trade.volume().isEmpty()) {
+                    try {
+                        BigDecimal price = new BigDecimal(trade.price());
+                        BigDecimal volume = new BigDecimal(trade.volume());
+                        totalValue = totalValue.add(price.multiply(volume));
+                        totalVolume = totalVolume.add(volume);
+                    } catch (NumberFormatException e) {
+                        log.warn("Failed to parse trade: price={}, volume={}", trade.price(), trade.volume());
+                    }
                 }
+            }
+
+            if (totalVolume.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal avgPrice = totalValue.divide(totalVolume, 8, RoundingMode.HALF_UP);
+                log.debug("Calculated weighted average price: {} (from {} trades)", avgPrice, response.trades().size());
+                return avgPrice;
             }
         }
         return null;
@@ -523,6 +539,45 @@ public class TradingBotService {
 
         // 포지션 청산
         riskManagementService.emergencyClose(market);
+    }
+
+    /**
+     * ATR 기반 동적 주문 비율 계산
+     * 변동성 높음(ATR% > 3%): 15%, 보통(1-3%): 선형 보간, 낮음(< 1%): 35%
+     *
+     * @param market 마켓
+     * @return 동적 주문 비율 (0.15 ~ 0.35)
+     */
+    private double calculateDynamicOrderRatio(String market) {
+        BigDecimal atrPercent = indicatorService.calculateATRPercent(market);
+
+        if (atrPercent == null) {
+            log.debug("ATR calculation failed, using default ratio");
+            return tradingProperties.getBot().getOrderRatio();  // 기본값 25%
+        }
+
+        double atrPct = atrPercent.doubleValue();
+        double ratioMin = tradingProperties.getBot().getOrderRatioMin();  // 0.15 (변동성 높을 때)
+        double ratioMax = tradingProperties.getBot().getOrderRatioMax();  // 0.35 (변동성 낮을 때)
+        double baseRatio = tradingProperties.getBot().getOrderRatio();    // 0.25 (기본값)
+
+        double result;
+        if (atrPct >= 3.0) {
+            // 변동성 높음 → 보수적 매수 (15%)
+            result = ratioMin;
+            log.debug("High volatility (ATR {}%), using min ratio {}%", atrPct, ratioMin * 100);
+        } else if (atrPct <= 1.0) {
+            // 변동성 낮음 → 적극적 매수 (35%)
+            result = ratioMax;
+            log.debug("Low volatility (ATR {}%), using max ratio {}%", atrPct, ratioMax * 100);
+        } else {
+            // 중간 영역 → 선형 보간
+            // ATR 3% → 15%, ATR 1% → 35%
+            result = ratioMax - ((atrPct - 1.0) / 2.0) * (ratioMax - ratioMin);
+            log.debug("Medium volatility (ATR {}%), using interpolated ratio {}%", atrPct, result * 100);
+        }
+
+        return result;
     }
 
     public record BotStatus(boolean running, boolean paused, String market) {}

@@ -62,14 +62,37 @@ trading:
     sellRsiMin: 30       # 매도 시 RSI 하한
     sellStochKMin: 15    # 매도 시 StochK 하한
   risk:
-    stopLoss: -0.08      # -8%
-    takeProfit: 0.15     # +15%
-    trailingStop: 0.03   # -3% 추적
+    stopLoss: -0.08           # -8%
+    takeProfit: 0.15          # +15%
+    trailingStop: 0.03        # -3% 추적
     trailingActivation: 0.10  # +10% 도달 시 활성화
+    takerFeeRate: 0.0025      # 수수료율 0.25%
+    minProfitThreshold: 0.006 # 최소 수익률 0.6%
   rebalancing:
     enabled: true
     defaultRatio: 0.50
 ```
+
+## Recent Changes
+
+### Fee-included P&L Calculation
+- `calculateUnrealizedPnlPctWithFee()` 사용으로 수수료 포함 수익률 계산
+- 매도 판단 시 실제 수익률 반영 → 손실 매도 방지
+
+### Weighted Average Price
+- `extractExecutedPrice()`: 부분 체결 시 가중평균 체결가 계산
+- 변경 전: 첫 번째 체결가만 사용
+- 변경 후: trades 리스트 전체 가중평균
+
+### ATR-based Dynamic Order Ratio
+- 변동성 높음 (ATR ≥ 3%): 15% 주문
+- 변동성 낮음 (ATR ≤ 1%): 35% 주문
+- 중간: 선형 보간
+
+### Signal Logic Update
+- MA60 조건 제거 (저점 매수 기회 확대)
+- 매수: score ≥ 40 AND RSI < 70 AND StochK < 85
+- 매도: score ≤ -40 AND RSI > 30 AND StochK > 15
 
 ## REST API
 

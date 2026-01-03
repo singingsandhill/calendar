@@ -67,6 +67,22 @@ Trading position with P&L tracking and trailing stop.
 | trailingStopPrice | BigDecimal | Current trailing stop price |
 | highWaterMark | BigDecimal | Highest price since entry |
 | trailingStopActive | boolean | Trailing stop activation status |
+| entryFee | BigDecimal | Entry trading fee |
+| exitFee | BigDecimal | Exit trading fee |
+| totalFees | BigDecimal | Total fees (entry + exit) |
+
+**Key Methods**:
+| Method | Description |
+|--------|-------------|
+| `calculateUnrealizedPnl(currentPrice)` | Unrealized P&L (fee excluded) |
+| `calculateUnrealizedPnlPct(currentPrice)` | Unrealized P&L % (fee excluded) |
+| `calculateUnrealizedPnlWithFee(currentPrice, feeRate)` | Unrealized P&L with fees |
+| `calculateUnrealizedPnlPctWithFee(currentPrice, feeRate)` | Unrealized P&L % with fees |
+| `shouldStopLoss(currentPrice)` | Check stop-loss trigger |
+| `shouldTakeProfit(currentPrice)` | Check take-profit trigger |
+| `shouldTrailingStop(currentPrice)` | Check trailing stop trigger |
+| `updateHighWaterMark(currentPrice)` | Update HWM for trailing stop |
+| `activateTrailingStop(trailingStopPrice)` | Activate trailing stop |
 
 ### Signal (signal/)
 Trading signal from technical analysis.
@@ -96,9 +112,11 @@ Trading signal from technical analysis.
 - Volume Divergence: ±20
 - RSI Trend: ±10 (RSI 상승/하락 추세)
 
-**Signal Conditions**:
-- BUY: score >= 40 AND price > MA60 AND RSI < 70 AND StochK < 85
-- SELL: score <= -40 AND price < MA60 AND RSI > 30 AND StochK > 15
+**Signal Conditions** (Updated):
+- BUY: score >= 40 AND RSI < 70 AND StochK < 85
+- SELL: score <= -40 AND RSI > 30 AND StochK > 15
+
+*Note: MA60 requirement removed to allow low-point buying opportunities*
 
 ### Account Models (account/)
 

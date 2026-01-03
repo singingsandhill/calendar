@@ -238,4 +238,64 @@ public class IndicatorService {
 
         return new BigDecimal[]{prevMa5, prevMa20};
     }
+
+    /**
+     * ATR (Average True Range) 계산
+     * 변동성 측정 지표
+     *
+     * @param candles 캔들 리스트 (최신순 정렬)
+     * @param period ATR 기간
+     * @return ATR 값
+     */
+    public BigDecimal calculateATR(List<Candle> candles, int period) {
+        if (candles.size() < period + 1) {
+            return null;
+        }
+
+        BigDecimal sumTR = BigDecimal.ZERO;
+        for (int i = 0; i < period; i++) {
+            Candle current = candles.get(i);
+            Candle prev = candles.get(i + 1);
+
+            // True Range = max(High-Low, |High-PrevClose|, |Low-PrevClose|)
+            BigDecimal highLow = current.getHighPrice().subtract(current.getLowPrice());
+            BigDecimal highPrevClose = current.getHighPrice().subtract(prev.getTradePrice()).abs();
+            BigDecimal lowPrevClose = current.getLowPrice().subtract(prev.getTradePrice()).abs();
+
+            BigDecimal trueRange = highLow.max(highPrevClose).max(lowPrevClose);
+            sumTR = sumTR.add(trueRange);
+        }
+
+        return sumTR.divide(BigDecimal.valueOf(period), 8, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * ATR 퍼센트 계산 (가격 대비 변동성)
+     * 포지션 사이징에 사용
+     *
+     * @param market 마켓
+     * @return ATR% (예: 2.5 = 2.5% 변동성), 계산 불가시 null
+     */
+    public BigDecimal calculateATRPercent(String market) {
+        int atrPeriod = tradingProperties.getIndicators().getAtrPeriod();
+        List<Candle> candles = candleRepository.findByMarketOrderByDateTimeDesc(market, atrPeriod + 5);
+
+        if (candles.isEmpty()) {
+            return null;
+        }
+
+        BigDecimal atr = calculateATR(candles, atrPeriod);
+        if (atr == null) {
+            return null;
+        }
+
+        BigDecimal currentPrice = candles.get(0).getTradePrice();
+        if (currentPrice.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+
+        // ATR / 현재가 * 100 = ATR%
+        return atr.divide(currentPrice, 6, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+    }
 }

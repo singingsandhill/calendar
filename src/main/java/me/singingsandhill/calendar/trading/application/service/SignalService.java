@@ -244,17 +244,18 @@ public class SignalService {
         int sellRsiMin = tradingProperties.getThresholds().getSellRsiMin();
         int sellStochKMin = tradingProperties.getThresholds().getSellStochKMin();
 
-        // 매수 조건: score >= 40 AND price > MA60 AND RSI < 70 AND StochK < 85
+        // 매수 조건: score >= 40 AND RSI < 70 AND StochK < 85
+        // MA60 필수 조건 제거 - 이미 MA Trend 점수(±15)로 반영됨
+        // 저점 매수 기회 확보를 위해 완화
         if (totalScore >= buyThreshold &&
-            indicators.isPriceAboveMa60() &&
             indicators.rsi() != null && indicators.rsi().compareTo(BigDecimal.valueOf(buyRsiMax)) < 0 &&
             indicators.stochK() != null && indicators.stochK().compareTo(BigDecimal.valueOf(buyStochKMax)) < 0) {
             return SignalType.BUY;
         }
 
-        // 매도 조건: score <= -40 AND price < MA60 AND RSI > 30 AND StochK > 15
+        // 매도 조건: score <= -40 AND RSI > 30 AND StochK > 15
+        // MA60 필수 조건 제거 - 이미 MA Trend 점수(±15)로 반영됨
         if (totalScore <= sellThreshold &&
-            indicators.isPriceBelowMa60() &&
             indicators.rsi() != null && indicators.rsi().compareTo(BigDecimal.valueOf(sellRsiMin)) > 0 &&
             indicators.stochK() != null && indicators.stochK().compareTo(BigDecimal.valueOf(sellStochKMin)) > 0) {
             return SignalType.SELL;

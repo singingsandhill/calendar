@@ -110,6 +110,34 @@ public class Position {
                 .multiply(BigDecimal.valueOf(100));
     }
 
+    /**
+     * 수수료를 포함한 미실현 손익 계산
+     * 진입 수수료 + 예상 청산 수수료를 차감
+     *
+     * @param currentPrice 현재가
+     * @param feeRate 수수료율 (예: 0.0025 = 0.25%)
+     * @return 수수료 차감 후 미실현 손익
+     */
+    public BigDecimal calculateUnrealizedPnlWithFee(BigDecimal currentPrice, BigDecimal feeRate) {
+        BigDecimal currentValue = currentPrice.multiply(entryVolume);
+        BigDecimal estimatedExitFee = currentValue.multiply(feeRate).setScale(0, RoundingMode.UP);
+        BigDecimal totalFees = (entryFee != null ? entryFee : BigDecimal.ZERO).add(estimatedExitFee);
+        return currentValue.subtract(entryAmount).subtract(totalFees);
+    }
+
+    /**
+     * 수수료를 포함한 미실현 손익률 계산
+     *
+     * @param currentPrice 현재가
+     * @param feeRate 수수료율 (예: 0.0025 = 0.25%)
+     * @return 수수료 차감 후 미실현 손익률 (%)
+     */
+    public BigDecimal calculateUnrealizedPnlPctWithFee(BigDecimal currentPrice, BigDecimal feeRate) {
+        BigDecimal unrealizedPnl = calculateUnrealizedPnlWithFee(currentPrice, feeRate);
+        return unrealizedPnl.divide(entryAmount, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+    }
+
     public boolean shouldStopLoss(BigDecimal currentPrice) {
         return stopLossPrice != null && currentPrice.compareTo(stopLossPrice) <= 0;
     }
