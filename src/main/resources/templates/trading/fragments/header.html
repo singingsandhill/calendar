@@ -5,30 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ADA Trading Bot</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" rel="stylesheet">
     <!-- Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         .card {
-            @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-4;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1rem;
         }
         .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition;
+            background-color: #2563eb;
+            color: #ffffff;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.15s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
         }
         .btn-danger {
-            @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition;
+            background-color: #dc2626;
+            color: #ffffff;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.15s ease-in-out;
+        }
+        .btn-danger:hover {
+            background-color: #b91c1c;
         }
         .btn-success {
-            @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition;
+            background-color: #16a34a;
+            color: #ffffff;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.15s ease-in-out;
+        }
+        .btn-success:hover {
+            background-color: #15803d;
         }
         .stat-value {
-            @apply text-2xl font-bold dark:text-white;
+            font-size: 1.5rem;
+            line-height: 2rem;
+            font-weight: 700;
         }
         .stat-label {
-            @apply text-gray-500 dark:text-gray-400 text-sm;
+            color: #6b7280;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
         }
         .positive { color: #22c55e; }
         .negative { color: #ef4444; }
+        @media (prefers-color-scheme: dark) {
+            .card {
+                background-color: #1f2937;
+            }
+            .stat-value {
+                color: #ffffff;
+            }
+            .stat-label {
+                color: #9ca3af;
+            }
+        }
     </style>
 </head>
 <body>
