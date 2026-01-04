@@ -1,5 +1,8 @@
 package me.singingsandhill.calendar.trading.infrastructure.config;
 
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -7,12 +10,43 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "trading")
 public class TradingProperties {
 
+    private static final Logger log = LoggerFactory.getLogger(TradingProperties.class);
+
     private Bithumb bithumb = new Bithumb();
     private Bot bot = new Bot();
     private Indicators indicators = new Indicators();
     private Thresholds thresholds = new Thresholds();
     private Risk risk = new Risk();
     private Rebalancing rebalancing = new Rebalancing();
+
+    @PostConstruct
+    public void validateConfiguration() {
+        // 리밸런싱 설정 검증
+        if (rebalancing.getBullRatio() < 0 || rebalancing.getBullRatio() > 1.0) {
+            throw new IllegalStateException("Invalid bullRatio: must be between 0 and 1.0");
+        }
+        if (rebalancing.getBearRatio() < 0 || rebalancing.getBearRatio() > 1.0) {
+            throw new IllegalStateException("Invalid bearRatio: must be between 0 and 1.0");
+        }
+        if (rebalancing.getDefaultRatio() < 0 || rebalancing.getDefaultRatio() > 1.0) {
+            throw new IllegalStateException("Invalid defaultRatio: must be between 0 and 1.0");
+        }
+        if (rebalancing.getDeviationTrigger() <= 0) {
+            log.warn("deviationTrigger is {} - rebalancing may trigger too frequently",
+                    rebalancing.getDeviationTrigger());
+        }
+        if (rebalancing.getCooldownMinutes() < 0) {
+            throw new IllegalStateException("Invalid cooldownMinutes: must be non-negative");
+        }
+        if (rebalancing.getMinOrderAmount() < 0) {
+            throw new IllegalStateException("Invalid minOrderAmount: must be non-negative");
+        }
+        if (rebalancing.getSlippageBuffer() < 0 || rebalancing.getSlippageBuffer() > 0.1) {
+            log.warn("slippageBuffer {} is outside recommended range (0-0.1)",
+                    rebalancing.getSlippageBuffer());
+        }
+        log.info("TradingProperties validated successfully");
+    }
 
     public static class Bithumb {
         private String baseUrl = "https://api.bithumb.com";
@@ -142,6 +176,10 @@ public class TradingProperties {
         private double bullRatio = 0.70;
         private double bearRatio = 0.30;
         private double deviationTrigger = 0.10;
+        private long cooldownMinutes = 240;              // 4시간 쿨다운
+        private double minOrderAmount = 5000.0;          // 최소 주문 금액 (KRW)
+        private double slippageBuffer = 0.005;           // 0.5% 슬리피지 버퍼
+        private boolean skipWhenDataInsufficient = true; // MA60 데이터 부족 시 스킵
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -153,6 +191,14 @@ public class TradingProperties {
         public void setBearRatio(double bearRatio) { this.bearRatio = bearRatio; }
         public double getDeviationTrigger() { return deviationTrigger; }
         public void setDeviationTrigger(double deviationTrigger) { this.deviationTrigger = deviationTrigger; }
+        public long getCooldownMinutes() { return cooldownMinutes; }
+        public void setCooldownMinutes(long cooldownMinutes) { this.cooldownMinutes = cooldownMinutes; }
+        public double getMinOrderAmount() { return minOrderAmount; }
+        public void setMinOrderAmount(double minOrderAmount) { this.minOrderAmount = minOrderAmount; }
+        public double getSlippageBuffer() { return slippageBuffer; }
+        public void setSlippageBuffer(double slippageBuffer) { this.slippageBuffer = slippageBuffer; }
+        public boolean isSkipWhenDataInsufficient() { return skipWhenDataInsufficient; }
+        public void setSkipWhenDataInsufficient(boolean skipWhenDataInsufficient) { this.skipWhenDataInsufficient = skipWhenDataInsufficient; }
     }
 
     public Bithumb getBithumb() { return bithumb; }

@@ -28,6 +28,11 @@ public class BithumbPrivateApi {
     private static final Logger log = LoggerFactory.getLogger(BithumbPrivateApi.class);
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
+    // Issue #7: Rate Limit 재시도 설정
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 1000;
+    private static final double RETRY_BACKOFF_MULTIPLIER = 2.0;
+
     private final WebClient webClient;
     private final BithumbJwtGenerator jwtGenerator;
 
@@ -185,25 +190,56 @@ public class BithumbPrivateApi {
             return null;
         }
 
-        String authToken = jwtGenerator.generateAuthorizationHeader(params);
+        // Issue #7: Rate Limit 재시도 로직
+        return executeWithRetry(() -> {
+            String authToken = jwtGenerator.generateAuthorizationHeader(params);
 
-        return webClient.post()
-                .uri("/v1/orders")
-                .header("Authorization", authToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(params)
-                .retrieve()
-                .bodyToMono(BithumbOrderResponse.class)
-                .timeout(TIMEOUT)
-                .onErrorResume(WebClientResponseException.class, e -> {
-                    logApiError("executing order", e);
-                    return Mono.empty();
-                })
-                .onErrorResume(Exception.class, e -> {
-                    log.error("Error executing order: {}", e.getMessage());
-                    return Mono.empty();
-                })
-                .block();
+            return webClient.post()
+                    .uri("/v1/orders")
+                    .header("Authorization", authToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(params)
+                    .retrieve()
+                    .bodyToMono(BithumbOrderResponse.class)
+                    .timeout(TIMEOUT);
+        }, "executing order");
+    }
+
+    /**
+     * Issue #7: 지수 백오프 재시도 로직
+     * Rate Limit (429) 발생 시 최대 3회까지 재시도
+     */
+    private <T> T executeWithRetry(java.util.function.Supplier<Mono<T>> operation, String operationName) {
+        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                T result = operation.get().block();
+                if (attempt > 0) {
+                    log.info("{} succeeded on retry attempt {}", operationName, attempt);
+                }
+                return result;
+            } catch (WebClientResponseException e) {
+                if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS && attempt < MAX_RETRIES) {
+                    long waitTime = (long) (RETRY_DELAY_MS * Math.pow(RETRY_BACKOFF_MULTIPLIER, attempt));
+                    log.warn("Rate limited while {}, retrying in {}ms (attempt {}/{})",
+                            operationName, waitTime, attempt + 1, MAX_RETRIES);
+                    try {
+                        Thread.sleep(waitTime);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.error("Retry interrupted while {}", operationName);
+                        return null;
+                    }
+                } else {
+                    logApiError(operationName, e);
+                    return null;
+                }
+            } catch (Exception e) {
+                log.error("Error {}: {}", operationName, e.getMessage());
+                return null;
+            }
+        }
+        log.error("Max retries ({}) exceeded for {}", MAX_RETRIES, operationName);
+        return null;
     }
 
     /**

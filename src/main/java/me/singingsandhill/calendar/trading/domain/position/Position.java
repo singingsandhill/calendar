@@ -30,6 +30,11 @@ public class Position {
     private BigDecimal exitFee;
     private BigDecimal totalFees;
 
+    // Issue #5: 청산 시도 추적 필드
+    private boolean closingAttempted;
+    private LocalDateTime lastCloseAttemptAt;
+    private int closeAttemptCount;
+
     public Position(Long id, String market, PositionStatus status,
                     BigDecimal entryPrice, BigDecimal entryVolume, BigDecimal entryAmount,
                     BigDecimal exitPrice, BigDecimal exitVolume, BigDecimal exitAmount,
@@ -61,6 +66,10 @@ public class Position {
         this.entryFee = entryFee;
         this.exitFee = exitFee;
         this.totalFees = totalFees;
+        // 청산 시도 필드는 기본값으로 초기화
+        this.closingAttempted = false;
+        this.lastCloseAttemptAt = null;
+        this.closeAttemptCount = 0;
     }
 
     public static Position open(String market, BigDecimal entryPrice, BigDecimal entryVolume,
@@ -84,6 +93,20 @@ public class Position {
     }
 
     public void close(BigDecimal exitPrice, BigDecimal exitVolume, CloseReason reason, BigDecimal exitFee) {
+        // Issue #4: 상태 검증 - OPEN 상태에서만 close 가능
+        if (this.status != PositionStatus.OPEN) {
+            throw new IllegalStateException(
+                    "Cannot close position " + id + ": current status is " + status + ", expected OPEN");
+        }
+
+        // 파라미터 검증
+        if (exitPrice == null || exitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Exit price must be positive");
+        }
+        if (exitVolume == null || exitVolume.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Exit volume must be positive");
+        }
+
         this.exitPrice = exitPrice;
         this.exitVolume = exitVolume;
         this.exitAmount = exitPrice.multiply(exitVolume);
@@ -97,6 +120,62 @@ public class Position {
         this.closeReason = reason;
         this.status = PositionStatus.CLOSED;
         this.closedAt = LocalDateTime.now();
+        // 청산 성공 시 플래그 초기화
+        this.closingAttempted = false;
+    }
+
+    /**
+     * 포지션이 close 가능한 상태인지 확인
+     */
+    public boolean canClose() {
+        return this.status == PositionStatus.OPEN;
+    }
+
+    // Issue #5: 청산 시도 추적 메서드
+    /**
+     * 청산 시도 시작을 표시
+     */
+    public void markClosingAttempted() {
+        this.closingAttempted = true;
+        this.lastCloseAttemptAt = LocalDateTime.now();
+        this.closeAttemptCount++;
+    }
+
+    /**
+     * 청산 시도 플래그 초기화 (성공 시 또는 수동 리셋)
+     */
+    public void resetClosingAttempt() {
+        this.closingAttempted = false;
+    }
+
+    /**
+     * 청산 시도 중인지 확인
+     */
+    public boolean isClosingAttempted() {
+        return closingAttempted;
+    }
+
+    /**
+     * 재시도 가능 여부 확인
+     * - 시도 횟수가 3회 미만이고
+     * - 마지막 시도가 5분 이전이거나 시도한 적이 없을 때
+     */
+    public boolean shouldRetryClose() {
+        if (closeAttemptCount >= 3) {
+            return false;
+        }
+        if (lastCloseAttemptAt == null) {
+            return true;
+        }
+        return lastCloseAttemptAt.plusMinutes(5).isBefore(LocalDateTime.now());
+    }
+
+    public int getCloseAttemptCount() {
+        return closeAttemptCount;
+    }
+
+    public LocalDateTime getLastCloseAttemptAt() {
+        return lastCloseAttemptAt;
     }
 
     public BigDecimal calculateUnrealizedPnl(BigDecimal currentPrice) {
@@ -202,4 +281,9 @@ public class Position {
     public BigDecimal getEntryFee() { return entryFee; }
     public BigDecimal getExitFee() { return exitFee; }
     public BigDecimal getTotalFees() { return totalFees; }
+
+    // 청산 시도 추적 필드 setter (DB 복원용)
+    public void setClosingAttempted(boolean closingAttempted) { this.closingAttempted = closingAttempted; }
+    public void setLastCloseAttemptAt(LocalDateTime lastCloseAttemptAt) { this.lastCloseAttemptAt = lastCloseAttemptAt; }
+    public void setCloseAttemptCount(int closeAttemptCount) { this.closeAttemptCount = closeAttemptCount; }
 }

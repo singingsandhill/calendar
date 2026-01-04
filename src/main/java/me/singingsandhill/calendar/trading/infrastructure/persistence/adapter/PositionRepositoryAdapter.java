@@ -117,11 +117,15 @@ public class PositionRepositoryAdapter implements PositionRepository {
         if (position.getId() != null) {
             entity.setId(position.getId());
         }
+        // Issue #5: 청산 시도 추적 필드 매핑
+        entity.setClosingAttempted(position.isClosingAttempted());
+        entity.setLastCloseAttemptAt(position.getLastCloseAttemptAt());
+        entity.setCloseAttemptCount(position.getCloseAttemptCount());
         return entity;
     }
 
     private Position toDomain(PositionJpaEntity entity) {
-        return new Position(
+        Position position = new Position(
                 entity.getId(),
                 entity.getMarket(),
                 PositionStatus.valueOf(entity.getStatus()),
@@ -146,5 +150,10 @@ public class PositionRepositoryAdapter implements PositionRepository {
                 entity.getExitFee(),
                 entity.getTotalFees()
         );
+        // Issue #5: 청산 시도 추적 필드 복원
+        position.setClosingAttempted(entity.isClosingAttempted() != null && entity.isClosingAttempted());
+        position.setLastCloseAttemptAt(entity.getLastCloseAttemptAt());
+        position.setCloseAttemptCount(entity.getCloseAttemptCount() != null ? entity.getCloseAttemptCount() : 0);
+        return position;
     }
 }

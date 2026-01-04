@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
 
+import me.singingsandhill.calendar.trading.domain.signal.DivergenceType;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -128,6 +130,7 @@ public class TradingBotService {
 
     /**
      * 1분 주기 메인 실행 로직
+     * Issue #10: 강한 신호는 리밸런싱보다 우선
      */
     @Transactional
     public void executeTradeLoop() {
@@ -142,28 +145,38 @@ public class TradingBotService {
             // 1. 캔들 데이터 업데이트
             candleService.fetchAndSaveCandles();
 
-            // 2. 리스크 체크 (손절/익절)
+            // 2. 리스크 체크 (손절/익절) - 최우선
             CloseReason closeReason = riskManagementService.checkAndExecuteRiskRules(market);
             if (closeReason != null) {
                 log.info("Position closed due to: {}", closeReason);
                 return;
             }
 
-            // 3. 리밸런싱 체크
-            RebalanceService.RebalanceResult rebalanceResult = rebalanceService.checkAndExecute(market);
-            if (rebalanceResult.executed()) {
-                log.info("Rebalancing executed");
-                return;
-            }
-
-            // 4. 신호 생성 및 분석
+            // 3. 신호 생성 (Issue #10: 리밸런싱 전에 신호 먼저 확인)
             Signal signal = signalService.generateSignal(market);
             if (signal == null) {
                 log.warn("Failed to generate signal");
                 return;
             }
 
-            // 5. 신호에 따른 매매 실행
+            // 4. Issue #10: 강한 신호는 리밸런싱보다 우선
+            int strongSignalThreshold = 60;
+            boolean isStrongSignal = Math.abs(signal.getTotalScore()) >= strongSignalThreshold;
+
+            if (isStrongSignal && signal.getSignalType() != SignalType.HOLD) {
+                log.info("Strong signal detected (score: {}), prioritizing over rebalancing", signal.getTotalScore());
+                executeTradeBySignal(market, signal);
+                return;
+            }
+
+            // 5. 일반 신호: 리밸런싱 우선
+            RebalanceService.RebalanceResult rebalanceResult = rebalanceService.checkAndExecute(market);
+            if (rebalanceResult.executed()) {
+                log.info("Rebalancing executed");
+                return;
+            }
+
+            // 6. 신호에 따른 매매 실행
             executeTradeBySignal(market, signal);
 
         } catch (Exception e) {
@@ -173,6 +186,7 @@ public class TradingBotService {
 
     /**
      * 신호에 따른 매매 실행 - 다중 포지션 지원
+     * Issue #2: 강한 SELL 신호는 수익률 무관하게 실행
      */
     @Transactional
     public void executeTradeBySignal(String market, Signal signal) {
@@ -183,33 +197,60 @@ public class TradingBotService {
         if (signal.getSignalType() == SignalType.BUY && openPositionCount < maxPositions) {
             executeBuy(market, signal);
         } else if (signal.getSignalType() == SignalType.SELL) {
-            // 모든 열린 포지션 청산 (수익성 체크 포함)
+            // 모든 열린 포지션 청산
             List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
             Double currentPrice = bithumbApiClient.getCurrentPrice();
             double minProfitThreshold = tradingProperties.getRisk().getMinProfitThreshold();
+
+            // Issue #2: 강한 SELL 신호 여부 확인
+            boolean isStrongSellSignal = isStrongSellSignal(signal);
 
             for (Position position : openPositions) {
                 if (currentPrice != null) {
                     // 수수료를 포함한 실제 수익률로 판단
                     BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
                     BigDecimal pnlPct = position.calculateUnrealizedPnlPctWithFee(BigDecimal.valueOf(currentPrice), feeRate);
-                    // 최소 수익률(0.6%) 이상일 때만 매도 실행
-                    if (pnlPct.doubleValue() >= minProfitThreshold * 100) {
+
+                    // Issue #2: 강한 신호는 수익률 무관하게 실행, 일반 신호는 최소 수익률 체크
+                    if (isStrongSellSignal) {
+                        log.info("Strong SELL signal detected (score: {}, divergence: {}), executing regardless of profit",
+                                signal.getTotalScore(), signal.hasDivergence());
+                        executeSell(market, signal, position);
+                    } else if (pnlPct.doubleValue() >= minProfitThreshold * 100) {
                         executeSell(market, signal, position);
                     } else {
-                        log.info("Skipping sell - below min profit threshold: {}% (min: {}%)",
+                        log.info("Skipping weak sell signal - below min profit threshold: {}% (min: {}%)",
                                 pnlPct, minProfitThreshold * 100);
                     }
                 } else {
-                    // 가격 조회 실패 시에도 신호가 강하면 매도
-                    executeSell(market, signal, position);
+                    // 가격 조회 실패 시 매도 스킵 (수익률 판단 불가)
+                    log.warn("Skipping sell - cannot get current price for profit check");
                 }
             }
         }
     }
 
     /**
+     * Issue #2: 강한 SELL 신호 판별
+     * - 점수 -60 이하 (강한 하락 추세)
+     * - 약세 다이버전스 감지 (RSI 또는 Stochastic)
+     */
+    private boolean isStrongSellSignal(Signal signal) {
+        // 점수 -60 이하: 강한 매도 신호
+        if (signal.getTotalScore() <= -60) {
+            return true;
+        }
+        // 약세 다이버전스 감지
+        if (signal.getRsiDivergence() == DivergenceType.BEARISH
+                || signal.getStochDivergence() == DivergenceType.BEARISH) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * 매수 실행
+     * Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (고아 레코드 방지)
      */
     @Transactional
     public void executeBuy(String market, Signal signal) {
@@ -234,81 +275,104 @@ public class TradingBotService {
 
         log.info("Executing BUY order: {} KRW (ratio: {}%)", orderAmount, orderRatio * 100);
 
-        // Trade 먼저 생성 (WAIT 상태)
-        String uuid = UUID.randomUUID().toString();
-        Trade trade = Trade.createBuyOrder(
-                uuid,
-                market,
-                null, // 시장가 주문
-                orderAmount,
-                "market",
-                signal.getTotalScore(),
-                "Auto buy signal"
-        );
-
         try {
-            Trade savedTrade = tradeRepository.save(trade);
-            log.info("Trade record created: uuid={}", uuid);
-
+            // Issue #1: API 호출 먼저 실행
             BithumbOrderResponse response = bithumbApiClient.placeMarketBuyOrder(orderAmount);
 
-            if (response != null) {
-                log.info("Buy order placed: {}", response.uuid());
-
-                // 수수료 추출
-                BigDecimal fee = extractFee(response);
-
-                // 체결가 결정: trades 리스트에서 가져오거나, 현재가로 fallback
-                BigDecimal entryPrice = extractExecutedPrice(response);
-
-                // 체결가 확보 실패 시 현재가 조회
-                if (entryPrice == null) {
-                    Double currentPrice = bithumbApiClient.getCurrentPrice();
-                    if (currentPrice != null) {
-                        entryPrice = BigDecimal.valueOf(currentPrice);
-                        log.debug("Using current price as fallback: {}", entryPrice);
-                    }
-                }
-
-                // 체결가 확보 실패 시 에러 처리
-                if (entryPrice == null) {
-                    log.error("Failed to determine entry price after order execution. Order uuid: {}", response.uuid());
-                    savedTrade.markFailed("Price fetch failed after order execution");
-                    tradeRepository.save(savedTrade);
-                    return;
-                }
-
-                // Position 생성
-                BigDecimal volume = orderAmount.divide(entryPrice, 8, RoundingMode.DOWN);
-                BigDecimal stopLossPrice = riskManagementService.calculateStopLossPrice(entryPrice);
-                BigDecimal takeProfitPrice = riskManagementService.calculateTakeProfitPrice(entryPrice);
-
-                // Trade 실행 정보 업데이트
-                savedTrade.markExecuted(entryPrice, volume, fee);
-                tradeRepository.save(savedTrade);
-
-                // Position 생성 (수수료 포함)
-                Position position = Position.open(
-                        market, entryPrice, volume, stopLossPrice, takeProfitPrice, fee
-                );
-                positionRepository.save(position);
-                log.info("Position opened: entry={}, volume={}, fee={}", entryPrice, volume, fee);
-            } else {
-                // 주문 실패: CANCEL 상태로 변경
-                savedTrade.markCancelled();
-                tradeRepository.save(savedTrade);
-                log.warn("Buy order cancelled - null response");
+            if (response == null) {
+                log.warn("Buy order failed - null response from API");
+                return;
             }
+
+            log.info("Buy order placed: {}", response.uuid());
+
+            // 수수료 추출
+            BigDecimal fee = extractFee(response);
+
+            // Issue #3: 체결가 결정 (재시도 로직 포함)
+            BigDecimal entryPrice = extractExecutedPriceWithRetry(response, 3);
+
+            // 체결가 확보 실패 시 에러 처리
+            if (entryPrice == null) {
+                log.error("Failed to determine entry price after order execution. Order uuid: {}", response.uuid());
+                // API 호출은 성공했지만 체결가 확인 실패 - 로그만 남기고 종료
+                // 실제로는 주문이 체결되었을 수 있으므로 별도 확인 필요
+                return;
+            }
+
+            // Position 생성
+            BigDecimal volume = orderAmount.divide(entryPrice, 8, RoundingMode.DOWN);
+            BigDecimal stopLossPrice = riskManagementService.calculateStopLossPrice(entryPrice);
+            BigDecimal takeProfitPrice = riskManagementService.calculateTakeProfitPrice(entryPrice);
+
+            // Issue #1: API 성공 후에만 Trade 저장
+            String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
+            Trade trade = Trade.createBuyOrder(
+                    uuid,
+                    market,
+                    entryPrice,
+                    orderAmount,
+                    "market",
+                    signal.getTotalScore(),
+                    "Auto buy signal"
+            );
+            trade.markExecuted(entryPrice, volume, fee);
+            tradeRepository.save(trade);
+            log.info("Trade record created: uuid={}", uuid);
+
+            // Position 생성 (수수료 포함)
+            Position position = Position.open(
+                    market, entryPrice, volume, stopLossPrice, takeProfitPrice, fee
+            );
+            positionRepository.save(position);
+            log.info("Position opened: entry={}, volume={}, fee={}", entryPrice, volume, fee);
+
         } catch (Exception e) {
             log.error("Failed to execute buy order", e);
-            // 예외 발생: FAILED 상태로 변경
-            trade.markFailed(e.getMessage());
-            try {
-                tradeRepository.save(trade);
-            } catch (Exception saveEx) {
-                log.error("Failed to save trade failure record", saveEx);
+        }
+    }
+
+    /**
+     * Issue #3: 체결가 재시도 로직
+     * 주문 응답에서 체결가를 추출하고, 실패 시 주문 상세 조회로 재시도
+     */
+    private BigDecimal extractExecutedPriceWithRetry(BithumbOrderResponse response, int maxRetries) {
+        // 1단계: 응답에서 직접 추출
+        BigDecimal price = extractExecutedPrice(response);
+        if (price != null) {
+            return price;
+        }
+
+        // 2단계: 주문 상세 조회로 재시도
+        if (response.uuid() != null) {
+            for (int i = 0; i < maxRetries; i++) {
+                try {
+                    Thread.sleep(500 * (i + 1));  // 500ms, 1000ms, 1500ms 백오프
+                    BithumbOrderResponse orderDetail = bithumbApiClient.getOrder(response.uuid());
+                    if (orderDetail != null) {
+                        price = extractExecutedPrice(orderDetail);
+                        if (price != null) {
+                            log.info("Retrieved execution price on retry {}: {}", i + 1, price);
+                            return price;
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Price extraction retry interrupted");
+                    break;
+                }
             }
         }
+
+        // 3단계: 현재가로 fallback
+        Double currentPrice = bithumbApiClient.getCurrentPrice();
+        if (currentPrice != null) {
+            log.warn("Using current price as final fallback: {}", currentPrice);
+            return BigDecimal.valueOf(currentPrice);
+        }
+
+        log.error("Failed to determine execution price after {} retries", maxRetries);
+        return null;
     }
 
     /**
@@ -359,80 +423,68 @@ public class TradingBotService {
 
     /**
      * 매도 실행
+     * Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (고아 레코드 방지)
      */
     @Transactional
     public void executeSell(String market, Signal signal, Position position) {
         log.info("Executing SELL order for position: {}", position.getId());
 
-        // Trade 먼저 생성 (WAIT 상태)
-        String uuid = UUID.randomUUID().toString();
-        Trade trade = Trade.createSellOrder(
-                uuid,
-                position.getId(),
-                market,
-                BigDecimal.valueOf(signal.getCurrentPrice().doubleValue()),
-                position.getEntryVolume(),
-                "market",
-                signal.getTotalScore(),
-                "Auto sell signal"
-        );
+        // Issue #4: 포지션 상태 확인
+        if (!position.canClose()) {
+            log.warn("Position {} cannot be closed - status: {}", position.getId(), position.getStatus());
+            return;
+        }
 
         try {
-            Trade savedTrade = tradeRepository.save(trade);
-            log.info("Trade record created: uuid={}", uuid);
-
+            // Issue #1: API 호출 먼저 실행
             BithumbOrderResponse response = bithumbApiClient.placeMarketSellOrder(position.getEntryVolume());
 
-            if (response != null) {
-                log.info("Sell order placed: {}", response.uuid());
-
-                // 수수료 추출
-                BigDecimal fee = extractFee(response);
-
-                // 체결가 결정: trades 리스트에서 가져오거나, 현재가로 fallback
-                BigDecimal exitPrice = extractExecutedPrice(response);
-
-                // 체결가 확보 실패 시 현재가 조회
-                if (exitPrice == null) {
-                    Double currentPrice = bithumbApiClient.getCurrentPrice();
-                    if (currentPrice != null) {
-                        exitPrice = BigDecimal.valueOf(currentPrice);
-                        log.debug("Using current price as fallback: {}", exitPrice);
-                    }
-                }
-
-                // 체결가 확보 실패 시 에러 처리
-                if (exitPrice == null) {
-                    log.error("Failed to determine exit price after order execution. Order uuid: {}", response.uuid());
-                    savedTrade.markFailed("Price fetch failed after order execution");
-                    tradeRepository.save(savedTrade);
-                    return;
-                }
-
-                // Trade 실행 정보 업데이트
-                savedTrade.markExecuted(exitPrice, position.getEntryVolume(), fee);
-                tradeRepository.save(savedTrade);
-
-                // Position 청산 (수수료 포함)
-                position.close(exitPrice, position.getEntryVolume(), CloseReason.SIGNAL, fee);
-                positionRepository.save(position);
-                log.info("Position closed: exit={}, pnl={}%, fee={}",
-                        exitPrice, position.getRealizedPnlPct(), fee);
-            } else {
-                // 주문 실패: CANCEL 상태로 변경
-                savedTrade.markCancelled();
-                tradeRepository.save(savedTrade);
-                log.warn("Sell order cancelled - null response");
+            if (response == null) {
+                log.warn("Sell order failed - null response from API");
+                return;
             }
+
+            log.info("Sell order placed: {}", response.uuid());
+
+            // 수수료 추출
+            BigDecimal fee = extractFee(response);
+
+            // Issue #3: 체결가 결정 (재시도 로직 포함)
+            BigDecimal exitPrice = extractExecutedPriceWithRetry(response, 3);
+
+            // 체결가 확보 실패 시 에러 처리
+            if (exitPrice == null) {
+                log.error("Failed to determine exit price after order execution. Order uuid: {}", response.uuid());
+                return;
+            }
+
+            // Issue #1: API 성공 후에만 Trade 저장
+            String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
+            Trade trade = Trade.createSellOrder(
+                    uuid,
+                    position.getId(),
+                    market,
+                    exitPrice,
+                    position.getEntryVolume(),
+                    "market",
+                    signal.getTotalScore(),
+                    "Auto sell signal"
+            );
+            trade.markExecuted(exitPrice, position.getEntryVolume(), fee);
+            tradeRepository.save(trade);
+            log.info("Trade record created: uuid={}", uuid);
+
+            // Position 청산 (수수료 포함)
+            position.close(exitPrice, position.getEntryVolume(), CloseReason.SIGNAL, fee);
+            positionRepository.save(position);
+            log.info("Position closed: exit={}, pnl={}%, fee={}",
+                    exitPrice, position.getRealizedPnlPct(), fee);
+
+        } catch (IllegalStateException e) {
+            // Issue #4: 이미 닫힌 포지션
+            log.warn("Position {} already closed: {}", position.getId(), e.getMessage());
         } catch (Exception e) {
             log.error("Failed to execute sell order", e);
-            // 예외 발생: FAILED 상태로 변경
-            trade.markFailed(e.getMessage());
-            try {
-                tradeRepository.save(trade);
-            } catch (Exception saveEx) {
-                log.error("Failed to save trade failure record", saveEx);
-            }
         }
     }
 
@@ -444,11 +496,19 @@ public class TradingBotService {
         String market = tradingProperties.getBot().getMarket();
         log.info("Manual buy: {} KRW", amount);
 
+        // 현재가 조회 (Trade 생성용)
+        Double orderPriceDouble = bithumbApiClient.getCurrentPrice();
+        if (orderPriceDouble == null) {
+            log.warn("Cannot get current price for manual buy");
+            return false;
+        }
+        BigDecimal orderPrice = BigDecimal.valueOf(orderPriceDouble);
+
         String uuid = UUID.randomUUID().toString();
         Trade trade = Trade.createBuyOrder(
                 uuid,
                 market,
-                null,  // 시장가 주문
+                orderPrice,
                 amount,
                 "market",
                 null,  // 수동 매수는 신호 점수 없음
@@ -489,12 +549,20 @@ public class TradingBotService {
         String market = tradingProperties.getBot().getMarket();
         log.info("Manual sell: {} coins", volume);
 
+        // 현재가 조회 (Trade 생성용)
+        Double orderPriceDouble = bithumbApiClient.getCurrentPrice();
+        if (orderPriceDouble == null) {
+            log.warn("Cannot get current price for manual sell");
+            return false;
+        }
+        BigDecimal orderPrice = BigDecimal.valueOf(orderPriceDouble);
+
         String uuid = UUID.randomUUID().toString();
         Trade trade = Trade.createSellOrder(
                 uuid,
                 null,  // 수동 매도는 포지션 ID 없음
                 market,
-                null,  // 시장가 주문
+                orderPrice,
                 volume,
                 "market",
                 null,  // 수동 매도는 신호 점수 없음

@@ -73,7 +73,16 @@ trading:
     bullRatio: 0.70
     bearRatio: 0.30
     deviationTrigger: 0.10
+    cooldownMinutes: 240      # 4시간 쿨다운
+    minOrderAmount: 5000      # 최소 주문 금액 (KRW)
+    slippageBuffer: 0.005     # 0.5% 슬리피지 버퍼
+    skipWhenDataInsufficient: true  # MA60 부족 시 스킵
 ```
+
+**Configuration Validation**:
+- `@PostConstruct` 검증으로 시작 시 설정값 유효성 체크
+- 비정상 값 (bullRatio > 1.0 등) 발견 시 예외 발생
+- deviationTrigger ≤ 0 경고 로그 출력
 
 ## JPA Entities
 

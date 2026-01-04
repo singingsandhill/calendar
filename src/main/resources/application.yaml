@@ -100,6 +100,10 @@ trading:
     bull-ratio: 0.70
     bear-ratio: 0.30
     deviation-trigger: 0.10
+    cooldown-minutes: 240              # 4시간 쿨다운
+    min-order-amount: 5000.0           # 최소 주문 금액 (KRW)
+    slippage-buffer: 0.005             # 0.5% 슬리피지 버퍼
+    skip-when-data-insufficient: true  # MA60 데이터 부족 시 스킵
 
 # Stock Trading Bot Configuration (Gap & Pullback Strategy)
 stock:

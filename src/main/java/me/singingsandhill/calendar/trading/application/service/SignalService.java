@@ -233,8 +233,9 @@ public class SignalService {
 
     /**
      * 신호 타입 결정
-     * 매수: 점수 >= 40 AND 현재가 > MA60 AND RSI < 70 AND StochK < 85
-     * 매도: 점수 <= -40 AND 현재가 < MA60 AND RSI > 30 AND StochK > 15
+     * 매수: 점수 >= 40 AND RSI < 70 AND StochK < 85
+     *       - Issue #9: 현재가 < MA60일 때는 추가 확인 조건 필요
+     * 매도: 점수 <= -40 AND RSI > 30 AND StochK > 15
      */
     private SignalType determineSignalType(int totalScore, DivergenceResult divergence, IndicatorResult indicators) {
         int buyThreshold = tradingProperties.getThresholds().getSignalBuy();
@@ -245,16 +246,32 @@ public class SignalService {
         int sellStochKMin = tradingProperties.getThresholds().getSellStochKMin();
 
         // 매수 조건: score >= 40 AND RSI < 70 AND StochK < 85
-        // MA60 필수 조건 제거 - 이미 MA Trend 점수(±15)로 반영됨
-        // 저점 매수 기회 확보를 위해 완화
         if (totalScore >= buyThreshold &&
             indicators.rsi() != null && indicators.rsi().compareTo(BigDecimal.valueOf(buyRsiMax)) < 0 &&
             indicators.stochK() != null && indicators.stochK().compareTo(BigDecimal.valueOf(buyStochKMax)) < 0) {
+
+            // Issue #9: 현재가 < MA60일 때 추가 확인 조건
+            if (indicators.ma60() != null && indicators.isPriceBelowMa60()) {
+                boolean hasBullishDivergence = divergence.hasBullishDivergence();
+                boolean strongOversold = indicators.rsi().compareTo(BigDecimal.valueOf(30)) < 0;
+                boolean volumeSpike = indicators.currentVolume() != null && indicators.volumeMa() != null &&
+                        indicators.currentVolume().compareTo(
+                                indicators.volumeMa().multiply(BigDecimal.valueOf(1.5))) > 0;
+
+                if (!(hasBullishDivergence || strongOversold || volumeSpike)) {
+                    log.debug("Buy signal suppressed - price below MA60 without confirmation. " +
+                            "Divergence: {}, RSI: {}, VolumeSpike: {}",
+                            hasBullishDivergence, indicators.rsi(), volumeSpike);
+                    return SignalType.HOLD;
+                }
+                log.info("Buy signal confirmed below MA60 - Divergence: {}, Oversold: {}, VolumeSpike: {}",
+                        hasBullishDivergence, strongOversold, volumeSpike);
+            }
+
             return SignalType.BUY;
         }
 
         // 매도 조건: score <= -40 AND RSI > 30 AND StochK > 15
-        // MA60 필수 조건 제거 - 이미 MA Trend 점수(±15)로 반영됨
         if (totalScore <= sellThreshold &&
             indicators.rsi() != null && indicators.rsi().compareTo(BigDecimal.valueOf(sellRsiMin)) > 0 &&
             indicators.stochK() != null && indicators.stochK().compareTo(BigDecimal.valueOf(sellStochKMin)) > 0) {

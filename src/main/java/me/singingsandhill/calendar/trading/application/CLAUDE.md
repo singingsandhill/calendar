@@ -109,16 +109,25 @@ Risk rule enforcement with trailing stop.
 - Trailing Stop: +10% 도달 시 활성화, -3% 추적
 
 ### RebalanceService
-Portfolio rebalancing.
+Portfolio rebalancing with cooldown and safety features.
 
 | Method | Description |
 |--------|-------------|
 | `checkAndExecute()` | Check and execute rebalancing |
+| `isCooldownElapsed()` | Check if cooldown period has passed |
+| `determineTargetRatio()` | Calculate target ratio based on MA60 |
 
 **Dynamic Target Ratio**:
 - Bullish (price > MA60): 70% coins / 30% KRW
 - Bearish (price < MA60): 30% coins / 70% KRW
 - Trigger: 10% deviation from target
+
+**Safety Features**:
+- Cooldown: 4시간 간격 (빈번한 리밸런싱 방지)
+- Min Order: 5,000 KRW 미만 주문 스킵
+- Slippage: 0.5% 버퍼 적용
+- Exception: API 실패 시 Trade FAILED 상태 업데이트
+- Data Check: MA60 부족 시 리밸런싱 스킵 옵션
 
 ### ProfitService
 P&L statistics and reporting.

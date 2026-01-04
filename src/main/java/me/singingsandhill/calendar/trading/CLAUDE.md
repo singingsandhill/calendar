@@ -71,9 +71,25 @@ trading:
   rebalancing:
     enabled: true
     defaultRatio: 0.50
+    bullRatio: 0.70           # 강세장 코인 비중
+    bearRatio: 0.30           # 약세장 코인 비중
+    deviationTrigger: 0.10    # 10% 편차 시 트리거
+    cooldownMinutes: 240      # 4시간 쿨다운
+    minOrderAmount: 5000      # 최소 주문 금액 (KRW)
+    slippageBuffer: 0.005     # 0.5% 슬리피지 버퍼
+    skipWhenDataInsufficient: true  # MA60 부족 시 스킵
 ```
 
 ## Recent Changes
+
+### Rebalancing Logic Improvements
+- **쿨다운 타임**: 4시간 간격으로 빈번한 리밸런싱 방지
+- **최소 주문 금액**: 5,000원 미만 주문 스킵으로 API 오류 방지
+- **슬리피지 버퍼**: 0.5% 버퍼 적용으로 시장가 주문 시 체결가 차이 보정
+- **예외 처리 강화**: API 실패 시 Trade 상태를 FAILED로 업데이트
+- **MA60 부족 처리**: 데이터 부족 시 리밸런싱 스킵 옵션 추가
+- **상세 로깅**: 리밸런싱 전후 상태 명시적 로깅
+- **설정 검증**: 시작 시 `@PostConstruct`로 설정값 유효성 검증
 
 ### Fee-included P&L Calculation
 - `calculateUnrealizedPnlPctWithFee()` 사용으로 수수료 포함 수익률 계산

@@ -78,6 +78,16 @@ public class PositionJpaEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    // Issue #5: 청산 시도 추적 필드
+    @Column(name = "closing_attempted")
+    private Boolean closingAttempted;
+
+    @Column(name = "last_close_attempt_at")
+    private LocalDateTime lastCloseAttemptAt;
+
+    @Column(name = "close_attempt_count")
+    private Integer closeAttemptCount;
+
     protected PositionJpaEntity() {}
 
     public PositionJpaEntity(String market, String status, BigDecimal entryPrice, BigDecimal entryVolume,
@@ -158,4 +168,12 @@ public class PositionJpaEntity {
     public void setExitFee(BigDecimal exitFee) { this.exitFee = exitFee; }
     public BigDecimal getTotalFees() { return totalFees; }
     public void setTotalFees(BigDecimal totalFees) { this.totalFees = totalFees; }
+
+    // Issue #5: 청산 시도 추적 필드 getter/setter
+    public Boolean isClosingAttempted() { return closingAttempted; }
+    public void setClosingAttempted(Boolean closingAttempted) { this.closingAttempted = closingAttempted; }
+    public LocalDateTime getLastCloseAttemptAt() { return lastCloseAttemptAt; }
+    public void setLastCloseAttemptAt(LocalDateTime lastCloseAttemptAt) { this.lastCloseAttemptAt = lastCloseAttemptAt; }
+    public Integer getCloseAttemptCount() { return closeAttemptCount; }
+    public void setCloseAttemptCount(Integer closeAttemptCount) { this.closeAttemptCount = closeAttemptCount; }
 }
