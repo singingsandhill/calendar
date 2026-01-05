@@ -1,11 +1,15 @@
 package me.singingsandhill.calendar.common.presentation.controller;
 
+import me.singingsandhill.calendar.common.application.service.SitemapService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Duration;
 
 /**
  * SEO 정적 파일 제공 컨트롤러.
@@ -13,6 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 public class StaticResourceController {
+
+    private final SitemapService sitemapService;
+
+    public StaticResourceController(SitemapService sitemapService) {
+        this.sitemapService = sitemapService;
+    }
 
     @GetMapping(value = "/robots.txt", produces = MediaType.TEXT_PLAIN_VALUE)
     public Resource robotsTxt() {
@@ -25,8 +35,11 @@ public class StaticResourceController {
     }
 
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
-    public Resource sitemapXml() {
-        return new ClassPathResource("static/sitemap.xml");
+    public ResponseEntity<String> sitemapXml() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_XML)
+                .cacheControl(CacheControl.maxAge(Duration.ofHours(24)))
+                .body(sitemapService.generateSitemapXml());
     }
 
     @GetMapping(value = "/manifest.json", produces = MediaType.APPLICATION_JSON_VALUE)

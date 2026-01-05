@@ -1,16 +1,29 @@
 # robots.txt for datedate.site
-# Group scheduling application
 
 User-agent: *
-Allow: /$
-Disallow: /api/
-Disallow: /h2-console/
 
-# Block user-generated content pages (infinite URL space)
+# Allow public pages
+Allow: /$
+Allow: /start$
+Allow: /runners$
+Allow: /runners/runs
+Allow: /runners/members
+Allow: /runners/announce$
+
+# Block API endpoints
+Disallow: /api/
+
+# Block admin and dev pages
+Disallow: /h2-console/
+Disallow: /runners/admin/
+
+# Block trading modules (private)
+Disallow: /trading/
+Disallow: /stock/
+
+# Block user-generated content
 Disallow: /*/*
 
-# Crawl-delay to prevent overwhelming the server
 Crawl-delay: 1
 
-# Sitemap location
 Sitemap: https://datedate.site/sitemap.xml
