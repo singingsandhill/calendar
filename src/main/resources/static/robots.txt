@@ -13,4 +13,4 @@ Disallow: /*/*
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: http://datedate.site/sitemap.xml
+Sitemap: https://datedate.site/sitemap.xml

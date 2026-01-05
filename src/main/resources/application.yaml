@@ -1,5 +1,5 @@
 app:
-  base-url: http://datedate.site
+  base-url: https://datedate.site
 
 spring:
   config:

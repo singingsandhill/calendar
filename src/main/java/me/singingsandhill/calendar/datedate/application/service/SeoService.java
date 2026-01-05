@@ -12,7 +12,7 @@ import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
 @Service
 public class SeoService {
 
-    @Value("${app.base-url:http://datedate.site}")
+    @Value("${app.base-url:https://datedate.site}")
     private String baseUrl;
 
     private static final String DEFAULT_OG_IMAGE = "/og-image.png";
