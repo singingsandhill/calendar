@@ -10,7 +10,7 @@ public interface PositionRepository {
 
     Optional<Position> findById(Long id);
 
-    Optional<Position> findOpenPositionByMarket(String market);
+    List<Position> findOpenPositionsByMarket(String market);
 
     List<Position> findByMarketOrderByOpenedAtDesc(String market, int page, int size);
 

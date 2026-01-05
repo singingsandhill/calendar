@@ -12,8 +12,8 @@ import java.util.Optional;
 
 public interface PositionJpaRepository extends JpaRepository<PositionJpaEntity, Long> {
 
-    @Query("SELECT p FROM PositionJpaEntity p WHERE p.market = :market AND p.status = 'OPEN'")
-    Optional<PositionJpaEntity> findOpenPositionByMarket(@Param("market") String market);
+    @Query("SELECT p FROM PositionJpaEntity p WHERE p.market = :market AND p.status = 'OPEN' ORDER BY p.openedAt DESC")
+    List<PositionJpaEntity> findOpenPositionsByMarket(@Param("market") String market);
 
     @Query("SELECT p FROM PositionJpaEntity p WHERE p.market = :market ORDER BY p.openedAt DESC")
     List<PositionJpaEntity> findByMarketOrderByOpenedAtDesc(@Param("market") String market, Pageable pageable);

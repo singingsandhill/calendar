@@ -39,8 +39,10 @@ public class PositionRepositoryAdapter implements PositionRepository {
     }
 
     @Override
-    public Optional<Position> findOpenPositionByMarket(String market) {
-        return jpaRepository.findOpenPositionByMarket(market).map(this::toDomain);
+    public List<Position> findOpenPositionsByMarket(String market) {
+        return jpaRepository.findOpenPositionsByMarket(market).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override

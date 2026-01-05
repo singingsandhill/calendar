@@ -21,7 +21,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -68,14 +67,16 @@ public class ProfitService {
         // 총 자산 가치
         BigDecimal totalValue = krwBalance.add(coinBalance.multiply(currentPriceBD));
 
-        // 미실현 손익
-        Optional<Position> openPosition = positionRepository.findOpenPositionByMarket(market);
+        // 미실현 손익 (모든 OPEN 포지션 합산)
+        List<Position> openPositions = positionRepository.findOpenPositionsByMarket(market);
         BigDecimal unrealizedPnl = BigDecimal.ZERO;
         BigDecimal unrealizedPnlPct = BigDecimal.ZERO;
 
-        if (openPosition.isPresent() && currentPriceBD.compareTo(BigDecimal.ZERO) > 0) {
-            unrealizedPnl = openPosition.get().calculateUnrealizedPnl(currentPriceBD);
-            unrealizedPnlPct = openPosition.get().calculateUnrealizedPnlPct(currentPriceBD);
+        if (!openPositions.isEmpty() && currentPriceBD.compareTo(BigDecimal.ZERO) > 0) {
+            for (Position pos : openPositions) {
+                unrealizedPnl = unrealizedPnl.add(pos.calculateUnrealizedPnl(currentPriceBD));
+                unrealizedPnlPct = unrealizedPnlPct.add(pos.calculateUnrealizedPnlPct(currentPriceBD));
+            }
         }
 
         // 실현 손익 (청산된 포지션)
