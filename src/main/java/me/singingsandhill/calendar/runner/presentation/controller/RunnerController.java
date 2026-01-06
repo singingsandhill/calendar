@@ -27,7 +27,7 @@ public class RunnerController {
 
     private static final String BASE_URL = "https://datedate.me";
     private static final String OG_IMAGE = "https://datedate.me/image/crew_logo.png";
-    private static final String KEYWORDS = "러닝 크루, 러닝, 달리기, 출석체크, 97 runners, 러닝 모임";
+    private static final String KEYWORDS = "97runners, 97 runners, 1997Runners, 1997runners, 97러너스, 1997러너스, 띠런, 97띠런, 러닝 크루, 러닝, 러닝 동호회, 달리기, 마라톤, 출석체크, 러닝 모임";
 
     private final RunService runService;
     private final AttendanceService attendanceService;
@@ -48,6 +48,7 @@ public class RunnerController {
                 .title("97 Runners - 함께 달리는 즐거움")
                 .description("97 Runners 러닝 크루 - 출석 체크, 거리 기록, 랭킹 확인. 함께 달리며 건강한 라이프스타일을 만들어갑니다.")
                 .keywords(KEYWORDS)
+                .robots("index, follow")
                 .canonical(BASE_URL + "/runners")
                 .ogImage(OG_IMAGE)
                 .build());
@@ -67,6 +68,7 @@ public class RunnerController {
                 .title("런 목록 - 97 Runners")
                 .description("97 Runners 러닝 크루의 정규런, 번개런 일정을 확인하고 출석 체크하세요.")
                 .keywords(KEYWORDS)
+                .robots("index, follow")
                 .canonical(BASE_URL + "/runners/runs")
                 .ogImage(OG_IMAGE)
                 .build());
@@ -106,6 +108,7 @@ public class RunnerController {
                 .title("출석 현황 - 97 Runners")
                 .description("97 Runners 러닝 크루 멤버들의 출석 현황과 누적 거리를 확인하세요.")
                 .keywords(KEYWORDS)
+                .robots("index, follow")
                 .canonical(BASE_URL + "/runners/members")
                 .ogImage(OG_IMAGE)
                 .build());
