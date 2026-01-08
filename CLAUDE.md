@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Multi-domain web application built with Spring Boot 4.0.0 and Java 21. Contains three independent domain modules:
+Multi-domain web application built with Spring Boot 4.0.0 and Java 21. Contains four independent domain modules:
 
 | Module | Description | Base Path |
 |--------|-------------|-----------|
 | **Schedule** | Group scheduling (약속 잡기) - owners create schedules, participants mark availability | `/api/`, `/owner/` |
 | **Runner** | Running crew management (97 Runners) - run tracking, attendance, rankings | `/runners/` |
 | **Trading** | Cryptocurrency trading bot - Bithumb integration, technical analysis, automated trading | `/trading/`, `/api/trading/` |
+| **Stock** | Korean stock Gap & Pullback trading bot - Korea Investment Securities API integration | `/stock/`, `/api/stock/` |
 
 ## Build Commands
 
@@ -57,10 +58,16 @@ src/main/java/me/singingsandhill/calendar/
 │   ├── infrastructure/  # JPA, Security
 │   └── presentation/    # Controllers, DTOs
 │
-└── trading/             # Trading module (self-contained hexagonal)
-    ├── domain/          # Candle, Trade, Position, Signal entities
-    ├── application/     # TradingBotService, IndicatorService, etc.
-    ├── infrastructure/  # Bithumb API, JPA, Schedulers
+├── trading/             # Trading module (self-contained hexagonal)
+│   ├── domain/          # Candle, Trade, Position, Signal entities
+│   ├── application/     # TradingBotService, IndicatorService, etc.
+│   ├── infrastructure/  # Bithumb API, JPA, Schedulers
+│   └── presentation/    # Dashboard, REST API
+│
+└── stock/               # Stock module (Korean stock trading)
+    ├── domain/          # Stock, Position, Trade, Signal, Candle entities
+    ├── application/     # GapPullbackBotService, ScreeningService, etc.
+    ├── infrastructure/  # Korea Investment API, JPA, Schedulers
     └── presentation/    # Dashboard, REST API
 ```
 
@@ -89,6 +96,15 @@ Base path: `/api/trading/`
 - `GET /api/trading/trades` - Trade history
 - `GET /api/trading/positions` - Position history
 - `GET /api/trading/profit/*` - P&L statistics
+
+### Stock API
+Base path: `/api/stock/`
+
+- `GET/POST /api/stock/bot/*` - Bot control (start/stop/pause/resume)
+- `GET /api/stock/monitoring` - Watching stocks list
+- `GET /api/stock/positions/*` - Position management
+- `GET /api/stock/trades` - Trade history
+- `GET /api/stock/signals` - Signal audit
 
 ## Database
 
@@ -139,6 +155,15 @@ Each package has its own CLAUDE.md with detailed guidance:
 | trading/infrastructure | `trading/infrastructure/CLAUDE.md` | Bithumb API, JPA, schedulers |
 | trading/presentation | `trading/presentation/CLAUDE.md` | Dashboard, REST API |
 
+### Stock Module
+| Package | Path | Description |
+|---------|------|-------------|
+| stock | `stock/CLAUDE.md` | Module overview, Gap & Pullback strategy |
+| stock/domain | `stock/domain/CLAUDE.md` | Stock, Position, Trade, Signal, Candle entities |
+| stock/application | `stock/application/CLAUDE.md` | Bot, screening, risk services |
+| stock/infrastructure | `stock/infrastructure/CLAUDE.md` | Korea Investment API, JPA, schedulers |
+| stock/presentation | `stock/presentation/CLAUDE.md` | Dashboard, REST API |
+
 ### Static Resources
 | Directory | Path | Description |
 |-----------|------|-------------|
@@ -153,3 +178,4 @@ Each package has its own CLAUDE.md with detailed guidance:
 | schedule | `templates/schedule/CLAUDE.md` | Calendar view template |
 | runners | `templates/runners/CLAUDE.md` | Runner crew templates |
 | trading | `templates/trading/CLAUDE.md` | Trading dashboard templates |
+| stock | `templates/stock/` | Stock dashboard templates |

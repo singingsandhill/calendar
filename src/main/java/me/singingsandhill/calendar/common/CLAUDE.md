@@ -64,7 +64,6 @@ public class RunNotFoundException extends BusinessException {
 ```java
 String code
 String message
-LocalDateTime timestamp
 ```
 
 ## Configuration

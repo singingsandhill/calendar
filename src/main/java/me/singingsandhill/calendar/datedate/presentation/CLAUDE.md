@@ -7,7 +7,8 @@ REST API and MVC controllers with DTOs.
 ```
 presentation/
 ├── api/                    # REST controllers
-│   ├── GlobalExceptionHandler.java
+│   ├── LocationApiController.java
+│   ├── MenuApiController.java
 │   ├── OwnerApiController.java
 │   ├── ParticipantApiController.java
 │   └── ScheduleApiController.java
@@ -45,6 +46,24 @@ presentation/
 | DELETE | `/participants/{participantId}` | Delete participant |
 | PATCH | `/participants/{participantId}/selections` | Update selections |
 
+### Location API (`/api`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/schedules/{scheduleId}/locations` | List locations |
+| POST | `/schedules/{scheduleId}/locations` | Add location |
+| DELETE | `/locations/{locationId}` | Delete location |
+| POST | `/locations/{locationId}/votes` | Vote for location |
+| DELETE | `/locations/{locationId}/votes/{voterName}` | Remove vote |
+
+### Menu API (`/api`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/schedules/{scheduleId}/menus` | List menus |
+| POST | `/schedules/{scheduleId}/menus` | Add menu |
+| DELETE | `/menus/{menuId}` | Delete menu |
+| POST | `/menus/{menuId}/votes` | Vote for menu |
+| DELETE | `/menus/{menuId}/votes/{voterName}` | Remove vote |
+
 ## MVC Endpoints
 
 | Method | Path | Controller | Template |
@@ -65,6 +84,9 @@ All use Jakarta validation annotations.
 | `ScheduleUpdateRequest` | weeks (4-6) |
 | `ParticipantCreateRequest` | name (max 10 chars) |
 | `SelectionUpdateRequest` | selections (List<Integer>) |
+| `LocationCreateRequest` | name (max 100 chars) |
+| `MenuCreateRequest` | name (max 100 chars), url (optional) |
+| `VoteRequest` | voterName (max 50 chars) |
 
 ## Response DTOs
 
@@ -76,6 +98,8 @@ All are Java Records with `from(Entity)` factory methods.
 | `ScheduleResponse` | id, year, month, weeks, participantCount |
 | `ScheduleDetailResponse` | ...above + daysInMonth, firstDayOfWeek, participants[] |
 | `ParticipantResponse` | id, name, color, selections[] |
+| `LocationResponse` | id, scheduleId, name, voteCount, voters[] |
+| `MenuResponse` | id, scheduleId, name, url, voteCount, voters[] |
 | `ErrorResponse` | code, message |
 
 ## Exception Handling
