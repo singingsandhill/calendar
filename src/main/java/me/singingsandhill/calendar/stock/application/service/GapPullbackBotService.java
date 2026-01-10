@@ -41,6 +41,7 @@ public class GapPullbackBotService {
     private final StockRiskService riskService;
     private final KoreaInvestmentApiClient kisApiClient;
     private final StockProperties stockProperties;
+    private final StockMailService mailService;
 
     private LocalDateTime startedAt;
     private LocalDate currentTradingDate;
@@ -50,13 +51,15 @@ public class GapPullbackBotService {
                                   StockPositionService positionService,
                                   StockRiskService riskService,
                                   KoreaInvestmentApiClient kisApiClient,
-                                  StockProperties stockProperties) {
+                                  StockProperties stockProperties,
+                                  StockMailService mailService) {
         this.screeningService = screeningService;
         this.pullbackDetectionService = pullbackDetectionService;
         this.positionService = positionService;
         this.riskService = riskService;
         this.kisApiClient = kisApiClient;
         this.stockProperties = stockProperties;
+        this.mailService = mailService;
     }
 
     // ========== Bot Lifecycle ==========
@@ -224,6 +227,13 @@ public class GapPullbackBotService {
             currentTradingDate, stockCodes);
 
         log.info("Screening complete: {} stocks selected", selectedStocks.size());
+
+        // 이메일 발송
+        try {
+            mailService.sendScreeningResult(currentTradingDate, selectedStocks);
+        } catch (Exception e) {
+            log.error("Failed to send screening result email: {}", e.getMessage());
+        }
     }
 
     /**

@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 public class StockProperties {
 
     private Kis kis = new Kis();
+    private Mail mail = new Mail();
     private Bot bot = new Bot();
     private Screening screening = new Screening();
     private Entry entry = new Entry();
@@ -37,6 +38,16 @@ public class StockProperties {
         public void setAccountProductCode(String accountProductCode) { this.accountProductCode = accountProductCode; }
         public boolean isProduction() { return production; }
         public void setProduction(boolean production) { this.production = production; }
+    }
+
+    public static class Mail {
+        private boolean enabled = false;
+        private String to;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public String getTo() { return to; }
+        public void setTo(String to) { this.to = to; }
     }
 
     public static class Bot {
@@ -152,6 +163,8 @@ public class StockProperties {
 
     public Kis getKis() { return kis; }
     public void setKis(Kis kis) { this.kis = kis; }
+    public Mail getMail() { return mail; }
+    public void setMail(Mail mail) { this.mail = mail; }
     public Bot getBot() { return bot; }
     public void setBot(Bot bot) { this.bot = bot; }
     public Screening getScreening() { return screening; }
