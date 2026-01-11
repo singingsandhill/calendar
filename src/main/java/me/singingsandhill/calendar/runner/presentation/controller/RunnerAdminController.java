@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.runner.presentation.controller;
 
 import jakarta.validation.Valid;
+import me.singingsandhill.calendar.runner.application.service.AttendanceService;
 import me.singingsandhill.calendar.runner.application.service.RunService;
 import me.singingsandhill.calendar.runner.domain.Run;
 import me.singingsandhill.calendar.runner.domain.RunCategory;
@@ -10,6 +11,7 @@ import me.singingsandhill.calendar.runner.presentation.dto.response.RunResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -24,9 +26,11 @@ public class RunnerAdminController {
     private static final String OG_IMAGE = "https://datedate.me/image/crew_logo.png";
 
     private final RunService runService;
+    private final AttendanceService attendanceService;
 
-    public RunnerAdminController(RunService runService) {
+    public RunnerAdminController(RunService runService, AttendanceService attendanceService) {
         this.runService = runService;
+        this.attendanceService = attendanceService;
     }
 
     private SeoMetadata createAdminSeo(String title) {
@@ -131,5 +135,12 @@ public class RunnerAdminController {
         runService.deleteRun(id);
         redirectAttributes.addFlashAttribute("message", "런이 삭제되었습니다.");
         return "redirect:/runners/admin";
+    }
+
+    @PostMapping("/attendance/{id}/delete")
+    @ResponseBody
+    public ResponseEntity<Void> deleteAttendance(@PathVariable Long id) {
+        attendanceService.deleteAttendance(id);
+        return ResponseEntity.noContent().build();
     }
 }

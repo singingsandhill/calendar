@@ -59,6 +59,7 @@ public class SecurityConfig {
                 .ignoringRequestMatchers("/h2-console/**")
                 .ignoringRequestMatchers("/api/**")
                 .ignoringRequestMatchers("/runners/runs/*/attendance")
+                .ignoringRequestMatchers("/runners/admin/attendance/*/delete")
             )
             .headers(headers -> headers
                 .frameOptions(frame -> frame.sameOrigin())

@@ -45,3 +45,4 @@ Thumbs.db
 # env file
 .env
 .claude/settings.local.json
+logs/stock-trading.log.2026-01-10.0.gz

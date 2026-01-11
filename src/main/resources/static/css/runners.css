@@ -966,3 +966,85 @@
         width: 100%;
     }
 }
+
+/* ==================== Delete Button ==================== */
+.runners-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--runners-accent-secondary);
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+    line-height: 1;
+    margin-left: 1rem;
+}
+
+.runners-delete-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* ==================== Modal ==================== */
+.runners-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.runners-modal.show {
+    display: flex;
+}
+
+.runners-modal-content {
+    background: var(--runners-bg-secondary);
+    border: 1px solid var(--runners-border);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--runners-shadow-lg);
+}
+
+.runners-modal-content h3 {
+    color: var(--runners-text-primary);
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.runners-modal-content p {
+    color: var(--runners-text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.runners-modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.runners-btn-danger {
+    background: var(--runners-accent-secondary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.runners-btn-danger:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}

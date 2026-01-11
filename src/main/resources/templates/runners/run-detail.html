@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ko">
 <head th:replace="~{runners/fragments/header :: head(${seo})}"></head>
 <body class="runners-body">
     <nav th:replace="~{runners/fragments/header :: navbar}"></nav>
@@ -59,9 +59,15 @@
                 <div class="runners-attendance-list-card">
                     <h2>출석 현황 (<span id="attendanceCount" th:text="${attendances.size()}">0</span>명)</h2>
                     <ul class="runners-attendance-list" id="attendanceList">
-                        <li class="runners-attendance-item" th:each="attendance : ${attendances}">
+                        <li class="runners-attendance-item" th:each="attendance : ${attendances}" th:data-id="${attendance.id()}">
                             <span class="runners-attendance-name" th:text="${attendance.participantName()}">러너</span>
                             <span class="runners-attendance-distance" th:text="${attendance.distance()} + 'km'">5.0km</span>
+                            <button sec:authorize="hasRole('ADMIN')"
+                                    class="runners-delete-btn"
+                                    th:data-id="${attendance.id()}"
+                                    th:data-name="${attendance.participantName()}"
+                                    type="button"
+                                    title="삭제">×</button>
                         </li>
                     </ul>
                     <div class="runners-empty" th:if="${attendances.isEmpty()}" id="emptyState">
@@ -71,6 +77,18 @@
             </div>
         </section>
     </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="runners-modal" sec:authorize="hasRole('ADMIN')">
+        <div class="runners-modal-content">
+            <h3>출석 삭제</h3>
+            <p><span id="deleteName"></span>님의 출석 기록을 정말 삭제하시겠습니까?</p>
+            <div class="runners-modal-buttons">
+                <button id="cancelDelete" class="runners-btn runners-btn-secondary" type="button">취소</button>
+                <button id="confirmDelete" class="runners-btn runners-btn-danger" type="button">삭제</button>
+            </div>
+        </div>
+    </div>
 
     <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
 
@@ -155,6 +173,84 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Delete functionality (admin only)
+        let deleteAttendanceId = null;
+        const deleteModal = document.getElementById('deleteModal');
+        const deleteNameSpan = document.getElementById('deleteName');
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+
+        // Attach click event to delete buttons
+        document.querySelectorAll('.runners-delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                deleteAttendanceId = this.dataset.id;
+                deleteNameSpan.textContent = this.dataset.name;
+                deleteModal.classList.add('show');
+            });
+        });
+
+        // Cancel delete
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.addEventListener('click', function() {
+                deleteModal.classList.remove('show');
+                deleteAttendanceId = null;
+            });
+        }
+
+        // Confirm delete
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', async function() {
+                if (!deleteAttendanceId) return;
+
+                try {
+                    const response = await fetch(`/runners/admin/attendance/${deleteAttendanceId}/delete`, {
+                        method: 'POST'
+                    });
+
+                    if (response.ok) {
+                        // Remove the item from DOM
+                        const item = document.querySelector(`li[data-id="${deleteAttendanceId}"]`);
+                        if (item) {
+                            item.remove();
+                        }
+
+                        // Update count
+                        const countSpan = document.getElementById('attendanceCount');
+                        const currentCount = parseInt(countSpan.textContent) || 0;
+                        countSpan.textContent = Math.max(0, currentCount - 1);
+
+                        // Show empty state if no attendances left
+                        const list = document.getElementById('attendanceList');
+                        if (list.children.length === 0) {
+                            const emptyState = document.getElementById('emptyState');
+                            if (emptyState) {
+                                emptyState.style.display = 'block';
+                            }
+                        }
+
+                        showMessage('출석 기록이 삭제되었습니다.', 'success');
+                    } else {
+                        showMessage('삭제에 실패했습니다.', 'error');
+                    }
+                } catch (error) {
+                    showMessage('네트워크 오류가 발생했습니다.', 'error');
+                } finally {
+                    deleteModal.classList.remove('show');
+                    deleteAttendanceId = null;
+                }
+            });
+        }
+
+        // Close modal on backdrop click
+        if (deleteModal) {
+            deleteModal.addEventListener('click', function(e) {
+                if (e.target === deleteModal) {
+                    deleteModal.classList.remove('show');
+                    deleteAttendanceId = null;
+                }
+            });
         }
     </script>
 </body>

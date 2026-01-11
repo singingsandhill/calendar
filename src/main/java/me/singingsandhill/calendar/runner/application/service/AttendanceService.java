@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.runner.application.service;
 
+import me.singingsandhill.calendar.runner.application.exception.AttendanceNotFoundException;
 import me.singingsandhill.calendar.runner.application.exception.DuplicateAttendanceException;
 import me.singingsandhill.calendar.runner.application.exception.RunNotFoundException;
 import me.singingsandhill.calendar.runner.domain.*;
@@ -53,5 +54,13 @@ public class AttendanceService {
 
     public List<Attendance> getAttendancesByParticipantName(String participantName) {
         return attendanceRepository.findByParticipantName(participantName);
+    }
+
+    @Transactional
+    public void deleteAttendance(Long id) {
+        if (attendanceRepository.findById(id).isEmpty()) {
+            throw new AttendanceNotFoundException(id);
+        }
+        attendanceRepository.deleteById(id);
     }
 }
