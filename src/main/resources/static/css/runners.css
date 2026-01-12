@@ -137,6 +137,13 @@
     margin-bottom: 2rem;
 }
 
+.runners-hero-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
 /* ==================== Rankings Section ==================== */
 .runners-rankings {
     padding: 4rem 0;

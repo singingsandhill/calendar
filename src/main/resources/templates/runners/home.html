@@ -10,9 +10,14 @@
             <div class="runners-hero-content">
                 <h1>97 Runners</h1>
                 <p class="tagline">함께 달리는 즐거움</p>
-                <a th:href="@{/runners/runs}" class="runners-btn runners-btn-primary runners-btn-lg">
-                    출석 체크하기
-                </a>
+                <div class="runners-hero-buttons">
+                    <a th:href="@{/runners/runs}" class="runners-btn runners-btn-primary runners-btn-lg">
+                        출석 체크하기
+                    </a>
+                    <a th:href="@{/runners/runs/new}" class="runners-btn runners-btn-secondary runners-btn-lg">
+                        새 런 만들기
+                    </a>
+                </div>
             </div>
         </section>
 

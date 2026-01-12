@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.runner.presentation.controller;
 
+import jakarta.validation.Valid;
 import me.singingsandhill.calendar.runner.application.service.AttendanceService;
 import me.singingsandhill.calendar.runner.application.service.RunService;
 import me.singingsandhill.calendar.runner.domain.Attendance;
@@ -7,16 +8,22 @@ import me.singingsandhill.calendar.runner.domain.AttendanceRankingDto;
 import me.singingsandhill.calendar.runner.domain.DistanceRankingDto;
 import me.singingsandhill.calendar.runner.domain.MemberAttendanceStatsDto;
 import me.singingsandhill.calendar.runner.domain.Run;
+import me.singingsandhill.calendar.runner.domain.RunCategory;
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
+import me.singingsandhill.calendar.runner.presentation.dto.request.RunCreateRequest;
 import me.singingsandhill.calendar.runner.presentation.dto.response.AttendanceResponse;
 import me.singingsandhill.calendar.runner.presentation.dto.response.AttendanceWithRunResponse;
 import me.singingsandhill.calendar.runner.presentation.dto.response.MemberStatsResponse;
 import me.singingsandhill.calendar.runner.presentation.dto.response.RunResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -159,5 +166,49 @@ public class RunnerController {
                 .ogImage(OG_IMAGE)
                 .build());
         return "runners/announce";
+    }
+
+    @GetMapping("/runs/new")
+    public String newRunForm(Model model) {
+        model.addAttribute("categories", RunCategory.values());
+        model.addAttribute("seo", SeoMetadata.builder()
+                .title("새 런 만들기 - 97 Runners")
+                .description("97 Runners 러닝 크루의 새로운 런을 등록하세요.")
+                .keywords(KEYWORDS)
+                .robots("index, follow")
+                .canonical(BASE_URL + "/runners/runs/new")
+                .ogImage(OG_IMAGE)
+                .build());
+        return "runners/run-form";
+    }
+
+    @PostMapping("/runs/create")
+    public String createRun(@Valid @ModelAttribute RunCreateRequest request,
+                            BindingResult bindingResult,
+                            RedirectAttributes redirectAttributes,
+                            Model model) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("categories", RunCategory.values());
+            model.addAttribute("errors", bindingResult.getAllErrors());
+            model.addAttribute("seo", SeoMetadata.builder()
+                    .title("새 런 만들기 - 97 Runners")
+                    .description("97 Runners 러닝 크루의 새로운 런을 등록하세요.")
+                    .keywords(KEYWORDS)
+                    .robots("index, follow")
+                    .canonical(BASE_URL + "/runners/runs/new")
+                    .ogImage(OG_IMAGE)
+                    .build());
+            return "runners/run-form";
+        }
+
+        Run run = runService.createRun(
+            request.date(),
+            request.time(),
+            request.location(),
+            RunCategory.valueOf(request.category())
+        );
+
+        redirectAttributes.addFlashAttribute("message", "런이 생성되었습니다.");
+        return "redirect:/runners/runs/" + run.getId();
     }
 }

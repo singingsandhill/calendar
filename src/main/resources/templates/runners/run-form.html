@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{runners/fragments/header :: head(${seo})}"></head>
+<body class="runners-body">
+    <nav th:replace="~{runners/fragments/header :: navbar}"></nav>
+
+    <main class="runners-container">
+        <div class="runners-login-card" style="max-width: 500px; margin: 2rem auto;">
+            <h1>새 런 만들기</h1>
+
+            <div th:if="${errors}" class="runners-message runners-message-error">
+                <ul style="margin: 0; padding-left: 1.25rem;">
+                    <li th:each="error : ${errors}" th:text="${error.defaultMessage}">에러 메시지</li>
+                </ul>
+            </div>
+
+            <form th:action="@{/runners/runs/create}" method="post">
+
+                <div class="runners-form-group">
+                    <label for="date">날짜</label>
+                    <input type="date" id="date" name="date"
+                           class="runners-input" required>
+                </div>
+
+                <div class="runners-form-group">
+                    <label for="time">시간</label>
+                    <input type="time" id="time" name="time"
+                           class="runners-input" required>
+                </div>
+
+                <div class="runners-form-group">
+                    <label for="location">장소</label>
+                    <input type="text" id="location" name="location"
+                           class="runners-input" placeholder="예: 잠실 종합운동장" required maxlength="100">
+                </div>
+
+                <div class="runners-form-group">
+                    <label for="category">유형</label>
+                    <select id="category" name="category" class="runners-select" required>
+                        <option value="">선택하세요</option>
+                        <option th:each="cat : ${categories}"
+                                th:value="${cat.name()}"
+                                th:text="${cat.displayName}">
+                        </option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <a th:href="@{/runners/runs}" class="runners-btn runners-btn-secondary" style="flex: 1; text-align: center;">
+                        취소
+                    </a>
+                    <button type="submit" class="runners-btn runners-btn-primary" style="flex: 1;">
+                        만들기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+</body>
+</html>
