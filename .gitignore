@@ -46,3 +46,4 @@ Thumbs.db
 .env
 .claude/settings.local.json
 logs/stock-trading.log.2026-01-10.0.gz
+logs/stock-trading.log.2026-01-11.0.gz

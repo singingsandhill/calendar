@@ -84,6 +84,11 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
         return scheduleJpaRepository.existsByOwnerIdAndYearMonth(ownerId, year, month);
     }
 
+    @Override
+    public long count() {
+        return scheduleJpaRepository.count();
+    }
+
     private Schedule toDomain(ScheduleJpaEntity entity) {
         return new Schedule(
                 entity.getId(),

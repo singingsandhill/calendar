@@ -86,6 +86,16 @@ public class LocationRepositoryAdapter implements LocationRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public long count() {
+        return locationJpaRepository.count();
+    }
+
+    @Override
+    public long countAllVotes() {
+        return locationJpaRepository.countAllVotes();
+    }
+
     private Location toDomain(LocationJpaEntity entity) {
         List<String> voters = entity.getVotes().stream()
                 .map(LocationVoteJpaEntity::getVoterName)

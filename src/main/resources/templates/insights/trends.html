@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
+
+<main class="container insights-page">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="breadcrumb">
+        <a th:href="@{/insights}">인사이트</a>
+        <span class="separator">/</span>
+        <span class="current">인기 트렌드</span>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="insights-hero animate-on-scroll">
+        <h1>인기 트렌드</h1>
+        <p class="insights-hero-subtitle">DateDate에서 가장 인기 있는 약속 장소와 메뉴를 확인하세요</p>
+    </section>
+
+    <!-- Description -->
+    <section class="insights-description animate-on-scroll">
+        <p>
+            아래 순위는 DateDate 사용자들이 약속을 잡을 때 투표한 장소와 메뉴를 집계한 결과입니다.
+            시간 가중치를 적용하여 최근 인기 있는 항목이 상위에 노출됩니다.
+            친구들과의 모임, 팀 회의, 가족 행사 등 다양한 상황에서 장소와 메뉴를 고를 때 참고해보세요.
+        </p>
+    </section>
+
+    <!-- Popular Content Grid -->
+    <div class="trends-grid">
+        <!-- 인기 장소 TOP 10 -->
+        <section class="trends-section animate-on-scroll">
+            <div class="trends-header">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="trends-icon">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                <h2>인기 장소 TOP 10</h2>
+            </div>
+
+            <div th:if="${popularLocations.isEmpty()}" class="empty-state">
+                <p>아직 등록된 장소가 없습니다.</p>
+            </div>
+
+            <div th:if="${!popularLocations.isEmpty()}" class="trends-table-wrapper">
+                <table class="trends-table">
+                    <thead>
+                        <tr>
+                            <th class="rank-col">순위</th>
+                            <th class="name-col">장소명</th>
+                            <th class="votes-col">투표 수</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="location, iter : ${popularLocations}">
+                            <td class="rank-col">
+                                <span th:class="${iter.index < 3} ? 'rank-badge top-' + ${iter.index + 1} : 'rank-badge'"
+                                      th:text="${iter.index + 1}">1</span>
+                            </td>
+                            <td class="name-col" th:text="${location.name}">장소명</td>
+                            <td class="votes-col">
+                                <span class="votes-badge" th:text="${location.totalVotes} + '표'">0표</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 인기 메뉴 TOP 10 -->
+        <section class="trends-section animate-on-scroll">
+            <div class="trends-header">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="trends-icon">
+                    <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+                </svg>
+                <h2>인기 메뉴 TOP 10</h2>
+            </div>
+
+            <div th:if="${popularMenus.isEmpty()}" class="empty-state">
+                <p>아직 등록된 메뉴가 없습니다.</p>
+            </div>
+
+            <div th:if="${!popularMenus.isEmpty()}" class="trends-table-wrapper">
+                <table class="trends-table">
+                    <thead>
+                        <tr>
+                            <th class="rank-col">순위</th>
+                            <th class="name-col">메뉴명</th>
+                            <th class="votes-col">투표 수</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="menu, iter : ${popularMenus}">
+                            <td class="rank-col">
+                                <span th:class="${iter.index < 3} ? 'rank-badge top-' + ${iter.index + 1} : 'rank-badge'"
+                                      th:text="${iter.index + 1}">1</span>
+                            </td>
+                            <td class="name-col">
+                                <a th:if="${menu.url != null and !menu.url.isEmpty()}"
+                                   th:href="${menu.url}"
+                                   th:text="${menu.name}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="menu-link">메뉴명</a>
+                                <span th:if="${menu.url == null or menu.url.isEmpty()}"
+                                      th:text="${menu.name}">메뉴명</span>
+                            </td>
+                            <td class="votes-col">
+                                <span class="votes-badge" th:text="${menu.totalVotes} + '표'">0표</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Additional Info -->
+    <section class="insights-info animate-on-scroll">
+        <h3>트렌드 순위 계산 방식</h3>
+        <p>
+            인기 순위는 단순히 투표 수만을 기준으로 하지 않습니다.
+            최근 30일 이내에 등록된 항목에 가중치를 부여하여,
+            현재 트렌드를 더 정확하게 반영합니다.
+            따라서 최근에 많이 선택된 장소와 메뉴가 상위에 노출됩니다.
+        </p>
+    </section>
+
+    <!-- Navigation -->
+    <section class="insights-nav animate-on-scroll">
+        <a th:href="@{/insights}" class="btn-secondary">인사이트 홈으로</a>
+        <a th:href="@{/insights/stats}" class="btn-secondary">이용 현황 보기</a>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+<script defer th:src="@{/js/animations.js}"></script>
+</body>
+</html>

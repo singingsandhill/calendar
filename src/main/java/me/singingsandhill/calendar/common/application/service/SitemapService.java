@@ -31,10 +31,14 @@ public class SitemapService {
 
     public List<SitemapEntry> getSitemapEntries() {
         LocalDate runnerLastmod = getLatestRunDate();
+        LocalDate insightsLastmod = LocalDate.now();
 
         return List.of(
                 new SitemapEntry(baseUrl + "/", startupDate, "monthly", "1.0"),
                 new SitemapEntry(baseUrl + "/start", startupDate, "monthly", "0.9"),
+                new SitemapEntry(baseUrl + "/insights", insightsLastmod, "weekly", "0.8"),
+                new SitemapEntry(baseUrl + "/insights/trends", insightsLastmod, "weekly", "0.8"),
+                new SitemapEntry(baseUrl + "/insights/stats", insightsLastmod, "weekly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners", runnerLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners/runs", runnerLastmod, "weekly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners/members", runnerLastmod, "weekly", "0.7")

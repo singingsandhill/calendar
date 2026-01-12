@@ -18,4 +18,7 @@ public interface LocationJpaRepository extends JpaRepository<LocationJpaEntity, 
 
     @Query("SELECT l FROM LocationJpaEntity l LEFT JOIN FETCH l.votes ORDER BY SIZE(l.votes) DESC, l.createdAt DESC")
     List<LocationJpaEntity> findAllOrderByPopularity();
+
+    @Query("SELECT COUNT(v) FROM LocationVoteJpaEntity v")
+    long countAllVotes();
 }

@@ -16,4 +16,8 @@ public interface MenuRepository {
     boolean existsByScheduleIdAndName(Long scheduleId, String name);
 
     List<Menu> findAllOrderByPopularity();
+
+    long count();
+
+    long countAllVotes();
 }

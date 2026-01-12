@@ -83,6 +83,11 @@ public class ParticipantRepositoryAdapter implements ParticipantRepository {
         return participantJpaRepository.existsByScheduleIdAndName(scheduleId, name);
     }
 
+    @Override
+    public long count() {
+        return participantJpaRepository.count();
+    }
+
     private Participant toDomain(ParticipantJpaEntity entity) {
         return new Participant(
                 entity.getId(),

@@ -18,4 +18,7 @@ public interface MenuJpaRepository extends JpaRepository<MenuJpaEntity, Long> {
 
     @Query("SELECT m FROM MenuJpaEntity m LEFT JOIN FETCH m.votes ORDER BY SIZE(m.votes) DESC, m.createdAt DESC")
     List<MenuJpaEntity> findAllOrderByPopularity();
+
+    @Query("SELECT COUNT(v) FROM MenuVoteJpaEntity v")
+    long countAllVotes();
 }

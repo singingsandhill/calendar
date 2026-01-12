@@ -85,6 +85,16 @@ public class MenuRepositoryAdapter implements MenuRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public long count() {
+        return menuJpaRepository.count();
+    }
+
+    @Override
+    public long countAllVotes() {
+        return menuJpaRepository.countAllVotes();
+    }
+
     private Menu toDomain(MenuJpaEntity entity) {
         List<String> voters = entity.getVotes().stream()
                 .map(MenuVoteJpaEntity::getVoterName)

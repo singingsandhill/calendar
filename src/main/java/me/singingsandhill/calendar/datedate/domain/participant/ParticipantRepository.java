@@ -16,4 +16,6 @@ public interface ParticipantRepository {
     int countByScheduleId(Long scheduleId);
 
     boolean existsByScheduleIdAndName(Long scheduleId, String name);
+
+    long count();
 }

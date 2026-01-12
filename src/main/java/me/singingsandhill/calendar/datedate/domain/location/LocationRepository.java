@@ -16,4 +16,8 @@ public interface LocationRepository {
     boolean existsByScheduleIdAndName(Long scheduleId, String name);
 
     List<Location> findAllOrderByPopularity();
+
+    long count();
+
+    long countAllVotes();
 }

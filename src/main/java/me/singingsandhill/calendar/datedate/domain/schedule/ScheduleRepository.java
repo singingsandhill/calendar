@@ -16,4 +16,6 @@ public interface ScheduleRepository {
     void delete(Schedule schedule);
 
     boolean existsByOwnerIdAndYearMonth(String ownerId, int year, int month);
+
+    long count();
 }
