@@ -119,10 +119,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </main>
 
 <!-- Add Participant Modal -->
-<div id="addParticipantModal" class="modal">
+<div id="addParticipantModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addParticipantModalTitle">
     <div class="modal-content modal-sm">
         <div class="modal-header">
-            <h2>참여자 추가</h2>
+            <h2 id="addParticipantModalTitle">참여자 추가</h2>
             <button class="modal-close" onclick="closeAddParticipantModal()">&times;</button>
         </div>
         <div class="modal-body">
@@ -148,485 +148,50 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
 
+<!-- Schedule data injection for external script -->
 <script th:inline="javascript">
-    // Thymeleaf Java Record 직렬화 이슈로 명시적 속성 추출
-    const scheduleId = [[${schedule.id()}]];
-    const ownerId = [[${ownerId}]];
-    const year = [[${schedule.year()}]];
-    const month = [[${schedule.month()}]];
-    const daysInMonth = [[${schedule.daysInMonth()}]];
-    const firstDayOfWeek = [[${schedule.firstDayOfWeek()}]];
-    const totalDays = [[${schedule.totalDays()}]];
-    const isExtendedMode = [[${schedule.isExtendedMode()}]];
-    // Thymeleaf 반복문으로 중첩 Record 속성 명시적 추출
-    const participants = [
-        [# th:each="p, stat : ${schedule.participants()}"]
-        {
-            id: [[${p.id()}]],
-            name: [[${p.name()}]],
-            color: [[${p.color()}]],
-            selections: [[${p.selections()}]]
-        }[# th:unless="${stat.last}"],[/]
-        [/]
-    ];
-
-    const locations = [
-        [# th:each="loc, stat : ${schedule.locations()}"]
-        {
-            id: [[${loc.id()}]],
-            name: [[${loc.name()}]],
-            voters: [[${loc.voters()}]],
-            voteCount: [[${loc.voteCount()}]]
-        }[# th:unless="${stat.last}"],[/]
-        [/]
-    ];
-
-    const menus = [
-        [# th:each="menu, stat : ${schedule.menus()}"]
-        {
-            id: [[${menu.id()}]],
-            name: [[${menu.name()}]],
-            url: [[${menu.url()}]],
-            voters: [[${menu.voters()}]],
-            voteCount: [[${menu.voteCount()}]]
-        }[# th:unless="${stat.last}"],[/]
-        [/]
-    ];
-
-    let currentParticipantId = null;
-    let selectedDays = new Set();
-
-    document.addEventListener('DOMContentLoaded', function() {
-        renderCalendar();
-    });
-
-    function renderCalendar() {
-        const calendarBody = document.getElementById('calendarBody');
-        calendarBody.innerHTML = '';
-
-        if (isExtendedMode) {
-            renderExtendedCalendar(calendarBody);
-        } else {
-            renderLegacyCalendar(calendarBody);
-        }
-    }
-
-    // 7주 확장 달력 렌더링
-    function renderExtendedCalendar(calendarBody) {
-        // 월 1일의 날짜 객체
-        const firstOfMonth = new Date(year, month - 1, 1);
-        // 그리드 시작점 (월 첫날 이전 주의 일요일)
-        const gridStart = new Date(firstOfMonth);
-        gridStart.setDate(gridStart.getDate() - firstDayOfWeek);
-
-        for (let index = 1; index <= totalDays; index++) {
-            const currentDate = new Date(gridStart);
-            currentDate.setDate(gridStart.getDate() + (index - 1));
-
-            const dayCell = document.createElement('div');
-            dayCell.className = 'calendar-day';
-            dayCell.dataset.day = index;
-
-            const dayNumber = document.createElement('span');
-            dayNumber.className = 'day-number';
-
-            const displayDay = currentDate.getDate();
-            const displayMonth = currentDate.getMonth() + 1;
-
-            // 선택된 월이 아닌 경우 스타일 변경
-            if (displayMonth !== month) {
-                dayCell.classList.add('other-month');
-                dayNumber.textContent = `${displayMonth}/${displayDay}`;
-            } else {
-                dayNumber.textContent = displayDay;
-            }
-
-            dayCell.appendChild(dayNumber);
-
-            // 참여자 dots 추가
-            const dotsContainer = document.createElement('div');
-            dotsContainer.className = 'participant-dots';
-
-            participants.forEach(p => {
-                if (p.selections && p.selections.includes(index)) {
-                    const dot = document.createElement('span');
-                    dot.className = 'participant-dot';
-                    dot.style.backgroundColor = p.color;
-                    dot.title = p.name;
-                    dotsContainer.appendChild(dot);
-                }
-            });
-
-            dayCell.appendChild(dotsContainer);
-            dayCell.addEventListener('click', () => toggleDay(index, dayCell));
-            calendarBody.appendChild(dayCell);
-        }
-    }
-
-    // 기존 월 단위 달력 렌더링 (하위 호환)
-    function renderLegacyCalendar(calendarBody) {
-        // Create empty cells for days before the first day of the month
-        for (let i = 0; i < firstDayOfWeek; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.className = 'calendar-day empty';
-            calendarBody.appendChild(emptyCell);
-        }
-
-        // Create cells for each day of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dayCell = document.createElement('div');
-            dayCell.className = 'calendar-day';
-            dayCell.dataset.day = day;
-
-            const dayNumber = document.createElement('span');
-            dayNumber.className = 'day-number';
-            dayNumber.textContent = day;
-            dayCell.appendChild(dayNumber);
-
-            // Add participant dots
-            const dotsContainer = document.createElement('div');
-            dotsContainer.className = 'participant-dots';
-
-            participants.forEach(p => {
-                if (p.selections && p.selections.includes(day)) {
-                    const dot = document.createElement('span');
-                    dot.className = 'participant-dot';
-                    dot.style.backgroundColor = p.color;
-                    dot.title = p.name;
-                    dotsContainer.appendChild(dot);
-                }
-            });
-
-            dayCell.appendChild(dotsContainer);
-
-            dayCell.addEventListener('click', () => toggleDay(day, dayCell));
-
-            calendarBody.appendChild(dayCell);
-        }
-    }
-
-    function onParticipantChange() {
-        const select = document.getElementById('participantSelect');
-        currentParticipantId = select.value ? parseInt(select.value) : null;
-
-        // Load current selections for this participant
-        selectedDays.clear();
-        if (currentParticipantId) {
-            const participant = participants.find(p => p.id === currentParticipantId);
-            if (participant && participant.selections) {
-                participant.selections.forEach(day => selectedDays.add(day));
-            }
-        }
-
-        updateCalendarDisplay();
-    }
-
-    function updateCalendarDisplay() {
-        document.querySelectorAll('.calendar-day').forEach(cell => {
-            cell.classList.remove('selected');
-            const day = parseInt(cell.dataset.day);
-            if (selectedDays.has(day)) {
-                cell.classList.add('selected');
-            }
-        });
-    }
-
-    function toggleDay(day, cell) {
-        if (!currentParticipantId) {
-            alert('먼저 이름을 선택하세요');
-            return;
-        }
-
-        if (selectedDays.has(day)) {
-            selectedDays.delete(day);
-            cell.classList.remove('selected');
-        } else {
-            selectedDays.add(day);
-            cell.classList.add('selected');
-        }
-    }
-
-    function resetSelections() {
-        if (!currentParticipantId) {
-            alert('먼저 이름을 선택하세요');
-            return;
-        }
-        selectedDays.clear();
-        updateCalendarDisplay();
-    }
-
-    async function saveSelections() {
-        if (!currentParticipantId) {
-            alert('먼저 이름을 선택하세요');
-            return;
-        }
-
-        try {
-            await api.updateSelections(currentParticipantId, Array.from(selectedDays));
-            // 로컬 데이터 업데이트
-            const participant = participants.find(p => p.id === currentParticipantId);
-            if (participant) {
-                participant.selections = Array.from(selectedDays);
-            }
-            // 캘린더 다시 렌더링
-            renderCalendar();
-            updateCalendarDisplay();
-            toast.success('저장되었습니다!');
-        } catch (error) {
-            toast.error(error.message);
-        }
-    }
-
-    function openAddParticipantModal() {
-        document.getElementById('addParticipantModal').classList.add('show');
-    }
-
-    function closeAddParticipantModal() {
-        document.getElementById('addParticipantModal').classList.remove('show');
-    }
-
-    document.getElementById('addParticipantForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const name = document.getElementById('participantName').value.trim();
-
-        try {
-            await api.addParticipant(scheduleId, name);
-            window.location.reload();
-        } catch (error) {
-            toast.error(error.message);
-        }
-    });
-
-    function copyLink() {
-        const url = window.location.href;
-
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(url)
-                .then(() => alert('링크가 클립보드에 복사되었습니다!'))
-                .catch(() => fallbackCopy(url));
-        } else {
-            fallbackCopy(url);
-        }
-    }
-
-    function fallbackCopy(text) {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-            document.execCommand('copy');
-            alert('링크가 클립보드에 복사되었습니다!');
-        } catch (err) {
-            prompt('아래 링크를 복사하세요:', text);
-        }
-        document.body.removeChild(textarea);
-    }
-
-    // Location voting functions
-    async function addLocation() {
-        const input = document.getElementById('locationInput');
-        const name = input.value.trim();
-
-        if (!name) {
-            alert('장소를 입력하세요');
-            return;
-        }
-
-        try {
-            const newLocation = await api.addLocation(scheduleId, name);
-            // 로컬 데이터에 추가
-            locations.push(newLocation);
-            // UI에 추가
-            addLocationToList(newLocation);
-            // 입력 필드 초기화
-            input.value = '';
-        } catch (error) {
-            toast.error(error.message);
-        }
-    }
-
-    function addLocationToList(location) {
-        const list = document.getElementById('locationList');
-        // "아직 제안된 장소가 없습니다" 메시지 제거
-        const emptyMsg = list.querySelector('.empty-locations');
-        if (emptyMsg) emptyMsg.remove();
-
-        const item = document.createElement('div');
-        item.className = 'location-item';
-        item.innerHTML = `
-            <div class="location-info">
-                <span class="location-name">${location.name}</span>
-                <span class="location-votes">${location.voteCount}표</span>
-            </div>
-            <div class="location-voters"></div>
-            <div class="location-actions">
-                <button class="btn btn-sm btn-primary vote-btn"
-                        data-location-id="${location.id}"
-                        onclick="toggleVote(this)">투표</button>
-            </div>
-        `;
-        list.appendChild(item);
-    }
-
-    async function toggleVote(button) {
-        const locationId = parseInt(button.dataset.locationId);
-        const select = document.getElementById('participantSelect');
-        const selectedOption = select.options[select.selectedIndex];
-
-        if (!select.value) {
-            alert('먼저 이름을 선택하세요');
-            return;
-        }
-
-        const voterName = selectedOption.text;
-        const location = locations.find(l => l.id === locationId);
-        const hasVoted = location && location.voters.some(v => v.toLowerCase() === voterName.toLowerCase());
-
-        try {
-            if (hasVoted) {
-                await api.unvoteLocation(locationId, voterName);
-                // 로컬 데이터에서 투표 제거
-                location.voters = location.voters.filter(v => v.toLowerCase() !== voterName.toLowerCase());
-                location.voteCount--;
-            } else {
-                await api.voteLocation(locationId, voterName);
-                // 로컬 데이터에 투표 추가
-                location.voters.push(voterName);
-                location.voteCount++;
-            }
-            // UI 업데이트
-            updateLocationItemUI(button.closest('.location-item'), location);
-        } catch (error) {
-            toast.error(error.message);
-        }
-    }
-
-    function updateLocationItemUI(itemElement, location) {
-        // 투표 수 업데이트
-        const votesSpan = itemElement.querySelector('.location-votes');
-        votesSpan.textContent = location.voteCount + '표';
-
-        // 투표자 태그 업데이트
-        const votersDiv = itemElement.querySelector('.location-voters');
-        votersDiv.innerHTML = location.voters.map(v =>
-            `<span class="voter-tag">${v}</span>`
-        ).join('');
-    }
-
-    // Handle Enter key for location input
-    document.getElementById('locationInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addLocation();
-        }
-    });
-
-    // Menu voting functions
-    async function addMenu() {
-        const nameInput = document.getElementById('menuInput');
-        const urlInput = document.getElementById('menuUrlInput');
-        const name = nameInput.value.trim();
-        const url = urlInput.value.trim() || null;
-
-        if (!name) {
-            alert('메뉴를 입력하세요');
-            return;
-        }
-
-        try {
-            const newMenu = await api.addMenu(scheduleId, name, url);
-            // 로컬 데이터에 추가
-            menus.push(newMenu);
-            // UI에 추가
-            addMenuToList(newMenu);
-            // 입력 필드 초기화
-            nameInput.value = '';
-            urlInput.value = '';
-        } catch (error) {
-            toast.error(error.message);
-        }
-    }
-
-    function addMenuToList(menu) {
-        const list = document.getElementById('menuList');
-        // "아직 제안된 메뉴가 없습니다" 메시지 제거
-        const emptyMsg = list.querySelector('.empty-locations');
-        if (emptyMsg) emptyMsg.remove();
-
-        const item = document.createElement('div');
-        item.className = 'location-item';
-        const urlLink = menu.url ? `<a href="${menu.url}" target="_blank" rel="noopener noreferrer" class="menu-link">🔗</a>` : '';
-        item.innerHTML = `
-            <div class="location-info">
-                <span class="location-name">${menu.name}</span>
-                ${urlLink}
-                <span class="location-votes">${menu.voteCount}표</span>
-            </div>
-            <div class="location-voters"></div>
-            <div class="location-actions">
-                <button class="btn btn-sm btn-primary menu-vote-btn"
-                        data-menu-id="${menu.id}"
-                        onclick="toggleMenuVote(this)">투표</button>
-            </div>
-        `;
-        list.appendChild(item);
-    }
-
-    async function toggleMenuVote(button) {
-        const menuId = parseInt(button.dataset.menuId);
-        const select = document.getElementById('participantSelect');
-        const selectedOption = select.options[select.selectedIndex];
-
-        if (!select.value) {
-            alert('먼저 이름을 선택하세요');
-            return;
-        }
-
-        const voterName = selectedOption.text;
-        const menu = menus.find(m => m.id === menuId);
-        const hasVoted = menu && menu.voters.some(v => v.toLowerCase() === voterName.toLowerCase());
-
-        try {
-            if (hasVoted) {
-                await api.unvoteMenu(menuId, voterName);
-                // 로컬 데이터에서 투표 제거
-                menu.voters = menu.voters.filter(v => v.toLowerCase() !== voterName.toLowerCase());
-                menu.voteCount--;
-            } else {
-                await api.voteMenu(menuId, voterName);
-                // 로컬 데이터에 투표 추가
-                menu.voters.push(voterName);
-                menu.voteCount++;
-            }
-            // UI 업데이트
-            updateMenuItemUI(button.closest('.location-item'), menu);
-        } catch (error) {
-            toast.error(error.message);
-        }
-    }
-
-    function updateMenuItemUI(itemElement, menu) {
-        // 투표 수 업데이트
-        const votesSpan = itemElement.querySelector('.location-votes');
-        votesSpan.textContent = menu.voteCount + '표';
-
-        // 투표자 태그 업데이트
-        const votersDiv = itemElement.querySelector('.location-voters');
-        votersDiv.innerHTML = menu.voters.map(v =>
-            `<span class="voter-tag">${v}</span>`
-        ).join('');
-    }
-
-    // Handle Enter key for menu input
-    document.getElementById('menuInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addMenu();
-        }
-    });
+    window.SCHEDULE_DATA = {
+        scheduleId: [[${schedule.id()}]],
+        ownerId: [[${ownerId}]],
+        year: [[${schedule.year()}]],
+        month: [[${schedule.month()}]],
+        daysInMonth: [[${schedule.daysInMonth()}]],
+        firstDayOfWeek: [[${schedule.firstDayOfWeek()}]],
+        totalDays: [[${schedule.totalDays()}]],
+        isExtendedMode: [[${schedule.isExtendedMode()}]],
+        participants: [
+            [# th:each="p, stat : ${schedule.participants()}"]
+            {
+                id: [[${p.id()}]],
+                name: [[${p.name()}]],
+                color: [[${p.color()}]],
+                selections: [[${p.selections()}]]
+            }[# th:unless="${stat.last}"],[/]
+            [/]
+        ],
+        locations: [
+            [# th:each="loc, stat : ${schedule.locations()}"]
+            {
+                id: [[${loc.id()}]],
+                name: [[${loc.name()}]],
+                voters: [[${loc.voters()}]],
+                voteCount: [[${loc.voteCount()}]]
+            }[# th:unless="${stat.last}"],[/]
+            [/]
+        ],
+        menus: [
+            [# th:each="menu, stat : ${schedule.menus()}"]
+            {
+                id: [[${menu.id()}]],
+                name: [[${menu.name()}]],
+                url: [[${menu.url()}]],
+                voters: [[${menu.voters()}]],
+                voteCount: [[${menu.voteCount()}]]
+            }[# th:unless="${stat.last}"],[/]
+            [/]
+        ]
+    };
 </script>
+<script defer th:src="@{/js/schedule-view.js}"></script>
 </body>
 </html>

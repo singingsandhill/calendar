@@ -86,15 +86,15 @@
 <!-- Default Header Fragment -->
 <th:block th:fragment="header">
     <header>
-        <nav class="navbar">
+        <nav class="navbar" role="navigation" aria-label="주 메뉴">
             <div class="navbar-content">
                 <a th:href="@{/}" class="logo">DateDate</a>
 
                 <!-- Hamburger Button (Mobile) -->
-                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false">
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
+                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false" aria-controls="navMenu">
+                    <span class="hamburger-line" aria-hidden="true"></span>
+                    <span class="hamburger-line" aria-hidden="true"></span>
+                    <span class="hamburger-line" aria-hidden="true"></span>
                 </button>
 
                 <!-- Navigation Menu -->
@@ -111,15 +111,15 @@
 <!-- Minimal Header Fragment (Garriock Style) -->
 <th:block th:fragment="header-minimal">
     <header>
-        <nav class="navbar-minimal" id="navbarMinimal">
+        <nav class="navbar-minimal" id="navbarMinimal" role="navigation" aria-label="주 메뉴">
             <div class="navbar-content">
                 <a th:href="@{/}" class="logo logo-serif">DateDate</a>
 
                 <!-- Hamburger Button (Mobile) -->
-                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false">
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
+                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false" aria-controls="navMenu">
+                    <span class="hamburger-line" aria-hidden="true"></span>
+                    <span class="hamburger-line" aria-hidden="true"></span>
+                    <span class="hamburger-line" aria-hidden="true"></span>
                 </button>
 
                 <!-- Navigation Menu -->

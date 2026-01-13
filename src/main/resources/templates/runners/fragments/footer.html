@@ -1,12 +1,27 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 
-<footer th:fragment="footer" class="runners-footer">
-    <p>&copy; 2025 97Runners. All rights reserved.</p>
-</footer>
+<th:block th:fragment="footer">
+    <footer class="runners-footer">
+        <p>&copy; 2025 97Runners. All rights reserved.</p>
+    </footer>
+    <script>
+    (function() {
+        const toggle = document.getElementById('runnersNavToggle');
+        const menu = document.getElementById('runnersNavMenu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', function() {
+                const expanded = this.getAttribute('aria-expanded') === 'true';
+                this.setAttribute('aria-expanded', !expanded);
+                menu.classList.toggle('show');
+            });
+        }
+    })();
+    </script>
+</th:block>
 
 <th:block th:fragment="scripts">
-    <script th:src="@{/js/runners.js}"></script>
+    <!-- 개별 페이지 스크립트는 여기에 추가 -->
 </th:block>
 
 </html>

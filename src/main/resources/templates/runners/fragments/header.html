@@ -62,13 +62,19 @@
     <link rel="stylesheet" th:href="@{/css/runners.css}">
 </head>
 
-<nav th:fragment="navbar" class="runners-navbar">
+<nav th:fragment="navbar" class="runners-navbar" role="navigation" aria-label="주 메뉴">
     <div class="runners-navbar-content">
         <a th:href="@{/runners}" class="runners-logo">
             <img th:src="@{/image/crew_logo.png}" alt="Running Crew Logo" onerror="this.style.display='none'">
             <span class="runners-logo-text">97 Runners</span>
         </a>
-        <div class="runners-nav">
+        <button class="runners-navbar-toggle" id="runnersNavToggle"
+                aria-label="메뉴 열기" aria-expanded="false" aria-controls="runnersNavMenu">
+            <span class="runners-hamburger-line" aria-hidden="true"></span>
+            <span class="runners-hamburger-line" aria-hidden="true"></span>
+            <span class="runners-hamburger-line" aria-hidden="true"></span>
+        </button>
+        <div class="runners-nav" id="runnersNavMenu">
             <a th:href="@{/runners}">홈</a>
             <a th:href="@{/runners/runs}">런 목록</a>
             <a th:href="@{/runners/members}">출석 현황</a>
