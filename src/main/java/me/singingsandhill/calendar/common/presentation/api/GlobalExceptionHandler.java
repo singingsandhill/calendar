@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import me.singingsandhill.calendar.common.application.exception.BusinessException;
 import me.singingsandhill.calendar.common.presentation.dto.response.ErrorResponse;
@@ -37,6 +38,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
         ErrorResponse response = new ErrorResponse("INVALID_ARGUMENT", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        ErrorResponse response = new ErrorResponse("INVALID_PATH_PARAM", "Invalid URL parameter: " + e.getName());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 

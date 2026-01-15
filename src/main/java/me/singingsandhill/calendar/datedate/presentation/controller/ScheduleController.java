@@ -36,7 +36,7 @@ public class ScheduleController {
         this.seoService = seoService;
     }
 
-    @GetMapping("/{ownerId}/{year}/{month}")
+    @GetMapping("/{ownerId}/{year:\\d{4}}/{month:\\d{1,2}}")
     public String viewSchedule(
             @PathVariable String ownerId,
             @PathVariable int year,
