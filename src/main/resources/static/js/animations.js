@@ -60,9 +60,19 @@ function initScrollAnimations() {
         return;
     }
 
-    // 각 요소에 인덱스 할당 (DOM 순서 기준)
-    animateElements.forEach((el, index) => {
-        el.dataset.animationIndex = index;
+    // 섹션별 로컬 인덱스 계산 (글로벌 인덱스 대신)
+    const sectionMap = new Map();
+
+    animateElements.forEach(el => {
+        const section = el.closest('section, .how-it-works, .popular-section');
+
+        if (!sectionMap.has(section)) {
+            sectionMap.set(section, 0);
+        }
+
+        const localIndex = sectionMap.get(section);
+        el.dataset.animationIndex = localIndex;
+        sectionMap.set(section, localIndex + 1);
     });
 
     const observerOptions = {

@@ -63,7 +63,7 @@ public class TradingProperties {
 
     public static class Bot {
         private boolean enabled = false;
-        private String market = "KRW-ADA";
+        private String market = "wslKRW-ADA";
         private int maxPositions = 2;
         private double orderRatio = 0.25;
         private double orderRatioMin = 0.15;  // 변동성 높을 때 최소 비율
