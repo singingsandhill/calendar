@@ -81,11 +81,24 @@ public class KoreaInvestmentApiClient {
      * 전일 종가 조회
      */
     public BigDecimal getPreviousClose(String stockCode) {
-        List<KisDailyPriceResponse> prices = getDailyPrices(stockCode, 1);
-        if (prices.isEmpty()) {
+        try {
+            List<KisDailyPriceResponse> prices = getDailyPrices(stockCode, 1);
+            if (prices == null || prices.isEmpty()) {
+                log.warn("No daily price data available for stock: {}", stockCode);
+                return null;
+            }
+
+            KisDailyPriceResponse firstPrice = prices.get(0);
+            if (firstPrice == null || firstPrice.closePrice() == null) {
+                log.warn("Invalid price data for stock: {}", stockCode);
+                return null;
+            }
+
+            return firstPrice.closePrice();
+        } catch (Exception e) {
+            log.error("Error getting previous close for {}: {}", stockCode, e.getMessage());
             return null;
         }
-        return prices.get(0).closePrice();
     }
 
     /**
@@ -134,11 +147,24 @@ public class KoreaInvestmentApiClient {
      * 예수금 조회
      */
     public BigDecimal getAvailableCash() {
-        KisBalanceResponse balance = getBalance();
-        if (balance != null && balance.summary() != null && !balance.summary().isEmpty()) {
-            return balance.summary().get(0).availableDeposit();
+        try {
+            KisBalanceResponse balance = getBalance();
+            if (balance == null || balance.summary() == null || balance.summary().isEmpty()) {
+                log.warn("No balance data available");
+                return BigDecimal.ZERO;
+            }
+
+            KisBalanceResponse.AccountSummary summary = balance.summary().get(0);
+            if (summary == null || summary.availableDeposit() == null) {
+                log.warn("Invalid balance summary data");
+                return BigDecimal.ZERO;
+            }
+
+            return summary.availableDeposit();
+        } catch (Exception e) {
+            log.error("Error getting available cash: {}", e.getMessage());
+            return BigDecimal.ZERO;
         }
-        return BigDecimal.ZERO;
     }
 
     /**

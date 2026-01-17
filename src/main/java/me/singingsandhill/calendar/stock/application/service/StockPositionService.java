@@ -69,23 +69,32 @@ public class StockPositionService {
         // 현재가 조회
         KisQuoteResponse quote = kisApiClient.getQuote(stockCode);
         if (quote == null) {
-            log.error("Failed to get quote for {}", stockCode);
+            log.error("Failed to open position for {}: Cannot retrieve quote from API. Stock may not exist or API is unavailable.", stockCode);
             return null;
         }
 
         BigDecimal currentPrice = quote.currentPrice();
+        if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            log.error("Failed to open position for {}: Invalid current price ({})", stockCode, currentPrice);
+            return null;
+        }
 
         // 포지션 사이즈 계산
         int quantity = calculatePositionSize(stockCode, currentPrice);
         if (quantity <= 0) {
-            log.warn("Calculated position size is 0 for {}", stockCode);
+            log.warn("Failed to open position for {}: Calculated position size is 0. This could be due to insufficient funds or position limits.", stockCode);
             return null;
         }
 
         // 시장가 매수 주문
         KisOrderResponse orderResponse = kisApiClient.buyMarket(stockCode, quantity);
-        if (orderResponse == null || !orderResponse.isSuccess()) {
-            log.error("Failed to place buy order for {}", stockCode);
+        if (orderResponse == null) {
+            log.error("Failed to open position for {}: Buy order API returned null. Network or authentication issue likely.", stockCode);
+            return null;
+        }
+        if (!orderResponse.isSuccess()) {
+            log.error("Failed to open position for {}: Buy order rejected by broker. Code: {}, Message: {}",
+                stockCode, orderResponse.messageCode(), orderResponse.message());
             return null;
         }
 
@@ -138,7 +147,12 @@ public class StockPositionService {
     private int calculatePositionSize(String stockCode, BigDecimal price) {
         // 가용 현금 조회
         BigDecimal availableCash = kisApiClient.getAvailableCash();
-        if (availableCash == null || availableCash.compareTo(BigDecimal.ZERO) <= 0) {
+        if (availableCash == null) {
+            log.error("Cannot calculate position size for {}: Failed to retrieve available cash from API", stockCode);
+            return 0;
+        }
+        if (availableCash.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Cannot calculate position size for {}: Insufficient funds (available: {})", stockCode, availableCash);
             return 0;
         }
 

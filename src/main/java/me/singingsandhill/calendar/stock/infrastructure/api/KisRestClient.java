@@ -142,6 +142,11 @@ public class KisRestClient {
     }
 
     private KisOrderbookResponse mapToOrderbookResponse(Map<String, Object> output, String stockCode) {
+        if (output == null) {
+            log.error("Cannot map orderbook response: output is null for stock {}", stockCode);
+            return null;
+        }
+
         return new KisOrderbookResponse(
             stockCode,
             parseBigDecimal(output.get("askp1")),
@@ -559,6 +564,7 @@ public class KisRestClient {
         try {
             return new BigDecimal(str);
         } catch (NumberFormatException e) {
+            log.warn("Failed to parse BigDecimal from value '{}': {}. Returning ZERO.", value, e.getMessage());
             return BigDecimal.ZERO;
         }
     }
@@ -571,6 +577,7 @@ public class KisRestClient {
         try {
             return Long.parseLong(str);
         } catch (NumberFormatException e) {
+            log.warn("Failed to parse Long from value '{}': {}. Returning 0.", value, e.getMessage());
             return 0L;
         }
     }
@@ -583,6 +590,7 @@ public class KisRestClient {
         try {
             return Integer.parseInt(str);
         } catch (NumberFormatException e) {
+            log.warn("Failed to parse Integer from value '{}': {}. Returning 0.", value, e.getMessage());
             return 0;
         }
     }

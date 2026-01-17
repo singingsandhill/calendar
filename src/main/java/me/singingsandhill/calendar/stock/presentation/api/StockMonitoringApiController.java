@@ -3,13 +3,18 @@ package me.singingsandhill.calendar.stock.presentation.api;
 import me.singingsandhill.calendar.stock.application.service.ScreeningService;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
 import me.singingsandhill.calendar.stock.domain.stock.StockState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -19,6 +24,7 @@ import java.util.List;
 @RequestMapping("/api/stock/monitoring")
 public class StockMonitoringApiController {
 
+    private static final Logger log = LoggerFactory.getLogger(StockMonitoringApiController.class);
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final ScreeningService screeningService;
@@ -28,13 +34,32 @@ public class StockMonitoringApiController {
     }
 
     /**
+     * 날짜 파라미터 파싱 (에러 처리 포함)
+     */
+    private LocalDate parseDateParameter(String date) {
+        if (date == null) {
+            return LocalDate.now(KST);
+        }
+
+        try {
+            return LocalDate.parse(date);
+        } catch (DateTimeParseException e) {
+            log.warn("Invalid date format provided: '{}'. Expected format: yyyy-MM-dd", date);
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                String.format("Invalid date format: '%s'. Expected format: yyyy-MM-dd (e.g., 2026-01-17)", date)
+            );
+        }
+    }
+
+    /**
      * 관심종목(워치리스트) 조회
      */
     @GetMapping
     public ResponseEntity<List<StockMonitoringResponse>> getWatchlist(
             @RequestParam(required = false) String date) {
 
-        LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
+        LocalDate tradingDate = parseDateParameter(date);
         List<Stock> stocks = screeningService.getWatchlist(tradingDate);
 
         List<StockMonitoringResponse> response = stocks.stream()
@@ -51,7 +76,7 @@ public class StockMonitoringApiController {
     public ResponseEntity<List<StockMonitoringResponse>> getActiveStocks(
             @RequestParam(required = false) String date) {
 
-        LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
+        LocalDate tradingDate = parseDateParameter(date);
         List<Stock> stocks = screeningService.getActiveStocks(tradingDate);
 
         List<StockMonitoringResponse> response = stocks.stream()
@@ -69,7 +94,7 @@ public class StockMonitoringApiController {
             @PathVariable StockState state,
             @RequestParam(required = false) String date) {
 
-        LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
+        LocalDate tradingDate = parseDateParameter(date);
         List<Stock> stocks = screeningService.getStocksByState(tradingDate, state);
 
         List<StockMonitoringResponse> response = stocks.stream()

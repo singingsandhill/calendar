@@ -52,11 +52,14 @@ public class CandleService {
         List<BithumbCandleResponse> candles = bithumbApiClient.getMinuteCandles(unit, market, count);
 
         if (candles == null || candles.isEmpty()) {
-            log.warn("No candle data received from API");
+            log.warn("No candle data received from API for market: {}", market);
             return 0;
         }
 
         int savedCount = 0;
+        int failedCount = 0;
+        int duplicateCount = 0;
+
         for (BithumbCandleResponse response : candles) {
             try {
                 LocalDateTime candleDateTime = parseDateTime(response.candleDateTimeKst());
@@ -69,14 +72,23 @@ public class CandleService {
                     Candle candle = mapToCandle(response);
                     candleRepository.save(candle);
                     savedCount++;
+                    log.debug("Saved candle for {} at {}", market, candleDateTime);
+                } else {
+                    duplicateCount++;
                 }
             } catch (Exception e) {
-                log.error("Failed to save candle: {}", response, e);
+                failedCount++;
+                log.error("Failed to save candle for {} at {}: {}. Error: {}",
+                    market,
+                    response.candleDateTimeKst(),
+                    e.getClass().getSimpleName(),
+                    e.getMessage());
             }
         }
 
-        if (savedCount > 0) {
-            log.info("Saved {} new candles for {}", savedCount, market);
+        if (savedCount > 0 || failedCount > 0) {
+            log.info("Candle save results for {}: {} saved, {} duplicates skipped, {} failed out of {} total",
+                market, savedCount, duplicateCount, failedCount, candles.size());
         }
 
         return savedCount;
