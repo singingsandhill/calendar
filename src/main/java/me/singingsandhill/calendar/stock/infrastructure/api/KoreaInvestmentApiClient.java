@@ -150,20 +150,20 @@ public class KoreaInvestmentApiClient {
         try {
             KisBalanceResponse balance = getBalance();
             if (balance == null || balance.summary() == null || balance.summary().isEmpty()) {
-                log.warn("No balance data available");
-                return BigDecimal.ZERO;
+                log.warn("No balance data available from API");
+                return null;
             }
 
             KisBalanceResponse.AccountSummary summary = balance.summary().get(0);
             if (summary == null || summary.availableDeposit() == null) {
-                log.warn("Invalid balance summary data");
-                return BigDecimal.ZERO;
+                log.warn("Invalid balance summary data from API");
+                return null;
             }
 
             return summary.availableDeposit();
         } catch (Exception e) {
             log.error("Error getting available cash: {}", e.getMessage());
-            return BigDecimal.ZERO;
+            return null;
         }
     }
 

@@ -148,11 +148,11 @@ public class StockPositionService {
         // 가용 현금 조회
         BigDecimal availableCash = kisApiClient.getAvailableCash();
         if (availableCash == null) {
-            log.error("Cannot calculate position size for {}: Failed to retrieve available cash from API", stockCode);
+            log.error("Cannot calculate position size for {}: API failure while retrieving available cash", stockCode);
             return 0;
         }
         if (availableCash.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("Cannot calculate position size for {}: Insufficient funds (available: {})", stockCode, availableCash);
+            log.warn("Cannot calculate position size for {}: Insufficient balance (available: {})", stockCode, availableCash);
             return 0;
         }
 
