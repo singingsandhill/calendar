@@ -40,6 +40,7 @@ body {
     line-height: 1.6;
     color: var(--text-color);
     background-color: var(--bg-light);
+    overflow-x: hidden;
 }
 
 /* Typography - Serif for headings */
@@ -1300,6 +1301,62 @@ footer {
     .participant-selector select {
         width: 100%;
     }
+
+    /* Location/Menu Voting */
+    .location-section {
+        padding: 1rem;
+        overflow: hidden;
+    }
+
+    .location-add {
+        flex-direction: column;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .location-add input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .location-add .btn {
+        width: 100%;
+        min-width: 0;
+        display: block;
+    }
+
+    /* Calendar - Tablet */
+    .calendar-container {
+        padding: 1.25rem;
+    }
+
+    .calendar {
+        max-width: 100%;
+    }
+
+    .calendar-header,
+    .calendar-body {
+        gap: 3px;
+    }
+
+    .weekday {
+        font-size: 0.8125rem;
+        padding: 0.375rem;
+    }
+
+    .calendar-day {
+        padding: 6px 3px;
+        min-height: 48px;
+    }
+
+    .day-number {
+        font-size: 0.9375rem;
+    }
+
+    .participant-dot {
+        width: 7px;
+        height: 7px;
+    }
 }
 
 /* Mobile - 480px */
@@ -1500,6 +1557,53 @@ footer {
         min-height: 44px;
     }
 
+    /* Location/Menu Voting Section */
+    .location-section {
+        padding: 1rem;
+        overflow: hidden;
+    }
+
+    .location-add {
+        flex-direction: column;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .location-add input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .location-add .btn {
+        width: 100%;
+        min-width: 0;
+        display: block;
+    }
+
+    .location-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .location-info {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .location-voters {
+        width: 100%;
+    }
+
+    .location-actions {
+        width: 100%;
+    }
+
+    .location-actions .btn {
+        width: 100%;
+        min-height: 44px;
+    }
+
     /* How It Works */
     .how-it-works {
         padding: 2rem 0;
@@ -1573,21 +1677,26 @@ footer {
     }
 
     .weekday {
-        font-size: 0.625rem;
+        font-size: 0.6875rem;
     }
 
     .calendar-day {
-        padding: 2px 1px;
+        padding: 3px 2px;
         border-radius: 4px;
+        min-height: 38px;
     }
 
     .day-number {
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .participant-dots {
+        gap: 2px;
     }
 
     .participant-dot {
-        width: 5px;
-        height: 5px;
+        width: 6px;
+        height: 6px;
     }
 
     /* Participant */
