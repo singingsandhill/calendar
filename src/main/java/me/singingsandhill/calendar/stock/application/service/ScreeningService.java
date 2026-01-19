@@ -79,19 +79,43 @@ public class ScreeningService {
         log.info("Screening complete. Selected {} stocks out of {} qualified",
             selectedStocks.size(), qualifiedStocks.size());
 
-        // DB에 저장
-        for (Stock stock : selectedStocks) {
-            stockRepository.save(stock);
+        // DB에 저장 (에러 처리 포함)
+        int savedStockCount = 0;
+        int savedSignalCount = 0;
+        int failedCount = 0;
 
-            // 갭 감지 시그널 저장
-            StockSignal signal = StockSignal.gapDetected(
-                stock.getStockCode(),
-                stock.getGapPercent(),
-                stock.getMarketCap(),
-                stock.getTradeValue(),
-                stock.getTradeStrength()
-            );
-            signalRepository.save(signal);
+        for (Stock stock : selectedStocks) {
+            try {
+                // 주식 정보와 시그널을 함께 저장 (트랜잭션 내에서 원자성 보장)
+                Stock savedStock = stockRepository.save(stock);
+                savedStockCount++;
+
+                // 갭 감지 시그널 저장
+                StockSignal signal = StockSignal.gapDetected(
+                    stock.getStockCode(),
+                    stock.getGapPercent(),
+                    stock.getMarketCap(),
+                    stock.getTradeValue(),
+                    stock.getTradeStrength()
+                );
+                signalRepository.save(signal);
+                savedSignalCount++;
+
+                log.debug("Saved stock {} with gap signal", stock.getStockCode());
+            } catch (Exception e) {
+                failedCount++;
+                log.error("Failed to save stock {} and its signal: {}. Error: {}",
+                    stock.getStockCode(),
+                    e.getClass().getSimpleName(),
+                    e.getMessage());
+            }
+        }
+
+        if (failedCount > 0) {
+            log.warn("Screening save results: {} stocks saved, {} signals saved, {} failed",
+                savedStockCount, savedSignalCount, failedCount);
+        } else {
+            log.info("Successfully saved all {} stocks and signals", savedStockCount);
         }
 
         return selectedStocks;

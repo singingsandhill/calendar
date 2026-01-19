@@ -2,6 +2,8 @@ package me.singingsandhill.calendar.trading.infrastructure.api;
 
 import me.singingsandhill.calendar.trading.infrastructure.api.dto.*;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -13,6 +15,8 @@ import java.util.List;
  */
 @Component
 public class BithumbApiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(BithumbApiClient.class);
 
     private final BithumbPublicApi publicApi;
     private final BithumbPrivateApi privateApi;
@@ -67,13 +71,25 @@ public class BithumbApiClient {
      * 현재가 조회 (호가 기반)
      */
     public Double getCurrentPrice() {
-        BithumbOrderbookResponse orderbook = getOrderbook();
-        if (orderbook != null && orderbook.orderbookUnits() != null && !orderbook.orderbookUnits().isEmpty()) {
-            // 매수/매도 호가의 중간값
-            BithumbOrderbookResponse.OrderbookUnit topUnit = orderbook.orderbookUnits().get(0);
-            return (topUnit.askPrice() + topUnit.bidPrice()) / 2;
+        try {
+            BithumbOrderbookResponse orderbook = getOrderbook();
+            if (orderbook != null && orderbook.orderbookUnits() != null && !orderbook.orderbookUnits().isEmpty()) {
+                // 매수/매도 호가의 중간값
+                BithumbOrderbookResponse.OrderbookUnit topUnit = orderbook.orderbookUnits().get(0);
+
+                // Null check on individual price fields
+                if (topUnit.askPrice() == null || topUnit.bidPrice() == null) {
+                    log.warn("Cannot calculate current price: ask or bid price is null");
+                    return null;
+                }
+
+                return (topUnit.askPrice() + topUnit.bidPrice()) / 2;
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("Error calculating current price from orderbook: {}", e.getMessage());
+            return null;
         }
-        return null;
     }
 
     // ==================== Private API ====================
@@ -168,11 +184,35 @@ public class BithumbApiClient {
      * 모든 대기 중인 주문 취소
      */
     public void cancelAllPendingOrders() {
-        List<BithumbOrderResponse> pendingOrders = getPendingOrders();
-        if (pendingOrders != null) {
-            for (BithumbOrderResponse order : pendingOrders) {
-                cancelOrder(order.uuid());
+        try {
+            List<BithumbOrderResponse> pendingOrders = getPendingOrders();
+            if (pendingOrders == null || pendingOrders.isEmpty()) {
+                log.debug("No pending orders to cancel");
+                return;
             }
+
+            int successCount = 0;
+            int failCount = 0;
+
+            for (BithumbOrderResponse order : pendingOrders) {
+                try {
+                    BithumbOrderResponse cancelResult = cancelOrder(order.uuid());
+                    if (cancelResult != null) {
+                        successCount++;
+                        log.debug("Cancelled order: {}", order.uuid());
+                    } else {
+                        failCount++;
+                        log.warn("Failed to cancel order: {} - API returned null", order.uuid());
+                    }
+                } catch (Exception e) {
+                    failCount++;
+                    log.error("Error cancelling order {}: {}", order.uuid(), e.getMessage());
+                }
+            }
+
+            log.info("Cancelled pending orders: {} succeeded, {} failed", successCount, failCount);
+        } catch (Exception e) {
+            log.error("Error retrieving pending orders for cancellation: {}", e.getMessage());
         }
     }
 }

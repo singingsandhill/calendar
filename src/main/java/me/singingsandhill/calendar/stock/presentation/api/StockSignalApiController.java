@@ -2,13 +2,18 @@ package me.singingsandhill.calendar.stock.presentation.api;
 
 import me.singingsandhill.calendar.stock.domain.signal.StockSignal;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignalRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -18,12 +23,32 @@ import java.util.List;
 @RequestMapping("/api/stock/signals")
 public class StockSignalApiController {
 
+    private static final Logger log = LoggerFactory.getLogger(StockSignalApiController.class);
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final StockSignalRepository signalRepository;
 
     public StockSignalApiController(StockSignalRepository signalRepository) {
         this.signalRepository = signalRepository;
+    }
+
+    /**
+     * 날짜 파라미터 파싱 (에러 처리 포함)
+     */
+    private LocalDate parseDateParameter(String date) {
+        if (date == null) {
+            return LocalDate.now(KST);
+        }
+
+        try {
+            return LocalDate.parse(date);
+        } catch (DateTimeParseException e) {
+            log.warn("Invalid date format provided: '{}'. Expected format: yyyy-MM-dd", date);
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                String.format("Invalid date format: '%s'. Expected format: yyyy-MM-dd (e.g., 2026-01-17)", date)
+            );
+        }
     }
 
     /**
@@ -34,7 +59,7 @@ public class StockSignalApiController {
             @RequestParam(required = false) String date,
             @RequestParam(defaultValue = "100") int limit) {
 
-        LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
+        LocalDate tradingDate = parseDateParameter(date);
         LocalDateTime from = tradingDate.atStartOfDay();
         LocalDateTime to = tradingDate.plusDays(1).atStartOfDay();
 
@@ -56,7 +81,7 @@ public class StockSignalApiController {
             @PathVariable String stockCode,
             @RequestParam(required = false) String date) {
 
-        LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
+        LocalDate tradingDate = parseDateParameter(date);
         LocalDateTime from = tradingDate.atStartOfDay();
         LocalDateTime to = tradingDate.plusDays(1).atStartOfDay();
 
