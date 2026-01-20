@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import me.singingsandhill.calendar.common.application.exception.BusinessException;
 import me.singingsandhill.calendar.common.presentation.dto.response.ErrorResponse;
@@ -45,6 +46,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTypeMismatchException(MethodArgumentTypeMismatchException e) {
         ErrorResponse response = new ErrorResponse("INVALID_PATH_PARAM", "Invalid URL parameter: " + e.getName());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.debug("Resource not found: {}", e.getResourcePath());
+        ErrorResponse response = new ErrorResponse("NOT_FOUND", "Resource not found");
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
     @ExceptionHandler(Exception.class)
