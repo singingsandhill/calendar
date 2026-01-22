@@ -9,8 +9,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @Transactional(readOnly = true)
@@ -93,6 +95,14 @@ public class CandleRepositoryAdapter implements CandleRepository {
     @Override
     public long countByMarket(String market) {
         return jpaRepository.countByMarket(market);
+    }
+
+    @Override
+    public Set<LocalDateTime> findExistingDateTimesByMarketAndDateTimeIn(String market, Collection<LocalDateTime> dateTimes) {
+        if (dateTimes == null || dateTimes.isEmpty()) {
+            return Set.of();
+        }
+        return jpaRepository.findCandleDateTimesByMarketAndDateTimeIn(market, dateTimes);
     }
 
     private CandleJpaEntity toEntity(Candle candle) {

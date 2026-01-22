@@ -13,8 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -45,7 +48,7 @@ public class CandleService {
     }
 
     /**
-     * 캔들 데이터 수집 및 저장
+     * 캔들 데이터 수집 및 저장 (배치 처리로 N+1 쿼리 해결)
      */
     @Transactional
     public int fetchAndSaveCandles(String market, int unit, int count) {
@@ -56,30 +59,37 @@ public class CandleService {
             return 0;
         }
 
-        int savedCount = 0;
-        for (BithumbCandleResponse response : candles) {
-            try {
-                LocalDateTime candleDateTime = parseDateTime(response.candleDateTimeKst());
+        // 1. API 응답을 시간 -> 응답 맵으로 변환
+        Map<LocalDateTime, BithumbCandleResponse> responseMap = candles.stream()
+                .collect(Collectors.toMap(
+                        r -> parseDateTime(r.candleDateTimeKst()),
+                        r -> r,
+                        (existing, replacement) -> existing // 중복 시 기존 값 유지
+                ));
 
-                // 중복 체크
-                Optional<Candle> existing = candleRepository.findByMarketAndCandleDateTime(
-                        response.market(), candleDateTime);
+        // 2. 단일 쿼리로 이미 존재하는 시간 조회
+        Set<LocalDateTime> existingDateTimes = candleRepository.findExistingDateTimesByMarketAndDateTimeIn(
+                market, responseMap.keySet());
 
-                if (existing.isEmpty()) {
-                    Candle candle = mapToCandle(response);
-                    candleRepository.save(candle);
-                    savedCount++;
+        // 3. 신규 캔들만 필터링하여 리스트 생성
+        List<Candle> newCandles = new ArrayList<>();
+        for (Map.Entry<LocalDateTime, BithumbCandleResponse> entry : responseMap.entrySet()) {
+            if (!existingDateTimes.contains(entry.getKey())) {
+                try {
+                    newCandles.add(mapToCandle(entry.getValue()));
+                } catch (Exception e) {
+                    log.error("Failed to map candle: {}", entry.getValue(), e);
                 }
-            } catch (Exception e) {
-                log.error("Failed to save candle: {}", response, e);
             }
         }
 
-        if (savedCount > 0) {
-            log.info("Saved {} new candles for {}", savedCount, market);
+        // 4. 배치 저장
+        if (!newCandles.isEmpty()) {
+            candleRepository.saveAll(newCandles);
+            log.info("Saved {} new candles for {} (batch)", newCandles.size(), market);
         }
 
-        return savedCount;
+        return newCandles.size();
     }
 
     /**

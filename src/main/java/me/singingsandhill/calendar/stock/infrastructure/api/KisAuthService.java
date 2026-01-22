@@ -11,6 +11,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -27,6 +30,10 @@ public class KisAuthService {
     private static final Logger log = LoggerFactory.getLogger(KisAuthService.class);
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final int TOKEN_REFRESH_BUFFER_MINUTES = 30;
+
+    // 재시도 설정
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long INITIAL_BACKOFF_MS = 1000;
 
     private final WebClient webClient;
     private final StockProperties stockProperties;
@@ -87,7 +94,7 @@ public class KisAuthService {
     }
 
     /**
-     * 접근토큰 발급 (oauth2/tokenP)
+     * 접근토큰 발급 (oauth2/tokenP) - 재시도 포함
      */
     private void refreshAccessToken() {
         log.info("Refreshing KIS access token");
@@ -98,30 +105,73 @@ public class KisAuthService {
             "appsecret", stockProperties.getKis().getAppSecret()
         );
 
-        try {
-            KisTokenResponse response = webClient.post()
-                .uri("/oauth2/tokenP")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(KisTokenResponse.class)
-                .timeout(TIMEOUT)
-                .block();
+        Exception lastException = null;
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                KisTokenResponse response = webClient.post()
+                    .uri("/oauth2/tokenP")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(KisTokenResponse.class)
+                    .timeout(TIMEOUT)
+                    .block();
 
-            if (response != null && response.accessToken() != null) {
-                this.accessToken = response.accessToken();
-                this.tokenExpiry = LocalDateTime.now().plusSeconds(response.expiresIn());
-                log.info("KIS access token refreshed, expires at: {}", tokenExpiry);
-            } else {
-                log.error("Failed to refresh KIS access token: empty response");
+                if (response != null && response.accessToken() != null) {
+                    this.accessToken = response.accessToken();
+                    this.tokenExpiry = LocalDateTime.now().plusSeconds(response.expiresIn());
+                    log.info("KIS access token refreshed, expires at: {}", tokenExpiry);
+                    return;
+                } else {
+                    log.error("Failed to refresh KIS access token: empty response");
+                    lastException = new RuntimeException("Empty token response");
+                }
+            } catch (WebClientResponseException e) {
+                log.error("Failed to refresh KIS access token (attempt {}): {} - {}",
+                    attempt, e.getStatusCode(), e.getResponseBodyAsString());
+                lastException = e;
+
+                // 재시도 불가능한 상태 코드는 즉시 실패
+                int status = e.getStatusCode().value();
+                if (status >= 400 && status < 500 && status != 429) {
+                    throw new RuntimeException("Failed to refresh KIS access token", e);
+                }
+            } catch (Exception e) {
+                log.error("Failed to refresh KIS access token (attempt {}): {}", attempt, e.getMessage());
+                lastException = e;
+
+                // 재시도 가능한 예외인지 확인
+                if (!isRetryableException(e)) {
+                    throw new RuntimeException("Failed to refresh KIS access token", e);
+                }
             }
-        } catch (WebClientResponseException e) {
-            log.error("Failed to refresh KIS access token: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Failed to refresh KIS access token", e);
-        } catch (Exception e) {
-            log.error("Failed to refresh KIS access token: {}", e.getMessage());
-            throw new RuntimeException("Failed to refresh KIS access token", e);
+
+            // 마지막 시도가 아니면 백오프 후 재시도
+            if (attempt < MAX_RETRY_ATTEMPTS) {
+                long backoffMs = INITIAL_BACKOFF_MS * (1L << (attempt - 1)); // 지수 백오프
+                log.warn("Retrying token refresh in {}ms (attempt {}/{})", backoffMs, attempt + 1, MAX_RETRY_ATTEMPTS);
+                try {
+                    Thread.sleep(backoffMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Token refresh interrupted", ie);
+                }
+            }
         }
+
+        // 모든 재시도 실패
+        throw new RuntimeException("Failed to refresh KIS access token after " + MAX_RETRY_ATTEMPTS + " attempts", lastException);
+    }
+
+    /**
+     * 재시도 가능한 예외인지 확인
+     */
+    private boolean isRetryableException(Exception e) {
+        Throwable cause = e.getCause();
+        return cause instanceof ConnectException
+            || cause instanceof SocketTimeoutException
+            || cause instanceof IOException
+            || (e.getMessage() != null && e.getMessage().contains("prematurely closed"));
     }
 
     /**

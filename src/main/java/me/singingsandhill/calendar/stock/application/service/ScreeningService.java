@@ -54,10 +54,11 @@ public class ScreeningService {
         log.info("Starting gap screening for {} stocks", stockCodes.size());
 
         List<Stock> qualifiedStocks = new ArrayList<>();
+        ScreeningStats stats = new ScreeningStats();
 
         for (String stockCode : stockCodes) {
             try {
-                Stock stock = screenSingleStock(stockCode, tradingDate);
+                Stock stock = screenSingleStock(stockCode, tradingDate, stats);
                 if (stock != null) {
                     qualifiedStocks.add(stock);
                 }
@@ -66,6 +67,7 @@ public class ScreeningService {
                 Thread.sleep(100);
             } catch (Exception e) {
                 log.warn("Error screening stock {}: {}", stockCode, e.getMessage());
+                stats.errors++;
             }
         }
 
@@ -76,8 +78,8 @@ public class ScreeningService {
             .limit(maxWatchlist)
             .toList();
 
-        log.info("Screening complete. Selected {} stocks out of {} qualified",
-            selectedStocks.size(), qualifiedStocks.size());
+        // 스크리닝 결과 요약 로그
+        logScreeningSummary(stockCodes.size(), qualifiedStocks.size(), selectedStocks.size(), stats);
 
         // DB에 저장
         for (Stock stock : selectedStocks) {
@@ -98,12 +100,14 @@ public class ScreeningService {
     }
 
     /**
-     * 단일 종목 스크리닝
+     * 단일 종목 스크리닝 (디버그 로깅 포함)
      */
-    private Stock screenSingleStock(String stockCode, LocalDate tradingDate) {
+    private Stock screenSingleStock(String stockCode, LocalDate tradingDate, ScreeningStats stats) {
         // 현재가 시세 조회
         KisQuoteResponse quote = kisApiClient.getQuote(stockCode);
         if (quote == null) {
+            log.debug("[{}] API 실패: 시세 조회 불가", stockCode);
+            stats.apiFailures++;
             return null;
         }
 
@@ -114,18 +118,27 @@ public class ScreeningService {
 
         // 1차 필터: 갭 비율
         if (gapPercent.compareTo(minGap) < 0 || gapPercent.compareTo(maxGap) > 0) {
+            log.debug("[{}] 갭 필터 탈락: gap={}% (기준: {}~{}%)",
+                stockCode, gapPercent, minGap, maxGap);
+            stats.gapFiltered++;
             return null;
         }
 
         // 2차 필터: 시가총액
         BigDecimal minMarketCap = stockProperties.getScreening().getMinMarketCap();
         if (quote.marketCap() != null && quote.marketCap().compareTo(minMarketCap) < 0) {
+            log.debug("[{}] 시총 필터 탈락: marketCap={}억 (기준: {}억 이상)",
+                stockCode, quote.marketCap().divide(BigDecimal.valueOf(100000000)), minMarketCap.divide(BigDecimal.valueOf(100000000)));
+            stats.marketCapFiltered++;
             return null;
         }
 
         // 3차 필터: 거래대금
         BigDecimal minTradeValue = stockProperties.getScreening().getMinTradeValue();
         if (quote.tradeValue() != null && quote.tradeValue().compareTo(minTradeValue) < 0) {
+            log.debug("[{}] 거래대금 필터 탈락: tradeValue={}억 (기준: {}억 이상)",
+                stockCode, quote.tradeValue().divide(BigDecimal.valueOf(100000000)), minTradeValue.divide(BigDecimal.valueOf(100000000)));
+            stats.tradeValueFiltered++;
             return null;
         }
 
@@ -133,6 +146,9 @@ public class ScreeningService {
         BigDecimal tradeStrength = quote.calculateTradeStrength();
         BigDecimal minStrength = stockProperties.getScreening().getMinTradeStrength();
         if (tradeStrength.compareTo(minStrength) < 0) {
+            log.debug("[{}] 체결강도 필터 탈락: strength={} (기준: {} 이상)",
+                stockCode, tradeStrength, minStrength);
+            stats.strengthFiltered++;
             return null;
         }
 
@@ -142,6 +158,9 @@ public class ScreeningService {
             BigDecimal spreadPercent = orderbook.calculateSpreadPercent();
             BigDecimal maxSpread = stockProperties.getScreening().getMaxSpreadPercent();
             if (spreadPercent.compareTo(maxSpread) > 0) {
+                log.debug("[{}] 스프레드 필터 탈락: spread={}% (기준: {}% 이하)",
+                    stockCode, spreadPercent, maxSpread);
+                stats.spreadFiltered++;
                 return null;
             }
         }
@@ -162,10 +181,37 @@ public class ScreeningService {
             stock.setSpreadPercent(orderbook.calculateSpreadPercent());
         }
 
+        stats.passed++;
         log.info("Stock {} passed screening: gap={}%, strength={}",
             stockCode, gapPercent, tradeStrength);
 
         return stock;
+    }
+
+    /**
+     * 스크리닝 통계 로깅
+     */
+    private void logScreeningSummary(int total, int qualified, int selected, ScreeningStats stats) {
+        log.info("=== Screening Summary ===");
+        log.info("Total: {}, Passed: {}, Selected: {}", total, qualified, selected);
+        log.info("API failures: {}, Errors: {}", stats.apiFailures, stats.errors);
+        log.info("Filtered - Gap: {}, MarketCap: {}, TradeValue: {}, Strength: {}, Spread: {}",
+            stats.gapFiltered, stats.marketCapFiltered, stats.tradeValueFiltered,
+            stats.strengthFiltered, stats.spreadFiltered);
+    }
+
+    /**
+     * 스크리닝 통계 클래스
+     */
+    private static class ScreeningStats {
+        int apiFailures = 0;
+        int errors = 0;
+        int gapFiltered = 0;
+        int marketCapFiltered = 0;
+        int tradeValueFiltered = 0;
+        int strengthFiltered = 0;
+        int spreadFiltered = 0;
+        int passed = 0;
     }
 
     /**

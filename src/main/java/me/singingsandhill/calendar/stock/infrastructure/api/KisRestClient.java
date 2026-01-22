@@ -9,10 +9,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -28,6 +33,11 @@ public class KisRestClient {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    // 재시도 설정
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final Duration INITIAL_BACKOFF = Duration.ofSeconds(1);
+    private static final Duration MAX_BACKOFF = Duration.ofSeconds(4);
+
     private final WebClient webClient;
     private final KisAuthService authService;
     private final StockProperties stockProperties;
@@ -42,10 +52,82 @@ public class KisRestClient {
             .build();
     }
 
+    // ========== 재시도 로직 ==========
+
+    /**
+     * 재시도 가능한 예외인지 확인
+     */
+    private boolean isRetryableException(Throwable throwable) {
+        if (throwable instanceof WebClientRequestException) {
+            Throwable cause = throwable.getCause();
+            return cause instanceof ConnectException
+                || cause instanceof SocketTimeoutException
+                || cause instanceof IOException
+                || (cause != null && cause.getMessage() != null
+                    && cause.getMessage().contains("prematurely closed"));
+        }
+        if (throwable instanceof WebClientResponseException e) {
+            int status = e.getStatusCode().value();
+            return status == 429 || status == 500 || status == 502 || status == 503 || status == 504;
+        }
+        return false;
+    }
+
+    /**
+     * 지수 백오프 재시도 전략 생성
+     */
+    private Retry buildRetrySpec(String operation) {
+        return Retry.backoff(MAX_RETRY_ATTEMPTS, INITIAL_BACKOFF)
+            .maxBackoff(MAX_BACKOFF)
+            .filter(this::isRetryableException)
+            .doBeforeRetry(signal -> log.warn("Retry attempt {} for {}: {}",
+                signal.totalRetries() + 1, operation, signal.failure().getMessage()));
+    }
+
+    /**
+     * GET 요청 실행 (재시도 포함)
+     */
+    private <T> T executeGetWithRetry(String operation,
+                                       java.util.function.Function<WebClient, Mono<T>> requestBuilder) {
+        try {
+            return requestBuilder.apply(webClient)
+                .retryWhen(buildRetrySpec(operation))
+                .timeout(TIMEOUT)
+                .block();
+        } catch (Exception e) {
+            if (e.getCause() != null && isRetryableException(e.getCause())) {
+                log.error("All {} retry attempts failed for {}: {}", MAX_RETRY_ATTEMPTS, operation, e.getMessage());
+            } else {
+                log.error("Error during {}: {}", operation, e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * POST 요청 실행 (재시도 포함)
+     */
+    private <T> T executePostWithRetry(String operation,
+                                        java.util.function.Function<WebClient, Mono<T>> requestBuilder) {
+        try {
+            return requestBuilder.apply(webClient)
+                .retryWhen(buildRetrySpec(operation))
+                .timeout(TIMEOUT)
+                .block();
+        } catch (Exception e) {
+            if (e.getCause() != null && isRetryableException(e.getCause())) {
+                log.error("All {} retry attempts failed for {}: {}", MAX_RETRY_ATTEMPTS, operation, e.getMessage());
+            } else {
+                log.error("Error during {}: {}", operation, e.getMessage());
+            }
+            return null;
+        }
+    }
+
     // ========== 시세 조회 APIs ==========
 
     /**
-     * 주식현재가 시세 조회 (FHKST01010100)
+     * 주식현재가 시세 조회 (FHKST01010100) - 재시도 포함
      */
     public KisQuoteResponse getQuote(String stockCode) {
         log.debug("Fetching quote for {}", stockCode);
@@ -57,8 +139,8 @@ public class KisRestClient {
 
         Map<String, String> headers = authService.buildAuthHeaders("FHKST01010100");
 
-        try {
-            Map<String, Object> response = webClient.get()
+        Map<String, Object> response = executeGetWithRetry("getQuote(" + stockCode + ")",
+            client -> client.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/uapi/domestic-stock/v1/quotations/inquire-price")
                     .queryParam("FID_COND_MRKT_DIV_CODE", "J")
@@ -66,23 +148,14 @@ public class KisRestClient {
                     .build())
                 .headers(h -> headers.forEach(h::set))
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(TIMEOUT)
-                .block();
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
 
-            if (response != null && "0".equals(response.get("rt_cd"))) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> output = (Map<String, Object>) response.get("output");
-                return mapToQuoteResponse(output, stockCode);
-            }
-            return null;
-        } catch (WebClientResponseException e) {
-            logApiError("fetching quote for " + stockCode, e);
-            return null;
-        } catch (Exception e) {
-            log.error("Error fetching quote for {}: {}", stockCode, e.getMessage());
-            return null;
+        if (response != null && "0".equals(response.get("rt_cd"))) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> output = (Map<String, Object>) response.get("output");
+            return mapToQuoteResponse(output, stockCode);
         }
+        return null;
     }
 
     private KisQuoteResponse mapToQuoteResponse(Map<String, Object> output, String stockCode) {
@@ -105,7 +178,7 @@ public class KisRestClient {
     }
 
     /**
-     * 호가 조회 (FHKST01010200)
+     * 호가 조회 (FHKST01010200) - 재시도 포함
      */
     public KisOrderbookResponse getOrderbook(String stockCode) {
         log.debug("Fetching orderbook for {}", stockCode);
@@ -116,8 +189,8 @@ public class KisRestClient {
 
         Map<String, String> headers = authService.buildAuthHeaders("FHKST01010200");
 
-        try {
-            Map<String, Object> response = webClient.get()
+        Map<String, Object> response = executeGetWithRetry("getOrderbook(" + stockCode + ")",
+            client -> client.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn")
                     .queryParam("FID_COND_MRKT_DIV_CODE", "J")
@@ -125,20 +198,14 @@ public class KisRestClient {
                     .build())
                 .headers(h -> headers.forEach(h::set))
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(TIMEOUT)
-                .block();
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
 
-            if (response != null && "0".equals(response.get("rt_cd"))) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> output = (Map<String, Object>) response.get("output1");
-                return mapToOrderbookResponse(output, stockCode);
-            }
-            return null;
-        } catch (Exception e) {
-            log.error("Error fetching orderbook for {}: {}", stockCode, e.getMessage());
-            return null;
+        if (response != null && "0".equals(response.get("rt_cd"))) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> output = (Map<String, Object>) response.get("output1");
+            return mapToOrderbookResponse(output, stockCode);
         }
+        return null;
     }
 
     private KisOrderbookResponse mapToOrderbookResponse(Map<String, Object> output, String stockCode) {
@@ -162,7 +229,7 @@ public class KisRestClient {
     }
 
     /**
-     * 일자별 시세 조회 (FHKST01010400)
+     * 일자별 시세 조회 (FHKST01010400) - 재시도 포함
      */
     public List<KisDailyPriceResponse> getDailyPrices(String stockCode, int days) {
         log.debug("Fetching {} days of daily prices for {}", days, stockCode);
@@ -173,8 +240,8 @@ public class KisRestClient {
 
         Map<String, String> headers = authService.buildAuthHeaders("FHKST01010400");
 
-        try {
-            Map<String, Object> response = webClient.get()
+        Map<String, Object> response = executeGetWithRetry("getDailyPrices(" + stockCode + ")",
+            client -> client.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/uapi/domestic-stock/v1/quotations/inquire-daily-price")
                     .queryParam("FID_COND_MRKT_DIV_CODE", "J")
@@ -184,25 +251,19 @@ public class KisRestClient {
                     .build())
                 .headers(h -> headers.forEach(h::set))
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(TIMEOUT)
-                .block();
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
 
-            if (response != null && "0".equals(response.get("rt_cd"))) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> outputs = (List<Map<String, Object>>) response.get("output");
-                if (outputs != null) {
-                    return outputs.stream()
-                        .limit(days)
-                        .map(this::mapToDailyPriceResponse)
-                        .toList();
-                }
+        if (response != null && "0".equals(response.get("rt_cd"))) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> outputs = (List<Map<String, Object>>) response.get("output");
+            if (outputs != null) {
+                return outputs.stream()
+                    .limit(days)
+                    .map(this::mapToDailyPriceResponse)
+                    .toList();
             }
-            return Collections.emptyList();
-        } catch (Exception e) {
-            log.error("Error fetching daily prices for {}: {}", stockCode, e.getMessage());
-            return Collections.emptyList();
         }
+        return Collections.emptyList();
     }
 
     private KisDailyPriceResponse mapToDailyPriceResponse(Map<String, Object> output) {
@@ -223,7 +284,7 @@ public class KisRestClient {
     // ========== 계좌 조회 APIs ==========
 
     /**
-     * 주식잔고조회 (TTTC8434R)
+     * 주식잔고조회 (TTTC8434R) - 재시도 포함
      */
     public KisBalanceResponse getBalance() {
         log.debug("Fetching account balance");
@@ -235,8 +296,8 @@ public class KisRestClient {
         String trId = stockProperties.getKis().isProduction() ? "TTTC8434R" : "VTTC8434R";
         Map<String, String> headers = authService.buildAuthHeaders(trId);
 
-        try {
-            Map<String, Object> response = webClient.get()
+        Map<String, Object> response = executeGetWithRetry("getBalance",
+            client -> client.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/uapi/domestic-stock/v1/trading/inquire-balance")
                     .queryParam("CANO", authService.getAccountNumber())
@@ -252,18 +313,12 @@ public class KisRestClient {
                     .build())
                 .headers(h -> headers.forEach(h::set))
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(TIMEOUT)
-                .block();
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
 
-            if (response != null && "0".equals(response.get("rt_cd"))) {
-                return mapToBalanceResponse(response);
-            }
-            return null;
-        } catch (Exception e) {
-            log.error("Error fetching balance: {}", e.getMessage());
-            return null;
+        if (response != null && "0".equals(response.get("rt_cd"))) {
+            return mapToBalanceResponse(response);
         }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -307,7 +362,7 @@ public class KisRestClient {
     }
 
     /**
-     * 매수가능조회 (TTTC8908R)
+     * 매수가능조회 (TTTC8908R) - 재시도 포함
      */
     public KisBuyingPowerResponse getBuyingPower(String stockCode, BigDecimal price) {
         log.debug("Fetching buying power for {} at price {}", stockCode, price);
@@ -319,8 +374,8 @@ public class KisRestClient {
         String trId = stockProperties.getKis().isProduction() ? "TTTC8908R" : "VTTC8908R";
         Map<String, String> headers = authService.buildAuthHeaders(trId);
 
-        try {
-            Map<String, Object> response = webClient.get()
+        Map<String, Object> response = executeGetWithRetry("getBuyingPower(" + stockCode + ")",
+            client -> client.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/uapi/domestic-stock/v1/trading/inquire-psbl-order")
                     .queryParam("CANO", authService.getAccountNumber())
@@ -333,20 +388,14 @@ public class KisRestClient {
                     .build())
                 .headers(h -> headers.forEach(h::set))
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(TIMEOUT)
-                .block();
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
 
-            if (response != null && "0".equals(response.get("rt_cd"))) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> output = (Map<String, Object>) response.get("output");
-                return mapToBuyingPowerResponse(output);
-            }
-            return null;
-        } catch (Exception e) {
-            log.error("Error fetching buying power: {}", e.getMessage());
-            return null;
+        if (response != null && "0".equals(response.get("rt_cd"))) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> output = (Map<String, Object>) response.get("output");
+            return mapToBuyingPowerResponse(output);
         }
+        return null;
     }
 
     private KisBuyingPowerResponse mapToBuyingPowerResponse(Map<String, Object> output) {
@@ -405,8 +454,8 @@ public class KisRestClient {
         String hashkey = authService.generateHashkey(requestBody);
         Map<String, String> headers = authService.buildAuthHeaders(trId);
 
-        try {
-            Map<String, Object> response = webClient.post()
+        Map<String, Object> response = executePostWithRetry("executeOrder(" + stockCode + ")",
+            client -> client.post()
                 .uri("/uapi/domestic-stock/v1/trading/order-cash")
                 .headers(h -> {
                     headers.forEach(h::set);
@@ -417,47 +466,38 @@ public class KisRestClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(TIMEOUT)
-                .block();
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
 
-            if (response != null) {
-                String resultCode = (String) response.get("rt_cd");
-                String msgCode = (String) response.get("msg_cd");
-                String msg = (String) response.get("msg1");
+        if (response != null) {
+            String resultCode = (String) response.get("rt_cd");
+            String msgCode = (String) response.get("msg_cd");
+            String msg = (String) response.get("msg1");
 
-                @SuppressWarnings("unchecked")
-                Map<String, Object> output = (Map<String, Object>) response.get("output");
-                KisOrderResponse.OrderOutput orderOutput = null;
-                if (output != null) {
-                    orderOutput = new KisOrderResponse.OrderOutput(
-                        (String) output.get("ODNO"),
-                        (String) output.get("ORD_TMD")
-                    );
-                }
-
-                KisOrderResponse orderResponse = new KisOrderResponse(resultCode, msgCode, msg, orderOutput);
-
-                if (orderResponse.isSuccess()) {
-                    log.info("Order placed successfully: {}", orderResponse.getOrderId());
-                } else {
-                    log.error("Order failed: [{}] {}", msgCode, msg);
-                }
-
-                return orderResponse;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> output = (Map<String, Object>) response.get("output");
+            KisOrderResponse.OrderOutput orderOutput = null;
+            if (output != null) {
+                orderOutput = new KisOrderResponse.OrderOutput(
+                    (String) output.get("ODNO"),
+                    (String) output.get("ORD_TMD")
+                );
             }
-            return null;
-        } catch (WebClientResponseException e) {
-            logApiError("placing order", e);
-            return null;
-        } catch (Exception e) {
-            log.error("Error placing order: {}", e.getMessage());
-            return null;
+
+            KisOrderResponse orderResponse = new KisOrderResponse(resultCode, msgCode, msg, orderOutput);
+
+            if (orderResponse.isSuccess()) {
+                log.info("Order placed successfully: {}", orderResponse.getOrderId());
+            } else {
+                log.error("Order failed: [{}] {}", msgCode, msg);
+            }
+
+            return orderResponse;
         }
+        return null;
     }
 
     /**
-     * 일별주문체결조회 (TTTC0081R)
+     * 일별주문체결조회 (TTTC0081R) - 재시도 포함
      */
     public KisOrderDetailResponse getOrderHistory(LocalDate date) {
         log.debug("Fetching order history for {}", date);
@@ -470,8 +510,8 @@ public class KisRestClient {
         Map<String, String> headers = authService.buildAuthHeaders(trId);
         String dateStr = date.format(DATE_FORMATTER);
 
-        try {
-            Map<String, Object> response = webClient.get()
+        Map<String, Object> response = executeGetWithRetry("getOrderHistory(" + date + ")",
+            client -> client.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/uapi/domestic-stock/v1/trading/inquire-daily-ccld")
                     .queryParam("CANO", authService.getAccountNumber())
@@ -491,18 +531,12 @@ public class KisRestClient {
                     .build())
                 .headers(h -> headers.forEach(h::set))
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(TIMEOUT)
-                .block();
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
 
-            if (response != null && "0".equals(response.get("rt_cd"))) {
-                return mapToOrderDetailResponse(response);
-            }
-            return null;
-        } catch (Exception e) {
-            log.error("Error fetching order history: {}", e.getMessage());
-            return null;
+        if (response != null && "0".equals(response.get("rt_cd"))) {
+            return mapToOrderDetailResponse(response);
         }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
