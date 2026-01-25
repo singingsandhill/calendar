@@ -155,6 +155,8 @@ public class TradingProperties {
         private double trailingActivation = 0.10;
         private double takerFeeRate = 0.0025;        // 0.25% Bithumb taker fee
         private double minProfitThreshold = 0.006;   // 0.6% (왕복 수수료 0.5% + 마진 0.1%)
+        private double strongSignalMaxLoss = -0.02;  // 강한 신호 매도 시 최대 허용 손실률 -2%
+        private double slippageBuffer = 0.005;       // 슬리피지 버퍼 0.5%
 
         public double getStopLoss() { return stopLoss; }
         public void setStopLoss(double stopLoss) { this.stopLoss = stopLoss; }
@@ -168,6 +170,10 @@ public class TradingProperties {
         public void setTakerFeeRate(double takerFeeRate) { this.takerFeeRate = takerFeeRate; }
         public double getMinProfitThreshold() { return minProfitThreshold; }
         public void setMinProfitThreshold(double minProfitThreshold) { this.minProfitThreshold = minProfitThreshold; }
+        public double getStrongSignalMaxLoss() { return strongSignalMaxLoss; }
+        public void setStrongSignalMaxLoss(double strongSignalMaxLoss) { this.strongSignalMaxLoss = strongSignalMaxLoss; }
+        public double getSlippageBuffer() { return slippageBuffer; }
+        public void setSlippageBuffer(double slippageBuffer) { this.slippageBuffer = slippageBuffer; }
     }
 
     public static class Rebalancing {
@@ -180,6 +186,7 @@ public class TradingProperties {
         private double minOrderAmount = 5000.0;          // 최소 주문 금액 (KRW)
         private double slippageBuffer = 0.005;           // 0.5% 슬리피지 버퍼
         private boolean skipWhenDataInsufficient = true; // MA60 데이터 부족 시 스킵
+        private double minSellPnlPct = 0.03;             // 리밸런싱 매도 최소 손익률 3% (최소 수익 보장)
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -199,6 +206,8 @@ public class TradingProperties {
         public void setSlippageBuffer(double slippageBuffer) { this.slippageBuffer = slippageBuffer; }
         public boolean isSkipWhenDataInsufficient() { return skipWhenDataInsufficient; }
         public void setSkipWhenDataInsufficient(boolean skipWhenDataInsufficient) { this.skipWhenDataInsufficient = skipWhenDataInsufficient; }
+        public double getMinSellPnlPct() { return minSellPnlPct; }
+        public void setMinSellPnlPct(double minSellPnlPct) { this.minSellPnlPct = minSellPnlPct; }
     }
 
     public Bithumb getBithumb() { return bithumb; }

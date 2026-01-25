@@ -120,18 +120,32 @@ public class RiskManagementService {
                     position.getId(), trailingStopPrice, currentPrice, pnlPct);
         }
 
-        // 4. 트레일링 스탑 가격 업데이트 (상승만)
+        // 4. 트레일링 스탑 가격 업데이트 (상승만, 손익분기점 보장)
         if (position.isTrailingStopActive()) {
             double trailingPct = tradingProperties.getRisk().getTrailingStop();
             BigDecimal newTrailingStop = position.getHighWaterMark().multiply(
                     BigDecimal.ONE.subtract(BigDecimal.valueOf(trailingPct)))
                     .setScale(0, RoundingMode.DOWN);
+
+            // 손익분기점 보장: 진입가 + 왕복 수수료(0.5%)
+            double takerFeeRate = tradingProperties.getRisk().getTakerFeeRate();
+            BigDecimal breakEvenPrice = position.getEntryPrice()
+                    .multiply(BigDecimal.valueOf(1 + takerFeeRate * 2))
+                    .setScale(0, RoundingMode.UP);
+
+            // 트레일링 스탑이 손익분기점 아래로 내려가지 않도록
+            if (newTrailingStop.compareTo(breakEvenPrice) < 0) {
+                log.debug("Trailing stop adjusted to break-even: {} -> {} (entry: {})",
+                        newTrailingStop, breakEvenPrice, position.getEntryPrice());
+                newTrailingStop = breakEvenPrice;
+            }
+
             position.updateTrailingStop(newTrailingStop);
 
             // 5. 트레일링 스탑 트리거 체크
             if (position.shouldTrailingStop(currentPrice)) {
-                log.info("Trailing stop triggered for position {}! Price: {}, Stop: {}, PnL: {}%",
-                        position.getId(), currentPrice, position.getTrailingStopPrice(), pnlPct);
+                log.info("Trailing stop triggered for position {}! Price: {}, Stop: {} (breakEven: {}), PnL: {}%",
+                        position.getId(), currentPrice, position.getTrailingStopPrice(), breakEvenPrice, pnlPct);
                 closePosition(position, currentPrice, CloseReason.TRAILING_STOP);
                 return CloseReason.TRAILING_STOP;
             }

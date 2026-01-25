@@ -207,15 +207,28 @@ public class TradingBotService {
 
             for (Position position : openPositions) {
                 if (currentPrice != null) {
-                    // 수수료를 포함한 실제 수익률로 판단
-                    BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
-                    BigDecimal pnlPct = position.calculateUnrealizedPnlPctWithFee(BigDecimal.valueOf(currentPrice), feeRate);
+                    // 슬리피지를 고려한 보수적 예상 매도가 계산
+                    double slippageBuffer = tradingProperties.getRisk().getSlippageBuffer();
+                    BigDecimal conservativeExitPrice = BigDecimal.valueOf(currentPrice)
+                            .multiply(BigDecimal.valueOf(1.0 - slippageBuffer));
 
-                    // Issue #2: 강한 신호는 수익률 무관하게 실행, 일반 신호는 최소 수익률 체크
+                    // 수수료 + 슬리피지를 포함한 실제 수익률로 판단
+                    BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
+                    BigDecimal pnlPct = position.calculateUnrealizedPnlPctWithFee(conservativeExitPrice, feeRate);
+
+                    // Issue #2: 강한 신호도 최대 손실률 제한 적용 (-2%)
+                    double strongSignalMaxLoss = tradingProperties.getRisk().getStrongSignalMaxLoss();
+                    BigDecimal maxLossThreshold = BigDecimal.valueOf(strongSignalMaxLoss * 100);  // -2.0%
+
                     if (isStrongSellSignal) {
-                        log.info("Strong SELL signal detected (score: {}, divergence: {}), executing regardless of profit",
-                                signal.getTotalScore(), signal.hasDivergence());
-                        executeSell(market, signal, position);
+                        if (pnlPct.compareTo(maxLossThreshold) >= 0) {
+                            log.info("Strong SELL signal: pnl={}% >= {}%, executing (score: {}, divergence: {})",
+                                    pnlPct, maxLossThreshold, signal.getTotalScore(), signal.hasDivergence());
+                            executeSell(market, signal, position);
+                        } else {
+                            log.warn("Strong SELL signal skipped: pnl={}% < {}% max loss threshold (score: {}, divergence: {})",
+                                    pnlPct, maxLossThreshold, signal.getTotalScore(), signal.hasDivergence());
+                        }
                     } else if (pnlPct.doubleValue() >= minProfitThreshold * 100) {
                         executeSell(market, signal, position);
                     } else {
@@ -273,11 +286,17 @@ public class TradingBotService {
         BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(orderRatio))
                 .setScale(0, RoundingMode.DOWN);
 
-        log.info("Executing BUY order: {} KRW (ratio: {}%)", orderAmount, orderRatio * 100);
+        // 슬리피지 버퍼 적용 (0.5% 적게 주문하여 예상보다 적은 체결 방지)
+        double slippageBuffer = tradingProperties.getRisk().getSlippageBuffer();
+        BigDecimal adjustedOrderAmount = orderAmount.multiply(BigDecimal.valueOf(1.0 - slippageBuffer))
+                .setScale(0, RoundingMode.DOWN);
+
+        log.info("Executing BUY order: {} KRW (ratio: {}%, slippage buffer: {}%)",
+                adjustedOrderAmount, orderRatio * 100, slippageBuffer * 100);
 
         try {
-            // Issue #1: API 호출 먼저 실행
-            BithumbOrderResponse response = bithumbApiClient.placeMarketBuyOrder(orderAmount);
+            // Issue #1: API 호출 먼저 실행 (슬리피지 버퍼 적용된 금액)
+            BithumbOrderResponse response = bithumbApiClient.placeMarketBuyOrder(adjustedOrderAmount);
 
             if (response == null) {
                 log.warn("Buy order failed - null response from API");

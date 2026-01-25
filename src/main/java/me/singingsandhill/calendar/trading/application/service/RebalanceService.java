@@ -1,6 +1,9 @@
 package me.singingsandhill.calendar.trading.application.service;
 
 import me.singingsandhill.calendar.trading.application.dto.IndicatorResult;
+import me.singingsandhill.calendar.trading.domain.position.Position;
+import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
+import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
 import me.singingsandhill.calendar.trading.domain.trade.Trade;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
@@ -16,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,15 +34,18 @@ public class RebalanceService {
     private final IndicatorService indicatorService;
     private final TradingProperties tradingProperties;
     private final TradeRepository tradeRepository;
+    private final PositionRepository positionRepository;
 
     public RebalanceService(BithumbApiClient bithumbApiClient,
                             IndicatorService indicatorService,
                             TradingProperties tradingProperties,
-                            TradeRepository tradeRepository) {
+                            TradeRepository tradeRepository,
+                            PositionRepository positionRepository) {
         this.bithumbApiClient = bithumbApiClient;
         this.indicatorService = indicatorService;
         this.tradingProperties = tradingProperties;
         this.tradeRepository = tradeRepository;
+        this.positionRepository = positionRepository;
     }
 
     /**
@@ -201,6 +208,19 @@ public class RebalanceService {
                 }
             } else {
                 // 코인 비중 과다 → 매도
+                // 손익 체크: 열린 포지션들의 평균 손익률 확인
+                BigDecimal avgPnlPct = calculateAveragePnlPct(market, currentPrice);
+                double minSellPnlPct = tradingProperties.getRebalancing().getMinSellPnlPct();
+
+                if (avgPnlPct.compareTo(BigDecimal.valueOf(minSellPnlPct * 100)) < 0) {
+                    log.warn("Rebalance sell skipped: avgPnl={}% < {}% min threshold",
+                            avgPnlPct.setScale(2, RoundingMode.HALF_UP),
+                            minSellPnlPct * 100);
+                    return new RebalanceResult(false, currentRatio, targetRatio,
+                            currentRatio.subtract(targetRatio).abs(),
+                            "Skipped: below min profit threshold (" + avgPnlPct.setScale(2, RoundingMode.HALF_UP) + "%)");
+                }
+
                 BigDecimal sellVolume = adjustedDifference.abs().divide(currentPrice, 8, RoundingMode.DOWN);
                 // Issue #1: API 호출 먼저
                 BithumbOrderResponse response = bithumbApiClient.placeMarketSellOrder(sellVolume);
@@ -216,7 +236,8 @@ public class RebalanceService {
                     );
                     trade.markExecuted(currentPrice, sellVolume, fee);
                     tradeRepository.save(trade);
-                    log.info("Rebalance sell completed - Volume: {}, Fee: {} KRW", sellVolume, fee);
+                    log.info("Rebalance sell completed - Volume: {}, Fee: {} KRW, avgPnl: {}%",
+                            sellVolume, fee, avgPnlPct.setScale(2, RoundingMode.HALF_UP));
                 } else {
                     log.warn("Rebalance sell failed - no response from API");
                     return new RebalanceResult(false, currentRatio, targetRatio,
@@ -253,10 +274,38 @@ public class RebalanceService {
         return BigDecimal.ZERO;
     }
 
+    /**
+     * 열린 포지션들의 평균 손익률 계산 (수수료 포함)
+     */
+    private BigDecimal calculateAveragePnlPct(String market, BigDecimal currentPrice) {
+        List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
+
+        if (openPositions.isEmpty()) {
+            // 포지션이 없으면 매도 허용 (리밸런싱 목적)
+            return BigDecimal.valueOf(100);  // 높은 값 반환하여 조건 통과
+        }
+
+        BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
+        BigDecimal totalPnlPct = BigDecimal.ZERO;
+
+        for (Position position : openPositions) {
+            BigDecimal pnlPct = position.calculateUnrealizedPnlPctWithFee(currentPrice, feeRate);
+            totalPnlPct = totalPnlPct.add(pnlPct);
+        }
+
+        return totalPnlPct.divide(BigDecimal.valueOf(openPositions.size()), 4, RoundingMode.HALF_UP);
+    }
+
     public record RebalanceResult(
         boolean executed,
         BigDecimal currentRatio,
         BigDecimal targetRatio,
-        BigDecimal deviation
-    ) {}
+        BigDecimal deviation,
+        String reason
+    ) {
+        // 기존 4파라미터 생성자 호환용
+        public RebalanceResult(boolean executed, BigDecimal currentRatio, BigDecimal targetRatio, BigDecimal deviation) {
+            this(executed, currentRatio, targetRatio, deviation, null);
+        }
+    }
 }
