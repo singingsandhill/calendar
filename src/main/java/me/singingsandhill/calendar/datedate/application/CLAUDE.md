@@ -55,7 +55,6 @@ Business logic orchestration layer between presentation and domain/infrastructur
 
 **SeoService**
 - `getHomeSeo()` - Landing page SEO (index, follow)
-- `getStartPageSeo()` - Start page SEO (index, follow)
 - `getDashboardSeo(ownerId)` - Dashboard SEO (noindex)
 - `getScheduleSeo(ownerId, year, month)` - Schedule page SEO (noindex)
 

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import me.singingsandhill.calendar.datedate.application.service.InsightsService;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.application.service.PopularityService;
 import me.singingsandhill.calendar.datedate.application.service.SeoService;
@@ -16,13 +17,16 @@ public class HomeController {
     private final OwnerService ownerService;
     private final SeoService seoService;
     private final PopularityService popularityService;
+    private final InsightsService insightsService;
 
     public HomeController(OwnerService ownerService,
                           SeoService seoService,
-                          PopularityService popularityService) {
+                          PopularityService popularityService,
+                          InsightsService insightsService) {
         this.ownerService = ownerService;
         this.seoService = seoService;
         this.popularityService = popularityService;
+        this.insightsService = insightsService;
     }
 
     @GetMapping("/")
@@ -30,13 +34,8 @@ public class HomeController {
         model.addAttribute("seo", seoService.getHomeSeo());
         model.addAttribute("popularLocations", popularityService.getPopularLocations());
         model.addAttribute("popularMenus", popularityService.getPopularMenus());
+        model.addAttribute("overview", insightsService.getInsightsOverview());
         return "index";
-    }
-
-    @GetMapping("/start")
-    public String startPage(Model model) {
-        model.addAttribute("seo", seoService.getStartPageSeo());
-        return "start";
     }
 
     @PostMapping("/start")

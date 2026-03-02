@@ -27,25 +27,12 @@ public class InsightsController {
         this.seoService = seoService;
     }
 
-    @GetMapping
-    public String hub(Model model) {
-        model.addAttribute("seo", seoService.getInsightsHubSeo());
-        model.addAttribute("overview", insightsService.getInsightsOverview());
-        return "insights/hub";
-    }
-
     @GetMapping("/trends")
     public String trends(Model model) {
         model.addAttribute("seo", seoService.getInsightsTrendsSeo());
         model.addAttribute("popularLocations", popularityService.getPopularLocations(TOP_ITEMS_LIMIT));
         model.addAttribute("popularMenus", popularityService.getPopularMenus(TOP_ITEMS_LIMIT));
-        return "insights/trends";
-    }
-
-    @GetMapping("/stats")
-    public String stats(Model model) {
-        model.addAttribute("seo", seoService.getInsightsStatsSeo());
         model.addAttribute("stats", insightsService.getServiceStats());
-        return "insights/stats";
+        return "insights/trends";
     }
 }

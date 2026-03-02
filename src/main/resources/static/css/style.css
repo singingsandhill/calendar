@@ -5,6 +5,14 @@
     box-sizing: border-box;
 }
 
+/* Form elements inherit font */
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
 :root {
     /* Colors - 기존 유지 */
     --primary-color: #3498db;
@@ -21,7 +29,7 @@
 
     /* Typography - Garriock 스타일 */
     --font-serif: 'Noto Serif KR', Georgia, serif;
-    --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
     /* Animation */
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -577,63 +585,6 @@ a:focus-visible {
 }
 
 /* ======================================
-   BENEFITS SECTION - Garriock Style
-   ====================================== */
-.benefits-section {
-    padding: var(--section-padding) 2rem;
-    background: var(--bg-white);
-}
-
-.benefits-section .section-title {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
-    text-align: center;
-    margin-bottom: 3rem;
-    color: var(--text-color);
-}
-
-.benefits-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2.5rem;
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-.benefit-item {
-    text-align: center;
-    padding: 2rem;
-}
-
-.benefit-icon {
-    width: 56px;
-    height: 56px;
-    margin: 0 auto 1.25rem;
-    color: var(--primary-color);
-}
-
-.benefit-icon svg {
-    width: 100%;
-    height: 100%;
-}
-
-.benefit-title {
-    font-family: var(--font-serif);
-    font-size: 1.25rem;
-    font-weight: 500;
-    margin-bottom: 0.75rem;
-    color: var(--text-color);
-}
-
-.benefit-desc {
-    font-family: var(--font-sans);
-    color: var(--text-light);
-    line-height: 1.6;
-    font-size: 0.95rem;
-}
-
-/* ======================================
    FOOTER MINIMAL - Garriock Style
    ====================================== */
 .footer-minimal {
@@ -685,6 +636,7 @@ a:focus-visible {
     border: none;
     border-radius: 8px;
     font-size: 1rem;
+    font-family: inherit;
     cursor: pointer;
     text-decoration: none;
     text-align: center;
@@ -2221,38 +2173,49 @@ footer {
 }
 
 /* ======================================
-   START BENEFITS (start.html)
+   STATS STRIP (index.html)
    ====================================== */
-.start-benefits {
-    max-width: 500px;
-    margin: 3rem auto;
+.stats-strip {
+    padding: 2rem 0;
     text-align: center;
 }
 
-.start-benefits h2 {
-    margin-bottom: 1.5rem;
-    font-size: 1.25rem;
+.stats-strip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    max-width: 700px;
+    margin: 0 auto;
 }
 
-.benefits-list {
-    list-style: none;
-    padding: 0;
+.stats-strip-card {
+    background: var(--bg-white);
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    box-shadow: var(--shadow);
 }
 
-.benefits-list li {
-    padding: 0.75rem 0;
+.stats-strip-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stats-strip-label {
+    font-size: 0.9rem;
     color: var(--text-light);
-    position: relative;
-    padding-left: 1.5rem;
-    text-align: left;
 }
 
-.benefits-list li::before {
-    content: "\2713";
-    position: absolute;
-    left: 0;
-    color: var(--success-color);
-    font-weight: bold;
+.popular-more {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+.popular-more .btn-text {
+    font-size: 1rem;
 }
 
 /* ======================================
@@ -2286,8 +2249,13 @@ footer {
         padding: 0.875rem 1rem;
     }
 
-    .start-benefits {
-        margin: 2rem auto;
+    .stats-strip-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .stats-strip-number {
+        font-size: 1.5rem;
     }
 }
 
@@ -2314,20 +2282,6 @@ footer {
 
     .scroll-indicator {
         display: none;
-    }
-
-    /* Benefits Section */
-    .benefits-section {
-        padding: var(--section-padding-mobile) 1.5rem;
-    }
-
-    .benefits-grid {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-
-    .benefit-item {
-        padding: 1.5rem;
     }
 
     /* Navbar Minimal */
@@ -2416,29 +2370,6 @@ footer {
         width: 100%;
     }
 
-    /* Benefits Section */
-    .benefits-section {
-        padding: 3rem 1rem;
-    }
-
-    .benefits-section .section-title {
-        font-size: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .benefit-item {
-        padding: 1rem;
-    }
-
-    .benefit-icon {
-        width: 48px;
-        height: 48px;
-    }
-
-    .benefit-title {
-        font-size: 1.1rem;
-    }
-
     /* Footer Minimal */
     .footer-minimal {
         padding: 3rem 1rem;
@@ -2459,13 +2390,6 @@ footer {
         font-size: 1.75rem;
     }
 
-    .benefits-section {
-        padding: 2.5rem 0.75rem;
-    }
-
-    .benefit-item {
-        padding: 0.75rem;
-    }
 }
 
 /* ======================================
@@ -2625,72 +2549,6 @@ footer {
 
 .insights-description p:last-child {
     margin-bottom: 0;
-}
-
-/* Insights Navigation Cards */
-.insights-nav-cards {
-    margin-bottom: 3rem;
-}
-
-.insights-nav-cards h2 {
-    text-align: center;
-    font-size: 1.5rem;
-    margin-bottom: 2rem;
-    color: var(--text-color);
-}
-
-.nav-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-.nav-card {
-    background: var(--bg-white);
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: var(--shadow);
-    text-decoration: none;
-    color: inherit;
-    text-align: center;
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 2px solid transparent;
-}
-
-.nav-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary-color);
-}
-
-.nav-card-icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 1rem;
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.nav-card-icon svg {
-    width: 32px;
-    height: 32px;
-    fill: white;
-}
-
-.nav-card h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-    color: var(--text-color);
-}
-
-.nav-card p {
-    color: var(--text-light);
-    font-size: 0.95rem;
 }
 
 /* Insights CTA */
@@ -2997,29 +2855,6 @@ footer {
     color: var(--text-color);
 }
 
-/* Stats About */
-.stats-about {
-    max-width: 800px;
-    margin: 0 auto 3rem;
-    text-align: center;
-}
-
-.stats-about h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-    color: var(--text-color);
-}
-
-.stats-about p {
-    color: var(--text-light);
-    line-height: 1.8;
-    margin-bottom: 1rem;
-}
-
-.stats-about p:last-child {
-    margin-bottom: 0;
-}
-
 /* Button Styles for Insights */
 .btn-primary {
     display: inline-block;
@@ -3123,17 +2958,6 @@ footer {
         font-size: 1.75rem;
     }
 
-    .nav-cards-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .nav-card {
-        padding: 1.5rem;
-    }
-
-    .insights-cta {
-        padding: 2rem 1rem;
-    }
 
     .trends-table th,
     .trends-table td {
