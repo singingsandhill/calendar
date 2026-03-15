@@ -38,7 +38,8 @@ public class SitemapService {
                 new SitemapEntry(baseUrl + "/insights/trends", insightsLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners", runnerLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners/runs", runnerLastmod, "weekly", "0.7"),
-                new SitemapEntry(baseUrl + "/runners/members", runnerLastmod, "weekly", "0.7")
+                new SitemapEntry(baseUrl + "/runners/members", runnerLastmod, "weekly", "0.7"),
+                new SitemapEntry(baseUrl + "/runners/announce", startupDate, "monthly", "0.5")
         );
     }
 

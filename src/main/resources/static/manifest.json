@@ -1,7 +1,7 @@
 {
   "name": "DateDate - 약속 잡기",
   "short_name": "DateDate",
-  "description": "여러명이서 쉽게 날짜 조율하기 - Group scheduling made easy",
+  "description": "링크 하나로 날짜, 장소, 메뉴까지 한번에 정하세요. 가입 없이 무료로 그룹 일정을 조율할 수 있습니다.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f5f5",

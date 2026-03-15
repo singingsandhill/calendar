@@ -24,12 +24,12 @@ public class SeoService {
      */
     public SeoMetadata getHomeSeo() {
         String jsonLd = """
-            {
+            [{
                 "@context": "https://schema.org",
                 "@type": "WebApplication",
                 "name": "DateDate",
                 "alternateName": "약속 잡기",
-                "description": "여러명이서 쉽게 날짜 조율하기 - Group scheduling made easy",
+                "description": "링크 하나로 날짜, 장소, 메뉴까지 한번에 정하세요. 가입 없이 무료로 그룹 일정을 조율할 수 있습니다.",
                 "url": "%s",
                 "applicationCategory": "SchedulingApplication",
                 "operatingSystem": "All",
@@ -44,7 +44,61 @@ public class SeoService {
                     "name": "DateDate",
                     "url": "%s"
                 }
-            }
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "무료인가요? 가입이 필요한가요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "완전 무료, 가입 없이 바로 사용할 수 있습니다. ID 입력만으로 페이지가 생성되고, 참여자도 링크만으로 참여합니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "참여자가 날짜를 수정할 수 있나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "네. 드롭다운에서 이름을 선택하고 날짜를 다시 고른 뒤 저장하면 됩니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "장소나 메뉴 투표는 어떻게 하나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "일정 페이지 하단에서 장소·메뉴를 제안하고 투표하세요. 중복 투표 가능하며, 메뉴에는 배달앱 링크도 첨부할 수 있습니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "일정 데이터는 얼마나 보관되나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "삭제하지 않는 한 계속 보관됩니다. 대시보드에서 언제든 확인·관리 가능합니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "내 페이지 ID가 이미 사용 중이면?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "해당 페이지의 대시보드로 이동합니다. 숫자나 하이픈을 조합해 고유한 ID를 만드세요. 예: my-team-2025"
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "링크를 공유하면 누구나 참여할 수 있나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "네, 링크를 아는 사람은 누구나 참여할 수 있습니다. 신뢰할 수 있는 사람에게만 공유하세요."
+                        }
+                    }
+                ]
+            }]
             """.formatted(baseUrl, baseUrl);
 
         return SeoMetadata.builder()
@@ -103,14 +157,31 @@ public class SeoService {
      */
     public SeoMetadata getInsightsTrendsSeo() {
         String jsonLd = """
-            {
+            [{
                 "@context": "https://schema.org",
                 "@type": "WebPage",
                 "name": "인기 트렌드 & 이용 현황 - DateDate",
                 "description": "가장 인기 있는 약속 장소와 메뉴, 서비스 이용 통계를 확인하세요",
                 "url": "%s/insights/trends"
-            }
-            """.formatted(baseUrl);
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "인기 트렌드 & 이용 현황"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl);
 
         return SeoMetadata.builder()
             .title("인기 트렌드 & 이용 현황 | " + BRAND_NAME + " - 인기 장소, 메뉴 순위, 서비스 통계")

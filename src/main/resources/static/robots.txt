@@ -5,10 +5,10 @@ User-agent: *
 # Allow public pages
 Allow: /$
 Allow: /insights/trends
-Allow: /runners$
+Allow: /runners
 Allow: /runners/runs
 Allow: /runners/members
-Allow: /runners/announce$
+Allow: /runners/announce
 
 # Block API endpoints
 Disallow: /api/
