@@ -41,6 +41,9 @@ public record KisQuoteResponse(
         if (prevClosePrice == null || prevClosePrice.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
+        if (openPrice == null || openPrice.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
         return openPrice.subtract(prevClosePrice)
             .multiply(new BigDecimal("100"))
             .divide(prevClosePrice, 4, java.math.RoundingMode.HALF_UP);

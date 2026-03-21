@@ -192,8 +192,10 @@ public class StockPositionService {
         trade.markFilled(price, quantity, BigDecimal.ZERO);
         tradeRepository.save(trade);
 
-        // 포지션 업데이트
-        position.executePartialExit(quantity, price, reason);
+        // 포지션 업데이트 (수수료 포함)
+        BigDecimal commissionRate = stockProperties.getRisk().getCommissionRate();
+        BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
+        position.executePartialExit(quantity, price, reason, commissionRate, sellTaxRate);
         positionRepository.save(position);
 
         // 시그널 저장
@@ -204,14 +206,13 @@ public class StockPositionService {
             case STOP_LOSS -> StockSignalType.STOP_LOSS_EXIT;
             case TRAILING_STOP -> StockSignalType.TRAILING_EXIT;
             case TIME_EXIT -> StockSignalType.TIME_EXIT;
-            default -> null;
+            case MANUAL -> StockSignalType.MANUAL_EXIT;
+            case EMERGENCY -> StockSignalType.EMERGENCY_EXIT;
         };
 
-        if (signalType != null) {
-            StockSignal signal = StockSignal.exitSignal(stockCode, signalType, price);
-            signal.markExecuted();
-            signalRepository.save(signal);
-        }
+        StockSignal signal = StockSignal.exitSignal(stockCode, signalType, price);
+        signal.markExecuted();
+        signalRepository.save(signal);
 
         log.info("Partial exit completed for {}: remaining {} shares",
             stockCode, position.getRemainingQuantity());

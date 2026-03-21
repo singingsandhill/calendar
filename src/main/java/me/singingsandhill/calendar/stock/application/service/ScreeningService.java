@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -111,6 +112,13 @@ public class ScreeningService {
             return null;
         }
 
+        // 시가 미확정 체크 (장 초반 openPrice=0 방어)
+        if (quote.openPrice() == null || quote.openPrice().compareTo(BigDecimal.ZERO) == 0) {
+            log.debug("[{}] 데이터 부족: 시가 미확정", stockCode);
+            stats.dataInsufficient++;
+            return null;
+        }
+
         // 갭 비율 계산
         BigDecimal gapPercent = quote.calculateGapPercent();
         BigDecimal minGap = stockProperties.getScreening().getMinGapPercent();
@@ -128,7 +136,9 @@ public class ScreeningService {
         BigDecimal minMarketCap = stockProperties.getScreening().getMinMarketCap();
         if (quote.marketCap() != null && quote.marketCap().compareTo(minMarketCap) < 0) {
             log.debug("[{}] 시총 필터 탈락: marketCap={}억 (기준: {}억 이상)",
-                stockCode, quote.marketCap().divide(BigDecimal.valueOf(100000000)), minMarketCap.divide(BigDecimal.valueOf(100000000)));
+                stockCode,
+                quote.marketCap().divide(BigDecimal.valueOf(100000000), 0, RoundingMode.HALF_UP),
+                minMarketCap.divide(BigDecimal.valueOf(100000000), 0, RoundingMode.HALF_UP));
             stats.marketCapFiltered++;
             return null;
         }
@@ -137,7 +147,9 @@ public class ScreeningService {
         BigDecimal minTradeValue = stockProperties.getScreening().getMinTradeValue();
         if (quote.tradeValue() != null && quote.tradeValue().compareTo(minTradeValue) < 0) {
             log.debug("[{}] 거래대금 필터 탈락: tradeValue={}억 (기준: {}억 이상)",
-                stockCode, quote.tradeValue().divide(BigDecimal.valueOf(100000000)), minTradeValue.divide(BigDecimal.valueOf(100000000)));
+                stockCode,
+                quote.tradeValue().divide(BigDecimal.valueOf(100000000), 0, RoundingMode.HALF_UP),
+                minTradeValue.divide(BigDecimal.valueOf(100000000), 0, RoundingMode.HALF_UP));
             stats.tradeValueFiltered++;
             return null;
         }
@@ -194,7 +206,7 @@ public class ScreeningService {
     private void logScreeningSummary(int total, int qualified, int selected, ScreeningStats stats) {
         log.info("=== Screening Summary ===");
         log.info("Total: {}, Passed: {}, Selected: {}", total, qualified, selected);
-        log.info("API failures: {}, Errors: {}", stats.apiFailures, stats.errors);
+        log.info("API failures: {}, Data insufficient: {}, Errors: {}", stats.apiFailures, stats.dataInsufficient, stats.errors);
         log.info("Filtered - Gap: {}, MarketCap: {}, TradeValue: {}, Strength: {}, Spread: {}",
             stats.gapFiltered, stats.marketCapFiltered, stats.tradeValueFiltered,
             stats.strengthFiltered, stats.spreadFiltered);
@@ -206,6 +218,7 @@ public class ScreeningService {
     private static class ScreeningStats {
         int apiFailures = 0;
         int errors = 0;
+        int dataInsufficient = 0;
         int gapFiltered = 0;
         int marketCapFiltered = 0;
         int tradeValueFiltered = 0;

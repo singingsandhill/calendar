@@ -37,6 +37,7 @@ public class KisRestClient {
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final Duration INITIAL_BACKOFF = Duration.ofSeconds(1);
     private static final Duration MAX_BACKOFF = Duration.ofSeconds(4);
+    private static final BigDecimal HUNDRED_MILLION = new BigDecimal("100000000");
 
     private final WebClient webClient;
     private final KisAuthService authService;
@@ -170,7 +171,7 @@ public class KisRestClient {
             parseBigDecimal(output.get("prdy_ctrt")),
             parseLong(output.get("acml_vol")),
             parseBigDecimal(output.get("acml_tr_pbmn")),
-            parseBigDecimal(output.get("hts_avls")),
+            parseBigDecimal(output.get("hts_avls")).multiply(HUNDRED_MILLION),
             parseBigDecimal(output.get("vol_tnrt")),
             parseBigDecimal(output.get("seln_cntg_smtn")),
             parseBigDecimal(output.get("shnu_cntg_smtn"))

@@ -17,7 +17,7 @@ import java.time.ZoneId;
  *
  * 거래 타임라인:
  * 08:30      사전 준비 (전일 데이터 수집)
- * 09:00      갭 상승 종목 스크리닝
+ * 09:05      갭 상승 종목 스크리닝 (시가 확정 대기)
  * 09:10~11:20  5초 간격 트레이딩 루프
  * 11:20      최종 청산
  */
@@ -56,11 +56,12 @@ public class StockTradingScheduler {
     }
 
     /**
-     * 갭 상승 종목 스크리닝 (09:00 월~금)
+     * 갭 상승 종목 스크리닝 (09:05 월~금)
+     * - 09:05 실행으로 시가 확정 대기 (09:00 시 openPrice=0 문제 방지)
      * - 2-7% 갭 상승 종목 필터링
      * - 시가총액, 거래대금, 체결강도 필터
      */
-    @Scheduled(cron = "0 0 9 * * MON-FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 5 9 * * MON-FRI", zone = "Asia/Seoul")
     public void executeScreening() {
         if (!isEnabled() || !isTradingDay()) {
             return;

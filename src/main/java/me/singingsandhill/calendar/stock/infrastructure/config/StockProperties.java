@@ -133,6 +133,15 @@ public class StockProperties {
         private BigDecimal stopLossPercent = new BigDecimal("1.5");
         private BigDecimal trailingStopPercent = new BigDecimal("0.8");
         private BigDecimal positionSizeRatio = new BigDecimal("0.1");
+        private BigDecimal commissionRate = new BigDecimal("0.00015");    // 증권사 수수료 0.015%
+        private BigDecimal sellTaxRate = new BigDecimal("0.0023");        // 거래세+농특세 0.23%
+        private BigDecimal slippageBuffer = new BigDecimal("0.002");      // 슬리피지 0.2%
+        private BigDecimal minProfitThreshold = new BigDecimal("0.005");  // 최소 수익률 0.5%
+
+        /** 왕복 수수료율 = 매수 수수료 + 매도 수수료 + 매도 세금 */
+        public BigDecimal getRoundTripFeeRate() {
+            return commissionRate.multiply(new BigDecimal("2")).add(sellTaxRate);
+        }
 
         public BigDecimal getStopLossPercent() { return stopLossPercent; }
         public void setStopLossPercent(BigDecimal stopLossPercent) { this.stopLossPercent = stopLossPercent; }
@@ -140,6 +149,14 @@ public class StockProperties {
         public void setTrailingStopPercent(BigDecimal trailingStopPercent) { this.trailingStopPercent = trailingStopPercent; }
         public BigDecimal getPositionSizeRatio() { return positionSizeRatio; }
         public void setPositionSizeRatio(BigDecimal positionSizeRatio) { this.positionSizeRatio = positionSizeRatio; }
+        public BigDecimal getCommissionRate() { return commissionRate; }
+        public void setCommissionRate(BigDecimal commissionRate) { this.commissionRate = commissionRate; }
+        public BigDecimal getSellTaxRate() { return sellTaxRate; }
+        public void setSellTaxRate(BigDecimal sellTaxRate) { this.sellTaxRate = sellTaxRate; }
+        public BigDecimal getSlippageBuffer() { return slippageBuffer; }
+        public void setSlippageBuffer(BigDecimal slippageBuffer) { this.slippageBuffer = slippageBuffer; }
+        public BigDecimal getMinProfitThreshold() { return minProfitThreshold; }
+        public void setMinProfitThreshold(BigDecimal minProfitThreshold) { this.minProfitThreshold = minProfitThreshold; }
     }
 
     public static class Trading {

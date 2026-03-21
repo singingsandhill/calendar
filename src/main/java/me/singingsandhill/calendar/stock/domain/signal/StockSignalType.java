@@ -51,6 +51,16 @@ public enum StockSignalType {
     TIME_EXIT("시간청산"),
 
     /**
+     * 수동 청산 신호
+     */
+    MANUAL_EXIT("수동청산"),
+
+    /**
+     * 긴급 청산 신호
+     */
+    EMERGENCY_EXIT("긴급청산"),
+
+    /**
      * 필터 아웃 (조건 미달)
      */
     FILTERED_OUT("필터아웃");
@@ -71,6 +81,7 @@ public enum StockSignalType {
 
     public boolean isExit() {
         return this == TP1_EXIT || this == TP2_EXIT || this == TP3_EXIT
-            || this == STOP_LOSS_EXIT || this == TRAILING_EXIT || this == TIME_EXIT;
+            || this == STOP_LOSS_EXIT || this == TRAILING_EXIT || this == TIME_EXIT
+            || this == MANUAL_EXIT || this == EMERGENCY_EXIT;
     }
 }

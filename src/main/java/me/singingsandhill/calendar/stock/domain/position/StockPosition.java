@@ -109,6 +109,39 @@ public class StockPosition {
             .divide(entryPrice, 4, RoundingMode.HALF_UP);
     }
 
+    /**
+     * 수수료 포함 미실현 손익 계산
+     * @param commissionRate 증권사 수수료율 (매수/매도 각각)
+     * @param sellTaxRate 매도 세금율 (거래세+농특세)
+     */
+    public BigDecimal calculateUnrealizedPnlWithFee(BigDecimal currentPrice,
+            BigDecimal commissionRate, BigDecimal sellTaxRate) {
+        if (remainingQuantity == null || remainingQuantity == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal currentValue = currentPrice.multiply(BigDecimal.valueOf(remainingQuantity));
+        BigDecimal costBasis = entryPrice.multiply(BigDecimal.valueOf(remainingQuantity));
+        BigDecimal buyFee = costBasis.multiply(commissionRate);
+        BigDecimal sellFee = currentValue.multiply(commissionRate.add(sellTaxRate));
+        return currentValue.subtract(costBasis).subtract(buyFee).subtract(sellFee);
+    }
+
+    /**
+     * 수수료 포함 미실현 손익률 계산 (%)
+     * @param commissionRate 증권사 수수료율 (매수/매도 각각)
+     * @param sellTaxRate 매도 세금율 (거래세+농특세)
+     */
+    public BigDecimal calculateUnrealizedPnlPctWithFee(BigDecimal currentPrice,
+            BigDecimal commissionRate, BigDecimal sellTaxRate) {
+        if (remainingQuantity == null || remainingQuantity == 0
+                || entryPrice == null || entryPrice.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal pnl = calculateUnrealizedPnlWithFee(currentPrice, commissionRate, sellTaxRate);
+        BigDecimal costBasis = entryPrice.multiply(BigDecimal.valueOf(remainingQuantity));
+        return pnl.divide(costBasis, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
+    }
+
     // ========== 손절/익절 체크 ==========
 
     /**
@@ -193,16 +226,21 @@ public class StockPosition {
     // ========== 포지션 업데이트 ==========
 
     /**
-     * 부분 청산 실행
+     * 부분 청산 실행 (수수료 포함)
+     * @param commissionRate 증권사 수수료율 (매수/매도 각각)
+     * @param sellTaxRate 매도 세금율 (거래세+농특세)
      */
-    public void executePartialExit(int quantity, BigDecimal exitPrice, StockCloseReason reason) {
+    public void executePartialExit(int quantity, BigDecimal exitPrice, StockCloseReason reason,
+                                    BigDecimal commissionRate, BigDecimal sellTaxRate) {
         if (quantity > remainingQuantity) {
             throw new IllegalArgumentException("Exit quantity exceeds remaining quantity");
         }
 
         BigDecimal exitAmount = exitPrice.multiply(BigDecimal.valueOf(quantity));
         BigDecimal costBasis = entryPrice.multiply(BigDecimal.valueOf(quantity));
-        BigDecimal pnl = exitAmount.subtract(costBasis);
+        BigDecimal buyFee = costBasis.multiply(commissionRate);
+        BigDecimal sellFee = exitAmount.multiply(commissionRate.add(sellTaxRate));
+        BigDecimal pnl = exitAmount.subtract(costBasis).subtract(buyFee).subtract(sellFee);
 
         this.totalExitAmount = this.totalExitAmount.add(exitAmount);
         this.totalExitQuantity = this.totalExitQuantity + quantity;
@@ -235,13 +273,14 @@ public class StockPosition {
     }
 
     /**
-     * 잔여 전량 청산
+     * 잔여 전량 청산 (수수료 포함)
      */
-    public void closeRemaining(BigDecimal exitPrice, StockCloseReason reason) {
+    public void closeRemaining(BigDecimal exitPrice, StockCloseReason reason,
+                                BigDecimal commissionRate, BigDecimal sellTaxRate) {
         if (remainingQuantity == null || remainingQuantity == 0) {
             return;
         }
-        executePartialExit(remainingQuantity, exitPrice, reason);
+        executePartialExit(remainingQuantity, exitPrice, reason, commissionRate, sellTaxRate);
     }
 
     /**
@@ -259,9 +298,11 @@ public class StockPosition {
     }
 
     /**
-     * 트레일링 스탑 업데이트
+     * 트레일링 스탑 업데이트 (손익분기점 보장)
+     * @param breakEvenPrice 손익분기점 가격 (진입가 × (1 + 왕복수수료)), null이면 보장 안함
      */
-    public void updateTrailingStop(BigDecimal currentPrice, BigDecimal trailingPercent) {
+    public void updateTrailingStop(BigDecimal currentPrice, BigDecimal trailingPercent,
+                                    BigDecimal breakEvenPrice) {
         // 1차 익절 후 트레일링 활성화
         if (!trailingActive && tp1Executed) {
             this.trailingActive = true;
@@ -276,9 +317,16 @@ public class StockPosition {
         if (currentPrice.compareTo(trailingHigh) > 0) {
             this.trailingHigh = currentPrice;
             // 트레일링 스탑 가격 업데이트 (고점 대비 -0.8%)
-            this.trailingStopPrice = trailingHigh.multiply(
+            BigDecimal newTrailingStop = trailingHigh.multiply(
                 BigDecimal.ONE.subtract(trailingPercent.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP))
             );
+
+            // 트레일링 스탑이 손익분기점 아래로 내려가지 않도록 보장
+            if (breakEvenPrice != null && newTrailingStop.compareTo(breakEvenPrice) < 0) {
+                newTrailingStop = breakEvenPrice;
+            }
+
+            this.trailingStopPrice = newTrailingStop;
         }
 
         this.updatedAt = LocalDateTime.now();

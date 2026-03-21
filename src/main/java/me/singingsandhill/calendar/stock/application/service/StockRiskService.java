@@ -103,50 +103,83 @@ public class StockRiskService {
     }
 
     /**
-     * 다단계 익절 체크
+     * 다단계 익절 체크 (수수료 포함 최소 수익률 검증)
      */
     private void checkTakeProfitLevels(StockPosition position, BigDecimal currentPrice) {
         BigDecimal tp1Percent = stockProperties.getExit().getTp1Percent();
         BigDecimal tp3Percent = stockProperties.getExit().getTp3Percent();
+        BigDecimal commissionRate = stockProperties.getRisk().getCommissionRate();
+        BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
+        BigDecimal minProfitThreshold = stockProperties.getRisk().getMinProfitThreshold();
+        // minProfitThreshold는 비율(0.005=0.5%)이므로 % 단위로 변환
+        BigDecimal minProfitPct = minProfitThreshold.multiply(new BigDecimal("100"));
 
         // TP1: +1.5% → 50% 매도
         if (position.shouldTp1(currentPrice, tp1Percent)) {
+            BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
+                currentPrice, commissionRate, sellTaxRate);
+            if (pnlPctWithFee.compareTo(minProfitPct) < 0) {
+                log.debug("[{}] TP1 보류: 수수료 포함 수익률={}% < 최소 {}%",
+                    position.getStockCode(), pnlPctWithFee, minProfitPct);
+                return;
+            }
             int quantity = position.calculateTp1Quantity();
             if (quantity > 0) {
-                log.info("TP1 triggered for {}: {} shares @ {}",
-                    position.getStockCode(), quantity, currentPrice);
+                log.info("TP1 triggered for {}: {} shares @ {} (수수료 포함 수익률={}%)",
+                    position.getStockCode(), quantity, currentPrice, pnlPctWithFee);
                 positionService.executePartialExit(position, quantity, currentPrice, StockCloseReason.TP1);
             }
         }
 
         // TP2: 당일 고점 → 잔여의 60% 매도
         else if (position.shouldTp2(currentPrice)) {
+            BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
+                currentPrice, commissionRate, sellTaxRate);
+            if (pnlPctWithFee.compareTo(minProfitPct) < 0) {
+                log.debug("[{}] TP2 보류: 수수료 포함 수익률={}% < 최소 {}%",
+                    position.getStockCode(), pnlPctWithFee, minProfitPct);
+                return;
+            }
             int quantity = position.calculateTp2Quantity();
             if (quantity > 0) {
-                log.info("TP2 triggered for {}: {} shares @ {}",
-                    position.getStockCode(), quantity, currentPrice);
+                log.info("TP2 triggered for {}: {} shares @ {} (수수료 포함 수익률={}%)",
+                    position.getStockCode(), quantity, currentPrice, pnlPctWithFee);
                 positionService.executePartialExit(position, quantity, currentPrice, StockCloseReason.TP2);
             }
         }
 
         // TP3: 고점 +1% → 잔량 전량 매도
         else if (position.shouldTp3(currentPrice, tp3Percent)) {
+            BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
+                currentPrice, commissionRate, sellTaxRate);
+            if (pnlPctWithFee.compareTo(minProfitPct) < 0) {
+                log.debug("[{}] TP3 보류: 수수료 포함 수익률={}% < 최소 {}%",
+                    position.getStockCode(), pnlPctWithFee, minProfitPct);
+                return;
+            }
             int quantity = position.calculateTp3Quantity();
             if (quantity > 0) {
-                log.info("TP3 triggered for {}: {} shares @ {}",
-                    position.getStockCode(), quantity, currentPrice);
+                log.info("TP3 triggered for {}: {} shares @ {} (수수료 포함 수익률={}%)",
+                    position.getStockCode(), quantity, currentPrice, pnlPctWithFee);
                 positionService.executePartialExit(position, quantity, currentPrice, StockCloseReason.TP3);
             }
         }
     }
 
     /**
-     * 트레일링 스탑 업데이트
+     * 트레일링 스탑 업데이트 (손익분기점 보장)
      */
     @Transactional
     public void updateTrailingStop(StockPosition position, BigDecimal currentPrice) {
         BigDecimal trailingPercent = stockProperties.getRisk().getTrailingStopPercent();
-        position.updateTrailingStop(currentPrice, trailingPercent);
+        BigDecimal roundTripFeeRate = stockProperties.getRisk().getRoundTripFeeRate();
+
+        // 손익분기점 = 진입가 × (1 + 왕복수수료)
+        BigDecimal breakEvenPrice = position.getEntryPrice()
+            .multiply(BigDecimal.ONE.add(roundTripFeeRate))
+            .setScale(0, java.math.RoundingMode.UP);
+
+        position.updateTrailingStop(currentPrice, trailingPercent, breakEvenPrice);
         positionRepository.save(position);
     }
 
