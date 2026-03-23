@@ -30,6 +30,9 @@ public class SecurityConfig {
                 .requestMatchers("/runners/css/**", "/runners/js/**", "/runners/images/**").permitAll()
                 .requestMatchers("/runners/admin/login").permitAll()
 
+                // 인사이트 공개 경로
+                .requestMatchers("/insights", "/insights/**").permitAll()
+
                 // 러너 관리자 경로 - ADMIN 역할 필요
                 .requestMatchers("/runners/admin", "/runners/admin/**").hasRole("ADMIN")
 
