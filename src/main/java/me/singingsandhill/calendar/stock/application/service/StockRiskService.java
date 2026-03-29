@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 /**
@@ -104,13 +106,14 @@ public class StockRiskService {
 
     /**
      * 다단계 익절 체크 (수수료 포함 최소 수익률 검증)
+     * 시간 감소 익절: 장 후반으로 갈수록 minProfitThreshold 감소
      */
     private void checkTakeProfitLevels(StockPosition position, BigDecimal currentPrice) {
         BigDecimal tp1Percent = stockProperties.getExit().getTp1Percent();
         BigDecimal tp3Percent = stockProperties.getExit().getTp3Percent();
         BigDecimal commissionRate = stockProperties.getRisk().getCommissionRate();
         BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
-        BigDecimal minProfitThreshold = stockProperties.getRisk().getMinProfitThreshold();
+        BigDecimal minProfitThreshold = calculateTimeDecayThreshold();
         // minProfitThreshold는 비율(0.005=0.5%)이므로 % 단위로 변환
         BigDecimal minProfitPct = minProfitThreshold.multiply(new BigDecimal("100"));
 
@@ -164,6 +167,49 @@ public class StockRiskService {
                 positionService.executePartialExit(position, quantity, currentPrice, StockCloseReason.TP3);
             }
         }
+    }
+
+    /**
+     * 시간 기반 최소 수익률 임계값 계산
+     * 09:10 → minProfitThreshold (0.5%)
+     * 15:15 → minProfitThresholdLate (0.1%) 또는 0%
+     * 선형 감소
+     */
+    private BigDecimal calculateTimeDecayThreshold() {
+        StockProperties.Risk riskConfig = stockProperties.getRisk();
+
+        if (!riskConfig.isTimeDecayEnabled()) {
+            return riskConfig.getMinProfitThreshold();
+        }
+
+        LocalTime now = LocalTime.now();
+        LocalTime tradingStart = LocalTime.of(9, 10);
+        LocalTime tradingEnd = LocalTime.of(15, 15);
+
+        if (now.isBefore(tradingStart)) {
+            return riskConfig.getMinProfitThreshold();
+        }
+        if (!now.isBefore(tradingEnd)) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal earlyThreshold = riskConfig.getMinProfitThreshold();
+        BigDecimal lateThreshold = riskConfig.getMinProfitThresholdLate();
+
+        long totalSeconds = java.time.Duration.between(tradingStart, tradingEnd).getSeconds();
+        long elapsedSeconds = java.time.Duration.between(tradingStart, now).getSeconds();
+
+        BigDecimal progress = BigDecimal.valueOf(elapsedSeconds)
+            .divide(BigDecimal.valueOf(totalSeconds), 6, RoundingMode.HALF_UP);
+
+        BigDecimal decayed = earlyThreshold.subtract(
+            earlyThreshold.subtract(lateThreshold).multiply(progress));
+
+        log.debug("Time-decay threshold: {} (time={}, progress={}%)",
+            decayed.setScale(4, RoundingMode.HALF_UP), now,
+            progress.multiply(new BigDecimal("100")).setScale(1, RoundingMode.HALF_UP));
+
+        return decayed;
     }
 
     /**

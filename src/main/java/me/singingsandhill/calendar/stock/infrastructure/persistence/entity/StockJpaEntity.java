@@ -65,6 +65,9 @@ public class StockJpaEntity {
     @Column(name = "spread_percent", precision = 10, scale = 4)
     private BigDecimal spreadPercent;
 
+    @Column(name = "composite_score", precision = 10, scale = 2)
+    private BigDecimal compositeScore;
+
     @Column(nullable = false, length = 20)
     private String state;
 
@@ -138,6 +141,8 @@ public class StockJpaEntity {
     public void setTradeStrength(BigDecimal tradeStrength) { this.tradeStrength = tradeStrength; }
     public BigDecimal getSpreadPercent() { return spreadPercent; }
     public void setSpreadPercent(BigDecimal spreadPercent) { this.spreadPercent = spreadPercent; }
+    public BigDecimal getCompositeScore() { return compositeScore; }
+    public void setCompositeScore(BigDecimal compositeScore) { this.compositeScore = compositeScore; }
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
     public BigDecimal getHighAfterOpen() { return highAfterOpen; }

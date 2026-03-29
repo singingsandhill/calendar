@@ -13,6 +13,7 @@ public class StockProperties {
     private Mail mail = new Mail();
     private Bot bot = new Bot();
     private Screening screening = new Screening();
+    private Scoring scoring = new Scoring();
     private Entry entry = new Entry();
     private Exit exit = new Exit();
     private Risk risk = new Risk();
@@ -71,6 +72,8 @@ public class StockProperties {
         private BigDecimal minTradeStrength = new BigDecimal("110");
         private BigDecimal maxSpreadPercent = new BigDecimal("0.3");
         private int maxWatchlistSize = 10;
+        private BigDecimal floorGapPercent = new BigDecimal("0.5");
+        private BigDecimal floorTradeStrength = new BigDecimal("95");
 
         public BigDecimal getMinGapPercent() { return minGapPercent; }
         public void setMinGapPercent(BigDecimal minGapPercent) { this.minGapPercent = minGapPercent; }
@@ -86,6 +89,38 @@ public class StockProperties {
         public void setMaxSpreadPercent(BigDecimal maxSpreadPercent) { this.maxSpreadPercent = maxSpreadPercent; }
         public int getMaxWatchlistSize() { return maxWatchlistSize; }
         public void setMaxWatchlistSize(int maxWatchlistSize) { this.maxWatchlistSize = maxWatchlistSize; }
+        public BigDecimal getFloorGapPercent() { return floorGapPercent; }
+        public void setFloorGapPercent(BigDecimal floorGapPercent) { this.floorGapPercent = floorGapPercent; }
+        public BigDecimal getFloorTradeStrength() { return floorTradeStrength; }
+        public void setFloorTradeStrength(BigDecimal floorTradeStrength) { this.floorTradeStrength = floorTradeStrength; }
+    }
+
+    public static class Scoring {
+        private boolean enabled = true;
+        private int gapWeight = 30;
+        private int strengthWeight = 25;
+        private int tradeValueWeight = 20;
+        private int spreadWeight = 15;
+        private int marketCapWeight = 10;
+        private BigDecimal minScoreThreshold = new BigDecimal("40");
+        private int minCandidates = 3;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public int getGapWeight() { return gapWeight; }
+        public void setGapWeight(int gapWeight) { this.gapWeight = gapWeight; }
+        public int getStrengthWeight() { return strengthWeight; }
+        public void setStrengthWeight(int strengthWeight) { this.strengthWeight = strengthWeight; }
+        public int getTradeValueWeight() { return tradeValueWeight; }
+        public void setTradeValueWeight(int tradeValueWeight) { this.tradeValueWeight = tradeValueWeight; }
+        public int getSpreadWeight() { return spreadWeight; }
+        public void setSpreadWeight(int spreadWeight) { this.spreadWeight = spreadWeight; }
+        public int getMarketCapWeight() { return marketCapWeight; }
+        public void setMarketCapWeight(int marketCapWeight) { this.marketCapWeight = marketCapWeight; }
+        public BigDecimal getMinScoreThreshold() { return minScoreThreshold; }
+        public void setMinScoreThreshold(BigDecimal minScoreThreshold) { this.minScoreThreshold = minScoreThreshold; }
+        public int getMinCandidates() { return minCandidates; }
+        public void setMinCandidates(int minCandidates) { this.minCandidates = minCandidates; }
     }
 
     public static class Entry {
@@ -95,6 +130,9 @@ public class StockProperties {
         private BigDecimal bounceThresholdPercent = new BigDecimal("0.3");
         private int minPullbackMinutes = 3;
         private int maxPullbackMinutes = 15;
+        private BigDecimal entryMinStrength = new BigDecimal("100");
+        private BigDecimal entryMinImbalance = new BigDecimal("1.0");
+        private boolean softEntryValidation = true;
 
         public BigDecimal getHighThresholdPercent() { return highThresholdPercent; }
         public void setHighThresholdPercent(BigDecimal highThresholdPercent) { this.highThresholdPercent = highThresholdPercent; }
@@ -108,6 +146,12 @@ public class StockProperties {
         public void setMinPullbackMinutes(int minPullbackMinutes) { this.minPullbackMinutes = minPullbackMinutes; }
         public int getMaxPullbackMinutes() { return maxPullbackMinutes; }
         public void setMaxPullbackMinutes(int maxPullbackMinutes) { this.maxPullbackMinutes = maxPullbackMinutes; }
+        public BigDecimal getEntryMinStrength() { return entryMinStrength; }
+        public void setEntryMinStrength(BigDecimal entryMinStrength) { this.entryMinStrength = entryMinStrength; }
+        public BigDecimal getEntryMinImbalance() { return entryMinImbalance; }
+        public void setEntryMinImbalance(BigDecimal entryMinImbalance) { this.entryMinImbalance = entryMinImbalance; }
+        public boolean isSoftEntryValidation() { return softEntryValidation; }
+        public void setSoftEntryValidation(boolean softEntryValidation) { this.softEntryValidation = softEntryValidation; }
     }
 
     public static class Exit {
@@ -137,6 +181,8 @@ public class StockProperties {
         private BigDecimal sellTaxRate = new BigDecimal("0.0023");        // 거래세+농특세 0.23%
         private BigDecimal slippageBuffer = new BigDecimal("0.002");      // 슬리피지 0.2%
         private BigDecimal minProfitThreshold = new BigDecimal("0.005");  // 최소 수익률 0.5%
+        private boolean timeDecayEnabled = true;
+        private BigDecimal minProfitThresholdLate = new BigDecimal("0.001");  // 장 후반 0.1%
 
         /** 왕복 수수료율 = 매수 수수료 + 매도 수수료 + 매도 세금 */
         public BigDecimal getRoundTripFeeRate() {
@@ -157,6 +203,10 @@ public class StockProperties {
         public void setSlippageBuffer(BigDecimal slippageBuffer) { this.slippageBuffer = slippageBuffer; }
         public BigDecimal getMinProfitThreshold() { return minProfitThreshold; }
         public void setMinProfitThreshold(BigDecimal minProfitThreshold) { this.minProfitThreshold = minProfitThreshold; }
+        public boolean isTimeDecayEnabled() { return timeDecayEnabled; }
+        public void setTimeDecayEnabled(boolean timeDecayEnabled) { this.timeDecayEnabled = timeDecayEnabled; }
+        public BigDecimal getMinProfitThresholdLate() { return minProfitThresholdLate; }
+        public void setMinProfitThresholdLate(BigDecimal minProfitThresholdLate) { this.minProfitThresholdLate = minProfitThresholdLate; }
     }
 
     public static class Trading {
@@ -186,6 +236,8 @@ public class StockProperties {
     public void setBot(Bot bot) { this.bot = bot; }
     public Screening getScreening() { return screening; }
     public void setScreening(Screening screening) { this.screening = screening; }
+    public Scoring getScoring() { return scoring; }
+    public void setScoring(Scoring scoring) { this.scoring = scoring; }
     public Entry getEntry() { return entry; }
     public void setEntry(Entry entry) { this.entry = entry; }
     public Exit getExit() { return exit; }

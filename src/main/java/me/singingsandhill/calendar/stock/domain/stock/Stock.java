@@ -34,6 +34,7 @@ public class Stock {
     private BigDecimal marketCap;
     private BigDecimal tradeStrength;
     private BigDecimal spreadPercent;
+    private BigDecimal compositeScore;
 
     // 상태 관리
     private StockState state;
@@ -313,6 +314,8 @@ public class Stock {
     public void setTradeStrength(BigDecimal tradeStrength) { this.tradeStrength = tradeStrength; }
     public BigDecimal getSpreadPercent() { return spreadPercent; }
     public void setSpreadPercent(BigDecimal spreadPercent) { this.spreadPercent = spreadPercent; }
+    public BigDecimal getCompositeScore() { return compositeScore; }
+    public void setCompositeScore(BigDecimal compositeScore) { this.compositeScore = compositeScore; }
     public StockState getState() { return state; }
     public BigDecimal getHighAfterOpen() { return highAfterOpen; }
     public LocalDateTime getHighFormedAt() { return highFormedAt; }

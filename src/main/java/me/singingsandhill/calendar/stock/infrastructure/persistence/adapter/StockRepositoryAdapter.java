@@ -137,6 +137,7 @@ public class StockRepositoryAdapter implements StockRepository {
         entity.setMarketCap(stock.getMarketCap());
         entity.setTradeStrength(stock.getTradeStrength());
         entity.setSpreadPercent(stock.getSpreadPercent());
+        entity.setCompositeScore(stock.getCompositeScore());
         entity.setState(stock.getState().name());
         entity.setHighAfterOpen(stock.getHighAfterOpen());
         entity.setHighFormedAt(stock.getHighFormedAt());
@@ -160,6 +161,7 @@ public class StockRepositoryAdapter implements StockRepository {
         stock.setMarketCap(entity.getMarketCap());
         stock.setTradeStrength(entity.getTradeStrength());
         stock.setSpreadPercent(entity.getSpreadPercent());
+        stock.setCompositeScore(entity.getCompositeScore());
         stock.updateState(StockState.valueOf(entity.getState()));
         return stock;
     }

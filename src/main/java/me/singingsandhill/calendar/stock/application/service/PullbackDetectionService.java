@@ -171,49 +171,70 @@ public class PullbackDetectionService {
 
     /**
      * 진입 조건 추가 검증
-     * - 체결강도 >= 105
-     * - 호가 불균형 (매수잔량 / 매도잔량) > 1.2
+     * softEntryValidation=true: 3개 조건 중 2개 충족 시 통과
+     * softEntryValidation=false: 3개 조건 모두 충족 필요
      */
     private boolean validateEntryConditions(Stock stock) {
-        // 체결강도 체크
+        StockProperties.Entry entryConfig = stockProperties.getEntry();
+        boolean softValidation = entryConfig.isSoftEntryValidation();
+        int passedConditions = 0;
+        int totalConditions = 3;
+
+        // 조건 1: 체결강도 체크
         BigDecimal tradeStrength = kisApiClient.getTradeStrength(stock.getStockCode());
-        if (tradeStrength != null && tradeStrength.compareTo(new BigDecimal("105")) < 0) {
-            log.debug("Entry rejected for {}: weak trade strength {}",
-                stock.getStockCode(), tradeStrength);
-            return false;
+        boolean strengthPassed = tradeStrength == null
+            || tradeStrength.compareTo(entryConfig.getEntryMinStrength()) >= 0;
+        if (strengthPassed) {
+            passedConditions++;
+        } else {
+            log.debug("Entry condition failed for {}: strength={} < {}",
+                stock.getStockCode(), tradeStrength, entryConfig.getEntryMinStrength());
         }
 
-        // 호가 불균형 체크
+        // 조건 2: 호가 불균형 체크
         KisOrderbookResponse orderbook = kisApiClient.getOrderbook(stock.getStockCode());
+        boolean imbalancePassed = true;
         if (orderbook != null) {
             BigDecimal imbalance = orderbook.calculateOrderImbalance();
-            if (imbalance.compareTo(new BigDecimal("1.2")) < 0) {
-                log.debug("Entry rejected for {}: weak order imbalance {}",
-                    stock.getStockCode(), imbalance);
-                return false;
+            imbalancePassed = imbalance.compareTo(entryConfig.getEntryMinImbalance()) >= 0;
+            if (!imbalancePassed) {
+                log.debug("Entry condition failed for {}: imbalance={} < {}",
+                    stock.getStockCode(), imbalance, entryConfig.getEntryMinImbalance());
             }
         }
+        if (imbalancePassed) {
+            passedConditions++;
+        }
 
-        // 눌림목 시간 체크 (최소 3분, 최대 15분)
+        // 조건 3: 눌림목 시간 체크
+        boolean timePassed = true;
         LocalDateTime pullbackStart = stock.getPullbackStartAt();
         if (pullbackStart != null) {
             long pullbackMinutes = java.time.Duration.between(pullbackStart, LocalDateTime.now()).toMinutes();
-            int minMinutes = stockProperties.getEntry().getMinPullbackMinutes();
-            int maxMinutes = stockProperties.getEntry().getMaxPullbackMinutes();
-
-            if (pullbackMinutes < minMinutes) {
-                log.debug("Entry rejected for {}: pullback too short {}min",
-                    stock.getStockCode(), pullbackMinutes);
-                return false;
-            }
-            if (pullbackMinutes > maxMinutes) {
-                log.debug("Entry rejected for {}: pullback too long {}min",
-                    stock.getStockCode(), pullbackMinutes);
-                return false;
+            int minMinutes = entryConfig.getMinPullbackMinutes();
+            int maxMinutes = entryConfig.getMaxPullbackMinutes();
+            timePassed = pullbackMinutes >= minMinutes && pullbackMinutes <= maxMinutes;
+            if (!timePassed) {
+                log.debug("Entry condition failed for {}: pullback={}min (range: {}-{}min)",
+                    stock.getStockCode(), pullbackMinutes, minMinutes, maxMinutes);
             }
         }
+        if (timePassed) {
+            passedConditions++;
+        }
 
-        return true;
+        int requiredConditions = softValidation ? 2 : totalConditions;
+        boolean result = passedConditions >= requiredConditions;
+
+        if (!result) {
+            log.debug("Entry rejected for {}: {}/{} conditions passed (required: {}, soft={})",
+                stock.getStockCode(), passedConditions, totalConditions, requiredConditions, softValidation);
+        } else {
+            log.info("Entry validated for {}: {}/{} conditions passed (soft={})",
+                stock.getStockCode(), passedConditions, totalConditions, softValidation);
+        }
+
+        return result;
     }
 
     /**

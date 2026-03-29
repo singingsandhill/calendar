@@ -144,9 +144,20 @@ stock:
     max-gap-percent: 10.0
     min-market-cap: 100000000000
     min-trade-value: 500000000
-    min-trade-strength: 110
+    min-trade-strength: 100
     max-spread-percent: 0.3
     max-watchlist-size: 10
+    floor-gap-percent: 0.5
+    floor-trade-strength: 95
+  scoring:
+    enabled: true
+    gap-weight: 30
+    strength-weight: 25
+    trade-value-weight: 20
+    spread-weight: 15
+    market-cap-weight: 10
+    min-score-threshold: 40
+    min-candidates: 3
   entry:
     high-threshold-percent: 1.5
     pullback-min-percent: 1.0
@@ -154,6 +165,9 @@ stock:
     bounce-threshold-percent: 0.2
     min-pullback-minutes: 3
     max-pullback-minutes: 15
+    entry-min-strength: 100
+    entry-min-imbalance: 1.0
+    soft-entry-validation: true
   exit:
     tp1-percent: 5.0
     tp1-ratio: 0.5
@@ -164,6 +178,8 @@ stock:
     stop-loss-percent: 5.0
     trailing-stop-percent: 3.8
     position-size-ratio: 0.1
+    time-decay-enabled: true
+    min-profit-threshold-late: 0.001
   trading:
     pre-market-start: "08:30"
     market-open: "09:00"
