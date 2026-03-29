@@ -1,15 +1,24 @@
 # Stock Application Layer
 
-## Screening Filters
+## Screening (ScreeningService)
 
-1. Gap ratio: 2-7%
-2. Market cap >= configured minimum
-3. Trade value >= configured minimum
-4. Trade strength >= 110
-5. Spread <= configured maximum
+**Score-based mode** (default, `scoring.enabled=true`):
+
+1. Floor filters (hard cut): min gap%, max gap 15%, min trade strength, min market cap 500억
+2. Composite score = weighted sum of 5 normalized factors:
+   - Gap score (bell curve, center=4%, sigma=3)
+   - Strength score (linear, 95~130)
+   - Trade value score (log scale, 5억~500억)
+   - Spread score (inverse, 0~0.5%)
+   - Market cap score (log scale, 500억~10조)
+3. Sort by score descending → select top N (minCandidates guaranteed)
+
+**Legacy mode** (`scoring.enabled=false`): sequential hard-cut filters (gap, market cap, trade value, strength, spread).
 
 ## Entry Validation (PullbackDetectionService)
 
-- Trade strength >= 105
-- Order imbalance (bid/ask) > 1.2
-- Pullback duration: 3-15 minutes
+3 conditions checked; **soft validation** (`softEntryValidation=true`): 2/3 sufficient.
+
+- Trade strength >= configured `entryMinStrength`
+- Order imbalance (bid/ask) >= configured `entryMinImbalance`
+- Pullback duration: configured min~max minutes
