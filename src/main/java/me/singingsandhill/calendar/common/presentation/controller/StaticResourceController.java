@@ -24,14 +24,22 @@ public class StaticResourceController {
         this.sitemapService = sitemapService;
     }
 
-    @GetMapping(value = "/robots.txt", produces = MediaType.TEXT_PLAIN_VALUE)
-    public Resource robotsTxt() {
-        return new ClassPathResource("static/robots.txt");
+    @GetMapping(value = "/robots.txt")
+    public ResponseEntity<Resource> robotsTxt() {
+        Resource resource = new ClassPathResource("static/robots.txt");
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_PLAIN)
+                .cacheControl(CacheControl.maxAge(Duration.ofHours(24)))
+                .body(resource);
     }
 
-    @GetMapping(value = "/ads.txt", produces = MediaType.TEXT_PLAIN_VALUE)
-    public Resource adsTxt() {
-        return new ClassPathResource("static/ads.txt");
+    @GetMapping(value = "/ads.txt")
+    public ResponseEntity<Resource> adsTxt() {
+        Resource resource = new ClassPathResource("static/ads.txt");
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_PLAIN)
+                .cacheControl(CacheControl.maxAge(Duration.ofHours(24)))
+                .body(resource);
     }
 
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
@@ -57,6 +65,15 @@ public class StaticResourceController {
         Resource resource = new ClassPathResource("static/favicon.svg");
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("image/svg+xml"))
+                .body(resource);
+    }
+
+    @GetMapping(value = "/og-image.svg")
+    public ResponseEntity<Resource> ogImageSvg() {
+        Resource resource = new ClassPathResource("static/og-image.svg");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("image/svg+xml"))
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(7)))
                 .body(resource);
     }
 }

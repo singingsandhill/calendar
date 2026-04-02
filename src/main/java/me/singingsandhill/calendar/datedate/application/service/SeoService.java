@@ -15,7 +15,7 @@ public class SeoService {
     @Value("${app.base-url:https://datedate.site}")
     private String baseUrl;
 
-    private static final String DEFAULT_OG_IMAGE = "/og-image.png";
+    private static final String DEFAULT_OG_IMAGE = "/og-image.svg";
     private static final String BRAND_NAME = "DateDate";
 
     /**
@@ -147,6 +147,39 @@ public class SeoService {
             .ogType("article")
             .ogTitle(String.format("%s - %d년 %d월 일정", ownerId, year, month))
             .ogDescription("이 일정에 참여하여 가능한 날짜를 선택하세요.")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .build();
+    }
+
+    /**
+     * 개인정보처리방침 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getPrivacyPolicySeo() {
+        return SeoMetadata.builder()
+            .title("개인정보처리방침 | " + BRAND_NAME)
+            .description("DateDate 서비스의 개인정보 수집·이용 방침을 안내합니다.")
+            .robots("index, follow")
+            .canonical(baseUrl + "/privacy-policy")
+            .ogType("website")
+            .ogTitle("개인정보처리방침 | " + BRAND_NAME)
+            .ogDescription("DateDate 서비스의 개인정보 수집·이용 방침을 안내합니다.")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .build();
+    }
+
+    /**
+     * 서비스 소개 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getAboutSeo() {
+        return SeoMetadata.builder()
+            .title("서비스 소개 | " + BRAND_NAME)
+            .description("DateDate는 가입 없이 링크 하나로 그룹 날짜 조율, 장소·메뉴 투표까지 한번에 해결하는 무료 서비스입니다.")
+            .keywords("DateDate 소개, 약속 잡기 서비스, 일정 조율 무료, 그룹 스케줄링")
+            .robots("index, follow")
+            .canonical(baseUrl + "/about")
+            .ogType("website")
+            .ogTitle("DateDate 소개 - 무료 그룹 일정 조율 서비스")
+            .ogDescription("가입 없이, 링크 하나로 날짜·장소·메뉴를 한번에 정하세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .build();
     }

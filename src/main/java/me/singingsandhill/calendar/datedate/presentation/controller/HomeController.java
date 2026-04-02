@@ -44,4 +44,16 @@ public class HomeController {
         ownerService.getOrCreateOwner(normalizedId);
         return "redirect:/" + normalizedId;
     }
+
+    @GetMapping("/privacy-policy")
+    public String privacyPolicy(Model model) {
+        model.addAttribute("seo", seoService.getPrivacyPolicySeo());
+        return "privacy-policy";
+    }
+
+    @GetMapping("/about")
+    public String about(Model model) {
+        model.addAttribute("seo", seoService.getAboutSeo());
+        return "about";
+    }
 }

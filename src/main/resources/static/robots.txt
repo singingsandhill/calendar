@@ -9,6 +9,8 @@ Allow: /runners
 Allow: /runners/runs
 Allow: /runners/members
 Allow: /runners/announce
+Allow: /privacy-policy
+Allow: /about
 
 # Block API endpoints
 Disallow: /api/
@@ -21,7 +23,7 @@ Disallow: /runners/admin/
 Disallow: /trading/
 Disallow: /stock/
 
-# Block user-generated content
+# Block user-generated content (owner dashboards and schedules)
 Disallow: /*/*
 
 Crawl-delay: 1

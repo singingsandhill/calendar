@@ -35,6 +35,8 @@ public class SitemapService {
 
         return List.of(
                 new SitemapEntry(baseUrl + "/", startupDate, "monthly", "1.0"),
+                new SitemapEntry(baseUrl + "/about", startupDate, "yearly", "0.7"),
+                new SitemapEntry(baseUrl + "/privacy-policy", startupDate, "yearly", "0.5"),
                 new SitemapEntry(baseUrl + "/insights/trends", insightsLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners", runnerLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners/runs", runnerLastmod, "weekly", "0.7"),
