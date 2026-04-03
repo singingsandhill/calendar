@@ -59,20 +59,6 @@ public class DailySummaryScheduler {
         }
     }
 
-    /**
-     * 매시간 정각에 계좌 스냅샷 저장 (백업)
-     */
-    @Scheduled(cron = "0 0 * * * *")
-    public void saveHourlySnapshot() {
-        if (!tradingProperties.getBot().isEnabled()) {
-            return;
-        }
-
-        log.debug("Saving hourly account snapshot");
-        try {
-            profitService.saveAccountSnapshot();
-        } catch (Exception e) {
-            log.error("Failed to save hourly account snapshot", e);
-        }
-    }
+    // [FIX #5] saveHourlySnapshot() 제거: saveAccountSnapshot()이 이미 매 5분(*/5)마다 실행되므로
+    // 매시 정각(:00)에 saveHourlySnapshot + saveAccountSnapshot 두 번 중복 저장되던 문제 해결
 }

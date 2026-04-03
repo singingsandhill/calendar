@@ -56,12 +56,13 @@ public class StockTradingScheduler {
     }
 
     /**
-     * 갭 상승 종목 스크리닝 (09:05 월~금)
-     * - 09:05 실행으로 시가 확정 대기 (09:00 시 openPrice=0 문제 방지)
+     * 갭 상승 종목 스크리닝 (09:10 월~금)
+     * - [FIX #4] 09:05→09:10: 장 시작 직후 체결강도(strength)=0 문제 해결
+     *   09:05에 실행 시 전 종목 strength=0으로 스크리닝 실패 사례 다수 발생
      * - 2-7% 갭 상승 종목 필터링
      * - 시가총액, 거래대금, 체결강도 필터
      */
-    @Scheduled(cron = "0 5 9 * * MON-FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 10 9 * * MON-FRI", zone = "Asia/Seoul")
     public void executeScreening() {
         if (!isEnabled() || !isTradingDay()) {
             return;
