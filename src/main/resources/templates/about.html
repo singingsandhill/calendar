@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
+
+<main class="container">
+    <article class="policy-article">
+        <header class="policy-header">
+            <h1>DateDate 소개</h1>
+            <p class="policy-intro">여러 명이서 약속 잡는 걸 쉽게 만들기 위해 태어났습니다.</p>
+        </header>
+
+        <section class="policy-section">
+            <h2>서비스 소개</h2>
+            <p>
+                DateDate는 <strong>가입 없이</strong>, <strong>앱 설치 없이</strong>, 링크 하나로 그룹 일정을 조율할 수 있는 무료 웹 서비스입니다.
+                "언제 돼?" 메시지를 반복해서 보내는 대신, 링크 하나를 공유하면 참여자 모두가 달력에서 가능한 날짜를 직접 선택합니다.
+                날짜뿐 아니라 장소와 메뉴도 투표로 정할 수 있습니다.
+            </p>
+        </section>
+
+        <section class="policy-section">
+            <h2>핵심 가치</h2>
+            <ul>
+                <li><strong>단순함</strong> — ID를 입력하면 페이지가 생깁니다. 설정도, 설명도 필요 없습니다.</li>
+                <li><strong>무료</strong> — 기본 기능은 영원히 무료입니다.</li>
+                <li><strong>가입 불필요</strong> — 이름만 입력하면 참여할 수 있습니다.</li>
+                <li><strong>한 페이지에서 모두</strong> — 날짜, 장소, 메뉴까지 하나의 링크로 해결합니다.</li>
+            </ul>
+        </section>
+
+        <section class="policy-section">
+            <h2>이용 방법</h2>
+            <ol>
+                <li>홈페이지에서 나만의 ID를 입력합니다. (예: <code>college-friends</code>)</li>
+                <li>생성된 링크를 카카오톡, 슬랙, 이메일 등으로 공유합니다.</li>
+                <li>참여자들이 링크를 열고 자신의 이름과 가능한 날짜를 선택합니다.</li>
+                <li>캘린더에서 모두가 겹치는 날짜를 한눈에 확인합니다.</li>
+                <li>(선택) 장소·메뉴를 제안하고 투표로 결정합니다.</li>
+            </ol>
+        </section>
+
+        <section class="policy-section">
+            <h2>문의 및 피드백</h2>
+            <p>서비스 개선을 위한 의견을 환영합니다.</p>
+            <ul>
+                <li>
+                    <strong>의견 보내기</strong> —
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
+                       target="_blank" rel="noopener noreferrer">피드백 양식</a>
+                </li>
+                <li><strong>서비스 주소</strong> — <a href="https://datedate.site">datedate.site</a></li>
+            </ul>
+        </section>
+    </article>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+</body>
+</html>

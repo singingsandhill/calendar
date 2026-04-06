@@ -3334,3 +3334,119 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+/* ======================================
+   POLICY / ABOUT - 정책 페이지 스타일
+   ====================================== */
+.policy-article {
+    max-width: 800px;
+    margin: 4rem auto;
+    padding: 0 2rem 4rem;
+}
+
+.policy-header {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.policy-header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-color);
+}
+
+.policy-updated {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.policy-intro {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+}
+
+.policy-section {
+    margin-bottom: 2.5rem;
+}
+
+.policy-section h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.policy-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.5rem;
+    color: var(--text-color);
+}
+
+.policy-section p {
+    line-height: 1.8;
+    color: var(--text-color);
+    margin-bottom: 0.75rem;
+}
+
+.policy-section ul,
+.policy-section ol {
+    padding-left: 1.5rem;
+    line-height: 1.8;
+}
+
+.policy-section li {
+    margin-bottom: 0.4rem;
+    color: var(--text-color);
+}
+
+.policy-section a {
+    color: var(--primary-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.policy-section a:hover {
+    color: var(--primary-dark);
+}
+
+.policy-section code {
+    background: var(--bg-light);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: monospace;
+}
+
+/* footer-nav for default footer */
+.footer-nav {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+}
+
+.footer-nav-link {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    text-decoration: none;
+    transition: color var(--duration-fast);
+}
+
+.footer-nav-link:hover {
+    color: var(--primary-color);
+}
+
+@media (max-width: 480px) {
+    .policy-article {
+        margin: 2rem auto;
+        padding: 0 1rem 2rem;
+    }
+
+    .policy-header h1 {
+        font-size: 1.6rem;
+    }
+}

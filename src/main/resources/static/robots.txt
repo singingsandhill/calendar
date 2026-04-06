@@ -11,6 +11,8 @@ Allow: /runners/members
 Allow: /runners/announce
 Allow: /guide
 Allow: /use-cases/
+Allow: /privacy-policy
+Allow: /about
 
 # Block API endpoints
 Disallow: /api/

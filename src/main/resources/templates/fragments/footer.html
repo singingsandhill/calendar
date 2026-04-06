@@ -6,7 +6,13 @@
     <footer>
         <div class="footer-content">
             <p>DateDate - 간편한 그룹 일정 조율</p>
-            <p><a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor" target="_blank" rel="noopener noreferrer">의견 보내기</a></p>
+            <div class="footer-nav">
+                <a th:href="@{/}" class="footer-nav-link">홈</a>
+                <a th:href="@{/about}" class="footer-nav-link">서비스 소개</a>
+                <a th:href="@{/privacy-policy}" class="footer-nav-link">개인정보처리방침</a>
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
+                   target="_blank" rel="noopener noreferrer" class="footer-nav-link">의견 보내기</a>
+            </div>
         </div>
     </footer>
 </th:block>
@@ -22,6 +28,7 @@
                     <a th:href="@{/}" class="footer-link">홈</a>
                     <a href="/#start-form" class="footer-link">일정 만들기</a>
                     <a th:href="@{/insights/trends}" class="footer-link">인사이트</a>
+                    <a th:href="@{/about}" class="footer-link">소개</a>
                 </div>
             </div>
             <div class="footer-section">
@@ -30,6 +37,7 @@
                     <a th:href="@{/guide}" class="footer-link">사용 가이드</a>
                     <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
                        target="_blank" rel="noopener noreferrer" class="footer-link">의견 보내기</a>
+                    <a th:href="@{/privacy-policy}" class="footer-link">개인정보처리방침</a>
                 </div>
             </div>
             <div class="footer-section">
@@ -42,7 +50,7 @@
                 </div>
             </div>
         </div>
-        <p class="footer-copyright">DateDate - 간편한 그룹 일정 조율</p>
+        <p class="footer-copyright">© 2025 DateDate. 간편한 그룹 일정 조율 서비스.</p>
     </footer>
 </th:block>
 

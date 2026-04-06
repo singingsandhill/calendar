@@ -17,9 +17,9 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 // 기존 앱 경로 - 모두 허용
-                .requestMatchers("/", "/start", "/index.html").permitAll()
+                .requestMatchers("/", "/start", "/index.html", "/privacy-policy", "/about").permitAll()
                 .requestMatchers("/api/**").permitAll()
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/image/**", "/favicon.*", "/manifest.json", "/robots.txt", "/sitemap.xml", "/ads.txt").permitAll()
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/image/**", "/favicon.*", "/manifest.json", "/robots.txt", "/sitemap.xml", "/ads.txt", "/og-image.svg", "/og-image.png").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
 
                 // 러너 공개 경로
