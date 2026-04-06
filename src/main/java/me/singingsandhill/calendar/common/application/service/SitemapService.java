@@ -35,7 +35,12 @@ public class SitemapService {
 
         return List.of(
                 new SitemapEntry(baseUrl + "/", startupDate, "monthly", "1.0"),
+                new SitemapEntry(baseUrl + "/guide", startupDate, "monthly", "0.9"),
                 new SitemapEntry(baseUrl + "/insights/trends", insightsLastmod, "weekly", "0.8"),
+                new SitemapEntry(baseUrl + "/use-cases/friend-meetup", startupDate, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/use-cases/team-meeting", startupDate, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/use-cases/travel-planning", startupDate, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/use-cases/study-group", startupDate, "monthly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners", runnerLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners/runs", runnerLastmod, "weekly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners/members", runnerLastmod, "weekly", "0.7"),

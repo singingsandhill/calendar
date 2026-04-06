@@ -38,6 +38,12 @@ public class HomeController {
         return "index";
     }
 
+    @GetMapping("/guide")
+    public String guide(Model model) {
+        model.addAttribute("seo", seoService.getGuideSeo());
+        return "guide";
+    }
+
     @PostMapping("/start")
     public String start(@RequestParam String ownerId) {
         String normalizedId = ownerId.toLowerCase();

@@ -25,6 +25,10 @@
     <!-- Canonical URL -->
     <link rel="canonical" th:href="${seo.canonical()}">
 
+    <!-- hreflang -->
+    <link rel="alternate" hreflang="ko" th:href="${seo.canonical()}">
+    <link rel="alternate" hreflang="x-default" th:href="${seo.canonical()}">
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" th:content="${seo.ogType()}">
     <meta property="og:site_name" content="DateDate">
@@ -71,10 +75,12 @@
     <!-- Google Fonts - Garriock Style -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
 
     <!-- CSS -->
+    <link rel="preload" th:href="@{/css/style.css}" as="style">
     <link rel="stylesheet" th:href="@{/css/style.css}">
 
     <!-- Navbar Script -->
@@ -101,6 +107,7 @@
                 <div class="nav-menu" id="navMenu">
                     <a th:href="@{/}" class="nav-link">홈</a>
                     <a href="/#start-form" class="nav-link">일정 만들기</a>
+                    <a th:href="@{/guide}" class="nav-link">가이드</a>
                     <a th:href="@{/insights/trends}" class="nav-link">인사이트</a>
                 </div>
             </div>
@@ -126,6 +133,7 @@
                 <div class="nav-menu" id="navMenu">
                     <a th:href="@{/}" class="nav-link-animated">홈</a>
                     <a href="/#start-form" class="nav-link-animated">일정 만들기</a>
+                    <a th:href="@{/guide}" class="nav-link-animated">가이드</a>
                     <a th:href="@{/insights/trends}" class="nav-link-animated">인사이트</a>
                 </div>
             </div>

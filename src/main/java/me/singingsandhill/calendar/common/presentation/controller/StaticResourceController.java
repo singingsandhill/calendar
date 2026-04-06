@@ -59,4 +59,20 @@ public class StaticResourceController {
                 .contentType(MediaType.parseMediaType("image/svg+xml"))
                 .body(resource);
     }
+
+    @GetMapping(value = "/og-image.png", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<Resource> ogImage() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)))
+                .body(new ClassPathResource("static/og-image.png"));
+    }
+
+    @GetMapping(value = "/apple-touch-icon.png", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<Resource> appleTouchIcon() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)))
+                .body(new ClassPathResource("static/apple-touch-icon.png"));
+    }
 }

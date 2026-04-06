@@ -37,6 +37,11 @@ spring:
       cache:
         period: 604800
       static-locations: classpath:/static/
+      chain:
+        strategy:
+          content:
+            enabled: true
+            paths: /**
 
   jackson:
     default-property-inclusion: always

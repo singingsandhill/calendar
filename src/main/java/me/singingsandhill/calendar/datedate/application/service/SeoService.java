@@ -20,7 +20,6 @@ public class SeoService {
 
     /**
      * 홈페이지(랜딩 페이지) SEO 메타데이터.
-     * 유일하게 인덱싱되는 페이지입니다.
      */
     public SeoMetadata getHomeSeo() {
         String jsonLd = """
@@ -44,6 +43,26 @@ public class SeoService {
                     "name": "DateDate",
                     "url": "%s"
                 }
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "name": "DateDate",
+                "url": "%s",
+                "logo": "%s/og-image.png",
+                "description": "여러명이서 쉽게 날짜 조율하기. 링크 하나로 날짜, 장소, 메뉴까지 한번에 정하세요."
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    }
+                ]
             },
             {
                 "@context": "https://schema.org",
@@ -99,7 +118,7 @@ public class SeoService {
                     }
                 ]
             }]
-            """.formatted(baseUrl, baseUrl);
+            """.formatted(baseUrl, baseUrl, baseUrl, baseUrl, baseUrl);
 
         return SeoMetadata.builder()
             .title("DateDate - 약속 잡기 | 여러명이서 쉽게 날짜 조율하기")
@@ -148,6 +167,144 @@ public class SeoService {
             .ogTitle(String.format("%s - %d년 %d월 일정", ownerId, year, month))
             .ogDescription("이 일정에 참여하여 가능한 날짜를 선택하세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .build();
+    }
+
+    /**
+     * 사용 가이드 페이지 SEO 메타데이터.
+     * HowTo 스키마로 Google 리치 결과 대상.
+     */
+    public SeoMetadata getGuideSeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "HowTo",
+                "name": "DateDate로 여러명 약속 잡기",
+                "description": "DateDate를 사용하여 그룹 일정을 조율하는 방법을 5단계로 안내합니다.",
+                "totalTime": "PT2M",
+                "tool": {
+                    "@type": "HowToTool",
+                    "name": "웹 브라우저"
+                },
+                "step": [
+                    {
+                        "@type": "HowToStep",
+                        "position": 1,
+                        "name": "페이지 만들기",
+                        "text": "datedate.site에 접속하여 원하는 ID를 입력하고 시작하기를 클릭합니다. 영문, 숫자, 하이픈으로 2~20자의 고유 ID를 만드세요.",
+                        "url": "%s/guide#step-1"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 2,
+                        "name": "일정 생성",
+                        "text": "대시보드에서 월을 선택하면 해당 월의 일정 페이지가 자동으로 생성됩니다.",
+                        "url": "%s/guide#step-2"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 3,
+                        "name": "링크 공유",
+                        "text": "생성된 일정 페이지 링크를 카카오톡, 슬랙, 이메일 등으로 참여자에게 공유합니다.",
+                        "url": "%s/guide#step-3"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 4,
+                        "name": "날짜 선택 & 투표",
+                        "text": "참여자들이 이름을 입력하고 가능한 날짜를 클릭하여 선택합니다. 장소와 메뉴도 제안하고 투표할 수 있습니다.",
+                        "url": "%s/guide#step-4"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 5,
+                        "name": "결과 확인 & 결정",
+                        "text": "가장 많은 사람이 가능한 날짜, 가장 인기있는 장소와 메뉴를 확인하고 최종 약속을 결정합니다.",
+                        "url": "%s/guide#step-5"
+                    }
+                ]
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "사용 가이드"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl, baseUrl, baseUrl, baseUrl, baseUrl);
+
+        return SeoMetadata.builder()
+            .title("사용 가이드 - 여러명 약속 잡기 방법 | " + BRAND_NAME)
+            .description("DateDate로 여러명이 약속을 잡는 방법을 5단계로 안내합니다. 무료 일정 조율 사이트로 모임 날짜, 장소, 메뉴를 한번에 정하세요.")
+            .keywords("여러명 약속 잡기 방법, 무료 일정 조율 사이트, 모임 날짜 맞추기, 그룹 스케줄링 사용법, 약속 잡기 도구")
+            .robots("index, follow")
+            .canonical(baseUrl + "/guide")
+            .ogType("article")
+            .ogTitle("사용 가이드 - 여러명 약속 잡기 방법 | " + BRAND_NAME)
+            .ogDescription("5단계로 쉽게! 링크 하나로 날짜·장소·메뉴까지 한번에 정하는 방법을 알아보세요.")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .build();
+    }
+
+    /**
+     * 활용 사례 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getUseCaseSeo(String slug, String title, String description) {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": "%s | DateDate",
+                "description": "%s",
+                "url": "%s/use-cases/%s"
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "활용 사례",
+                        "item": "%s/use-cases/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": "%s"
+                    }
+                ]
+            }]
+            """.formatted(title, description, baseUrl, slug, baseUrl, baseUrl, title);
+
+        return SeoMetadata.builder()
+            .title(title + " | " + BRAND_NAME + " 활용 사례")
+            .description(description)
+            .keywords(title + ", 약속 잡기, 일정 조율, " + BRAND_NAME)
+            .robots("index, follow")
+            .canonical(baseUrl + "/use-cases/" + slug)
+            .ogType("article")
+            .ogTitle(title + " | " + BRAND_NAME)
+            .ogDescription(description)
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
             .build();
     }
 
