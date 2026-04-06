@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<main class="container policy-page">
+    <section class="policy-hero animate-on-scroll">
+        <h1>이용약관</h1>
+        <p class="policy-updated">최종 수정일: 2026년 4월 6일</p>
+    </section>
+
+    <section class="policy-content animate-on-scroll">
+        <article class="policy-section">
+            <h2>1. 서비스 개요</h2>
+            <p>DateDate(이하 "서비스")는 여러 사람이 모임 날짜, 장소, 메뉴를 조율할 수 있는 무료 온라인 일정 조율 서비스입니다. 회원가입 없이 누구나 이용할 수 있습니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>2. 이용 조건</h2>
+            <ul>
+                <li>서비스는 무료로 제공되며, 별도의 회원가입 없이 이용 가능합니다.</li>
+                <li>페이지 ID는 영문 소문자, 숫자, 하이픈(-)만 사용 가능하며, 2~20자로 제한됩니다.</li>
+                <li>서비스 이용 시 본 약관에 동의한 것으로 간주합니다.</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2>3. 사용자 콘텐츠</h2>
+            <ul>
+                <li>사용자가 입력한 일정, 장소, 메뉴 등의 콘텐츠에 대한 책임은 해당 사용자에게 있습니다.</li>
+                <li>서비스는 인기 트렌드 분석을 위해 익명화된 통계 데이터를 활용할 수 있습니다.</li>
+                <li>부적절한 콘텐츠(욕설, 혐오 표현, 불법 정보 등)는 사전 통보 없이 삭제될 수 있습니다.</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2>4. 데이터 보관</h2>
+            <ul>
+                <li>일정 데이터는 사용자가 삭제하지 않는 한 계속 보관됩니다.</li>
+                <li>대시보드에서 언제든지 일정을 삭제할 수 있습니다.</li>
+                <li>서비스 운영 중단 시 사전 공지 후 데이터를 삭제할 수 있습니다.</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2>5. 금지 행위</h2>
+            <p>다음 행위는 금지됩니다:</p>
+            <ul>
+                <li>서비스의 정상적인 운영을 방해하는 행위</li>
+                <li>자동화 도구를 이용한 대량 페이지 생성</li>
+                <li>타인의 권리를 침해하는 콘텐츠 게시</li>
+                <li>서비스를 상업적 광고 목적으로 악용하는 행위</li>
+                <li>서비스의 보안을 위협하는 행위</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2>6. 면책 사항</h2>
+            <ul>
+                <li>서비스는 "있는 그대로" 제공되며, 특정 목적에의 적합성이나 데이터의 정확성을 보증하지 않습니다.</li>
+                <li>서비스 이용으로 인해 발생한 직·간접적 손해에 대해 책임지지 않습니다.</li>
+                <li>천재지변, 시스템 장애 등 불가항력에 의한 서비스 중단에 대해 책임지지 않습니다.</li>
+                <li>사용자 간 일정 조율 과정에서 발생한 분쟁에 대해 책임지지 않습니다.</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2>7. 광고</h2>
+            <p>서비스 운영을 위해 일부 페이지에 Google AdSense를 통한 광고가 게재됩니다. 광고 관련 개인정보 처리는 <a th:href="@{/privacy}">개인정보처리방침</a>을 참조해 주세요.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>8. 약관 변경</h2>
+            <p>본 약관은 서비스 개선 및 법률 변경에 따라 수정될 수 있습니다. 변경 시 이 페이지에 최종 수정일과 함께 공지합니다. 변경 후에도 서비스를 계속 이용하면 변경된 약관에 동의한 것으로 간주합니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>9. 문의</h2>
+            <p>이용약관에 관한 문의는 <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor" target="_blank" rel="noopener noreferrer">의견 보내기</a>를 통해 연락해 주세요.</p>
+        </article>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+</body>
+</html>

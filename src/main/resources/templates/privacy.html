@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<main class="container policy-page">
+    <section class="policy-hero animate-on-scroll">
+        <h1>개인정보처리방침</h1>
+        <p class="policy-updated">최종 수정일: 2026년 4월 6일</p>
+    </section>
+
+    <section class="policy-content animate-on-scroll">
+        <article class="policy-section">
+            <h2>1. 수집하는 정보</h2>
+            <p>DateDate는 서비스 제공을 위해 다음과 같은 정보를 수집합니다:</p>
+            <ul>
+                <li><strong>사용자 입력 정보:</strong> 페이지 ID(owner ID), 참여자 이름, 선택한 날짜, 제안한 장소 및 메뉴</li>
+                <li><strong>자동 수집 정보:</strong> 쿠키, 방문 기록, 브라우저 정보, IP 주소 (Google Analytics를 통해 수집)</li>
+            </ul>
+            <p>DateDate는 회원가입을 요구하지 않으며, 이메일, 전화번호 등의 개인 식별 정보를 직접 수집하지 않습니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>2. 정보 사용 목적</h2>
+            <p>수집된 정보는 다음 목적으로 사용됩니다:</p>
+            <ul>
+                <li>일정 조율 서비스 제공 및 운영</li>
+                <li>서비스 이용 통계 분석 및 개선</li>
+                <li>인기 장소·메뉴 트렌드 데이터 생성</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2>3. 쿠키 및 추적 기술</h2>
+            <p>DateDate는 다음과 같은 쿠키 및 추적 기술을 사용합니다:</p>
+            <ul>
+                <li><strong>Google Analytics (Google Tag Manager):</strong> 사이트 방문 통계, 사용자 행동 분석을 위해 사용됩니다. 수집된 데이터는 익명화되어 처리됩니다.</li>
+                <li><strong>Google AdSense:</strong> 콘텐츠 페이지에 맞춤형 광고를 표시하기 위해 쿠키를 사용합니다. 사용자의 관심사에 기반한 광고가 게재될 수 있습니다.</li>
+            </ul>
+            <p>브라우저 설정에서 쿠키를 비활성화할 수 있으나, 일부 서비스 기능이 제한될 수 있습니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>4. 제3자 광고</h2>
+            <p>DateDate는 Google AdSense를 통해 광고를 게재합니다. Google은 사용자의 이전 방문 기록을 기반으로 관련성 높은 광고를 표시할 수 있습니다.</p>
+            <p>Google의 광고 개인정보보호에 대한 자세한 내용은 <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer">Google 광고 정책</a>에서 확인할 수 있습니다.</p>
+            <p>맞춤 광고를 원하지 않는 경우 <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer">Google 광고 설정</a>에서 비활성화할 수 있습니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>5. 데이터 보관 및 삭제</h2>
+            <ul>
+                <li>일정 데이터는 사용자가 삭제하지 않는 한 계속 보관됩니다.</li>
+                <li>대시보드에서 일정을 직접 삭제할 수 있습니다.</li>
+                <li>서비스 운영에 필요한 최소한의 데이터만 보관합니다.</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2>6. 데이터 보안</h2>
+            <p>DateDate는 사용자 데이터를 보호하기 위해 HTTPS 암호화 통신을 사용하며, 합리적인 기술적·관리적 보호 조치를 취하고 있습니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>7. 아동 개인정보</h2>
+            <p>DateDate는 만 14세 미만 아동의 개인정보를 의도적으로 수집하지 않습니다. 만 14세 미만 아동의 정보가 수집된 것을 발견한 경우 즉시 삭제 조치합니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>8. 방침 변경</h2>
+            <p>본 개인정보처리방침은 법률 또는 서비스 변경에 따라 수정될 수 있습니다. 변경 시 이 페이지에 최종 수정일과 함께 공지합니다.</p>
+        </article>
+
+        <article class="policy-section">
+            <h2>9. 문의</h2>
+            <p>개인정보처리방침에 관한 문의는 <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor" target="_blank" rel="noopener noreferrer">의견 보내기</a>를 통해 연락해 주세요.</p>
+        </article>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+</body>
+</html>

@@ -68,8 +68,8 @@
     })(window,document,'script','dataLayer','GTM-PFPKQT7W');</script>
     <!-- End Google Tag Manager -->
 
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7334667748813914"
+    <!-- Google AdSense (only on content pages) -->
+    <script th:if="${seo.adsEnabled()}" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7334667748813914"
          crossorigin="anonymous"></script>
 
     <!-- Google Fonts - Garriock Style -->

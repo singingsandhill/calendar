@@ -15,7 +15,7 @@ public class SeoService {
     @Value("${app.base-url:https://datedate.site}")
     private String baseUrl;
 
-    private static final String DEFAULT_OG_IMAGE = "/og-image.svg";
+    private static final String DEFAULT_OG_IMAGE = "/og-image.png";
     private static final String BRAND_NAME = "DateDate";
 
     /**
@@ -131,6 +131,7 @@ public class SeoService {
             .ogDescription("카톡방에서 날짜 조율 그만. 링크 하나로 날짜·장소·메뉴를 한번에 정하세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .jsonLd(jsonLd)
+            .adsEnabled(true)
             .build();
     }
 
@@ -254,22 +255,7 @@ public class SeoService {
             .ogDescription("5단계로 쉽게! 링크 하나로 날짜·장소·메뉴까지 한번에 정하는 방법을 알아보세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .jsonLd(jsonLd)
-            .build();
-    }
-
-    /**
-     * 개인정보처리방침 페이지 SEO 메타데이터.
-     */
-    public SeoMetadata getPrivacyPolicySeo() {
-        return SeoMetadata.builder()
-            .title("개인정보처리방침 | " + BRAND_NAME)
-            .description("DateDate 서비스의 개인정보 수집·이용 방침을 안내합니다.")
-            .robots("index, follow")
-            .canonical(baseUrl + "/privacy-policy")
-            .ogType("website")
-            .ogTitle("개인정보처리방침 | " + BRAND_NAME)
-            .ogDescription("DateDate 서비스의 개인정보 수집·이용 방침을 안내합니다.")
-            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .adsEnabled(true)
             .build();
     }
 
@@ -321,23 +307,7 @@ public class SeoService {
             .ogDescription(description)
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .jsonLd(jsonLd)
-            .build();
-    }
-
-    /**
-     * 서비스 소개 페이지 SEO 메타데이터.
-     */
-    public SeoMetadata getAboutSeo() {
-        return SeoMetadata.builder()
-            .title("서비스 소개 | " + BRAND_NAME)
-            .description("DateDate는 가입 없이 링크 하나로 그룹 날짜 조율, 장소·메뉴 투표까지 한번에 해결하는 무료 서비스입니다.")
-            .keywords("DateDate 소개, 약속 잡기 서비스, 일정 조율 무료, 그룹 스케줄링")
-            .robots("index, follow")
-            .canonical(baseUrl + "/about")
-            .ogType("website")
-            .ogTitle("DateDate 소개 - 무료 그룹 일정 조율 서비스")
-            .ogDescription("가입 없이, 링크 하나로 날짜·장소·메뉴를 한번에 정하세요.")
-            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .adsEnabled(true)
             .build();
     }
 
@@ -384,6 +354,99 @@ public class SeoService {
             .ogDescription("DateDate에서 가장 인기 있는 약속 장소와 메뉴 TOP 10, 서비스 이용 통계를 확인하세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .jsonLd(jsonLd)
+            .adsEnabled(true)
+            .build();
+    }
+
+    /**
+     * 개인정보처리방침 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getPrivacySeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": "개인정보처리방침 - DateDate",
+                "description": "DateDate 개인정보처리방침",
+                "url": "%s/privacy"
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "개인정보처리방침"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl);
+
+        return SeoMetadata.builder()
+            .title("개인정보처리방침 | " + BRAND_NAME)
+            .description("DateDate 개인정보처리방침. 수집하는 정보, 사용 목적, 제3자 광고, 쿠키 정책 등을 안내합니다.")
+            .keywords("개인정보처리방침, 프라이버시, 개인정보보호")
+            .robots("index, follow")
+            .canonical(baseUrl + "/privacy")
+            .ogType("website")
+            .ogTitle("개인정보처리방침 | " + BRAND_NAME)
+            .ogDescription("DateDate 개인정보처리방침")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
+            .build();
+    }
+
+    /**
+     * 이용약관 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getTermsSeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": "이용약관 - DateDate",
+                "description": "DateDate 서비스 이용약관",
+                "url": "%s/terms"
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "이용약관"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl);
+
+        return SeoMetadata.builder()
+            .title("이용약관 | " + BRAND_NAME)
+            .description("DateDate 서비스 이용약관. 서비스 이용 조건, 면책 사항, 데이터 보관 정책 등을 안내합니다.")
+            .keywords("이용약관, 서비스 약관, 이용 조건")
+            .robots("index, follow")
+            .canonical(baseUrl + "/terms")
+            .ogType("website")
+            .ogTitle("이용약관 | " + BRAND_NAME)
+            .ogDescription("DateDate 서비스 이용약관")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
             .build();
     }
 }

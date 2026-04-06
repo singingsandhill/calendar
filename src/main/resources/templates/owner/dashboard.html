@@ -45,8 +45,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
 
     <div class="empty-state" th:if="${schedules.isEmpty()}">
-        <p>아직 일정이 없습니다. 첫 번째 일정을 만들어보세요!</p>
-        <button class="btn btn-primary" onclick="openCreateModal()">+ 새 일정</button>
+        <h2>여러명이서 쉽게 날짜 조율하기</h2>
+        <p>DateDate는 가입 없이 링크 하나로 모임 날짜, 장소, 메뉴를 한번에 정할 수 있는 무료 일정 조율 서비스입니다.</p>
+        <p>아래 버튼을 눌러 첫 번째 일정을 만들어보세요. 생성된 링크를 참여자에게 공유하면 각자 가능한 날짜를 선택할 수 있습니다.</p>
+        <button class="btn btn-primary" onclick="openCreateModal()">+ 새 일정 만들기</button>
+        <p style="margin-top: 1rem;"><a th:href="@{/guide}">사용 가이드 보기 &rarr;</a></p>
     </div>
 </main>
 

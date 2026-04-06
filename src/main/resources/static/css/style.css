@@ -3335,71 +3335,65 @@ footer {
     }
 }
 
-/* ======================================
-   POLICY / ABOUT - 정책 페이지 스타일
-   ====================================== */
-.policy-article {
+/* ========================= */
+/* Policy Pages (Privacy, Terms) */
+/* ========================= */
+
+.policy-page {
     max-width: 800px;
-    margin: 4rem auto;
-    padding: 0 2rem 4rem;
+    margin: 0 auto;
+    padding-top: 2rem;
 }
 
-.policy-header {
-    margin-bottom: 3rem;
-    padding-bottom: 2rem;
-    border-bottom: 2px solid var(--border-color);
+.policy-hero {
+    text-align: center;
+    padding: 3rem 0 1rem;
 }
 
-.policy-header h1 {
-    font-size: 2.2rem;
-    margin-bottom: 0.75rem;
+.policy-hero h1 {
+    font-family: var(--font-serif);
+    font-size: 2rem;
     color: var(--text-color);
+    margin-bottom: 0.5rem;
 }
 
 .policy-updated {
-    font-size: 0.875rem;
+    font-size: 0.9rem;
     color: var(--text-light);
 }
 
-.policy-intro {
-    font-size: 1.05rem;
-    line-height: 1.8;
-    color: var(--text-light);
-    margin-bottom: 1.5rem;
+.policy-content {
+    padding: 1rem 0 3rem;
 }
 
 .policy-section {
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
 }
 
 .policy-section h2 {
+    font-family: var(--font-serif);
     font-size: 1.3rem;
-    margin-bottom: 1rem;
     color: var(--text-color);
-}
-
-.policy-section h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 1.25rem 0 0.5rem;
-    color: var(--text-color);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .policy-section p {
     line-height: 1.8;
     color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.policy-section ul {
+    padding-left: 1.5rem;
     margin-bottom: 0.75rem;
 }
 
-.policy-section ul,
-.policy-section ol {
-    padding-left: 1.5rem;
-    line-height: 1.8;
-}
-
 .policy-section li {
-    margin-bottom: 0.4rem;
+    line-height: 1.8;
     color: var(--text-color);
+    margin-bottom: 0.25rem;
 }
 
 .policy-section a {
@@ -3410,14 +3404,6 @@ footer {
 
 .policy-section a:hover {
     color: var(--primary-dark);
-}
-
-.policy-section code {
-    background: var(--bg-light);
-    padding: 0.15em 0.4em;
-    border-radius: 4px;
-    font-size: 0.9em;
-    font-family: monospace;
 }
 
 /* footer-nav for default footer */
@@ -3441,12 +3427,11 @@ footer {
 }
 
 @media (max-width: 480px) {
-    .policy-article {
-        margin: 2rem auto;
-        padding: 0 1rem 2rem;
+    .policy-page {
+        padding-top: 1rem;
     }
 
-    .policy-header h1 {
+    .policy-hero h1 {
         font-size: 1.6rem;
     }
 }

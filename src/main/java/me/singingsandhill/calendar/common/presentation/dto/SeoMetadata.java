@@ -14,7 +14,8 @@ public record SeoMetadata(
     String ogTitle,
     String ogDescription,
     String ogImage,
-    String jsonLd
+    String jsonLd,
+    boolean adsEnabled
 ) {
     public static Builder builder() {
         return new Builder();
@@ -31,6 +32,7 @@ public record SeoMetadata(
         private String ogDescription;
         private String ogImage;
         private String jsonLd;
+        private boolean adsEnabled = false;
 
         public Builder title(String title) {
             this.title = title;
@@ -82,6 +84,11 @@ public record SeoMetadata(
             return this;
         }
 
+        public Builder adsEnabled(boolean adsEnabled) {
+            this.adsEnabled = adsEnabled;
+            return this;
+        }
+
         public SeoMetadata build() {
             return new SeoMetadata(
                 title,
@@ -93,7 +100,8 @@ public record SeoMetadata(
                 ogTitle != null ? ogTitle : title,
                 ogDescription != null ? ogDescription : description,
                 ogImage,
-                jsonLd
+                jsonLd,
+                adsEnabled
             );
         }
     }
