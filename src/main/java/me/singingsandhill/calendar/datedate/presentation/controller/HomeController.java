@@ -38,6 +38,24 @@ public class HomeController {
         return "index";
     }
 
+    @GetMapping("/guide")
+    public String guide(Model model) {
+        model.addAttribute("seo", seoService.getGuideSeo());
+        return "guide";
+    }
+
+    @GetMapping("/privacy")
+    public String privacy(Model model) {
+        model.addAttribute("seo", seoService.getPrivacySeo());
+        return "privacy";
+    }
+
+    @GetMapping("/terms")
+    public String terms(Model model) {
+        model.addAttribute("seo", seoService.getTermsSeo());
+        return "terms";
+    }
+
     @PostMapping("/start")
     public String start(@RequestParam String ownerId) {
         String normalizedId = ownerId.toLowerCase();
@@ -45,15 +63,4 @@ public class HomeController {
         return "redirect:/" + normalizedId;
     }
 
-    @GetMapping("/privacy-policy")
-    public String privacyPolicy(Model model) {
-        model.addAttribute("seo", seoService.getPrivacyPolicySeo());
-        return "privacy-policy";
-    }
-
-    @GetMapping("/about")
-    public String about(Model model) {
-        model.addAttribute("seo", seoService.getAboutSeo());
-        return "about";
-    }
 }

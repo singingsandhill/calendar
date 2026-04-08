@@ -15,12 +15,11 @@ public class SeoService {
     @Value("${app.base-url:https://datedate.site}")
     private String baseUrl;
 
-    private static final String DEFAULT_OG_IMAGE = "/og-image.svg";
+    private static final String DEFAULT_OG_IMAGE = "/og-image.png";
     private static final String BRAND_NAME = "DateDate";
 
     /**
      * 홈페이지(랜딩 페이지) SEO 메타데이터.
-     * 유일하게 인덱싱되는 페이지입니다.
      */
     public SeoMetadata getHomeSeo() {
         String jsonLd = """
@@ -44,6 +43,26 @@ public class SeoService {
                     "name": "DateDate",
                     "url": "%s"
                 }
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "name": "DateDate",
+                "url": "%s",
+                "logo": "%s/og-image.png",
+                "description": "여러명이서 쉽게 날짜 조율하기. 링크 하나로 날짜, 장소, 메뉴까지 한번에 정하세요."
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    }
+                ]
             },
             {
                 "@context": "https://schema.org",
@@ -99,7 +118,7 @@ public class SeoService {
                     }
                 ]
             }]
-            """.formatted(baseUrl, baseUrl);
+            """.formatted(baseUrl, baseUrl, baseUrl, baseUrl, baseUrl);
 
         return SeoMetadata.builder()
             .title("DateDate - 약속 잡기 | 여러명이서 쉽게 날짜 조율하기")
@@ -112,6 +131,7 @@ public class SeoService {
             .ogDescription("카톡방에서 날짜 조율 그만. 링크 하나로 날짜·장소·메뉴를 한번에 정하세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .jsonLd(jsonLd)
+            .adsEnabled(true)
             .build();
     }
 
@@ -152,35 +172,142 @@ public class SeoService {
     }
 
     /**
-     * 개인정보처리방침 페이지 SEO 메타데이터.
+     * 사용 가이드 페이지 SEO 메타데이터.
+     * HowTo 스키마로 Google 리치 결과 대상.
      */
-    public SeoMetadata getPrivacyPolicySeo() {
+    public SeoMetadata getGuideSeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "HowTo",
+                "name": "DateDate로 여러명 약속 잡기",
+                "description": "DateDate를 사용하여 그룹 일정을 조율하는 방법을 5단계로 안내합니다.",
+                "totalTime": "PT2M",
+                "tool": {
+                    "@type": "HowToTool",
+                    "name": "웹 브라우저"
+                },
+                "step": [
+                    {
+                        "@type": "HowToStep",
+                        "position": 1,
+                        "name": "페이지 만들기",
+                        "text": "datedate.site에 접속하여 원하는 ID를 입력하고 시작하기를 클릭합니다. 영문, 숫자, 하이픈으로 2~20자의 고유 ID를 만드세요.",
+                        "url": "%s/guide#step-1"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 2,
+                        "name": "일정 생성",
+                        "text": "대시보드에서 월을 선택하면 해당 월의 일정 페이지가 자동으로 생성됩니다.",
+                        "url": "%s/guide#step-2"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 3,
+                        "name": "링크 공유",
+                        "text": "생성된 일정 페이지 링크를 카카오톡, 슬랙, 이메일 등으로 참여자에게 공유합니다.",
+                        "url": "%s/guide#step-3"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 4,
+                        "name": "날짜 선택 & 투표",
+                        "text": "참여자들이 이름을 입력하고 가능한 날짜를 클릭하여 선택합니다. 장소와 메뉴도 제안하고 투표할 수 있습니다.",
+                        "url": "%s/guide#step-4"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 5,
+                        "name": "결과 확인 & 결정",
+                        "text": "가장 많은 사람이 가능한 날짜, 가장 인기있는 장소와 메뉴를 확인하고 최종 약속을 결정합니다.",
+                        "url": "%s/guide#step-5"
+                    }
+                ]
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "사용 가이드"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl, baseUrl, baseUrl, baseUrl, baseUrl);
+
         return SeoMetadata.builder()
-            .title("개인정보처리방침 | " + BRAND_NAME)
-            .description("DateDate 서비스의 개인정보 수집·이용 방침을 안내합니다.")
+            .title("사용 가이드 - 여러명 약속 잡기 방법 | " + BRAND_NAME)
+            .description("DateDate로 여러명이 약속을 잡는 방법을 5단계로 안내합니다. 무료 일정 조율 사이트로 모임 날짜, 장소, 메뉴를 한번에 정하세요.")
+            .keywords("여러명 약속 잡기 방법, 무료 일정 조율 사이트, 모임 날짜 맞추기, 그룹 스케줄링 사용법, 약속 잡기 도구")
             .robots("index, follow")
-            .canonical(baseUrl + "/privacy-policy")
-            .ogType("website")
-            .ogTitle("개인정보처리방침 | " + BRAND_NAME)
-            .ogDescription("DateDate 서비스의 개인정보 수집·이용 방침을 안내합니다.")
+            .canonical(baseUrl + "/guide")
+            .ogType("article")
+            .ogTitle("사용 가이드 - 여러명 약속 잡기 방법 | " + BRAND_NAME)
+            .ogDescription("5단계로 쉽게! 링크 하나로 날짜·장소·메뉴까지 한번에 정하는 방법을 알아보세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
             .build();
     }
 
     /**
-     * 서비스 소개 페이지 SEO 메타데이터.
+     * 활용 사례 페이지 SEO 메타데이터.
      */
-    public SeoMetadata getAboutSeo() {
+    public SeoMetadata getUseCaseSeo(String slug, String title, String description) {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": "%s | DateDate",
+                "description": "%s",
+                "url": "%s/use-cases/%s"
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "활용 사례",
+                        "item": "%s/use-cases/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": "%s"
+                    }
+                ]
+            }]
+            """.formatted(title, description, baseUrl, slug, baseUrl, baseUrl, title);
+
         return SeoMetadata.builder()
-            .title("서비스 소개 | " + BRAND_NAME)
-            .description("DateDate는 가입 없이 링크 하나로 그룹 날짜 조율, 장소·메뉴 투표까지 한번에 해결하는 무료 서비스입니다.")
-            .keywords("DateDate 소개, 약속 잡기 서비스, 일정 조율 무료, 그룹 스케줄링")
+            .title(title + " | " + BRAND_NAME + " 활용 사례")
+            .description(description)
+            .keywords(title + ", 약속 잡기, 일정 조율, " + BRAND_NAME)
             .robots("index, follow")
-            .canonical(baseUrl + "/about")
-            .ogType("website")
-            .ogTitle("DateDate 소개 - 무료 그룹 일정 조율 서비스")
-            .ogDescription("가입 없이, 링크 하나로 날짜·장소·메뉴를 한번에 정하세요.")
+            .canonical(baseUrl + "/use-cases/" + slug)
+            .ogType("article")
+            .ogTitle(title + " | " + BRAND_NAME)
+            .ogDescription(description)
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
             .build();
     }
 
@@ -227,6 +354,99 @@ public class SeoService {
             .ogDescription("DateDate에서 가장 인기 있는 약속 장소와 메뉴 TOP 10, 서비스 이용 통계를 확인하세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .jsonLd(jsonLd)
+            .adsEnabled(true)
+            .build();
+    }
+
+    /**
+     * 개인정보처리방침 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getPrivacySeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": "개인정보처리방침 - DateDate",
+                "description": "DateDate 개인정보처리방침",
+                "url": "%s/privacy"
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "개인정보처리방침"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl);
+
+        return SeoMetadata.builder()
+            .title("개인정보처리방침 | " + BRAND_NAME)
+            .description("DateDate 개인정보처리방침. 수집하는 정보, 사용 목적, 제3자 광고, 쿠키 정책 등을 안내합니다.")
+            .keywords("개인정보처리방침, 프라이버시, 개인정보보호")
+            .robots("index, follow")
+            .canonical(baseUrl + "/privacy")
+            .ogType("website")
+            .ogTitle("개인정보처리방침 | " + BRAND_NAME)
+            .ogDescription("DateDate 개인정보처리방침")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
+            .build();
+    }
+
+    /**
+     * 이용약관 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getTermsSeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "name": "이용약관 - DateDate",
+                "description": "DateDate 서비스 이용약관",
+                "url": "%s/terms"
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "이용약관"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl);
+
+        return SeoMetadata.builder()
+            .title("이용약관 | " + BRAND_NAME)
+            .description("DateDate 서비스 이용약관. 서비스 이용 조건, 면책 사항, 데이터 보관 정책 등을 안내합니다.")
+            .keywords("이용약관, 서비스 약관, 이용 조건")
+            .robots("index, follow")
+            .canonical(baseUrl + "/terms")
+            .ogType("website")
+            .ogTitle("이용약관 | " + BRAND_NAME)
+            .ogDescription("DateDate 서비스 이용약관")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
             .build();
     }
 }

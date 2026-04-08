@@ -76,4 +76,12 @@ public class StaticResourceController {
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(7)))
                 .body(resource);
     }
+
+    @GetMapping(value = "/apple-touch-icon.png", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<Resource> appleTouchIcon() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)))
+                .body(new ClassPathResource("static/apple-touch-icon.png"));
+    }
 }

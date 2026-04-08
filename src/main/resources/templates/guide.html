@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<main class="container guide-page">
+    <section class="guide-hero animate-on-scroll">
+        <h1>DateDate 사용 가이드</h1>
+        <p class="guide-subtitle">5단계로 여러명의 약속을 쉽게 잡는 방법</p>
+    </section>
+
+    <section class="guide-steps">
+        <div class="guide-step animate-on-scroll" id="step-1">
+            <div class="guide-step-number">1</div>
+            <div class="guide-step-content">
+                <h2>페이지 만들기</h2>
+                <p>datedate.site에 접속하여 원하는 ID를 입력하고 <strong>시작하기</strong>를 클릭합니다.</p>
+                <ul>
+                    <li>영문 소문자, 숫자, 하이픈(-)만 사용 가능</li>
+                    <li>2~20자 사이로 입력</li>
+                    <li>예시: <code>my-team</code>, <code>college-friends</code>, <code>trip-2025</code></li>
+                </ul>
+                <p class="guide-tip">랜덤 생성 버튼으로 고유한 ID를 자동으로 만들 수도 있습니다.</p>
+            </div>
+        </div>
+
+        <div class="guide-step animate-on-scroll" id="step-2">
+            <div class="guide-step-number">2</div>
+            <div class="guide-step-content">
+                <h2>일정 생성</h2>
+                <p>대시보드에서 원하는 <strong>월(月)을 선택</strong>하면 해당 월의 일정 페이지가 자동으로 생성됩니다.</p>
+                <ul>
+                    <li>여러 달의 일정을 동시에 관리 가능</li>
+                    <li>대시보드에서 모든 일정을 한눈에 확인</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="guide-step animate-on-scroll" id="step-3">
+            <div class="guide-step-number">3</div>
+            <div class="guide-step-content">
+                <h2>링크 공유</h2>
+                <p>생성된 일정 페이지의 <strong>링크를 복사</strong>하여 참여자들에게 공유합니다.</p>
+                <ul>
+                    <li>카카오톡, 슬랙, 이메일 등 어디로든 공유 가능</li>
+                    <li>참여자는 가입이나 앱 설치 없이 바로 참여</li>
+                    <li>링크만 있으면 누구나 접근 가능</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="guide-step animate-on-scroll" id="step-4">
+            <div class="guide-step-number">4</div>
+            <div class="guide-step-content">
+                <h2>날짜 선택 & 투표</h2>
+                <p>참여자들이 <strong>이름을 입력</strong>하고 캘린더에서 <strong>가능한 날짜를 클릭</strong>합니다.</p>
+                <ul>
+                    <li>최대 8명까지 참여 가능</li>
+                    <li>참여자마다 고유 색상이 부여되어 직관적으로 확인</li>
+                    <li>날짜 수정도 간편 - 드롭다운에서 이름 선택 후 재선택</li>
+                    <li>장소와 메뉴도 제안하고 투표할 수 있음</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="guide-step animate-on-scroll" id="step-5">
+            <div class="guide-step-number">5</div>
+            <div class="guide-step-content">
+                <h2>결과 확인 & 결정</h2>
+                <p>가장 많은 사람이 가능한 날짜가 <strong>자동으로 하이라이트</strong>됩니다.</p>
+                <ul>
+                    <li>겹치는 날짜가 많을수록 진한 색상으로 표시</li>
+                    <li>인기 장소와 메뉴 순위도 함께 확인</li>
+                    <li>최종 약속 날짜, 장소, 메뉴를 결정하세요</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="guide-cta animate-on-scroll">
+        <h2>지금 바로 시작하세요</h2>
+        <p>가입도, 설치도, 비용도 없습니다.</p>
+        <a href="/#start-form" class="btn-spring">일정 만들기</a>
+    </section>
+
+    <section class="guide-use-cases animate-on-scroll">
+        <h2>이런 상황에서 활용하세요</h2>
+        <div class="guide-use-case-grid">
+            <a th:href="@{/use-cases/friend-meetup}" class="guide-use-case-card">
+                <span class="guide-use-case-emoji">👥</span>
+                <h3>친구 모임</h3>
+                <p>동창 모임, 정기 모임 날짜 잡기</p>
+            </a>
+            <a th:href="@{/use-cases/team-meeting}" class="guide-use-case-card">
+                <span class="guide-use-case-emoji">💼</span>
+                <h3>팀 회의</h3>
+                <p>킥오프, 리뷰 미팅 일정 조율</p>
+            </a>
+            <a th:href="@{/use-cases/travel-planning}" class="guide-use-case-card">
+                <span class="guide-use-case-emoji">✈️</span>
+                <h3>여행 계획</h3>
+                <p>여행 멤버 일정 맞추기</p>
+            </a>
+            <a th:href="@{/use-cases/study-group}" class="guide-use-case-card">
+                <span class="guide-use-case-emoji">📚</span>
+                <h3>스터디 그룹</h3>
+                <p>정기 모임 날짜 조율</p>
+            </a>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+</body>
+</html>
