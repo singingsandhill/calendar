@@ -14,6 +14,8 @@
     // ==================== Modal Functions ====================
 
     window.openCreateModal = function() {
+        const errorEl = document.getElementById('createFormError');
+        if (errorEl) { errorEl.style.display = 'none'; errorEl.textContent = ''; }
         document.getElementById('createModal').classList.add('show');
     };
 
@@ -47,6 +49,9 @@
 
     async function handleCreateSchedule(e) {
         e.preventDefault();
+        const errorEl = document.getElementById('createFormError');
+        if (errorEl) { errorEl.style.display = 'none'; errorEl.textContent = ''; }
+
         const year = parseInt(document.getElementById('year').value);
         const month = parseInt(document.getElementById('month').value);
 
@@ -54,6 +59,7 @@
             await api.createSchedule(ownerId, year, month);
             window.location.reload();
         } catch (error) {
+            if (errorEl) { errorEl.textContent = error.message; errorEl.style.display = 'block'; }
             toast.error(error.message);
         }
     }

@@ -27,7 +27,9 @@ const api = {
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({ code: 'UNKNOWN', message: '오류가 발생했습니다' }));
-            const koreanMessage = errorMessages[error.code] || error.message || '오류가 발생했습니다';
+            const koreanMessage = (error.code === 'VALIDATION_ERROR' && error.message)
+                ? error.message
+                : (errorMessages[error.code] || error.message || '오류가 발생했습니다');
             throw new Error(koreanMessage);
         }
 

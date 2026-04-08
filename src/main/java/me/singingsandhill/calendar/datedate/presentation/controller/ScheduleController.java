@@ -43,6 +43,10 @@ public class ScheduleController {
             @PathVariable int month,
             Model model) {
 
+        if (year < 2024 || year > 2100 || month < 1 || month > 12) {
+            return "redirect:/";
+        }
+
         ownerService.getOrCreateOwner(ownerId);
 
         Schedule schedule = scheduleService.findScheduleByOwnerAndYearMonth(ownerId, year, month);
