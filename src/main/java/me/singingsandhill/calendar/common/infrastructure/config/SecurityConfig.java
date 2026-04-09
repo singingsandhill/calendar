@@ -41,8 +41,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/stock/**").permitAll()
 
                 // 기존 동적 경로 (owner 페이지 등)
-                .requestMatchers("/{ownerId}").permitAll()
-                .requestMatchers("/{ownerId}/{year}/{month}").permitAll()
+                .requestMatchers("/*").permitAll()
+                .requestMatchers("/*/*/*").permitAll()
 
                 .anyRequest().authenticated()
             )
