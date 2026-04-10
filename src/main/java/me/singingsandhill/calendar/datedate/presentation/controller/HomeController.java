@@ -5,6 +5,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import me.singingsandhill.calendar.datedate.application.service.InsightsService;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
@@ -57,10 +58,15 @@ public class HomeController {
     }
 
     @PostMapping("/start")
-    public String start(@RequestParam String ownerId) {
-        String normalizedId = ownerId.toLowerCase();
-        ownerService.getOrCreateOwner(normalizedId);
-        return "redirect:/" + normalizedId;
+    public String start(@RequestParam String ownerId, RedirectAttributes redirectAttributes) {
+        try {
+            String normalizedId = ownerId.toLowerCase();
+            ownerService.getOrCreateOwner(normalizedId);
+            return "redirect:/" + normalizedId;
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "페이지를 만들 수 없습니다. 다시 시도해 주세요.");
+            return "redirect:/";
+        }
     }
 
 }

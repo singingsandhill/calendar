@@ -12,7 +12,7 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 
 ## Risk Levels
 
-- Stop-loss: -8%
+- Stop-loss: -5%
 - Take-profit: +15%
 - Trailing stop: activates at +10%, trails -3%
 - Fee rate: 0.25% (taker), min profit threshold: 0.6%
@@ -22,6 +22,7 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 - Bullish (price > MA60): 70% coins / 30% KRW
 - Bearish (price < MA60): 30% coins / 70% KRW
 - Trigger: 10% deviation from target
+- Min sell PnL: -3% (allows small loss to proceed with rebalancing)
 - Safety details: see `application/CLAUDE.md`
 
 ## ATR-based Dynamic Order Ratio

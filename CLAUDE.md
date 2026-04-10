@@ -13,7 +13,7 @@ Multi-domain Spring Boot 4.0.0 / Java 21 web application with four modules:
 
 ```bash
 ./gradlew build                              # Full build with tests
-./gradlew bootRun                            # Run application (http://localhost:8080)
+./gradlew bootRun                            # Run application (http://localhost:8081)
 ./gradlew test                               # Run all tests
 ./gradlew test --tests "*ServiceTest"       # Run pattern-matched tests
 ```
@@ -48,7 +48,7 @@ Hexagonal Architecture (Ports & Adapters). Each module has `domain/` (entities, 
 
 - **Dev:** H2 file-based (`./data/scheduledb`), MySQL compatibility mode
 - **Test:** H2 in-memory, create-drop DDL
-- **Console:** http://localhost:8080/h2-console (user: sa, no password)
+- **Console:** http://localhost:8081/h2-console (user: sa, no password)
 
 ## Testing
 

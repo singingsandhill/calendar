@@ -17,8 +17,8 @@ import java.time.ZoneId;
  *
  * 거래 타임라인:
  * 08:30      사전 준비 (전일 데이터 수집)
- * 09:05      갭 상승 종목 스크리닝 (시가 확정 대기)
- * 09:10~11:20  5초 간격 트레이딩 루프
+ * 09:20      갭 상승 종목 스크리닝 (체결강도 집계 안정화 대기)
+ * 09:20~11:20  5초 간격 트레이딩 루프
  * 11:20      최종 청산
  */
 @Component
@@ -56,13 +56,14 @@ public class StockTradingScheduler {
     }
 
     /**
-     * 갭 상승 종목 스크리닝 (09:10 월~금)
-     * - [FIX #4] 09:05→09:10: 장 시작 직후 체결강도(strength)=0 문제 해결
-     *   09:05에 실행 시 전 종목 strength=0으로 스크리닝 실패 사례 다수 발생
+     * 갭 상승 종목 스크리닝 (09:20 월~금)
+     * - [FIX #4] 09:05→09:10: 장 시작 직후 체결강도(strength)=0 문제 해결 (불충분)
+     * - [FIX #5] 09:10→09:20: 4/6~4/8 로그에서 여전히 전 종목 strength=0 확인
+     *   09:10에도 KIS API가 체결강도 미집계 상태로 반환하는 케이스 다수
      * - 2-7% 갭 상승 종목 필터링
      * - 시가총액, 거래대금, 체결강도 필터
      */
-    @Scheduled(cron = "0 10 9 * * MON-FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 20 9 * * MON-FRI", zone = "Asia/Seoul")
     public void executeScreening() {
         if (!isEnabled() || !isTradingDay()) {
             return;

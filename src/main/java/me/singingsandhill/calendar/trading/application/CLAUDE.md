@@ -2,8 +2,8 @@
 
 ## Signal Logic
 
-- BUY: score >= 40 AND RSI < 70 AND StochK < 85
-- SELL: score <= -40 AND RSI > 30 AND StochK > 15
+- BUY: score >= 30 AND RSI < 70 AND StochK < 85
+- SELL: score <= -30 AND RSI > 30 AND StochK > 15
 - Otherwise: HOLD
 
 ## Score Components (weights)

@@ -1,12 +1,19 @@
-# DateDate (약속 잡기)
+# Calendar — 멀티모듈 Spring Boot 웹 어플리케이션
 
-그룹 일정 조율을 위한 웹 어플리케이션 - 여러 명이 함께 가능한 날짜를 쉽게 찾아보세요.
+Spring Boot 4.0.0 / Java 21 기반의 4개 모듈로 구성된 웹 애플리케이션.
+
+| 모듈 | 패키지 | 설명 |
+|------|--------|------|
+| **DateDate** | `datedate` | 그룹 일정 조율 - 여러 명이 가능한 날짜를 쉽게 찾아보는 서비스 |
+| **Runner** | `runner` | 러닝 크루(97 Runners) 출석 관리, 순위 대시보드 |
+| **Trading** | `trading` | Bithumb 암호화폐 자동매매 봇 (MA/RSI/Stochastic) |
+| **Stock** | `stock` | 한국 주식 갭앤풀백 전략 봇 (한국투자증권 API) |
 
 ---
 
 ## 목차
 
-1. [서비스 소개](#서비스-소개)
+1. [DateDate 서비스 소개](#datedate-서비스-소개)
 2. [유저 플로우](#유저-플로우)
 3. [시스템 아키텍처](#시스템-아키텍처)
 4. [시퀀스 다이어그램](#시퀀스-다이어그램)
@@ -18,7 +25,7 @@
 
 ---
 
-## 서비스 소개
+## DateDate 서비스 소개
 
 ### 해결하는 문제
 
@@ -111,56 +118,53 @@ flowchart TD
 
 ### 헥사고날 아키텍처 (Ports & Adapters)
 
+모든 모듈이 동일한 4계층 구조를 따릅니다:
+
 ```mermaid
 graph TB
     subgraph Presentation["Presentation Layer"]
-        Controller["MVC Controllers<br/>(Thymeleaf)"]
+        MVC["MVC Controllers (Thymeleaf)"]
         API["REST API Controllers"]
-        DTO["DTOs"]
+        EH["Exception Handlers<br/>GlobalExceptionHandler (REST → JSON)<br/>MvcExceptionHandler (MVC → error/4xx, error/5xx)"]
     end
 
     subgraph Application["Application Layer"]
-        Service["Services<br/>(OwnerService, ScheduleService, ParticipantService)"]
-        Exception["Business Exceptions"]
+        Service["Services"]
+        Exception["BusinessException 계층"]
     end
 
     subgraph Domain["Domain Layer"]
-        Owner["Owner Aggregate"]
-        Schedule["Schedule Aggregate<br/>+ YearMonth"]
-        Participant["Participant Aggregate<br/>+ ParticipantColor"]
-        Port["Repository Interfaces<br/>(Ports)"]
+        Entities["Domain Entities / Aggregates"]
+        Port["Repository Interfaces (Ports)"]
     end
 
     subgraph Infrastructure["Infrastructure Layer"]
-        Entity["JPA Entities"]
-        Adapter["Repository Adapters"]
-        Config["Configurations"]
+        JPA["JPA Entities & Adapters"]
+        External["External APIs (Bithumb, KIS)"]
         DB[(H2 Database)]
     end
 
-    Controller --> Service
+    MVC --> Service
     API --> Service
     Service --> Port
-    Port -.->|implements| Adapter
-    Adapter --> Entity
-    Entity --> DB
+    Port -.->|implements| JPA
+    JPA --> DB
+    Service --> External
 ```
 
 ### 계층별 역할
 
-| 계층 | 패키지 | 역할 | 주요 구성요소 |
-|------|--------|------|--------------|
-| **Presentation** | `presentation/` | HTTP 요청/응답 처리 | Controllers, DTOs, Templates |
-| **Application** | `application/` | 비즈니스 로직 조율 | OwnerService, ScheduleService, ParticipantService |
-| **Domain** | `domain/` | 핵심 비즈니스 규칙 | Owner, Schedule, Participant (Aggregates) |
-| **Infrastructure** | `infrastructure/` | 외부 시스템 연동 | JPA Entities, Repository Adapters |
+| 계층 | 패키지 | 역할 |
+|------|--------|------|
+| **Presentation** | `presentation/` | HTTP 요청/응답, 에러 핸들링 |
+| **Application** | `application/` | 비즈니스 로직 조율, 서비스 |
+| **Domain** | `domain/` | 핵심 비즈니스 규칙, 포트 인터페이스 |
+| **Infrastructure** | `infrastructure/` | JPA 어댑터, 외부 API 클라이언트, 설정 |
 
-### 핵심 설계 패턴
+### 에러 핸들링
 
-- **Ports & Adapters**: Domain 계층이 Repository 인터페이스(Port)를 정의, Infrastructure 계층이 구현(Adapter)
-- **Aggregate Pattern**: Owner, Schedule, Participant가 각각 독립적인 집합체
-- **Value Objects**: `YearMonth`, `ParticipantColor`를 Java Record로 구현
-- **Immutability**: 컬렉션 반환 시 unmodifiable wrapper 사용
+- **`GlobalExceptionHandler`** — `@RestController` 전용, JSON `{ "code", "message" }` 반환
+- **`MvcExceptionHandler`** — `@Controller` 전용, `error/4xx.html` 또는 `error/5xx.html` 렌더링
 
 ---
 
@@ -265,21 +269,25 @@ sequenceDiagram
 
 ### Backend
 
-| 분류 | 기술 | 버전 | 비고 |
-|------|------|------|------|
-| Language | Java | 21 (LTS) | |
-| Framework | Spring Boot | 4.0.0 | |
-| ORM | Spring Data JPA | - | |
-| Persistence | Hibernate | - | |
-| Validation | Jakarta Bean Validation | - | |
-| Utility | Lombok | - | |
+| 분류 | 기술 | 버전 |
+|------|------|------|
+| Language | Java | 21 (LTS) |
+| Framework | Spring Boot | 4.0.0 |
+| ORM | Spring Data JPA / Hibernate | - |
+| Security | Spring Security | - |
+| Reactive | Spring WebFlux | Trading 모듈 (Bithumb API) |
+| Validation | Jakarta Bean Validation | - |
+| Template | Thymeleaf | - |
+| Mail | Spring Mail (SMTP) | Stock 봇 알림 |
+| Utility | Lombok | - |
 
 ### Database
 
 | 분류 | 기술 | 비고 |
 |------|------|------|
 | RDBMS | H2 Database | MySQL 호환 모드 |
-| Mode | File-based | `./data/scheduledb` |
+| Dev | File-based | `./data/scheduledb` |
+| Test | In-memory | `create-drop` DDL |
 
 ### Frontend
 
@@ -294,9 +302,7 @@ sequenceDiagram
 | 분류 | 기술 |
 |------|------|
 | Build Tool | Gradle |
-| Testing | JUnit 5 |
-| Mocking | Mockito |
-| Assertions | AssertJ |
+| Testing | JUnit 5 + Mockito + AssertJ |
 
 ---
 
@@ -315,10 +321,10 @@ git clone https://github.com/your-repo/calendar.git
 cd calendar
 ```
 
-2. 환경 변수 설정
+2. 환경 변수 설정 (`.env` 파일)
 ```bash
 cp .env.example .env
-# 필요시 .env 파일 편집
+# 필요시 .env 파일 편집 (DB_URL, BITHUMB_*, KIS_*, RUNNER_ADMIN_* 등)
 ```
 
 ### 빌드 및 실행
@@ -326,36 +332,26 @@ cp .env.example .env
 #### Linux / macOS
 
 ```bash
-# 빌드 (테스트 포함)
-./gradlew build
+./gradlew build                        # 빌드 (테스트 포함)
+./gradlew bootRun                      # 애플리케이션 실행
+./gradlew test                         # 테스트 실행
+./gradlew test --tests "*ServiceTest"  # 패턴 매칭 테스트
+```
 
-# 애플리케이션 실행
-./gradlew bootRun
+#### Jetson Nano / Linux (OpenClaw 컨테이너)
 
-# 테스트만 실행
-./gradlew test
+```bash
+export JAVA_HOME=/usr/lib/jvm/jdk-21.0.5+11
+export PATH=$JAVA_HOME/bin:$PATH
 
-# 특정 테스트 클래스 실행
-./gradlew test --tests ScheduleServiceTest
-
-# 패턴 매칭 테스트
-./gradlew test --tests "*ServiceTest"
+./gradlew bootRun --no-daemon --project-cache-dir /tmp/gradle-cache-calendar
 ```
 
 #### WSL 환경 (Windows JDK 사용)
 
 ```bash
-# 빌드
-cmd.exe /c "set JAVA_HOME=C:\\jdk-21&& .\\gradlew.bat build"
-
-# 실행
 cmd.exe /c "set JAVA_HOME=C:\\jdk-21&& .\\gradlew.bat bootRun"
-
-# 테스트
-cmd.exe /c "set JAVA_HOME=C:\\jdk-21&& .\\gradlew.bat test"
-
-# Java 프로세스 종료 (H2 DB 잠금 해제 시 필요)
-cmd.exe /c "taskkill /F /IM java.exe"
+cmd.exe /c "taskkill /F /IM java.exe"   # H2 DB 잠금 해제 시
 ```
 
 ### 접속 정보
@@ -364,6 +360,7 @@ cmd.exe /c "taskkill /F /IM java.exe"
 |--------|-----|------|
 | 애플리케이션 | http://localhost:8081 | 메인 서비스 |
 | H2 Console | http://localhost:8081/h2-console | user: `sa`, password: (없음) |
+| Runner 관리자 | http://localhost:8081/runners/admin/login | `RUNNER_ADMIN_*` 환경변수 |
 
 ---
 
@@ -421,75 +418,52 @@ cmd.exe /c "taskkill /F /IM java.exe"
 
 ```
 calendar/
-├── src/
-│   ├── main/
-│   │   ├── java/me/singingsandhill/calendar/
-│   │   │   ├── CalendarApplication.java
-│   │   │   │
-│   │   │   ├── presentation/                 # Presentation Layer
-│   │   │   │   ├── controller/               # MVC Controllers
-│   │   │   │   │   ├── HomeController.java
-│   │   │   │   │   ├── OwnerController.java
-│   │   │   │   │   └── ScheduleController.java
-│   │   │   │   ├── api/                      # REST API
-│   │   │   │   │   ├── OwnerApiController.java
-│   │   │   │   │   ├── ScheduleApiController.java
-│   │   │   │   │   ├── ParticipantApiController.java
-│   │   │   │   │   └── GlobalExceptionHandler.java
-│   │   │   │   └── dto/
-│   │   │   │       ├── request/
-│   │   │   │       └── response/
-│   │   │   │
-│   │   │   ├── application/                  # Application Layer
-│   │   │   │   ├── service/
-│   │   │   │   │   ├── OwnerService.java
-│   │   │   │   │   ├── ScheduleService.java
-│   │   │   │   │   └── ParticipantService.java
-│   │   │   │   └── exception/
-│   │   │   │
-│   │   │   ├── domain/                       # Domain Layer
-│   │   │   │   ├── owner/
-│   │   │   │   │   ├── Owner.java
-│   │   │   │   │   └── OwnerRepository.java
-│   │   │   │   ├── schedule/
-│   │   │   │   │   ├── Schedule.java
-│   │   │   │   │   ├── YearMonth.java
-│   │   │   │   │   └── ScheduleRepository.java
-│   │   │   │   └── participant/
-│   │   │   │       ├── Participant.java
-│   │   │   │       ├── ParticipantColor.java
-│   │   │   │       └── ParticipantRepository.java
-│   │   │   │
-│   │   │   └── infrastructure/               # Infrastructure Layer
-│   │   │       ├── config/
-│   │   │       └── persistence/
-│   │   │           ├── entity/
-│   │   │           ├── repository/
-│   │   │           ├── adapter/
-│   │   │           └── converter/
-│   │   │
-│   │   └── resources/
-│   │       ├── application.yaml
-│   │       ├── static/
-│   │       │   ├── css/
-│   │       │   └── js/
-│   │       │       ├── api.js
-│   │       │       └── calendar.js
-│   │       └── templates/
-│   │           ├── index.html
-│   │           ├── owner/dashboard.html
-│   │           ├── schedule/view.html
-│   │           └── fragments/
+├── src/main/java/me/singingsandhill/calendar/
+│   ├── CalendarApplication.java
+│   ├── common/                          # 공통 인프라
+│   │   ├── application/exception/       # BusinessException 기반 계층
+│   │   ├── infrastructure/config/       # SecurityConfig, 기타 설정
+│   │   └── presentation/
+│   │       ├── api/GlobalExceptionHandler.java     # REST 에러 → JSON
+│   │       └── controller/MvcExceptionHandler.java # MVC 에러 → 템플릿
 │   │
-│   └── test/
-│       └── java/me/singingsandhill/calendar/
-│           ├── domain/
-│           ├── application/service/
-│           └── presentation/api/
+│   ├── datedate/                        # 그룹 일정 조율 서비스
+│   │   ├── domain/                      # Owner, Schedule, Participant
+│   │   ├── application/                 # OwnerService, ScheduleService, ParticipantService 등
+│   │   ├── infrastructure/              # JPA 어댑터
+│   │   └── presentation/
+│   │       ├── api/                     # REST Controllers
+│   │       └── controller/              # MVC Controllers
+│   │
+│   ├── runner/                          # 러닝 크루 관리
+│   │   ├── domain/                      # Run, Attendance
+│   │   ├── application/                 # RunService, AttendanceService, RunnerAdminService
+│   │   ├── infrastructure/
+│   │   └── presentation/
+│   │
+│   ├── trading/                         # 암호화폐 자동매매 봇
+│   │   ├── domain/                      # Trade, Position, Signal, Candle 등
+│   │   ├── application/                 # SignalService, TradeService, RebalancingService 등
+│   │   ├── infrastructure/              # Bithumb API 클라이언트, 스케줄러
+│   │   └── presentation/
+│   │
+│   └── stock/                           # 한국 주식 갭앤풀백 봇
+│       ├── domain/                      # StockCandidate, Position 등
+│       ├── application/                 # ScreeningService, PullbackDetectionService 등
+│       ├── infrastructure/              # KIS API 클라이언트, 스케줄러
+│       └── presentation/
 │
+├── src/main/resources/
+│   ├── application.yaml
+│   ├── static/css/, static/js/
+│   └── templates/
+│       ├── fragments/                   # head, header, footer, scripts
+│       ├── error/4xx.html, error/5xx.html
+│       └── (모듈별 템플릿)
+│
+├── src/test/                            # JUnit 5 + Mockito + AssertJ
 ├── build.gradle
-├── gradlew / gradlew.bat
-├── .env.example
+├── .env                                 # H2 DB, API 키 (gitignore)
 ├── CLAUDE.md
 └── README.md
 ```

@@ -64,6 +64,13 @@ spring:
 
 server:
   port: 8081
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
+    whitelabel:
+      enabled: false
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
@@ -189,7 +196,7 @@ stock:
   trading:
     pre-market-start: "08:30"
     market-open: "09:00"
-    screening-end: "09:15"  # [FIX #4] 09:10→09:15: 스크리닝 후 체결강도 집계 대기
+    screening-end: "09:20"  # [FIX #5] 09:15→09:20: 09:10 실행 시 여전히 strength=0 문제 지속 확인
     trading-end: "11:30"
     polling-interval-seconds: 5
 

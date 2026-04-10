@@ -160,6 +160,12 @@ public class ScreeningService {
         }
 
         // Floor 필터 3: 최소 체결강도
+        // strength=0은 장 초반 KIS API 미집계 상태 — 필터 탈락이 아닌 데이터 부족으로 처리
+        if (tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
+            stats.dataInsufficient++;
+            log.debug("[{}] 체결강도 미집계(=0): 데이터 부족으로 스킵", stockCode);
+            return null;
+        }
         if (tradeStrength.compareTo(floorStrength) < 0) {
             stats.strengthFiltered++;
             log.debug("[{}] Floor 체결강도 탈락: strength={} (기준: {} 이상)", stockCode, tradeStrength, floorStrength);
@@ -428,6 +434,10 @@ public class ScreeningService {
 
         BigDecimal tradeStrength = quote.calculateTradeStrength();
         BigDecimal minStrength = stockProperties.getScreening().getMinTradeStrength();
+        if (tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
+            stats.dataInsufficient++;
+            return null;
+        }
         if (tradeStrength.compareTo(minStrength) < 0) {
             stats.strengthFiltered++;
             return null;
