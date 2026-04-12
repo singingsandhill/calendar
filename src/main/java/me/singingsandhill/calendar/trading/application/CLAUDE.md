@@ -2,9 +2,10 @@
 
 ## Signal Logic
 
-- BUY: score >= 30 AND RSI < 70 AND StochK < 85
-- SELL: score <= -30 AND RSI > 30 AND StochK > 15
+- BUY: score >= 40 AND RSI < 70 AND StochK < 85 AND 3+ indicators agree
+- SELL: score <= -40 AND RSI > 30 AND StochK > 15 AND 3+ indicators agree
 - Otherwise: HOLD
+- MA convergence (|MA5-MA20|/MA20 < 0.2%): MA cross score suppressed to 0
 
 ## Score Components (weights)
 
@@ -18,7 +19,7 @@ MA Cross: +/-25 | MA Trend: +/-15 | RSI Divergence: +/-20 | RSI Level: +/-15 | S
 
 ## Rebalancing Safety
 
-- Cooldown: 4h between rebalances
+- Cooldown: 8h between rebalances
 - Min order: 5,000 KRW (skip smaller)
 - Slippage: 0.5% buffer on market orders
 - MA60 data insufficient: skip rebalancing

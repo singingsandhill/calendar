@@ -22,6 +22,10 @@ import me.singingsandhill.calendar.trading.domain.signal.DivergenceType;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,6 +39,7 @@ public class TradingBotService {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean paused = new AtomicBoolean(false);
+    private volatile Instant lastTradeTime = null;
 
     private final CandleService candleService;
     private final SignalService signalService;
@@ -173,6 +178,7 @@ public class TradingBotService {
             RebalanceService.RebalanceResult rebalanceResult = rebalanceService.checkAndExecute(market);
             if (rebalanceResult.executed()) {
                 log.info("Rebalancing executed");
+                this.lastTradeTime = Instant.now();  // 리밸런싱 후 쿨다운 연동
                 return;
             }
 
@@ -187,9 +193,16 @@ public class TradingBotService {
     /**
      * 신호에 따른 매매 실행 - 다중 포지션 지원
      * Issue #2: 강한 SELL 신호는 수익률 무관하게 실행
+     * 휩소 방지: 매매 간 쿨다운 + 최소 보유 시간 적용
      */
     @Transactional
     public void executeTradeBySignal(String market, Signal signal) {
+        // 쿨다운 체크: 마지막 거래 후 최소 간격 확인
+        if (!isSignalCooldownElapsed()) {
+            log.debug("Signal cooldown active, skipping trade (last trade: {})", lastTradeTime);
+            return;
+        }
+
         // 최대 포지션 수 체크
         int maxPositions = tradingProperties.getBot().getMaxPositions();
         long openPositionCount = positionRepository.countByMarketAndStatus(market, PositionStatus.OPEN);
@@ -206,6 +219,15 @@ public class TradingBotService {
             boolean isStrongSellSignal = isStrongSellSignal(signal);
 
             for (Position position : openPositions) {
+                // 최소 보유 시간 체크 (휩소 방지)
+                long minHoldingMinutes = tradingProperties.getBot().getMinHoldingMinutes();
+                if (position.getOpenedAt() != null &&
+                        ChronoUnit.MINUTES.between(position.getOpenedAt(), LocalDateTime.now()) < minHoldingMinutes) {
+                    log.debug("Position {} below min holding time ({}min), skipping sell",
+                            position.getId(), minHoldingMinutes);
+                    continue;
+                }
+
                 if (currentPrice != null) {
                     // 슬리피지를 고려한 보수적 예상 매도가 계산
                     double slippageBuffer = tradingProperties.getRisk().getSlippageBuffer();
@@ -345,6 +367,9 @@ public class TradingBotService {
             );
             positionRepository.save(position);
             log.info("Position opened: entry={}, volume={}, fee={}", entryPrice, volume, fee);
+
+            // 쿨다운 갱신
+            this.lastTradeTime = Instant.now();
 
         } catch (Exception e) {
             log.error("Failed to execute buy order", e);
@@ -499,6 +524,9 @@ public class TradingBotService {
             log.info("Position closed: exit={}, pnl={}%, fee={}",
                     exitPrice, position.getRealizedPnlPct(), fee);
 
+            // 쿨다운 갱신
+            this.lastTradeTime = Instant.now();
+
         } catch (IllegalStateException e) {
             // Issue #4: 이미 닫힌 포지션
             log.warn("Position {} already closed: {}", position.getId(), e.getMessage());
@@ -626,6 +654,25 @@ public class TradingBotService {
 
         // 포지션 청산
         riskManagementService.emergencyClose(market);
+    }
+
+    /**
+     * 신호 쿨다운 경과 여부 확인
+     */
+    private boolean isSignalCooldownElapsed() {
+        if (lastTradeTime == null) {
+            return true;
+        }
+        long cooldownMinutes = tradingProperties.getBot().getSignalCooldownMinutes();
+        Duration elapsed = Duration.between(lastTradeTime, Instant.now());
+        return elapsed.toMinutes() >= cooldownMinutes;
+    }
+
+    /**
+     * 리밸런싱 실행 후 쿨다운 갱신용 (TradingBotService.executeTradeLoop에서 호출)
+     */
+    public void updateLastTradeTime() {
+        this.lastTradeTime = Instant.now();
     }
 
     /**

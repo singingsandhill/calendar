@@ -99,6 +99,8 @@ trading:
     market: KRW-ADA
     max-positions: 2
     order-ratio: 0.25
+    signal-cooldown-minutes: 10    # 매매 간 최소 간격 (휩소 방지)
+    min-holding-minutes: 15        # 포지션 최소 보유 시간
   indicators:
     ma-short: 5
     ma-mid: 20
@@ -109,8 +111,10 @@ trading:
     stoch-slow: 3
     volume-ma: 20
   thresholds:
-    signal-buy: 30        # [FIX #2] 40→30: 3일간 HOLD만 발생, 임계값 완화
-    signal-sell: -30      # [FIX #2] -40→-30: 매도 신호도 동일 완화
+    signal-buy: 40        # [FIX] 30→40: 사이클 매매 유지하면서 가짜 신호 필터링
+    signal-sell: -40      # [FIX] -30→-40: 매도 신호도 동일 상향
+    min-agreeing-indicators: 3  # 최소 3개 지표 합의 필요
+    ma-convergence-threshold: 0.002  # MA 수렴 임계값 (0.2% 미만이면 크로스 무시)
     rsi-oversold: 35
     rsi-overbought: 65
     stoch-oversold: 25
@@ -120,7 +124,7 @@ trading:
     sell-rsi-min: 30
     sell-stoch-k-min: 15
   risk:
-    stop-loss: -0.05      # [FIX #1] -8%→-5%: 손절 임계값 강화 (4월1일 -4.06% 미발동)
+    stop-loss: -0.03      # [FIX] -5%→-3%: 사이클 매매에 맞게 손절 강화
     take-profit: 0.15
     trailing-stop: 0.03
     trailing-activation: 0.10
@@ -130,7 +134,7 @@ trading:
     bull-ratio: 0.70
     bear-ratio: 0.30
     deviation-trigger: 0.10
-    cooldown-minutes: 240              # 4시간 쿨다운
+    cooldown-minutes: 480              # [FIX] 4시간→8시간: 리밸런싱 빈도 감소
     min-order-amount: 5000.0           # 최소 주문 금액 (KRW)
     slippage-buffer: 0.005             # 0.5% 슬리피지 버퍼
     skip-when-data-insufficient: true  # MA60 데이터 부족 시 스킵

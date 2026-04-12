@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Service
@@ -65,8 +66,10 @@ public class SignalService {
         int totalScore = maCrossScore + maTrendScore + rsiDivergenceScore + rsiLevelScore +
                 stochDivergenceScore + stochLevelScore + volumeDivergenceScore + rsiTrendScore;
 
-        // 신호 타입 결정
-        SignalType signalType = determineSignalType(totalScore, divergence, indicators);
+        // 신호 타입 결정 (개별 점수를 전달하여 다중지표 합의 확인)
+        SignalType signalType = determineSignalType(totalScore, divergence, indicators,
+                maCrossScore, maTrendScore, rsiDivergenceScore, rsiLevelScore,
+                stochDivergenceScore, stochLevelScore, volumeDivergenceScore, rsiTrendScore);
 
         Signal signal = new Signal(
                 null, market, LocalDateTime.now(), signalType, totalScore,
@@ -88,9 +91,20 @@ public class SignalService {
      * MA 크로스오버 점수 계산
      * 실제 골든크로스 이벤트: +25, 실제 데드크로스 이벤트: -25
      * MA5 > MA20 상태 유지: +10, MA5 < MA20 상태 유지: -10
+     * MA 수렴 시 (|MA5-MA20|/MA20 < threshold) 크로스 점수 억제 (횡보장 노이즈 방지)
      */
     private int calculateMaCrossScore(IndicatorResult indicators, BigDecimal[] prevMAs) {
         if (indicators.ma5() == null || indicators.ma20() == null) {
+            return 0;
+        }
+
+        // MA 수렴 체크: MA5와 MA20 간격이 임계값 미만이면 크로스 점수 0 (횡보장 노이즈)
+        double convergenceThreshold = tradingProperties.getThresholds().getMaConvergenceThreshold();
+        BigDecimal maGap = indicators.ma5().subtract(indicators.ma20()).abs();
+        BigDecimal maGapPct = maGap.divide(indicators.ma20(), 6, RoundingMode.HALF_UP);
+        if (maGapPct.compareTo(BigDecimal.valueOf(convergenceThreshold)) < 0) {
+            log.debug("MA convergence detected (gap: {}%), suppressing cross score",
+                    maGapPct.multiply(BigDecimal.valueOf(100)));
             return 0;
         }
 
@@ -232,20 +246,48 @@ public class SignalService {
     }
 
     /**
-     * 신호 타입 결정
-     * 매수: 점수 >= 40 AND RSI < 70 AND StochK < 85
-     *       - Issue #9: 현재가 < MA60일 때는 추가 확인 조건 필요
-     * 매도: 점수 <= -40 AND RSI > 30 AND StochK > 15
+     * 신호 방향과 동의하는 지표 수 계산
+     * 각 점수 컴포넌트가 신호 방향과 같은 부호이면 동의로 간주
      */
-    private SignalType determineSignalType(int totalScore, DivergenceResult divergence, IndicatorResult indicators) {
+    private int countAgreeingIndicators(int totalScore, int... scores) {
+        int direction = totalScore > 0 ? 1 : -1;
+        int count = 0;
+        for (int s : scores) {
+            if (s * direction > 0) count++;
+        }
+        return count;
+    }
+
+    /**
+     * 신호 타입 결정
+     * 매수: 점수 >= threshold AND RSI < 70 AND StochK < 85 AND 최소 3개 지표 합의
+     *       - Issue #9: 현재가 < MA60일 때는 추가 확인 조건 필요
+     * 매도: 점수 <= threshold AND RSI > 30 AND StochK > 15 AND 최소 3개 지표 합의
+     */
+    private SignalType determineSignalType(int totalScore, DivergenceResult divergence, IndicatorResult indicators,
+                                           int maCrossScore, int maTrendScore, int rsiDivergenceScore,
+                                           int rsiLevelScore, int stochDivergenceScore, int stochLevelScore,
+                                           int volumeDivergenceScore, int rsiTrendScore) {
         int buyThreshold = tradingProperties.getThresholds().getSignalBuy();
         int sellThreshold = tradingProperties.getThresholds().getSignalSell();
         int buyRsiMax = tradingProperties.getThresholds().getBuyRsiMax();
         int buyStochKMax = tradingProperties.getThresholds().getBuyStochKMax();
         int sellRsiMin = tradingProperties.getThresholds().getSellRsiMin();
         int sellStochKMin = tradingProperties.getThresholds().getSellStochKMin();
+        int minAgreeingIndicators = tradingProperties.getThresholds().getMinAgreeingIndicators();
 
-        // 매수 조건: score >= 40 AND RSI < 70 AND StochK < 85
+        // 다중지표 합의 확인
+        int agreeingCount = countAgreeingIndicators(totalScore,
+                maCrossScore, maTrendScore, rsiDivergenceScore, rsiLevelScore,
+                stochDivergenceScore, stochLevelScore, volumeDivergenceScore, rsiTrendScore);
+
+        if (agreeingCount < minAgreeingIndicators) {
+            log.debug("Insufficient indicator agreement: {} < {} required (score: {})",
+                    agreeingCount, minAgreeingIndicators, totalScore);
+            return SignalType.HOLD;
+        }
+
+        // 매수 조건: score >= threshold AND RSI < 70 AND StochK < 85
         if (totalScore >= buyThreshold &&
             indicators.rsi() != null && indicators.rsi().compareTo(BigDecimal.valueOf(buyRsiMax)) < 0 &&
             indicators.stochK() != null && indicators.stochK().compareTo(BigDecimal.valueOf(buyStochKMax)) < 0) {
@@ -271,7 +313,7 @@ public class SignalService {
             return SignalType.BUY;
         }
 
-        // 매도 조건: score <= -40 AND RSI > 30 AND StochK > 15
+        // 매도 조건: score <= threshold AND RSI > 30 AND StochK > 15
         if (totalScore <= sellThreshold &&
             indicators.rsi() != null && indicators.rsi().compareTo(BigDecimal.valueOf(sellRsiMin)) > 0 &&
             indicators.stochK() != null && indicators.stochK().compareTo(BigDecimal.valueOf(sellStochKMin)) > 0) {
