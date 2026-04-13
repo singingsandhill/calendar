@@ -68,6 +68,8 @@ public class TradingProperties {
         private double orderRatio = 0.25;
         private double orderRatioMin = 0.15;  // 변동성 높을 때 최소 비율
         private double orderRatioMax = 0.35;  // 변동성 낮을 때 최대 비율
+        private long signalCooldownMinutes = 10;  // 매매 간 최소 간격 (휩소 방지)
+        private long minHoldingMinutes = 15;      // 포지션 최소 보유 시간
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -81,6 +83,10 @@ public class TradingProperties {
         public void setOrderRatioMin(double orderRatioMin) { this.orderRatioMin = orderRatioMin; }
         public double getOrderRatioMax() { return orderRatioMax; }
         public void setOrderRatioMax(double orderRatioMax) { this.orderRatioMax = orderRatioMax; }
+        public long getSignalCooldownMinutes() { return signalCooldownMinutes; }
+        public void setSignalCooldownMinutes(long signalCooldownMinutes) { this.signalCooldownMinutes = signalCooldownMinutes; }
+        public long getMinHoldingMinutes() { return minHoldingMinutes; }
+        public void setMinHoldingMinutes(long minHoldingMinutes) { this.minHoldingMinutes = minHoldingMinutes; }
     }
 
     public static class Indicators {
@@ -125,6 +131,8 @@ public class TradingProperties {
         private int buyStochKMax = 85;
         private int sellRsiMin = 30;
         private int sellStochKMin = 15;
+        private int minAgreeingIndicators = 3;       // 최소 동의 지표 수
+        private double maConvergenceThreshold = 0.002; // MA 수렴 임계값 (0.2%)
 
         public int getSignalBuy() { return signalBuy; }
         public void setSignalBuy(int signalBuy) { this.signalBuy = signalBuy; }
@@ -146,10 +154,14 @@ public class TradingProperties {
         public void setSellRsiMin(int sellRsiMin) { this.sellRsiMin = sellRsiMin; }
         public int getSellStochKMin() { return sellStochKMin; }
         public void setSellStochKMin(int sellStochKMin) { this.sellStochKMin = sellStochKMin; }
+        public int getMinAgreeingIndicators() { return minAgreeingIndicators; }
+        public void setMinAgreeingIndicators(int minAgreeingIndicators) { this.minAgreeingIndicators = minAgreeingIndicators; }
+        public double getMaConvergenceThreshold() { return maConvergenceThreshold; }
+        public void setMaConvergenceThreshold(double maConvergenceThreshold) { this.maConvergenceThreshold = maConvergenceThreshold; }
     }
 
     public static class Risk {
-        private double stopLoss = -0.08;
+        private double stopLoss = -0.03;
         private double takeProfit = 0.15;
         private double trailingStop = 0.03;
         private double trailingActivation = 0.10;
@@ -182,7 +194,7 @@ public class TradingProperties {
         private double bullRatio = 0.70;
         private double bearRatio = 0.30;
         private double deviationTrigger = 0.10;
-        private long cooldownMinutes = 240;              // 4시간 쿨다운
+        private long cooldownMinutes = 480;              // 8시간 쿨다운
         private double minOrderAmount = 5000.0;          // 최소 주문 금액 (KRW)
         private double slippageBuffer = 0.005;           // 0.5% 슬리피지 버퍼
         private boolean skipWhenDataInsufficient = true; // MA60 데이터 부족 시 스킵

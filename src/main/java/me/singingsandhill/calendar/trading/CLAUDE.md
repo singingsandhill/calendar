@@ -12,16 +12,24 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 
 ## Risk Levels
 
-- Stop-loss: -5%
+- Stop-loss: -3%
 - Take-profit: +15%
 - Trailing stop: activates at +10%, trails -3%
 - Fee rate: 0.25% (taker), min profit threshold: 0.6%
+
+## Anti-Whipsaw (휩소 방지)
+
+- Signal cooldown: 10 minutes between trades
+- Min holding: 15 minutes before sell allowed
+- MA convergence suppression: |MA5-MA20|/MA20 < 0.2% → MA cross score = 0
+- Min agreeing indicators: 3 (out of 8 score components)
 
 ## Rebalancing
 
 - Bullish (price > MA60): 70% coins / 30% KRW
 - Bearish (price < MA60): 30% coins / 70% KRW
 - Trigger: 10% deviation from target
+- Cooldown: 8 hours between rebalances
 - Min sell PnL: -3% (allows small loss to proceed with rebalancing)
 - Safety details: see `application/CLAUDE.md`
 
