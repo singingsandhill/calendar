@@ -5,13 +5,13 @@
 <th:block th:fragment="footer">
     <footer>
         <div class="footer-content">
-            <p>DateDate - 간편한 그룹 일정 조율</p>
+            <p th:text="'DateDate - ' + #{footer.tagline}">DateDate - 간편한 그룹 일정 조율</p>
             <div class="footer-nav">
-                <a th:href="@{/}" class="footer-nav-link">홈</a>
-                <a th:href="@{/privacy}" class="footer-nav-link">개인정보처리방침</a>
-                <a th:href="@{/terms}" class="footer-nav-link">이용약관</a>
+                <a th:href="@{/}" class="footer-nav-link" th:text="#{footer.home}">홈</a>
+                <a th:href="@{/privacy}" class="footer-nav-link" th:text="#{footer.privacy}">개인정보처리방침</a>
+                <a th:href="@{/terms}" class="footer-nav-link" th:text="#{footer.terms}">이용약관</a>
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
-                   target="_blank" rel="noopener noreferrer" class="footer-nav-link">의견 보내기</a>
+                   target="_blank" rel="noopener noreferrer" class="footer-nav-link" th:text="#{footer.feedback}">의견 보내기</a>
             </div>
         </div>
     </footer>
@@ -23,39 +23,39 @@
         <span class="footer-logo">DateDate</span>
         <div class="footer-sections">
             <div class="footer-section">
-                <span class="footer-section-title">서비스</span>
+                <span class="footer-section-title" th:text="#{footer.section.service}">서비스</span>
                 <div class="footer-section-links">
-                    <a th:href="@{/}" class="footer-link">홈</a>
-                    <a href="/#start-form" class="footer-link">일정 만들기</a>
-                    <a th:href="@{/insights/trends}" class="footer-link">인사이트</a>
+                    <a th:href="@{/}" class="footer-link" th:text="#{footer.home}">홈</a>
+                    <a href="/#start-form" class="footer-link" th:text="#{nav.create}">일정 만들기</a>
+                    <a th:href="@{/insights/trends}" class="footer-link" th:text="#{nav.insights}">인사이트</a>
                 </div>
             </div>
             <div class="footer-section">
-                <span class="footer-section-title">도움말</span>
+                <span class="footer-section-title" th:text="#{footer.section.help}">도움말</span>
                 <div class="footer-section-links">
-                    <a th:href="@{/guide}" class="footer-link">사용 가이드</a>
+                    <a th:href="@{/guide}" class="footer-link" th:text="#{footer.guide}">사용 가이드</a>
                     <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
-                       target="_blank" rel="noopener noreferrer" class="footer-link">의견 보내기</a>
+                       target="_blank" rel="noopener noreferrer" class="footer-link" th:text="#{footer.feedback}">의견 보내기</a>
                 </div>
             </div>
             <div class="footer-section">
-                <span class="footer-section-title">정책</span>
+                <span class="footer-section-title" th:text="#{footer.section.policy}">정책</span>
                 <div class="footer-section-links">
-                    <a th:href="@{/privacy}" class="footer-link">개인정보처리방침</a>
-                    <a th:href="@{/terms}" class="footer-link">이용약관</a>
+                    <a th:href="@{/privacy}" class="footer-link" th:text="#{footer.privacy}">개인정보처리방침</a>
+                    <a th:href="@{/terms}" class="footer-link" th:text="#{footer.terms}">이용약관</a>
                 </div>
             </div>
             <div class="footer-section">
-                <span class="footer-section-title">활용 사례</span>
+                <span class="footer-section-title" th:text="#{footer.section.usecases}">활용 사례</span>
                 <div class="footer-section-links">
-                    <a th:href="@{/use-cases/friend-meetup}" class="footer-link">친구 모임</a>
-                    <a th:href="@{/use-cases/team-meeting}" class="footer-link">팀 회의</a>
-                    <a th:href="@{/use-cases/travel-planning}" class="footer-link">여행 계획</a>
-                    <a th:href="@{/use-cases/study-group}" class="footer-link">스터디 그룹</a>
+                    <a th:href="@{/use-cases/friend-meetup}" class="footer-link" th:text="#{footer.usecase.friend}">친구 모임</a>
+                    <a th:href="@{/use-cases/team-meeting}" class="footer-link" th:text="#{footer.usecase.team}">팀 회의</a>
+                    <a th:href="@{/use-cases/travel-planning}" class="footer-link" th:text="#{footer.usecase.travel}">여행 계획</a>
+                    <a th:href="@{/use-cases/study-group}" class="footer-link" th:text="#{footer.usecase.study}">스터디 그룹</a>
                 </div>
             </div>
         </div>
-        <p class="footer-copyright">DateDate - 간편한 그룹 일정 조율</p>
+        <p class="footer-copyright" th:text="'DateDate - ' + #{footer.tagline}">DateDate - 간편한 그룹 일정 조율</p>
     </footer>
 </th:block>
 

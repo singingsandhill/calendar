@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>일시적인 오류 - DateDate</title>
+    <title th:text="#{error.5xx.title}">일시적인 오류 - DateDate</title>
     <meta name="robots" content="noindex">
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,12 +23,12 @@
 </header>
 <main class="container" style="text-align:center;padding:6rem 1rem;">
     <p style="font-size:5rem;color:var(--text-light);margin-bottom:1rem;font-weight:300;">500</p>
-    <h1 style="margin-bottom:1rem;">일시적인 오류가 발생했어요</h1>
-    <p style="color:var(--text-light);margin-bottom:2rem;">
+    <h1 style="margin-bottom:1rem;" th:text="#{error.5xx.heading}">일시적인 오류가 발생했어요</h1>
+    <p style="color:var(--text-light);margin-bottom:2rem;" th:text="#{error.5xx.description}">
         잠시 후 다시 시도해 주세요.<br>
         문제가 계속된다면 의견 보내기로 알려주세요.
     </p>
-    <a th:href="@{/}" class="btn-spring" style="display:inline-block;">홈으로 돌아가기</a>
+    <a th:href="@{/}" class="btn-spring" style="display:inline-block;" th:text="#{error.5xx.home}">홈으로 돌아가기</a>
 </main>
 </body>
 </html>

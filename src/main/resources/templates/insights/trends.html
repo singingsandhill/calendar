@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head th:replace="~{fragments/header :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -11,23 +11,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <main class="container insights-page">
     <!-- Breadcrumb -->
     <nav class="breadcrumb" aria-label="breadcrumb">
-        <a th:href="@{/}">홈</a>
+        <a th:href="@{/}" th:text="#{insights.breadcrumb.home}">홈</a>
         <span class="separator">/</span>
-        <span class="current">인기 트렌드 & 이용 현황</span>
+        <span class="current" th:text="#{insights.breadcrumb.current}">인기 트렌드 & 이용 현황</span>
     </nav>
 
     <!-- Hero Section -->
     <section class="insights-hero animate-on-scroll">
-        <h1>인기 트렌드 & 이용 현황</h1>
-        <p class="insights-hero-subtitle">DateDate에서 가장 인기 있는 약속 장소와 메뉴, 서비스 이용 통계를 확인하세요</p>
+        <h1 th:text="#{insights.hero.title}">인기 트렌드 & 이용 현황</h1>
+        <p class="insights-hero-subtitle" th:text="#{insights.hero.subtitle}">DateDate에서 가장 인기 있는 약속 장소와 메뉴, 서비스 이용 통계를 확인하세요</p>
     </section>
 
     <!-- Description -->
     <section class="insights-description animate-on-scroll">
-        <p>
+        <p th:text="#{insights.description}">
             아래 순위는 DateDate 사용자들이 약속을 잡을 때 투표한 장소와 메뉴를 집계한 결과입니다.
-            시간 가중치를 적용하여 최근 인기 있는 항목이 상위에 노출됩니다.
-            친구들과의 모임, 팀 회의, 가족 행사 등 다양한 상황에서 장소와 메뉴를 고를 때 참고해보세요.
         </p>
     </section>
 
@@ -39,20 +37,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <svg viewBox="0 0 24 24" fill="currentColor" class="trends-icon">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
-                <h2>인기 장소 TOP 10</h2>
+                <h2 th:text="#{insights.location.title}">인기 장소 TOP 10</h2>
             </div>
 
             <div th:if="${popularLocations.isEmpty()}" class="empty-state">
-                <p>아직 등록된 장소가 없습니다.</p>
+                <p th:text="#{insights.empty.location}">아직 등록된 장소가 없습니다.</p>
             </div>
 
             <div th:if="${!popularLocations.isEmpty()}" class="trends-table-wrapper">
                 <table class="trends-table">
                     <thead>
                         <tr>
-                            <th scope="col" class="rank-col">순위</th>
-                            <th scope="col" class="name-col">장소명</th>
-                            <th scope="col" class="votes-col">투표 수</th>
+                            <th scope="col" class="rank-col" th:text="#{insights.table.rank}">순위</th>
+                            <th scope="col" class="name-col" th:text="#{insights.table.location}">장소명</th>
+                            <th scope="col" class="votes-col" th:text="#{insights.table.votes}">투표 수</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -63,7 +61,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </td>
                             <td class="name-col" th:text="${location.name}">장소명</td>
                             <td class="votes-col">
-                                <span class="votes-badge" th:text="${location.totalVotes} + '표'">0표</span>
+                                <span class="votes-badge" th:text="#{insights.votes(${location.totalVotes})}">0표</span>
                             </td>
                         </tr>
                     </tbody>
@@ -77,20 +75,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <svg viewBox="0 0 24 24" fill="currentColor" class="trends-icon">
                     <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
                 </svg>
-                <h2>인기 메뉴 TOP 10</h2>
+                <h2 th:text="#{insights.menu.title}">인기 메뉴 TOP 10</h2>
             </div>
 
             <div th:if="${popularMenus.isEmpty()}" class="empty-state">
-                <p>아직 등록된 메뉴가 없습니다.</p>
+                <p th:text="#{insights.empty.menu}">아직 등록된 메뉴가 없습니다.</p>
             </div>
 
             <div th:if="${!popularMenus.isEmpty()}" class="trends-table-wrapper">
                 <table class="trends-table">
                     <thead>
                         <tr>
-                            <th scope="col" class="rank-col">순위</th>
-                            <th scope="col" class="name-col">메뉴명</th>
-                            <th scope="col" class="votes-col">투표 수</th>
+                            <th scope="col" class="rank-col" th:text="#{insights.table.rank}">순위</th>
+                            <th scope="col" class="name-col" th:text="#{insights.table.menu}">메뉴명</th>
+                            <th scope="col" class="votes-col" th:text="#{insights.table.votes}">투표 수</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -110,7 +108,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                       th:text="${menu.name}">메뉴명</span>
                             </td>
                             <td class="votes-col">
-                                <span class="votes-badge" th:text="${menu.totalVotes} + '표'">0표</span>
+                                <span class="votes-badge" th:text="#{insights.votes(${menu.totalVotes})}">0표</span>
                             </td>
                         </tr>
                     </tbody>
@@ -121,12 +119,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Additional Info -->
     <section class="insights-info animate-on-scroll">
-        <h3>트렌드 순위 계산 방식</h3>
-        <p>
+        <h3 th:text="#{insights.trend.title}">트렌드 순위 계산 방식</h3>
+        <p th:text="#{insights.trend.desc}">
             인기 순위는 단순히 투표 수만을 기준으로 하지 않습니다.
-            최근 30일 이내에 등록된 항목에 가중치를 부여하여,
-            현재 트렌드를 더 정확하게 반영합니다.
-            따라서 최근에 많이 선택된 장소와 메뉴가 상위에 노출됩니다.
         </p>
     </section>
 
@@ -134,7 +129,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0 3rem;">
 
     <section class="stats-overview">
-        <h2 class="animate-on-scroll">이용 현황</h2>
+        <h2 class="animate-on-scroll" th:text="#{insights.stats.title}">이용 현황</h2>
 
         <div class="stats-grid">
             <div class="stats-card animate-on-scroll">
@@ -145,8 +140,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="stats-card-content">
                     <div class="stats-card-number" th:text="${stats.totalSchedules}">0</div>
-                    <div class="stats-card-label">총 생성된 일정</div>
-                    <div class="stats-card-desc">DateDate에서 생성된 전체 일정 수</div>
+                    <div class="stats-card-label" th:text="#{insights.stats.schedules}">총 생성된 일정</div>
+                    <div class="stats-card-desc" th:text="#{insights.stats.schedules.desc}">DateDate에서 생성된 전체 일정 수</div>
                 </div>
             </div>
 
@@ -158,8 +153,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="stats-card-content">
                     <div class="stats-card-number" th:text="${stats.totalParticipants}">0</div>
-                    <div class="stats-card-label">총 참여자</div>
-                    <div class="stats-card-desc">일정에 참여한 전체 인원 수</div>
+                    <div class="stats-card-label" th:text="#{insights.stats.participants}">총 참여자</div>
+                    <div class="stats-card-desc" th:text="#{insights.stats.participants.desc}">일정에 참여한 전체 인원 수</div>
                 </div>
             </div>
 
@@ -171,8 +166,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="stats-card-content">
                     <div class="stats-card-number" th:text="${stats.totalLocations}">0</div>
-                    <div class="stats-card-label">등록된 장소</div>
-                    <div class="stats-card-desc">투표를 위해 등록된 장소 수</div>
+                    <div class="stats-card-label" th:text="#{insights.stats.locations}">등록된 장소</div>
+                    <div class="stats-card-desc" th:text="#{insights.stats.locations.desc}">투표를 위해 등록된 장소 수</div>
                 </div>
             </div>
 
@@ -184,8 +179,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="stats-card-content">
                     <div class="stats-card-number" th:text="${stats.totalMenus}">0</div>
-                    <div class="stats-card-label">등록된 메뉴</div>
-                    <div class="stats-card-desc">투표를 위해 등록된 메뉴 수</div>
+                    <div class="stats-card-label" th:text="#{insights.stats.menus}">등록된 메뉴</div>
+                    <div class="stats-card-desc" th:text="#{insights.stats.menus.desc}">투표를 위해 등록된 메뉴 수</div>
                 </div>
             </div>
 
@@ -197,8 +192,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="stats-card-content">
                     <div class="stats-card-number" th:text="${stats.totalLocationVotes + stats.totalMenuVotes}">0</div>
-                    <div class="stats-card-label">총 투표 수</div>
-                    <div class="stats-card-desc">장소와 메뉴에 대한 전체 투표 수</div>
+                    <div class="stats-card-label" th:text="#{insights.stats.totalvotes}">총 투표 수</div>
+                    <div class="stats-card-desc" th:text="#{insights.stats.totalvotes.desc}">장소와 메뉴에 대한 전체 투표 수</div>
                 </div>
             </div>
 
@@ -210,8 +205,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="stats-card-content">
                     <div class="stats-card-number" th:text="${#numbers.formatDecimal(stats.avgParticipantsPerSchedule, 1, 1)}">0.0</div>
-                    <div class="stats-card-label">평균 참여자 수</div>
-                    <div class="stats-card-desc">일정당 평균 참여 인원</div>
+                    <div class="stats-card-label" th:text="#{insights.stats.avg}">평균 참여자 수</div>
+                    <div class="stats-card-desc" th:text="#{insights.stats.avg.desc}">일정당 평균 참여 인원</div>
                 </div>
             </div>
         </div>
@@ -219,37 +214,37 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Detailed Stats -->
     <section class="stats-detail animate-on-scroll">
-        <h2>상세 통계</h2>
+        <h2 th:text="#{insights.detail.title}">상세 통계</h2>
 
         <div class="stats-detail-grid">
             <div class="stats-detail-card">
-                <h3>장소 투표</h3>
+                <h3 th:text="#{insights.detail.location.title}">장소 투표</h3>
                 <div class="stats-detail-row">
-                    <span class="label">등록된 장소</span>
+                    <span class="label" th:text="#{insights.detail.location.count}">등록된 장소</span>
                     <span class="value" th:text="${stats.totalLocations}">0</span>
                 </div>
                 <div class="stats-detail-row">
-                    <span class="label">장소 투표 수</span>
+                    <span class="label" th:text="#{insights.detail.location.votes}">장소 투표 수</span>
                     <span class="value" th:text="${stats.totalLocationVotes}">0</span>
                 </div>
                 <div class="stats-detail-row" th:if="${stats.totalLocations > 0}">
-                    <span class="label">장소당 평균 투표</span>
+                    <span class="label" th:text="#{insights.detail.location.avg}">장소당 평균 투표</span>
                     <span class="value" th:text="${#numbers.formatDecimal(stats.totalLocationVotes / stats.totalLocations, 1, 1)}">0.0</span>
                 </div>
             </div>
 
             <div class="stats-detail-card">
-                <h3>메뉴 투표</h3>
+                <h3 th:text="#{insights.detail.menu.title}">메뉴 투표</h3>
                 <div class="stats-detail-row">
-                    <span class="label">등록된 메뉴</span>
+                    <span class="label" th:text="#{insights.detail.menu.count}">등록된 메뉴</span>
                     <span class="value" th:text="${stats.totalMenus}">0</span>
                 </div>
                 <div class="stats-detail-row">
-                    <span class="label">메뉴 투표 수</span>
+                    <span class="label" th:text="#{insights.detail.menu.votes}">메뉴 투표 수</span>
                     <span class="value" th:text="${stats.totalMenuVotes}">0</span>
                 </div>
                 <div class="stats-detail-row" th:if="${stats.totalMenus > 0}">
-                    <span class="label">메뉴당 평균 투표</span>
+                    <span class="label" th:text="#{insights.detail.menu.avg}">메뉴당 평균 투표</span>
                     <span class="value" th:text="${#numbers.formatDecimal(stats.totalMenuVotes / stats.totalMenus, 1, 1)}">0.0</span>
                 </div>
             </div>
@@ -258,7 +253,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Navigation -->
     <section class="insights-nav animate-on-scroll">
-        <a th:href="@{/}" class="btn-secondary">홈으로</a>
+        <a th:href="@{/}" class="btn-secondary" th:text="#{insights.home}">홈으로</a>
     </section>
 </main>
 

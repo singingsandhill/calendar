@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 
 <!-- Head Fragment -->
 <head th:fragment="head(seo)">
@@ -13,8 +13,8 @@
     <meta name="description" th:content="${seo.description()}">
     <meta name="keywords" th:content="${seo.keywords()}">
     <meta name="author" content="DateDate">
-    <meta name="language" content="ko-KR">
-    <meta http-equiv="content-language" content="ko-KR">
+    <meta name="language" th:content="${#locale.toLanguageTag()}">
+    <meta http-equiv="content-language" th:content="${#locale.toLanguageTag()}">
 
     <!-- Google Site Verification -->
     <meta name="google-site-verification" content="YVK_KclWiLH24rqy7kAI9iNYSA5No9ljXbnSOvsQB4k" />
@@ -27,6 +27,7 @@
 
     <!-- hreflang -->
     <link rel="alternate" hreflang="ko" th:href="${seo.canonical()}">
+    <link rel="alternate" hreflang="en" th:href="${seo.canonical() + '?lang=en'}">
     <link rel="alternate" hreflang="x-default" th:href="${seo.canonical()}">
 
     <!-- Open Graph / Facebook -->
@@ -36,7 +37,7 @@
     <meta property="og:description" th:content="${seo.ogDescription()}">
     <meta property="og:url" th:content="${seo.canonical()}">
     <meta property="og:image" th:content="${seo.ogImage()}">
-    <meta property="og:locale" content="ko_KR">
+    <meta property="og:locale" th:content="${#locale.language == 'en'} ? 'en_US' : 'ko_KR'">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -92,12 +93,14 @@
 <!-- Default Header Fragment -->
 <th:block th:fragment="header">
     <header>
-        <nav class="navbar" role="navigation" aria-label="주 메뉴">
+        <nav class="navbar" role="navigation" th:attr="aria-label=#{nav.aria.menu}">
             <div class="navbar-content">
                 <a th:href="@{/}" class="logo">DateDate</a>
 
                 <!-- Hamburger Button (Mobile) -->
-                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false" aria-controls="navMenu">
+                <button class="navbar-toggle" id="navbarToggle"
+                        th:attr="aria-label=#{nav.aria.open}"
+                        aria-expanded="false" aria-controls="navMenu">
                     <span class="hamburger-line" aria-hidden="true"></span>
                     <span class="hamburger-line" aria-hidden="true"></span>
                     <span class="hamburger-line" aria-hidden="true"></span>
@@ -105,10 +108,20 @@
 
                 <!-- Navigation Menu -->
                 <div class="nav-menu" id="navMenu">
-                    <a th:href="@{/}" class="nav-link">홈</a>
-                    <a href="/#start-form" class="nav-link">일정 만들기</a>
-                    <a th:href="@{/guide}" class="nav-link">가이드</a>
-                    <a th:href="@{/insights/trends}" class="nav-link">인사이트</a>
+                    <a th:href="@{/}" class="nav-link" th:text="#{nav.home}">홈</a>
+                    <a href="/#start-form" class="nav-link" th:text="#{nav.create}">일정 만들기</a>
+                    <a th:href="@{/guide}" class="nav-link" th:text="#{nav.guide}">가이드</a>
+                    <a th:href="@{/insights/trends}" class="nav-link" th:text="#{nav.insights}">인사이트</a>
+                    <!-- Language Toggle -->
+                    <div class="lang-toggle" role="group" aria-label="Language">
+                        <a href="?lang=ko" class="lang-btn"
+                           th:classappend="${#locale.language == 'ko'} ? ' active' : ''"
+                           aria-label="한국어">KO</a>
+                        <span class="lang-divider" aria-hidden="true">|</span>
+                        <a href="?lang=en" class="lang-btn"
+                           th:classappend="${#locale.language == 'en'} ? ' active' : ''"
+                           aria-label="English">EN</a>
+                    </div>
                 </div>
             </div>
         </nav>
@@ -118,12 +131,14 @@
 <!-- Minimal Header Fragment (Garriock Style) -->
 <th:block th:fragment="header-minimal">
     <header>
-        <nav class="navbar-minimal" id="navbarMinimal" role="navigation" aria-label="주 메뉴">
+        <nav class="navbar-minimal" id="navbarMinimal" role="navigation" th:attr="aria-label=#{nav.aria.menu}">
             <div class="navbar-content">
                 <a th:href="@{/}" class="logo logo-serif">DateDate</a>
 
                 <!-- Hamburger Button (Mobile) -->
-                <button class="navbar-toggle" id="navbarToggle" aria-label="메뉴 열기" aria-expanded="false" aria-controls="navMenu">
+                <button class="navbar-toggle" id="navbarToggle"
+                        th:attr="aria-label=#{nav.aria.open}"
+                        aria-expanded="false" aria-controls="navMenu">
                     <span class="hamburger-line" aria-hidden="true"></span>
                     <span class="hamburger-line" aria-hidden="true"></span>
                     <span class="hamburger-line" aria-hidden="true"></span>
@@ -131,10 +146,20 @@
 
                 <!-- Navigation Menu -->
                 <div class="nav-menu" id="navMenu">
-                    <a th:href="@{/}" class="nav-link-animated">홈</a>
-                    <a href="/#start-form" class="nav-link-animated">일정 만들기</a>
-                    <a th:href="@{/guide}" class="nav-link-animated">가이드</a>
-                    <a th:href="@{/insights/trends}" class="nav-link-animated">인사이트</a>
+                    <a th:href="@{/}" class="nav-link-animated" th:text="#{nav.home}">홈</a>
+                    <a href="/#start-form" class="nav-link-animated" th:text="#{nav.create}">일정 만들기</a>
+                    <a th:href="@{/guide}" class="nav-link-animated" th:text="#{nav.guide}">가이드</a>
+                    <a th:href="@{/insights/trends}" class="nav-link-animated" th:text="#{nav.insights}">인사이트</a>
+                    <!-- Language Toggle -->
+                    <div class="lang-toggle" role="group" aria-label="Language">
+                        <a href="?lang=ko" class="lang-btn"
+                           th:classappend="${#locale.language == 'ko'} ? ' active' : ''"
+                           aria-label="한국어">KO</a>
+                        <span class="lang-divider" aria-hidden="true">|</span>
+                        <a href="?lang=en" class="lang-btn"
+                           th:classappend="${#locale.language == 'en'} ? ' active' : ''"
+                           aria-label="English">EN</a>
+                    </div>
                 </div>
             </div>
         </nav>

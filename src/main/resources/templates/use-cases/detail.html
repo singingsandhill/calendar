@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head th:replace="~{fragments/header :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -19,7 +19,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
 
         <div class="use-case-example">
-            <h3>사용 예시</h3>
+            <h3 th:text="#{usecase.example}">사용 예시</h3>
             <div class="use-case-example-url">
                 <span class="use-case-example-label" th:text="${useCase.exampleLabel()}">예시</span>
                 <code>datedate.site/<span th:text="${useCase.exampleId()}">example</span></code>
@@ -28,16 +28,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
 
     <section class="use-case-cta animate-on-scroll">
-        <h2>지금 바로 시작하세요</h2>
-        <p>가입도, 설치도, 비용도 없습니다.</p>
+        <h2 th:text="#{usecase.cta.title}">지금 바로 시작하세요</h2>
+        <p th:text="#{usecase.cta.description}">가입도, 설치도, 비용도 없습니다.</p>
         <div class="use-case-cta-buttons">
-            <a href="/#start-form" class="btn-spring">일정 만들기</a>
-            <a th:href="@{/guide}" class="btn-text">사용 가이드 보기 &rarr;</a>
+            <a href="/#start-form" class="btn-spring" th:text="#{usecase.cta.start}">일정 만들기</a>
+            <a th:href="@{/guide}" class="btn-text" th:text="#{usecase.cta.guide}">사용 가이드 보기 →</a>
         </div>
     </section>
 
     <section class="use-case-others animate-on-scroll">
-        <h2>다른 활용 사례</h2>
+        <h2 th:text="#{usecase.others.title}">다른 활용 사례</h2>
         <div class="use-case-grid">
             <th:block th:each="entry : ${allUseCases}">
                 <a th:if="${entry.key != currentSlug}"

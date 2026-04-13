@@ -1,6 +1,9 @@
 package me.singingsandhill.calendar.datedate.presentation.controller;
 
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -41,6 +44,7 @@ public class ScheduleController {
             @PathVariable String ownerId,
             @PathVariable int year,
             @PathVariable int month,
+            Locale locale,
             Model model) {
 
         if (year < 2024 || year > 2100 || month < 1 || month > 12) {
@@ -63,8 +67,17 @@ public class ScheduleController {
         model.addAttribute("schedule", response);
         model.addAttribute("year", year);
         model.addAttribute("month", month);
+        model.addAttribute("yearMonthLabel", formatYearMonth(year, month, locale));
         model.addAttribute("seo", seoService.getScheduleSeo(ownerId, year, month));
 
         return "schedule/view";
+    }
+
+    private String formatYearMonth(int year, int month, Locale locale) {
+        if ("en".equals(locale.getLanguage())) {
+            return YearMonth.of(year, month)
+                    .format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH));
+        }
+        return year + "년 " + month + "월";
     }
 }

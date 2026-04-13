@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head th:replace="~{fragments/header :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -10,34 +10,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <main class="container">
     <div class="dashboard-header">
-        <h1><span th:text="${ownerId}">user</span>님의 대시보드</h1>
-        <button class="btn btn-primary" onclick="openCreateModal()">+ 새 일정</button>
+        <h1 th:text="#{dashboard.title(${ownerId})}">Dashboard</h1>
+        <button class="btn btn-primary" onclick="openCreateModal()" th:text="#{dashboard.new.schedule}">+ 새 일정</button>
     </div>
 
-    <section class="schedules-grid" th:if="${!schedules.isEmpty()}" aria-label="일정 목록">
+    <section class="schedules-grid" th:if="${!schedules.isEmpty()}" th:attr="aria-label=#{dashboard.new.schedule}">
         <article class="schedule-card" th:each="schedule : ${schedules}">
             <header class="schedule-card-header">
                 <h3 th:text="${schedule.formattedYearMonth()}">2025-12</h3>
             </header>
             <div class="schedule-card-body">
-                <p>
-                    <span class="participant-count" th:text="${schedule.participantCount()}">0</span>
-                    명 참여
-                </p>
+                <p th:text="#{dashboard.card.participants(${schedule.participantCount()})}">0명 참여</p>
             </div>
             <footer class="schedule-card-actions">
                 <a th:href="@{'/' + ${ownerId} + '/' + ${schedule.year()} + '/' + ${schedule.month()}}"
-                   class="btn btn-secondary">보기</a>
+                   class="btn btn-secondary" th:text="#{dashboard.card.view}">보기</a>
                 <button class="btn btn-outline copy-link-btn"
                         th:data-owner="${ownerId}"
                         th:data-year="${schedule.year()}"
-                        th:data-month="${schedule.month()}">
+                        th:data-month="${schedule.month()}"
+                        th:text="#{dashboard.card.copy}">
                     링크 복사
                 </button>
                 <button class="btn btn-danger delete-btn"
                         th:data-owner="${ownerId}"
                         th:data-year="${schedule.year()}"
-                        th:data-month="${schedule.month()}">
+                        th:data-month="${schedule.month()}"
+                        th:text="#{dashboard.card.delete}">
                     삭제
                 </button>
             </footer>
@@ -45,11 +44,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
 
     <div class="empty-state" th:if="${schedules.isEmpty()}">
-        <h2>여러명이서 쉽게 날짜 조율하기</h2>
-        <p>DateDate는 가입 없이 링크 하나로 모임 날짜, 장소, 메뉴를 한번에 정할 수 있는 무료 일정 조율 서비스입니다.</p>
-        <p>아래 버튼을 눌러 첫 번째 일정을 만들어보세요. 생성된 링크를 참여자에게 공유하면 각자 가능한 날짜를 선택할 수 있습니다.</p>
-        <button class="btn btn-primary" onclick="openCreateModal()">+ 새 일정 만들기</button>
-        <p style="margin-top: 1rem;"><a th:href="@{/guide}">사용 가이드 보기 &rarr;</a></p>
+        <h2 th:text="#{dashboard.empty.title}">여러명이서 쉽게 날짜 조율하기</h2>
+        <p th:text="#{dashboard.empty.desc1}">DateDate는 가입 없이 링크 하나로 모임 날짜, 장소, 메뉴를 한번에 정할 수 있는 무료 일정 조율 서비스입니다.</p>
+        <p th:text="#{dashboard.empty.desc2}">아래 버튼을 눌러 첫 번째 일정을 만들어보세요. 생성된 링크를 참여자에게 공유하면 각자 가능한 날짜를 선택할 수 있습니다.</p>
+        <button class="btn btn-primary" onclick="openCreateModal()" th:text="#{dashboard.empty.create}">+ 새 일정 만들기</button>
+        <p style="margin-top: 1rem;"><a th:href="@{/guide}" th:text="#{dashboard.empty.guide}">사용 가이드 보기 →</a></p>
     </div>
 </main>
 
@@ -57,13 +56,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="createModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="createModalTitle">새 일정</h2>
+            <h2 id="createModalTitle" th:text="#{dashboard.modal.title}">새 일정</h2>
             <button class="modal-close" onclick="closeCreateModal()">&times;</button>
         </div>
         <div class="modal-body">
             <form id="createScheduleForm">
                 <div class="form-group">
-                    <label for="year">연도</label>
+                    <label for="year" th:text="#{dashboard.modal.year}">연도</label>
                     <select id="year" name="year" required>
                         <option value="2024">2024</option>
                         <option value="2025" selected>2025</option>
@@ -75,18 +74,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="month">월</label>
+                    <label for="month" th:text="#{dashboard.modal.month}">월</label>
                     <select id="month" name="month" required>
                         <option th:each="m : ${#numbers.sequence(1, 12)}"
                                 th:value="${m}"
-                                th:text="${m + '월'}"
-                                th:selected="${m == 12}">12월</option>
+                                th:text="#{dashboard.month.option(${m})}"
+                                th:selected="${m == 12}">12</option>
                     </select>
                 </div>
                 <p id="createFormError" class="form-error-message" style="display:none" role="alert"></p>
                 <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">취소</button>
-                    <button type="submit" class="btn btn-primary">만들기</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()" th:text="#{dashboard.modal.cancel}">취소</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{dashboard.modal.create}">만들기</button>
                 </div>
             </form>
         </div>
