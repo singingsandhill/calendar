@@ -33,6 +33,9 @@ public class SecurityConfig {
                 // 인사이트 공개 경로
                 .requestMatchers("/insights", "/insights/**").permitAll()
 
+                // use-cases 공개 경로
+                .requestMatchers("/use-cases", "/use-cases/**").permitAll()
+
                 // 러너 관리자 경로 - ADMIN 역할 필요
                 .requestMatchers("/runners/admin", "/runners/admin/**").hasRole("ADMIN")
 
@@ -67,6 +70,7 @@ public class SecurityConfig {
             )
             .headers(headers -> headers
                 .frameOptions(frame -> frame.sameOrigin())
+                .cacheControl(cache -> cache.disable())
             );
 
         return http.build();
