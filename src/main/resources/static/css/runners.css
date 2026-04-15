@@ -1062,6 +1062,25 @@
     }
 }
 
+/* ==================== Edit Button ==================== */
+.runners-edit-btn {
+    background: transparent;
+    border: none;
+    color: var(--runners-text-secondary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0.5;
+    padding: 0.25rem 0.4rem;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.2s;
+    line-height: 1;
+}
+
+.runners-edit-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
 /* ==================== Delete Button ==================== */
 .runners-delete-btn {
     background: transparent;
@@ -1073,7 +1092,6 @@
     opacity: 0.6;
     transition: opacity 0.2s, transform 0.2s;
     line-height: 1;
-    margin-left: 1rem;
 }
 
 .runners-delete-btn:hover {

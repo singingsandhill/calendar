@@ -62,12 +62,16 @@
                         <li class="runners-attendance-item" th:each="attendance : ${attendances}" th:data-id="${attendance.id()}">
                             <span class="runners-attendance-name" th:text="${attendance.participantName()}">러너</span>
                             <span class="runners-attendance-distance" th:text="${attendance.distance()} + 'km'">5.0km</span>
-                            <button sec:authorize="hasRole('ADMIN')"
-                                    class="runners-delete-btn"
-                                    th:data-id="${attendance.id()}"
-                                    th:data-name="${attendance.participantName()}"
-                                    type="button"
-                                    title="삭제">×</button>
+                            <span sec:authorize="hasRole('ADMIN')" style="display: flex; align-items: center; margin-left: auto;">
+                                <a th:href="@{/runners/admin/attendance/{id}/edit(id=${attendance.id()})}"
+                                   class="runners-edit-btn"
+                                   title="수정">✎</a>
+                                <button class="runners-delete-btn"
+                                        th:data-id="${attendance.id()}"
+                                        th:data-name="${attendance.participantName()}"
+                                        type="button"
+                                        title="삭제">×</button>
+                            </span>
                         </li>
                     </ul>
                     <div class="runners-empty" th:if="${attendances.isEmpty()}" id="emptyState">

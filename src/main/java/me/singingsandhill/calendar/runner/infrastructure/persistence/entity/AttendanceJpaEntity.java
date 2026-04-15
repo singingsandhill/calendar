@@ -63,6 +63,14 @@ public class AttendanceJpaEntity {
         return distance;
     }
 
+    public void setParticipantName(String participantName) {
+        this.participantName = participantName;
+    }
+
+    public void setDistance(BigDecimal distance) {
+        this.distance = distance;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

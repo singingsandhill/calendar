@@ -46,12 +46,20 @@ public class AttendanceRepositoryAdapter implements AttendanceRepository {
         RunJpaEntity run = runJpaRepository.findById(attendance.getRunId())
                 .orElseThrow(() -> new IllegalStateException("Run not found: " + attendance.getRunId()));
 
-        AttendanceJpaEntity entity = new AttendanceJpaEntity(
-                run,
-                attendance.getParticipantName(),
-                attendance.getDistance(),
-                attendance.getCreatedAt()
-        );
+        AttendanceJpaEntity entity;
+        if (attendance.getId() != null) {
+            entity = attendanceJpaRepository.findById(attendance.getId())
+                    .orElseThrow(() -> new IllegalStateException("Attendance not found: " + attendance.getId()));
+            entity.setParticipantName(attendance.getParticipantName());
+            entity.setDistance(attendance.getDistance());
+        } else {
+            entity = new AttendanceJpaEntity(
+                    run,
+                    attendance.getParticipantName(),
+                    attendance.getDistance(),
+                    attendance.getCreatedAt()
+            );
+        }
 
         AttendanceJpaEntity saved = attendanceJpaRepository.save(entity);
         Attendance result = toDomain(saved);

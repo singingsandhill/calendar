@@ -56,6 +56,21 @@ public class AttendanceService {
         return attendanceRepository.findByParticipantName(participantName);
     }
 
+    public Attendance getAttendanceById(Long id) {
+        return attendanceRepository.findById(id)
+                .orElseThrow(() -> new AttendanceNotFoundException(id));
+    }
+
+    @Transactional
+    public Attendance updateAttendance(Long id, String participantName, BigDecimal distance) {
+        Attendance existing = attendanceRepository.findById(id)
+                .orElseThrow(() -> new AttendanceNotFoundException(id));
+        Attendance updated = new Attendance(
+                existing.getId(), existing.getRunId(),
+                participantName, distance, existing.getCreatedAt());
+        return attendanceRepository.save(updated);
+    }
+
     @Transactional
     public void deleteAttendance(Long id) {
         if (attendanceRepository.findById(id).isEmpty()) {

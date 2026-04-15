@@ -3,10 +3,13 @@ package me.singingsandhill.calendar.runner.presentation.controller;
 import jakarta.validation.Valid;
 import me.singingsandhill.calendar.runner.application.service.AttendanceService;
 import me.singingsandhill.calendar.runner.application.service.RunService;
+import me.singingsandhill.calendar.runner.domain.Attendance;
 import me.singingsandhill.calendar.runner.domain.Run;
 import me.singingsandhill.calendar.runner.domain.RunCategory;
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
+import me.singingsandhill.calendar.runner.presentation.dto.request.AttendanceUpdateRequest;
 import me.singingsandhill.calendar.runner.presentation.dto.request.RunCreateRequest;
+import me.singingsandhill.calendar.runner.presentation.dto.response.AttendanceResponse;
 import me.singingsandhill.calendar.runner.presentation.dto.response.RunResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -135,6 +138,36 @@ public class RunnerAdminController {
         runService.deleteRun(id);
         redirectAttributes.addFlashAttribute("message", "런이 삭제되었습니다.");
         return "redirect:/runners/admin";
+    }
+
+    @GetMapping("/attendance/{id}/edit")
+    public String editAttendanceForm(@PathVariable Long id, Model model) {
+        Attendance attendance = attendanceService.getAttendanceById(id);
+        Run run = runService.getRunById(attendance.getRunId());
+        model.addAttribute("attendance", AttendanceResponse.from(attendance));
+        model.addAttribute("run", RunResponse.from(run));
+        model.addAttribute("seo", createAdminSeo("출석 수정"));
+        return "runners/admin/attendance-form";
+    }
+
+    @PostMapping("/attendance/{id}")
+    public String updateAttendance(@PathVariable Long id,
+                                   @Valid @ModelAttribute AttendanceUpdateRequest request,
+                                   BindingResult bindingResult,
+                                   RedirectAttributes redirectAttributes,
+                                   Model model) {
+        if (bindingResult.hasErrors()) {
+            Attendance attendance = attendanceService.getAttendanceById(id);
+            Run run = runService.getRunById(attendance.getRunId());
+            model.addAttribute("attendance", AttendanceResponse.from(attendance));
+            model.addAttribute("run", RunResponse.from(run));
+            model.addAttribute("errors", bindingResult.getAllErrors());
+            model.addAttribute("seo", createAdminSeo("출석 수정"));
+            return "runners/admin/attendance-form";
+        }
+        Attendance updated = attendanceService.updateAttendance(id, request.participantName(), request.distance());
+        redirectAttributes.addFlashAttribute("message", "출석 기록이 수정되었습니다.");
+        return "redirect:/runners/runs/" + updated.getRunId();
     }
 
     @PostMapping("/attendance/{id}/delete")
