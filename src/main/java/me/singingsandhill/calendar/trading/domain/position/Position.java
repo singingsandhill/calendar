@@ -161,11 +161,12 @@ public class Position {
      * - 마지막 시도가 5분 이전이거나 시도한 적이 없을 때
      */
     public boolean shouldRetryClose() {
-        if (closeAttemptCount >= 3) {
-            return false;
-        }
         if (lastCloseAttemptAt == null) {
             return true;
+        }
+        if (closeAttemptCount >= 3) {
+            // 3회 이상 실패 시 30분 백오프 (포기하지 않고 계속 재시도)
+            return lastCloseAttemptAt.plusMinutes(30).isBefore(LocalDateTime.now());
         }
         return lastCloseAttemptAt.plusMinutes(5).isBefore(LocalDateTime.now());
     }

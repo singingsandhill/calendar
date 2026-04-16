@@ -60,8 +60,13 @@ public class RiskManagementService {
         for (Position position : openPositions) {
             // Issue #5: 청산 시도 중인 포지션 스킵 (재시도 가능한 경우 제외)
             if (position.isClosingAttempted() && !position.shouldRetryClose()) {
-                log.debug("Skipping position {} - closing attempted (count: {})",
-                        position.getId(), position.getCloseAttemptCount());
+                if (position.getCloseAttemptCount() >= 3) {
+                    log.error("Position {} stuck in closing state (count: {}), waiting for backoff. Manual intervention may be required.",
+                            position.getId(), position.getCloseAttemptCount());
+                } else {
+                    log.debug("Skipping position {} - closing attempted (count: {})",
+                            position.getId(), position.getCloseAttemptCount());
+                }
                 continue;
             }
 

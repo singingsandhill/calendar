@@ -250,7 +250,7 @@ public class SignalService {
      * 각 점수 컴포넌트가 신호 방향과 같은 부호이면 동의로 간주
      */
     private int countAgreeingIndicators(int totalScore, int... scores) {
-        int direction = totalScore > 0 ? 1 : -1;
+        int direction = totalScore >= 0 ? 1 : -1;
         int count = 0;
         for (int s : scores) {
             if (s * direction > 0) count++;

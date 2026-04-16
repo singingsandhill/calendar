@@ -6,10 +6,9 @@ Gap & Pullback trading bot for Korean stocks via Korea Investment Securities API
 
 ```
 08:30  PreMarket    -> Collect prev day data
-09:00  Screening    -> Floor filter + composite score ranking (top N)
-09:15  Trading      -> Every 5 seconds: risk check -> state update -> enter if ready
-11:30  Trading End  -> Stop entering new positions
-15:20  Final Exit   -> Close all remaining positions
+09:20  Screening    -> Floor filter + composite score ranking (top N) + email alert
+09:20  Trading      -> Every 5 seconds: risk check -> state update -> enter if ready
+11:20  Final Exit   -> Force close all remaining positions
 ```
 
 ## State Machine
@@ -28,11 +27,11 @@ PULLBACK      -> Price < High x 0.970          -> FILTERED_OUT (too deep)
 
 | Type | Condition | Action |
 |------|-----------|--------|
-| Stop Loss | Price <= Entry x 0.95 | Sell 100% |
-| TP1 | Price >= Entry x 1.05 | Sell 50% (fee-adjusted profit check) |
-| TP2 | Price >= High | Sell 60% remaining (fee-adjusted profit check) |
-| TP3 | Price >= Entry x 1.10 | Sell remaining (fee-adjusted profit check) |
-| Trailing | Price <= TrailingHigh x 0.962 | Sell remaining |
-| Time Exit | Time >= 15:20 | Sell 100% |
+| Stop Loss | Price <= Entry x 0.985 (-1.5%) | Sell 100% |
+| TP1 | Price >= Entry x 1.015 (+1.5%) | Sell 50% (fee-adjusted profit check) |
+| TP2 | Price >= DayHigh | Sell 60% remaining (fee-adjusted profit check) |
+| TP3 | Price >= DayHigh x 1.01 (+1% above day high) | Sell remaining (fee-adjusted profit check) |
+| Trailing | Price <= TrailingHigh x 0.992 (-0.8%) | Sell remaining |
+| Time Exit | Time >= 11:20 | Sell 100% |
 
-Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (09:15) to 0.1% (15:15), making TP triggers easier to hit later in the session.
+Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (09:10) to 0.1% (15:15), making TP triggers easier to hit later in the session.

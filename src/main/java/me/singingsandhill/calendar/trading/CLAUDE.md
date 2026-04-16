@@ -30,7 +30,7 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 - Bearish (price < MA60): 30% coins / 70% KRW
 - Trigger: 10% deviation from target
 - Cooldown: 8 hours between rebalances
-- Min sell PnL: -3% (allows small loss to proceed with rebalancing)
+- Min sell PnL: +3% (only rebalances by selling when position profit >= 3%)
 - Safety details: see `application/CLAUDE.md`
 
 ## ATR-based Dynamic Order Ratio

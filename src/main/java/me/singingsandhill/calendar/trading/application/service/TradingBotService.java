@@ -341,8 +341,8 @@ public class TradingBotService {
                 return;
             }
 
-            // Position 생성
-            BigDecimal volume = orderAmount.divide(entryPrice, 8, RoundingMode.DOWN);
+            // Position 생성 (실제 주문금액 기준으로 volume 계산)
+            BigDecimal volume = adjustedOrderAmount.divide(entryPrice, 8, RoundingMode.DOWN);
             BigDecimal stopLossPrice = riskManagementService.calculateStopLossPrice(entryPrice);
             BigDecimal takeProfitPrice = riskManagementService.calculateTakeProfitPrice(entryPrice);
 
@@ -563,27 +563,22 @@ public class TradingBotService {
         );
 
         try {
-            Trade savedTrade = tradeRepository.save(trade);
+            // Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (executeBuy와 동일 패턴)
             BithumbOrderResponse response = bithumbApiClient.placeMarketBuyOrder(amount);
             if (response != null) {
                 log.info("Manual buy order placed: {}", response.uuid());
                 BigDecimal fee = extractFee(response);
                 Double currentPrice = bithumbApiClient.getCurrentPrice();
-                if (currentPrice != null) {
-                    BigDecimal price = BigDecimal.valueOf(currentPrice);
-                    BigDecimal volume = amount.divide(price, 8, RoundingMode.DOWN);
-                    savedTrade.markExecuted(price, volume, fee);
-                    tradeRepository.save(savedTrade);
-                }
+                BigDecimal price = currentPrice != null ? BigDecimal.valueOf(currentPrice) : orderPrice;
+                BigDecimal volume = amount.divide(price, 8, RoundingMode.DOWN);
+                trade.markExecuted(price, volume, fee);
+                tradeRepository.save(trade);
                 return true;
             } else {
-                savedTrade.markCancelled();
-                tradeRepository.save(savedTrade);
+                log.warn("Manual buy order failed - no response from API");
             }
         } catch (Exception e) {
             log.error("Failed to execute manual buy", e);
-            trade.markFailed(e.getMessage());
-            try { tradeRepository.save(trade); } catch (Exception ignored) {}
         }
         return false;
     }
@@ -617,26 +612,21 @@ public class TradingBotService {
         );
 
         try {
-            Trade savedTrade = tradeRepository.save(trade);
+            // Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (executeSell과 동일 패턴)
             BithumbOrderResponse response = bithumbApiClient.placeMarketSellOrder(volume);
             if (response != null) {
                 log.info("Manual sell order placed: {}", response.uuid());
                 BigDecimal fee = extractFee(response);
                 Double currentPrice = bithumbApiClient.getCurrentPrice();
-                if (currentPrice != null) {
-                    BigDecimal price = BigDecimal.valueOf(currentPrice);
-                    savedTrade.markExecuted(price, volume, fee);
-                    tradeRepository.save(savedTrade);
-                }
+                BigDecimal price = currentPrice != null ? BigDecimal.valueOf(currentPrice) : orderPrice;
+                trade.markExecuted(price, volume, fee);
+                tradeRepository.save(trade);
                 return true;
             } else {
-                savedTrade.markCancelled();
-                tradeRepository.save(savedTrade);
+                log.warn("Manual sell order failed - no response from API");
             }
         } catch (Exception e) {
             log.error("Failed to execute manual sell", e);
-            trade.markFailed(e.getMessage());
-            try { tradeRepository.save(trade); } catch (Exception ignored) {}
         }
         return false;
     }
