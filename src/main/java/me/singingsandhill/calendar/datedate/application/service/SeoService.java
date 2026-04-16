@@ -284,8 +284,7 @@ public class SeoService {
                     {
                         "@type": "ListItem",
                         "position": 2,
-                        "name": "활용 사례",
-                        "item": "%s/use-cases/"
+                        "name": "활용 사례"
                     },
                     {
                         "@type": "ListItem",
@@ -294,7 +293,7 @@ public class SeoService {
                     }
                 ]
             }]
-            """.formatted(title, description, baseUrl, slug, baseUrl, baseUrl, title);
+            """.formatted(title, description, baseUrl, slug, baseUrl, title);
 
         return SeoMetadata.builder()
             .title(title + " | " + BRAND_NAME + " 활용 사례")

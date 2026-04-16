@@ -15,6 +15,7 @@ import me.singingsandhill.calendar.runner.presentation.dto.response.AttendanceRe
 import me.singingsandhill.calendar.runner.presentation.dto.response.AttendanceWithRunResponse;
 import me.singingsandhill.calendar.runner.presentation.dto.response.MemberStatsResponse;
 import me.singingsandhill.calendar.runner.presentation.dto.response.RunResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -32,14 +33,19 @@ import java.util.stream.Collectors;
 @RequestMapping("/runners")
 public class RunnerController {
 
-    private static final String BASE_URL = "https://datedate.me";
-    private static final String OG_IMAGE = "https://datedate.me/image/crew_logo.png";
     private static final String KEYWORDS = "97runners, 97 runners, 1997Runners, 1997runners, 97러너스, 1997러너스, 띠런, 97띠런, 러닝 크루, 러닝, 러닝 동호회, 달리기, 마라톤, 출석체크, 러닝 모임";
 
+    private final String baseUrl;
+    private final String ogImage;
     private final RunService runService;
     private final AttendanceService attendanceService;
 
-    public RunnerController(RunService runService, AttendanceService attendanceService) {
+    public RunnerController(
+            @Value("${app.base-url:https://datedate.me}") String baseUrl,
+            RunService runService,
+            AttendanceService attendanceService) {
+        this.baseUrl = baseUrl;
+        this.ogImage = baseUrl + "/image/crew_logo.png";
         this.runService = runService;
         this.attendanceService = attendanceService;
     }
@@ -56,8 +62,32 @@ public class RunnerController {
                 .description("97 Runners 러닝 크루 - 출석 체크, 거리 기록, 랭킹 확인. 함께 달리며 건강한 라이프스타일을 만들어갑니다.")
                 .keywords(KEYWORDS)
                 .robots("index, follow")
-                .canonical(BASE_URL + "/runners")
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners")
+                .ogImage(ogImage)
+                .jsonLd("""
+                    [{
+                        "@context": "https://schema.org",
+                        "@type": "SportsTeam",
+                        "name": "97 Runners",
+                        "sport": "Running",
+                        "url": "%s/runners",
+                        "description": "97년생 러닝 크루 - 함께 달리며 건강한 라이프스타일을 만들어갑니다.",
+                        "memberOf": {
+                            "@type": "SportsOrganization",
+                            "name": "97 Runners"
+                        }
+                    },
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "BreadcrumbList",
+                        "itemListElement": [{
+                            "@type": "ListItem",
+                            "position": 1,
+                            "name": "97 Runners 홈",
+                            "item": "%s/runners"
+                        }]
+                    }]
+                    """.formatted(baseUrl, baseUrl))
                 .build());
 
         return "runners/home";
@@ -76,8 +106,8 @@ public class RunnerController {
                 .description("97 Runners 러닝 크루의 정규런, 번개런 일정을 확인하고 출석 체크하세요.")
                 .keywords(KEYWORDS)
                 .robots("index, follow")
-                .canonical(BASE_URL + "/runners/runs")
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners/runs")
+                .ogImage(ogImage)
                 .build());
         return "runners/run-list";
     }
@@ -96,8 +126,8 @@ public class RunnerController {
                 .title(runResponse.formattedDate() + " " + runResponse.categoryDisplayName() + " - 97 Runners")
                 .description("97 Runners " + runResponse.formattedDate() + " " + runResponse.categoryDisplayName() + " - " + runResponse.location() + "에서 함께 달려요!")
                 .keywords(KEYWORDS)
-                .canonical(BASE_URL + "/runners/runs/" + id)
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners/runs/" + id)
+                .ogImage(ogImage)
                 .build());
 
         return "runners/run-detail";
@@ -116,8 +146,8 @@ public class RunnerController {
                 .description("97 Runners 러닝 크루 멤버들의 출석 현황과 누적 거리를 확인하세요.")
                 .keywords(KEYWORDS)
                 .robots("index, follow")
-                .canonical(BASE_URL + "/runners/members")
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners/members")
+                .ogImage(ogImage)
                 .build());
         return "runners/member-list";
     }
@@ -149,8 +179,8 @@ public class RunnerController {
                 .title(name + " - 97 Runners")
                 .description("97 Runners 멤버 " + name + "님의 출석 기록과 누적 거리를 확인하세요.")
                 .keywords(KEYWORDS)
-                .canonical(BASE_URL + "/runners/members/" + name)
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners/members/" + name)
+                .ogImage(ogImage)
                 .build());
 
         return "runners/member-detail";
@@ -162,8 +192,8 @@ public class RunnerController {
                 .title("공지 이미지 생성기 - 97 Runners")
                 .description("97 Runners 러닝 크루 공지 이미지를 쉽게 만들어보세요. 날짜, 시간, 장소를 입력하면 공유 가능한 이미지가 생성됩니다.")
                 .keywords(KEYWORDS)
-                .canonical(BASE_URL + "/runners/announce")
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners/announce")
+                .ogImage(ogImage)
                 .build());
         return "runners/announce";
     }
@@ -176,8 +206,8 @@ public class RunnerController {
                 .description("97 Runners 러닝 크루의 새로운 런을 등록하세요.")
                 .keywords(KEYWORDS)
                 .robots("index, follow")
-                .canonical(BASE_URL + "/runners/runs/new")
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners/runs/new")
+                .ogImage(ogImage)
                 .build());
         return "runners/run-form";
     }
@@ -195,8 +225,8 @@ public class RunnerController {
                     .description("97 Runners 러닝 크루의 새로운 런을 등록하세요.")
                     .keywords(KEYWORDS)
                     .robots("index, follow")
-                    .canonical(BASE_URL + "/runners/runs/new")
-                    .ogImage(OG_IMAGE)
+                    .canonical(baseUrl + "/runners/runs/new")
+                    .ogImage(ogImage)
                     .build());
             return "runners/run-form";
         }

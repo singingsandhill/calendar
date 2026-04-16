@@ -11,6 +11,7 @@ import me.singingsandhill.calendar.runner.presentation.dto.request.AttendanceUpd
 import me.singingsandhill.calendar.runner.presentation.dto.request.RunCreateRequest;
 import me.singingsandhill.calendar.runner.presentation.dto.response.AttendanceResponse;
 import me.singingsandhill.calendar.runner.presentation.dto.response.RunResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -25,13 +26,17 @@ import java.util.stream.Collectors;
 @RequestMapping("/runners/admin")
 public class RunnerAdminController {
 
-    private static final String BASE_URL = "https://datedate.me";
-    private static final String OG_IMAGE = "https://datedate.me/image/crew_logo.png";
-
+    private final String baseUrl;
+    private final String ogImage;
     private final RunService runService;
     private final AttendanceService attendanceService;
 
-    public RunnerAdminController(RunService runService, AttendanceService attendanceService) {
+    public RunnerAdminController(
+            @Value("${app.base-url:https://datedate.me}") String baseUrl,
+            RunService runService,
+            AttendanceService attendanceService) {
+        this.baseUrl = baseUrl;
+        this.ogImage = baseUrl + "/image/crew_logo.png";
         this.runService = runService;
         this.attendanceService = attendanceService;
     }
@@ -42,8 +47,8 @@ public class RunnerAdminController {
                 .description("97 Runners 러닝 크루 관리자 페이지")
                 .keywords("97 runners, 관리자")
                 .robots("noindex, nofollow")
-                .canonical(BASE_URL + "/runners/admin")
-                .ogImage(OG_IMAGE)
+                .canonical(baseUrl + "/runners/admin")
+                .ogImage(ogImage)
                 .build();
     }
 

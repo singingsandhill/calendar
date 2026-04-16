@@ -1,12 +1,14 @@
 package me.singingsandhill.calendar.common.application.service;
 
 import me.singingsandhill.calendar.common.application.dto.SitemapEntry;
+import me.singingsandhill.calendar.runner.domain.Run;
 import me.singingsandhill.calendar.runner.domain.RunRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -16,9 +18,16 @@ import java.util.List;
 @Service
 public class SitemapService {
 
+    // 콘텐츠 최종 수정일 — 실제 페이지 내용이 바뀔 때마다 갱신
+    private static final LocalDate HOME_LASTMOD     = LocalDate.of(2026, 4, 6);
+    private static final LocalDate GUIDE_LASTMOD    = LocalDate.of(2026, 4, 6);
+    private static final LocalDate PRIVACY_LASTMOD  = LocalDate.of(2026, 4, 6);
+    private static final LocalDate TERMS_LASTMOD    = LocalDate.of(2026, 4, 6);
+    private static final LocalDate USE_CASE_LASTMOD = LocalDate.of(2026, 4, 6);
+    private static final LocalDate ANNOUNCE_LASTMOD = LocalDate.of(2026, 4, 6);
+
     private final String baseUrl;
     private final RunRepository runRepository;
-    private final LocalDate startupDate;
 
     public SitemapService(
             @Value("${app.base-url:https://datedate.site}") String baseUrl,
@@ -26,38 +35,51 @@ public class SitemapService {
     ) {
         this.baseUrl = baseUrl;
         this.runRepository = runRepository;
-        this.startupDate = LocalDate.now();
     }
 
     public List<SitemapEntry> getSitemapEntries() {
         LocalDate runnerLastmod = getLatestRunDate();
         LocalDate insightsLastmod = LocalDate.now();
 
-        return List.of(
-                new SitemapEntry(baseUrl + "/", startupDate, "monthly", "1.0"),
-                new SitemapEntry(baseUrl + "/guide", startupDate, "monthly", "0.9"),
-                new SitemapEntry(baseUrl + "/privacy", startupDate, "yearly", "0.4"),
-                new SitemapEntry(baseUrl + "/terms", startupDate, "yearly", "0.4"),
+        List<SitemapEntry> entries = new ArrayList<>(List.of(
+                new SitemapEntry(baseUrl + "/", HOME_LASTMOD, "monthly", "1.0"),
+                new SitemapEntry(baseUrl + "/guide", GUIDE_LASTMOD, "monthly", "0.9"),
+                new SitemapEntry(baseUrl + "/privacy", PRIVACY_LASTMOD, "yearly", "0.4"),
+                new SitemapEntry(baseUrl + "/terms", TERMS_LASTMOD, "yearly", "0.4"),
                 new SitemapEntry(baseUrl + "/insights/trends", insightsLastmod, "weekly", "0.8"),
-                new SitemapEntry(baseUrl + "/use-cases/friend-meetup", startupDate, "monthly", "0.7"),
-                new SitemapEntry(baseUrl + "/use-cases/team-meeting", startupDate, "monthly", "0.7"),
-                new SitemapEntry(baseUrl + "/use-cases/travel-planning", startupDate, "monthly", "0.7"),
-                new SitemapEntry(baseUrl + "/use-cases/study-group", startupDate, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/use-cases/friend-meetup", USE_CASE_LASTMOD, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/use-cases/team-meeting", USE_CASE_LASTMOD, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/use-cases/travel-planning", USE_CASE_LASTMOD, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/use-cases/study-group", USE_CASE_LASTMOD, "monthly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners", runnerLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners/runs", runnerLastmod, "weekly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners/members", runnerLastmod, "weekly", "0.7"),
-                new SitemapEntry(baseUrl + "/runners/announce", startupDate, "monthly", "0.5")
-        );
+                new SitemapEntry(baseUrl + "/runners/announce", ANNOUNCE_LASTMOD, "monthly", "0.5")
+        ));
+
+        // 개별 런 상세 페이지 동적 추가
+        if (runRepository != null) {
+            runRepository.findAll().forEach(run ->
+                entries.add(new SitemapEntry(
+                        baseUrl + "/runners/runs/" + run.getId(),
+                        run.getCreatedAt().toLocalDate(),
+                        "monthly",
+                        "0.6"
+                ))
+            );
+        }
+
+        return entries;
     }
 
     private LocalDate getLatestRunDate() {
         if (runRepository == null) {
-            return startupDate;
+            return HOME_LASTMOD;
         }
         return runRepository.findAllOrderByDateDesc().stream()
                 .findFirst()
                 .map(run -> run.getCreatedAt().toLocalDate())
-                .orElse(startupDate);
+                .orElse(HOME_LASTMOD);
     }
 
     public String generateSitemapXml() {

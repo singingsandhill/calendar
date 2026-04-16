@@ -7,7 +7,9 @@ Allow: /$
 Allow: /insights/trends
 Allow: /runners
 Allow: /runners/runs
+Allow: /runners/runs/
 Allow: /runners/members
+Allow: /runners/members/
 Allow: /runners/announce
 Allow: /guide
 Allow: /privacy
@@ -26,6 +28,7 @@ Disallow: /trading/
 Disallow: /stock/
 
 # Block user-generated schedule pages (/{ownerId}/20xx/xx)
+# Note: /runners/runs/ and /runners/members/ Allow rules above take precedence (longer match)
 Disallow: /*/20
 
 Crawl-delay: 1
