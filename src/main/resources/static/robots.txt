@@ -2,6 +2,10 @@
 
 User-agent: *
 
+# Block form/action endpoints (must precede Allow: /runners/runs/)
+Disallow: /runners/runs/new
+Disallow: /runners/runs/create
+
 # Allow public pages
 Allow: /$
 Allow: /insights/trends
@@ -27,9 +31,14 @@ Disallow: /runners/admin/
 Disallow: /trading/
 Disallow: /stock/
 
-# Block user-generated schedule pages (/{ownerId}/20xx/xx)
+# Block user-generated schedule pages (/{ownerId}/20xx/mm)
+# Slash suffix ensures /runners/2026-recap style URLs are NOT blocked
 # Note: /runners/runs/ and /runners/members/ Allow rules above take precedence (longer match)
-Disallow: /*/20
+Disallow: /*/2024/
+Disallow: /*/2025/
+Disallow: /*/2026/
+Disallow: /*/2027/
+Disallow: /*/2028/
 
 Crawl-delay: 1
 

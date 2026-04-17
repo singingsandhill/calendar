@@ -41,7 +41,7 @@ public class RunnerController {
     private final AttendanceService attendanceService;
 
     public RunnerController(
-            @Value("${app.base-url:https://datedate.me}") String baseUrl,
+            @Value("${app.base-url:https://datedate.site}") String baseUrl,
             RunService runService,
             AttendanceService attendanceService) {
         this.baseUrl = baseUrl;
@@ -179,6 +179,7 @@ public class RunnerController {
                 .title(name + " - 97 Runners")
                 .description("97 Runners 멤버 " + name + "님의 출석 기록과 누적 거리를 확인하세요.")
                 .keywords(KEYWORDS)
+                .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/members/" + name)
                 .ogImage(ogImage)
                 .build());
@@ -192,6 +193,7 @@ public class RunnerController {
                 .title("공지 이미지 생성기 - 97 Runners")
                 .description("97 Runners 러닝 크루 공지 이미지를 쉽게 만들어보세요. 날짜, 시간, 장소를 입력하면 공유 가능한 이미지가 생성됩니다.")
                 .keywords(KEYWORDS)
+                .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/announce")
                 .ogImage(ogImage)
                 .build());
@@ -205,7 +207,7 @@ public class RunnerController {
                 .title("새 런 만들기 - 97 Runners")
                 .description("97 Runners 러닝 크루의 새로운 런을 등록하세요.")
                 .keywords(KEYWORDS)
-                .robots("index, follow")
+                .robots("noindex, nofollow")
                 .canonical(baseUrl + "/runners/runs/new")
                 .ogImage(ogImage)
                 .build());
@@ -224,7 +226,7 @@ public class RunnerController {
                     .title("새 런 만들기 - 97 Runners")
                     .description("97 Runners 러닝 크루의 새로운 런을 등록하세요.")
                     .keywords(KEYWORDS)
-                    .robots("index, follow")
+                    .robots("noindex, nofollow")
                     .canonical(baseUrl + "/runners/runs/new")
                     .ogImage(ogImage)
                     .build());
