@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
-<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
@@ -8,12 +8,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 <div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
-<main class="container">
+<main class="container" id="main-content">
     <div class="schedule-header">
         <p class="owner-info" th:text="#{schedule.owner.info(${ownerId})}">user님의 일정</p>
         <h1 th:text="${yearMonthLabel}">2025년 12월</h1>
         <p class="subtitle" th:text="#{schedule.subtitle}">참여 가능한 날짜를 선택하세요</p>
         <button class="btn btn-outline copy-link-btn" onclick="copyLink()" th:text="#{schedule.copy.link}">링크 복사</button>
+    </div>
+
+    <!-- 온보딩 배너: 참여자가 없을 때 사용 안내 표시 -->
+    <div class="onboarding-banner"
+         id="onboardingBanner"
+         role="note"
+         aria-label="사용 안내"
+         th:if="${schedule.participants().isEmpty()}">
+        <div class="onboarding-steps">
+            <span class="onboarding-step">
+                <span class="onboarding-step-num" aria-hidden="true">1</span>
+                <span th:text="#{schedule.onboarding.step1}">이름 선택 또는 추가</span>
+            </span>
+            <span class="onboarding-step-arrow" aria-hidden="true">→</span>
+            <span class="onboarding-step">
+                <span class="onboarding-step-num" aria-hidden="true">2</span>
+                <span th:text="#{schedule.onboarding.step2}">날짜 클릭으로 표시</span>
+            </span>
+            <span class="onboarding-step-arrow" aria-hidden="true">→</span>
+            <span class="onboarding-step">
+                <span class="onboarding-step-num" aria-hidden="true">3</span>
+                <span th:text="#{schedule.onboarding.step3}">저장하기</span>
+            </span>
+        </div>
+        <button onclick="document.getElementById('onboardingBanner').remove()"
+                class="btn-close-banner"
+                th:aria-label="#{schedule.onboarding.close}">×</button>
     </div>
 
     <div class="participant-section">
@@ -150,7 +177,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
-<th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+<th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
 
 <!-- Schedule data injection for external script -->
 <script th:inline="javascript">

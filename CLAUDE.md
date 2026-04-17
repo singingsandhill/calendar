@@ -154,7 +154,7 @@ CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트는 비활
 
 | 디렉토리 | 내용 |
 |---------|------|
-| `fragments/` | 공통 `header.html`, `footer.html` (datedate) |
+| `fragments/` | `head.html` (SEO/meta), `header.html` (nav), `footer.html` (footer), `scripts.html` (JS), `ad-slot.html` (AdSense 슬롯) |
 | `schedule/` | `view.html` — 참가자 일정 뷰 |
 | `owner/` | `dashboard.html` — 오너 대시보드 |
 | `runners/` | 홈, 런 목록/상세/폼, 멤버 목록/상세 |

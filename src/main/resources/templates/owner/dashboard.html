@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
-<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
@@ -8,10 +8,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 <div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
-<main class="container">
+<main class="container" id="main-content">
     <div class="dashboard-header">
         <h1 th:text="#{dashboard.title(${ownerId})}">Dashboard</h1>
-        <button class="btn btn-primary" onclick="openCreateModal()" th:text="#{dashboard.new.schedule}">+ 새 일정</button>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <!-- 이번 달 일정 바로 열기 -->
+            <a th:href="@{'/' + ${ownerId} + '/' + ${#dates.format(#dates.createNow(), 'yyyy')} + '/' + ${#dates.format(#dates.createNow(), 'M')}}"
+               class="btn btn-outline"
+               th:text="#{dashboard.this.month}">이번 달</a>
+            <button class="btn btn-primary" onclick="openCreateModal()" th:text="#{dashboard.new.schedule}">+ 새 일정</button>
+        </div>
     </div>
 
     <section class="schedules-grid" th:if="${!schedules.isEmpty()}" th:attr="aria-label=#{dashboard.new.schedule}">
@@ -43,12 +49,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </article>
     </section>
 
-    <div class="empty-state" th:if="${schedules.isEmpty()}">
-        <h2 th:text="#{dashboard.empty.title}">여러명이서 쉽게 날짜 조율하기</h2>
-        <p th:text="#{dashboard.empty.desc1}">DateDate는 가입 없이 링크 하나로 모임 날짜, 장소, 메뉴를 한번에 정할 수 있는 무료 일정 조율 서비스입니다.</p>
-        <p th:text="#{dashboard.empty.desc2}">아래 버튼을 눌러 첫 번째 일정을 만들어보세요. 생성된 링크를 참여자에게 공유하면 각자 가능한 날짜를 선택할 수 있습니다.</p>
-        <button class="btn btn-primary" onclick="openCreateModal()" th:text="#{dashboard.empty.create}">+ 새 일정 만들기</button>
-        <p style="margin-top: 1rem;"><a th:href="@{/guide}" th:text="#{dashboard.empty.guide}">사용 가이드 보기 →</a></p>
+    <!-- 빈 상태 UI (일정 없을 때) -->
+    <div class="empty-state" th:if="${schedules.isEmpty()}" role="status">
+        <div class="empty-state-icon" aria-hidden="true">📅</div>
+        <h2 th:text="#{dashboard.empty.title}">첫 일정을 만들어보세요</h2>
+        <p th:text="#{dashboard.empty.desc}">링크 하나로 날짜·장소·메뉴를 함께 정하세요. 가입 없이 바로 시작할 수 있어요.</p>
+        <button class="btn btn-primary" style="font-size: 1.05rem; padding: 0.875rem 2rem;"
+                onclick="openCreateModal()" th:text="#{dashboard.empty.create}">+ 새 일정 만들기</button>
+        <p style="margin-top: 1.25rem; font-size: 0.9rem;">
+            <a th:href="@{/guide}" th:text="#{dashboard.empty.guide}">사용 가이드 보기 →</a>
+        </p>
     </div>
 </main>
 
@@ -93,7 +103,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div>
 
 <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
-<th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+<th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
 
 <!-- Owner data injection for external script -->
 <script th:inline="javascript">

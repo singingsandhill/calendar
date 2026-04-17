@@ -59,10 +59,9 @@
     </footer>
 </th:block>
 
-<th:block th:fragment="scripts">
-    <script defer th:src="@{/js/toast.js}"></script>
-    <script defer th:src="@{/js/api.js}"></script>
-    <script defer th:src="@{/js/calendar.js}"></script>
-</th:block>
+<!--
+  공통 스크립트는 fragments/scripts.html 을 사용하세요.
+  <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+-->
 
 </html>

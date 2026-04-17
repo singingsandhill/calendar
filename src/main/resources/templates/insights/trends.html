@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
-<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
@@ -30,6 +30,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
 
     <!-- Popular Content Grid -->
+    <h2 class="insights-popular-heading animate-on-scroll" th:text="#{insights.popular.heading}">인기 순위</h2>
     <div class="trends-grid">
         <!-- 인기 장소 TOP 10 -->
         <section class="trends-section animate-on-scroll">
@@ -37,7 +38,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <svg viewBox="0 0 24 24" fill="currentColor" class="trends-icon">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
-                <h2 th:text="#{insights.location.title}">인기 장소 TOP 10</h2>
+                <h3 th:text="#{insights.location.title}">인기 장소 TOP 10</h3>
             </div>
 
             <div th:if="${popularLocations.isEmpty()}" class="empty-state">
@@ -75,7 +76,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <svg viewBox="0 0 24 24" fill="currentColor" class="trends-icon">
                     <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
                 </svg>
-                <h2 th:text="#{insights.menu.title}">인기 메뉴 TOP 10</h2>
+                <h3 th:text="#{insights.menu.title}">인기 메뉴 TOP 10</h3>
             </div>
 
             <div th:if="${popularMenus.isEmpty()}" class="empty-state">
@@ -124,6 +125,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             인기 순위는 단순히 투표 수만을 기준으로 하지 않습니다.
         </p>
     </section>
+
+    <!-- 광고 슬롯: 인기 순위 소비 후, 이용 현황 직전 -->
+    <div th:replace="~{fragments/ad-slot :: leaderboard(${seo.adsEnabled()})}"></div>
 
     <!-- 이용 현황 섹션 -->
     <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0 3rem;">
@@ -251,9 +255,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
     </section>
 
-    <!-- Navigation -->
-    <section class="insights-nav animate-on-scroll">
-        <a th:href="@{/}" class="btn-secondary" th:text="#{insights.home}">홈으로</a>
+    <!-- 광고 슬롯: 상세 통계 소비 후, CTA 직전 -->
+    <div th:replace="~{fragments/ad-slot :: infeed(${seo.adsEnabled()})}"></div>
+
+    <!-- CTA Section -->
+    <section class="insights-cta-section animate-on-scroll" aria-labelledby="insights-cta-heading">
+        <h2 id="insights-cta-heading" th:text="#{insights.cta.title}">지금 그룹 일정을 만들어보세요</h2>
+        <p th:text="#{insights.cta.desc}">계정 없이, 링크 하나로 날짜·장소·메뉴를 함께 정하세요</p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a th:href="@{/}" class="btn-spring" th:text="#{insights.cta.button}">시작하기</a>
+            <a th:href="@{/guide}" class="btn-secondary" th:text="#{insights.cta.guide}">사용 가이드</a>
+        </div>
     </section>
 </main>
 

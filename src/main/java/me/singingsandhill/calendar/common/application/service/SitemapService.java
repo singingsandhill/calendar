@@ -19,12 +19,14 @@ import java.util.List;
 public class SitemapService {
 
     // 콘텐츠 최종 수정일 — 실제 페이지 내용이 바뀔 때마다 갱신
-    private static final LocalDate HOME_LASTMOD     = LocalDate.of(2026, 4, 6);
-    private static final LocalDate GUIDE_LASTMOD    = LocalDate.of(2026, 4, 6);
+    private static final LocalDate HOME_LASTMOD     = LocalDate.of(2026, 4, 16);
+    private static final LocalDate GUIDE_LASTMOD    = LocalDate.of(2026, 4, 16);
     private static final LocalDate PRIVACY_LASTMOD  = LocalDate.of(2026, 4, 6);
     private static final LocalDate TERMS_LASTMOD    = LocalDate.of(2026, 4, 6);
-    private static final LocalDate USE_CASE_LASTMOD = LocalDate.of(2026, 4, 6);
+    private static final LocalDate USE_CASE_LASTMOD = LocalDate.of(2026, 4, 16);
     private static final LocalDate ANNOUNCE_LASTMOD = LocalDate.of(2026, 4, 6);
+    private static final LocalDate FAQ_LASTMOD      = LocalDate.of(2026, 4, 16);
+    private static final LocalDate TOOL_LASTMOD     = LocalDate.of(2026, 4, 16);
 
     private final String baseUrl;
     private final RunRepository runRepository;
@@ -51,6 +53,8 @@ public class SitemapService {
                 new SitemapEntry(baseUrl + "/use-cases/team-meeting", USE_CASE_LASTMOD, "monthly", "0.7"),
                 new SitemapEntry(baseUrl + "/use-cases/travel-planning", USE_CASE_LASTMOD, "monthly", "0.7"),
                 new SitemapEntry(baseUrl + "/use-cases/study-group", USE_CASE_LASTMOD, "monthly", "0.7"),
+                new SitemapEntry(baseUrl + "/faq", FAQ_LASTMOD, "monthly", "0.8"),
+                new SitemapEntry(baseUrl + "/tools/date-diff", TOOL_LASTMOD, "monthly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners", runnerLastmod, "weekly", "0.8"),
                 new SitemapEntry(baseUrl + "/runners/runs", runnerLastmod, "weekly", "0.7"),
                 new SitemapEntry(baseUrl + "/runners/members", runnerLastmod, "weekly", "0.7"),

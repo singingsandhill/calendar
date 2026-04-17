@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
-<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
@@ -26,6 +26,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
         </div>
     </section>
+
+    <!-- 광고 슬롯: 콘텐츠 소비 후, CTA 직전 -->
+    <div th:replace="~{fragments/ad-slot :: infeed(${seo.adsEnabled()})}"></div>
 
     <section class="use-case-cta animate-on-scroll">
         <h2 th:text="#{usecase.cta.title}">지금 바로 시작하세요</h2>

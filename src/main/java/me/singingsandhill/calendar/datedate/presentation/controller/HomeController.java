@@ -57,6 +57,18 @@ public class HomeController {
         return "terms";
     }
 
+    @GetMapping("/faq")
+    public String faq(Model model) {
+        model.addAttribute("seo", seoService.getFaqSeo());
+        return "faq";
+    }
+
+    @GetMapping("/tools/date-diff")
+    public String dateDiff(Model model) {
+        model.addAttribute("seo", seoService.getDateDiffSeo());
+        return "tools/date-diff";
+    }
+
     @PostMapping("/start")
     public String start(@RequestParam String ownerId, RedirectAttributes redirectAttributes) {
         try {

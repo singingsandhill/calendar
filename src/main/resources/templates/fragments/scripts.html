@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  scripts fragment — 캘린더/API/토스트 공통 스크립트 로딩.
+  사용법: <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+-->
+<th:block th:fragment="scripts">
+    <script defer th:src="@{/js/toast.js}"></script>
+    <script defer th:src="@{/js/api.js}"></script>
+    <script defer th:src="@{/js/calendar.js}"></script>
+</th:block>
+
+</html>

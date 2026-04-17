@@ -1,16 +1,23 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
-<head th:replace="~{fragments/header :: head(${seo})}"></head>
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
+
+<!-- Skip Navigation (Accessibility) -->
+<a href="#main-content" class="skip-nav" th:text="#{a11y.skip.nav}">본문 바로가기</a>
+
 <div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
 
 <!-- Hero Section - Fullscreen (Garriock Style) -->
 <section class="hero-fullscreen">
-    <h1 class="fade-in-up">DateDate</h1>
+    <h1 class="fade-in-up">
+        <span class="hero-brand">DateDate</span>
+        <span class="hero-keyword" th:text="#{index.hero.keyword}">그룹 약속 조율 서비스</span>
+    </h1>
     <p class="subtitle fade-in-up" style="--delay: 0.15s" th:text="#{index.hero.subtitle}">여러명이서 쉽게 날짜 조율하기</p>
     <p class="hero-description fade-in-up" style="--delay: 0.25s" th:utext="#{index.hero.description}">
         카톡방에서 "언제 돼?" 그만 보내세요.<br>
@@ -53,7 +60,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 </section>
 
-<main class="container">
+<main class="container" id="main-content">
     <!-- 실시간 통계 스트립 -->
     <section class="stats-strip animate-on-scroll">
         <div class="stats-strip-grid">
@@ -132,31 +139,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div class="feature-card animate-on-scroll">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
-                    </svg>
-                </div>
-                <h3 th:text="#{index.feature1.title}">나만의 고유 페이지</h3>
-                <p th:text="#{index.feature1.desc}">datedate.site/my-team — 기억하기 쉬운 URL로 팀, 모임, 프로젝트별 페이지를 만드세요.</p>
-            </div>
-
-            <div class="feature-card animate-on-scroll">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z"/>
                     </svg>
                 </div>
-                <h3 th:text="#{index.feature2.title}">직관적인 캘린더</h3>
-                <p th:text="#{index.feature2.desc}">달력에서 가능한 날짜를 클릭하면 끝. 설정도 설명도 필요 없습니다.</p>
-            </div>
-
-            <div class="feature-card animate-on-scroll">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                    </svg>
-                </div>
-                <h3 th:text="#{index.feature3.title}">최대 8명 참여</h3>
-                <p th:text="#{index.feature3.desc}">참여자마다 고유 색상이 부여되어, 누가 언제 되는지 한눈에 보입니다.</p>
+                <h3 th:text="#{index.feature2.title}">날짜 조율</h3>
+                <p th:text="#{index.feature2.desc}">달력에서 가능한 날짜를 클릭하면 끝. 최대 8명이 각자 색상으로 참여해 겹치는 날짜를 바로 확인할 수 있어요.</p>
             </div>
 
             <div class="feature-card animate-on-scroll">
@@ -165,8 +152,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
                     </svg>
                 </div>
-                <h3 th:text="#{index.feature4.title}">간편한 링크 공유</h3>
-                <p th:text="#{index.feature4.desc}">링크 복사 한 번이면 카톡, 슬랙, 이메일로 바로 공유. 가입도 설치도 없습니다.</p>
+                <h3 th:text="#{index.feature4.title}">링크 공유</h3>
+                <p th:text="#{index.feature4.desc}">링크 복사 한 번이면 카톡, 슬랙, 이메일로 바로 공유. 참여자는 가입도 설치도 없이 바로 참여합니다.</p>
             </div>
 
             <div class="feature-card animate-on-scroll">
@@ -232,65 +219,65 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
 
     <!-- FAQ Section -->
-    <section class="faq-section">
-        <h2 class="animate-on-scroll" th:text="#{index.faq.title}">자주 묻는 질문</h2>
+    <section class="faq-section" aria-labelledby="faq-heading">
+        <h2 id="faq-heading" class="animate-on-scroll" th:text="#{index.faq.title}">자주 묻는 질문</h2>
         <div class="faq-list">
             <div class="faq-item animate-on-scroll">
-                <button class="faq-question">
+                <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
                     <span th:text="#{index.faq1.q}">무료인가요? 가입이 필요한가요?</span>
-                    <span class="faq-toggle">+</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
                 </button>
-                <div class="faq-answer">
+                <div class="faq-answer" id="faq-answer-1" role="region">
                     <p th:text="#{index.faq1.a}">완전 무료, 가입 없이 바로 사용할 수 있습니다. ID 입력만으로 페이지가 생성되고, 참여자도 링크만으로 참여합니다.</p>
                 </div>
             </div>
 
             <div class="faq-item animate-on-scroll">
-                <button class="faq-question">
+                <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
                     <span th:text="#{index.faq2.q}">참여자가 날짜를 수정할 수 있나요?</span>
-                    <span class="faq-toggle">+</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
                 </button>
-                <div class="faq-answer">
+                <div class="faq-answer" id="faq-answer-2" role="region">
                     <p th:text="#{index.faq2.a}">네. 드롭다운에서 이름을 선택하고 날짜를 다시 고른 뒤 저장하면 됩니다.</p>
                 </div>
             </div>
 
             <div class="faq-item animate-on-scroll">
-                <button class="faq-question">
+                <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
                     <span th:text="#{index.faq3.q}">장소나 메뉴 투표는 어떻게 하나요?</span>
-                    <span class="faq-toggle">+</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
                 </button>
-                <div class="faq-answer">
+                <div class="faq-answer" id="faq-answer-3" role="region">
                     <p th:text="#{index.faq3.a}">일정 페이지 하단에서 장소·메뉴를 제안하고 투표하세요. 중복 투표 가능하며, 메뉴에는 배달앱 링크도 첨부할 수 있습니다.</p>
                 </div>
             </div>
 
             <div class="faq-item animate-on-scroll">
-                <button class="faq-question">
+                <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
                     <span th:text="#{index.faq4.q}">일정 데이터는 얼마나 보관되나요?</span>
-                    <span class="faq-toggle">+</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
                 </button>
-                <div class="faq-answer">
+                <div class="faq-answer" id="faq-answer-4" role="region">
                     <p th:text="#{index.faq4.a}">삭제하지 않는 한 계속 보관됩니다. 대시보드에서 언제든 확인·관리 가능합니다.</p>
                 </div>
             </div>
 
             <div class="faq-item animate-on-scroll">
-                <button class="faq-question">
+                <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
                     <span th:text="#{index.faq5.q}">내 페이지 ID가 이미 사용 중이면?</span>
-                    <span class="faq-toggle">+</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
                 </button>
-                <div class="faq-answer">
+                <div class="faq-answer" id="faq-answer-5" role="region">
                     <p th:text="#{index.faq5.a}">해당 페이지의 대시보드로 이동합니다. 숫자나 하이픈을 조합해 고유한 ID를 만드세요. 예: my-team-2025</p>
                 </div>
             </div>
 
             <div class="faq-item animate-on-scroll">
-                <button class="faq-question">
+                <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
                     <span th:text="#{index.faq6.q}">링크를 공유하면 누구나 참여할 수 있나요?</span>
-                    <span class="faq-toggle">+</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
                 </button>
-                <div class="faq-answer">
+                <div class="faq-answer" id="faq-answer-6" role="region">
                     <p th:text="#{index.faq6.a}">네, 링크를 아는 사람은 누구나 참여할 수 있습니다. 신뢰할 수 있는 사람에게만 공유하세요.</p>
                 </div>
             </div>
@@ -299,11 +286,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </main>
 
 <script>
-// FAQ 토글 기능
+// FAQ 토글 기능 (aria-expanded 포함)
 document.querySelectorAll('.faq-question').forEach(button => {
     button.addEventListener('click', () => {
         const faqItem = button.parentElement;
-        faqItem.classList.toggle('open');
+        const isOpen = faqItem.classList.toggle('open');
+        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
 });
 

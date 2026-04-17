@@ -1,5 +1,7 @@
 package me.singingsandhill.calendar.datedate.application.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -263,6 +265,7 @@ public class SeoService {
      * 활용 사례 페이지 SEO 메타데이터.
      */
     public SeoMetadata getUseCaseSeo(String slug, String title, String description) {
+        String howToJsonLd = buildHowToJsonLd(slug, title, description);
         String jsonLd = """
             [{
                 "@context": "https://schema.org",
@@ -292,8 +295,9 @@ public class SeoService {
                         "name": "%s"
                     }
                 ]
-            }]
-            """.formatted(title, description, baseUrl, slug, baseUrl, title);
+            },
+            %s]
+            """.formatted(title, description, baseUrl, slug, baseUrl, title, howToJsonLd);
 
         return SeoMetadata.builder()
             .title(title + " | " + BRAND_NAME + " 활용 사례")
@@ -308,6 +312,77 @@ public class SeoService {
             .jsonLd(jsonLd)
             .adsEnabled(true)
             .build();
+    }
+
+    private String buildHowToJsonLd(String slug, String title, String description) {
+        record HowToStep(int position, String name, String text) {}
+
+        List<HowToStep> steps = switch (slug) {
+            case "friend-meetup" -> List.of(
+                new HowToStep(1, "DateDate 페이지 만들기",
+                    "datedate.site에 접속해 그룹 ID(예: college-friends)를 입력하고 시작하기를 클릭합니다."),
+                new HowToStep(2, "친구들에게 링크 공유하기",
+                    "생성된 페이지 링크를 카카오톡, 문자 등으로 친구들에게 공유합니다. 앱 설치나 가입 없이 바로 참여할 수 있습니다."),
+                new HowToStep(3, "모두가 가능한 날짜 확인하기",
+                    "친구들이 각자 이름을 입력하고 가능한 날짜를 클릭하면, 가장 많이 겹치는 날짜가 자동으로 하이라이트됩니다.")
+            );
+            case "team-meeting" -> List.of(
+                new HowToStep(1, "팀 일정 페이지 만들기",
+                    "datedate.site에 접속해 팀 ID(예: dev-team)를 입력하고 시작하기를 클릭합니다."),
+                new HowToStep(2, "팀원에게 링크 공유하기",
+                    "생성된 링크를 슬랙, 이메일 등 업무 채널로 공유합니다. 팀원은 별도 가입 없이 참여 가능합니다."),
+                new HowToStep(3, "최적 미팅 날짜 결정하기",
+                    "팀원들이 가능한 날짜를 선택하면 공통 가능 날짜가 자동으로 강조됩니다. 장소와 회의실도 투표로 정할 수 있습니다.")
+            );
+            case "travel-planning" -> List.of(
+                new HowToStep(1, "여행 일정 페이지 만들기",
+                    "datedate.site에 접속해 여행 ID(예: trip-2025)를 입력하고 시작하기를 클릭합니다."),
+                new HowToStep(2, "여행 멤버에게 링크 공유하기",
+                    "생성된 링크를 여행 멤버들에게 공유합니다. 가입 없이 누구나 바로 일정에 참여할 수 있습니다."),
+                new HowToStep(3, "모두가 가능한 여행 날짜 잡기",
+                    "멤버들이 각자 가능한 날짜를 선택하면 최적 여행 날짜가 강조됩니다. 여행지와 맛집도 함께 투표해 결정할 수 있습니다.")
+            );
+            case "study-group" -> List.of(
+                new HowToStep(1, "스터디 일정 페이지 만들기",
+                    "datedate.site에 접속해 스터디 ID(예: java-study)를 입력하고 시작하기를 클릭합니다."),
+                new HowToStep(2, "스터디원에게 링크 공유하기",
+                    "생성된 링크를 스터디원들에게 공유합니다. 앱 설치나 로그인 없이 바로 일정에 참여할 수 있습니다."),
+                new HowToStep(3, "정기 모임 날짜 조율하기",
+                    "스터디원들이 가능한 날짜를 선택하면 공통 가능 날짜가 자동 표시됩니다. 장소와 공부할 메뉴도 함께 정할 수 있습니다.")
+            );
+            default -> List.of(
+                new HowToStep(1, "DateDate 페이지 만들기",
+                    "datedate.site에 접속해 원하는 ID를 입력하고 시작하기를 클릭합니다."),
+                new HowToStep(2, "링크 공유하기",
+                    "생성된 페이지 링크를 참여자들에게 공유합니다. 가입 없이 바로 참여할 수 있습니다."),
+                new HowToStep(3, "날짜 선택 후 결과 확인하기",
+                    "참여자들이 가능한 날짜를 선택하면 가장 많이 겹치는 날짜가 자동으로 강조됩니다.")
+            );
+        };
+
+        StringBuilder stepsJson = new StringBuilder();
+        for (int i = 0; i < steps.size(); i++) {
+            HowToStep step = steps.get(i);
+            stepsJson.append("""
+                {
+                    "@type": "HowToStep",
+                    "position": %d,
+                    "name": "%s",
+                    "text": "%s"
+                }""".formatted(step.position(), step.name(), step.text()));
+            if (i < steps.size() - 1) stepsJson.append(",\n            ");
+        }
+
+        return """
+            {
+                "@context": "https://schema.org",
+                "@type": "HowTo",
+                "name": "%s 방법 - DateDate",
+                "description": "%s",
+                "step": [
+                    %s
+                ]
+            }""".formatted(title, description, stepsJson);
     }
 
     /**
@@ -443,6 +518,157 @@ public class SeoService {
             .ogType("website")
             .ogTitle("이용약관 | " + BRAND_NAME)
             .ogDescription("DateDate 서비스 이용약관")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
+            .build();
+    }
+
+    /**
+     * FAQ 독립 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getFaqSeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "DateDate는 무료인가요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "완전 무료입니다. 가입, 설치, 결제 없이 URL 하나로 바로 사용할 수 있습니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "몇 명까지 참여할 수 있나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "일정 하나당 최대 8명이 참여할 수 있습니다. 각 참여자는 고유한 색상으로 표시됩니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "링크를 받은 참여자는 어떻게 하나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "링크를 열면 바로 일정 페이지로 연결됩니다. 이름을 선택하거나 추가한 뒤 캘린더에서 가능한 날짜를 클릭하고 저장하면 됩니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "데이터는 얼마나 보관되나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "생성된 일정 데이터는 서비스 서버에 보관됩니다. 불필요한 일정은 대시보드에서 직접 삭제할 수 있습니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "모바일에서도 사용할 수 있나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "네, 모든 기기에서 사용할 수 있습니다. 별도 앱 설치 없이 모바일 브라우저에서 바로 이용 가능합니다."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "장소와 메뉴 투표는 어떻게 하나요?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "일정 페이지 하단에 장소/메뉴 투표 섹션이 있습니다. 장소나 메뉴를 제안하고 투표 버튼을 눌러 참여하세요."
+                        }
+                    }
+                ]
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "자주 묻는 질문"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl);
+
+        return SeoMetadata.builder()
+            .title("자주 묻는 질문 (FAQ) | " + BRAND_NAME)
+            .description("DateDate 사용법에 대한 자주 묻는 질문입니다. 무료 여부, 참여 방법, 데이터 보관, 모바일 사용 등을 안내합니다.")
+            .keywords("DateDate FAQ, 약속 잡기 앱 질문, 그룹 일정 조율 방법, 날짜 선택 앱")
+            .robots("index, follow")
+            .canonical(baseUrl + "/faq")
+            .ogType("website")
+            .ogTitle("자주 묻는 질문 | " + BRAND_NAME)
+            .ogDescription("DateDate 사용법, 무료 여부, 참여 방법 등 자주 묻는 질문을 모았습니다.")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
+            .build();
+    }
+
+    /**
+     * 날짜 계산기 도구 페이지 SEO 메타데이터.
+     */
+    public SeoMetadata getDateDiffSeo() {
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                "name": "날짜 계산기 - DateDate",
+                "description": "두 날짜 사이의 일수, 주수, 개월수를 계산합니다. 디데이(D-Day) 계산, 기념일까지 남은 날 계산에 활용하세요.",
+                "url": "%s/tools/date-diff",
+                "applicationCategory": "UtilitiesApplication",
+                "operatingSystem": "All",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "KRW"
+                }
+            },
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "홈",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "도구"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": "날짜 계산기"
+                    }
+                ]
+            }]
+            """.formatted(baseUrl, baseUrl);
+
+        return SeoMetadata.builder()
+            .title("날짜 계산기 — 두 날짜 사이 일수 계산 | " + BRAND_NAME)
+            .description("두 날짜 사이의 일수, 주수, 개월수를 무료로 계산하세요. 디데이(D-Day), 기념일, 프로젝트 기간 계산에 활용하세요.")
+            .keywords("날짜 계산기, 디데이 계산, D-Day, 날짜 차이, 일수 계산, 기념일 계산, 두 날짜 사이")
+            .robots("index, follow")
+            .canonical(baseUrl + "/tools/date-diff")
+            .ogType("website")
+            .ogTitle("날짜 계산기 | " + BRAND_NAME)
+            .ogDescription("두 날짜 사이의 일수, 주수, 개월수를 무료로 계산하세요.")
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .jsonLd(jsonLd)
             .adsEnabled(true)
