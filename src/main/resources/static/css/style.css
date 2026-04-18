@@ -3739,15 +3739,15 @@ footer {
     font-size: var(--text-lg);
 }
 
-.faq-list {
+.faq-page .faq-list {
     margin: var(--space-6) 0;
 }
 
-.faq-item {
+.faq-page .faq-item {
     border-bottom: 1px solid var(--border-light);
 }
 
-.faq-item .faq-question {
+.faq-page .faq-question {
     width: 100%;
     background: none;
     border: none;
@@ -3763,16 +3763,16 @@ footer {
     gap: var(--space-4);
 }
 
-.faq-item .faq-question:hover { color: var(--primary); }
+.faq-page .faq-question:hover { color: var(--primary-color); }
 
-.faq-item .faq-toggle {
+.faq-page .faq-toggle {
     font-size: 1.25rem;
     flex-shrink: 0;
-    color: var(--primary);
+    color: var(--primary-color);
     font-weight: 300;
 }
 
-.faq-item .faq-answer {
+.faq-page .faq-answer {
     padding: 0 0 var(--space-4);
     color: var(--text-light);
     line-height: 1.7;
