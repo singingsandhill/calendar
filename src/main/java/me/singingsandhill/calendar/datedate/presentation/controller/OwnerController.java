@@ -25,7 +25,7 @@ public class OwnerController {
         this.seoService = seoService;
     }
 
-    @GetMapping("/{ownerId}")
+    @GetMapping("/{ownerId:[a-z0-9-]{2,20}}")
     public String dashboard(@PathVariable String ownerId, Model model) {
         Owner owner = ownerService.getOrCreateOwner(ownerId);
         List<Schedule> schedules = ownerService.getOwnerSchedules(ownerId);
