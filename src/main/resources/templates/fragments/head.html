@@ -83,6 +83,10 @@
     <!-- CSS (render-blocking, loaded first for no FOUC) -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
 
+    <!-- Page-specific stylesheets (optional) -->
+    <link th:if="${extraStylesheets != null}" th:each="css : ${extraStylesheets}"
+          rel="stylesheet" th:href="@{${css}}">
+
     <!-- Google Fonts — preconnect then async load (font-display:swap prevents invisible text) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
