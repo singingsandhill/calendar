@@ -20,11 +20,19 @@ import java.util.Locale;
 public class CookieThenAcceptLanguageLocaleResolver implements LocaleResolver {
 
     private static final String COOKIE_NAME = "lang";
+    private static final String CURRENT_LOCALE_ATTR =
+            CookieThenAcceptLanguageLocaleResolver.class.getName() + ".LOCALE";
     private static final int COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
     private static final List<String> SUPPORTED = List.of("ko", "en");
 
     @Override
     public Locale resolveLocale(HttpServletRequest request) {
+        // 0. Locale switched earlier in this same request (set by LocaleChangeInterceptor)
+        Object cached = request.getAttribute(CURRENT_LOCALE_ATTR);
+        if (cached instanceof Locale l) {
+            return l;
+        }
+
         // 1. Cookie
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -59,6 +67,9 @@ public class CookieThenAcceptLanguageLocaleResolver implements LocaleResolver {
     public void setLocale(HttpServletRequest request, HttpServletResponse response, Locale locale) {
         String lang = (locale != null && SUPPORTED.contains(locale.getLanguage()))
                 ? locale.getLanguage() : "ko";
+        Locale resolved = Locale.forLanguageTag(lang);
+        request.setAttribute(CURRENT_LOCALE_ATTR, resolved);
+
         Cookie cookie = new Cookie(COOKIE_NAME, lang);
         cookie.setMaxAge(COOKIE_MAX_AGE);
         cookie.setPath("/");
