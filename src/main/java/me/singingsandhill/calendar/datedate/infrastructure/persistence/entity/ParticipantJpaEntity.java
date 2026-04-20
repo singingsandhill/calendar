@@ -1,8 +1,11 @@
 package me.singingsandhill.calendar.datedate.infrastructure.persistence.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -11,6 +14,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
+import me.singingsandhill.calendar.datedate.infrastructure.persistence.converter.SelectionListConverter;
 
 @Entity
 @Table(name = "participants")
@@ -30,8 +35,9 @@ public class ParticipantJpaEntity {
     @Column(length = 7, nullable = false)
     private String color;
 
-    @Column(length = 100)
-    private String selections;
+    @Convert(converter = SelectionListConverter.class)
+    @Column(length = 500)
+    private List<Integer> selections;
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
@@ -40,11 +46,11 @@ public class ParticipantJpaEntity {
     }
 
     public ParticipantJpaEntity(ScheduleJpaEntity schedule, String name, String color,
-                                 String selections, LocalDateTime updatedAt) {
+                                 List<Integer> selections, LocalDateTime updatedAt) {
         this.schedule = schedule;
         this.name = name;
         this.color = color;
-        this.selections = selections;
+        this.selections = selections != null ? new ArrayList<>(selections) : new ArrayList<>();
         this.updatedAt = updatedAt;
     }
 
@@ -72,12 +78,12 @@ public class ParticipantJpaEntity {
         return color;
     }
 
-    public String getSelections() {
-        return selections;
+    public List<Integer> getSelections() {
+        return selections != null ? selections : new ArrayList<>();
     }
 
-    public void setSelections(String selections) {
-        this.selections = selections;
+    public void setSelections(List<Integer> selections) {
+        this.selections = selections != null ? new ArrayList<>(selections) : new ArrayList<>();
     }
 
     public LocalDateTime getUpdatedAt() {

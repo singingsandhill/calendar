@@ -13,7 +13,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <p class="owner-info" th:text="#{schedule.owner.info(${ownerId})}">user님의 일정</p>
         <h1 th:text="${yearMonthLabel}">2025년 12월</h1>
         <p class="subtitle" th:text="#{schedule.subtitle}">참여 가능한 날짜를 선택하세요</p>
-        <button class="btn btn-outline copy-link-btn" onclick="copyLink()" th:text="#{schedule.copy.link}">링크 복사</button>
+        <button class="btn btn-outline copy-link-btn" data-action="link.copy" th:text="#{schedule.copy.link}">링크 복사</button>
     </div>
 
     <!-- 온보딩 배너: 참여자가 없을 때 사용 안내 표시 -->
@@ -38,7 +38,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <span th:text="#{schedule.onboarding.step3}">저장하기</span>
             </span>
         </div>
-        <button onclick="document.getElementById('onboardingBanner').remove()"
+        <button data-action="onboarding.dismiss"
                 class="btn-close-banner"
                 th:aria-label="#{schedule.onboarding.close}">×</button>
     </div>
@@ -46,14 +46,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="participant-section">
         <div class="participant-selector">
             <label for="participantSelect" th:text="#{schedule.participant.label}">이름 선택:</label>
-            <select id="participantSelect" onchange="onParticipantChange()">
+            <select id="participantSelect">
                 <option value="" th:text="#{schedule.participant.placeholder}">-- 이름 선택 --</option>
                 <option th:each="p : ${schedule.participants()}"
                         th:value="${p.id()}"
                         th:text="${p.name()}"
                         th:data-color="${p.color()}">Participant</option>
             </select>
-            <button class="btn btn-outline btn-sm" onclick="openAddParticipantModal()" th:text="#{schedule.participant.add}">+ 추가</button>
+            <button class="btn btn-outline btn-sm" data-action="participant.openModal" th:text="#{schedule.participant.add}">+ 추가</button>
         </div>
 
         <div class="participant-legend">
@@ -82,8 +82,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
     <div class="action-buttons">
-        <button class="btn btn-secondary" onclick="resetSelections()" th:text="#{schedule.reset}">초기화</button>
-        <button class="btn btn-primary" onclick="saveSelections()" th:text="#{schedule.save}">저장</button>
+        <button class="btn btn-secondary" data-action="selections.reset" th:text="#{schedule.reset}">초기화</button>
+        <button class="btn btn-primary" data-action="selections.save" th:text="#{schedule.save}">저장</button>
     </div>
 
     <!-- Location Voting Section -->
@@ -91,7 +91,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <h3 th:text="#{schedule.location.title}">장소 투표</h3>
         <div class="location-add">
             <input type="text" id="locationInput" th:placeholder="#{schedule.location.placeholder}" maxlength="100">
-            <button class="btn btn-outline btn-sm" onclick="addLocation()" th:text="#{schedule.location.add}">추가</button>
+            <button class="btn btn-outline btn-sm" data-action="location.add" th:text="#{schedule.location.add}">추가</button>
         </div>
         <div class="location-list" id="locationList">
             <div class="location-item" th:each="loc : ${schedule.locations()}">
@@ -104,8 +104,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="location-actions">
                     <button class="btn btn-sm btn-primary vote-btn"
+                            data-action="location.vote"
                             th:data-location-id="${loc.id()}"
-                            onclick="toggleVote(this)"
                             th:text="#{schedule.location.vote}">투표</button>
                 </div>
             </div>
@@ -119,7 +119,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="location-add">
             <input type="text" id="menuInput" th:placeholder="#{schedule.menu.placeholder}" maxlength="100">
             <input type="url" id="menuUrlInput" th:placeholder="#{schedule.menu.url.placeholder}" maxlength="500">
-            <button class="btn btn-outline btn-sm" onclick="addMenu()" th:text="#{schedule.menu.add}">추가</button>
+            <button class="btn btn-outline btn-sm" data-action="menu.add" th:text="#{schedule.menu.add}">추가</button>
         </div>
         <div class="location-list" id="menuList">
             <div class="location-item" th:each="menu : ${schedule.menus()}">
@@ -137,8 +137,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="location-actions">
                     <button class="btn btn-sm btn-primary menu-vote-btn"
+                            data-action="menu.vote"
                             th:data-menu-id="${menu.id()}"
-                            onclick="toggleMenuVote(this)"
                             th:text="#{schedule.menu.vote}">투표</button>
                 </div>
             </div>
@@ -152,7 +152,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="modal-content modal-sm">
         <div class="modal-header">
             <h2 id="addParticipantModalTitle" th:text="#{schedule.modal.title}">참여자 추가</h2>
-            <button class="modal-close" onclick="closeAddParticipantModal()">&times;</button>
+            <button class="modal-close" data-action="participant.closeModal">&times;</button>
         </div>
         <div class="modal-body">
             <form id="addParticipantForm">
@@ -166,7 +166,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     0 / 8명
                 </p>
                 <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeAddParticipantModal()" th:text="#{schedule.participant.cancel}">취소</button>
+                    <button type="button" class="btn btn-secondary" data-action="participant.closeModal" th:text="#{schedule.participant.cancel}">취소</button>
                     <button type="submit" class="btn btn-primary"
                             th:disabled="${schedule.participants().size() >= 8}"
                             th:text="#{schedule.participant.add.btn}">추가</button>
@@ -223,6 +223,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         ]
     };
 </script>
-<script defer th:src="@{/js/schedule-view.js}"></script>
+<script type="module" th:src="@{/js/schedule/main.js}"></script>
 </body>
 </html>

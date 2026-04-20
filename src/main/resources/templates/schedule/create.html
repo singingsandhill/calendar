@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
+
+<main class="container" id="main-content">
+    <div class="empty-state" role="status">
+        <div class="empty-state-icon" aria-hidden="true">📅</div>
+        <h1 th:text="#{schedule.create.title}">일정이 아직 생성되지 않았어요</h1>
+        <p th:text="#{schedule.create.desc(${year}, ${month})}">이 달 일정을 지금 만들고, 날짜를 조율해보세요.</p>
+        <p class="owner-info" style="margin-top: 0.5rem;" th:text="#{schedule.owner.info(${ownerId})}">user님의 일정</p>
+
+        <p id="createFormError" class="form-error-message" style="display:none" role="alert"></p>
+
+        <button id="createScheduleBtn"
+                class="btn btn-primary"
+                style="font-size: 1.05rem; padding: 0.875rem 2rem; margin-top: 1.25rem;"
+                th:text="#{schedule.create.button}">이 일정 만들기</button>
+
+        <p style="margin-top: 1.25rem; font-size: 0.9rem;">
+            <a th:href="@{'/' + ${ownerId}}" th:text="#{schedule.create.back}">대시보드로 돌아가기</a>
+        </p>
+    </div>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+<th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+
+<script th:inline="javascript">
+    (function () {
+        const ownerId = [[${ownerId}]];
+        const year = [[${year}]];
+        const month = [[${month}]];
+        const errorMsg = [[#{schedule.create.error}]];
+
+        const btn = document.getElementById('createScheduleBtn');
+        const errorEl = document.getElementById('createFormError');
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            errorEl.style.display = 'none';
+            try {
+                const res = await fetch('/api/owners/' + encodeURIComponent(ownerId) + '/schedules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ year: year, month: month, weeks: null })
+                });
+                if (!res.ok) throw new Error('create failed: ' + res.status);
+                window.location.href = '/' + encodeURIComponent(ownerId) + '/' + year + '/' + month;
+            } catch (e) {
+                errorEl.textContent = errorMsg;
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+            }
+        });
+    })();
+</script>
+</body>
+</html>

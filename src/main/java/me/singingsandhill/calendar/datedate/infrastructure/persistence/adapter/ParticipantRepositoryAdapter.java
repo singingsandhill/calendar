@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import me.singingsandhill.calendar.datedate.domain.participant.Participant;
 import me.singingsandhill.calendar.datedate.domain.participant.ParticipantColor;
 import me.singingsandhill.calendar.datedate.domain.participant.ParticipantRepository;
-import me.singingsandhill.calendar.datedate.infrastructure.persistence.converter.SelectionConverter;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.entity.ParticipantJpaEntity;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.entity.ScheduleJpaEntity;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.repository.ParticipantJpaRepository;
@@ -47,7 +46,7 @@ public class ParticipantRepositoryAdapter implements ParticipantRepository {
         if (participant.getId() != null) {
             entity = participantJpaRepository.findById(participant.getId())
                     .orElseThrow(() -> new IllegalStateException("Participant not found: " + participant.getId()));
-            entity.setSelections(SelectionConverter.toJson(participant.getSelections()));
+            entity.setSelections(participant.getSelections());
             entity.setUpdatedAt(participant.getUpdatedAt());
         } else {
             ScheduleJpaEntity schedule = scheduleJpaRepository.findById(participant.getScheduleId())
@@ -57,7 +56,7 @@ public class ParticipantRepositoryAdapter implements ParticipantRepository {
                     schedule,
                     participant.getName(),
                     participant.getColorHex(),
-                    SelectionConverter.toJson(participant.getSelections()),
+                    participant.getSelections(),
                     participant.getUpdatedAt()
             );
         }
@@ -94,7 +93,7 @@ public class ParticipantRepositoryAdapter implements ParticipantRepository {
                 entity.getScheduleId(),
                 entity.getName(),
                 new ParticipantColor(entity.getColor()),
-                SelectionConverter.fromJson(entity.getSelections()),
+                entity.getSelections(),
                 entity.getUpdatedAt()
         );
     }

@@ -5,17 +5,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import me.singingsandhill.calendar.datedate.application.exception.DuplicateParticipantException;
+import me.singingsandhill.calendar.datedate.application.exception.ParticipantLimitExceededException;
 import me.singingsandhill.calendar.datedate.domain.participant.Participant;
 
 public class Schedule {
 
-    private static final int MAX_PARTICIPANTS = 8;
+    public static final int MAX_PARTICIPANTS = 8;
     private static final int EXTENDED_WEEKS = 7;
 
     private Long id;
     private final String ownerId;
     private final YearMonth yearMonth;
-    private final int weeks;
+    private int weeks;
     private final LocalDateTime createdAt;
     private final List<Participant> participants;
 
@@ -109,7 +111,10 @@ public class Schedule {
 
     public void addParticipant(Participant participant) {
         if (!canAddParticipant()) {
-            throw new IllegalStateException("Maximum number of participants (" + MAX_PARTICIPANTS + ") reached");
+            throw new ParticipantLimitExceededException();
+        }
+        if (hasParticipantWithName(participant.getName())) {
+            throw new DuplicateParticipantException(participant.getName());
         }
         participants.add(participant);
     }
@@ -117,5 +122,16 @@ public class Schedule {
     public boolean hasParticipantWithName(String name) {
         return participants.stream()
                 .anyMatch(p -> p.getName().equalsIgnoreCase(name));
+    }
+
+    public int nextColorIndex() {
+        return participants.size();
+    }
+
+    public void changeWeeks(int newWeeks) {
+        if (newWeeks < 4 || newWeeks > EXTENDED_WEEKS) {
+            throw new IllegalArgumentException("Weeks must be between 4 and " + EXTENDED_WEEKS);
+        }
+        this.weeks = newWeeks;
     }
 }

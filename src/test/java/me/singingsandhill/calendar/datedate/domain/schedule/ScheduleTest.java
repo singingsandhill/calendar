@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
+import me.singingsandhill.calendar.datedate.application.exception.DuplicateParticipantException;
+import me.singingsandhill.calendar.datedate.application.exception.ParticipantLimitExceededException;
+import me.singingsandhill.calendar.datedate.domain.participant.Participant;
 
 class ScheduleTest {
 
@@ -85,5 +87,40 @@ class ScheduleTest {
     void invalidMonth_throwsException() {
         assertThatThrownBy(() -> new Schedule("test-user", 2025, 13))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("addParticipant should accept up to MAX_PARTICIPANTS")
+    void addParticipant_belowLimit_succeeds() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+
+        for (int i = 0; i < Schedule.MAX_PARTICIPANTS; i++) {
+            schedule.addParticipant(new Participant(1L, "user" + i, schedule.nextColorIndex()));
+        }
+
+        assertThat(schedule.getParticipantCount()).isEqualTo(Schedule.MAX_PARTICIPANTS);
+        assertThat(schedule.canAddParticipant()).isFalse();
+    }
+
+    @Test
+    @DisplayName("addParticipant beyond MAX_PARTICIPANTS should throw")
+    void addParticipant_exceedsLimit_throws() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+        for (int i = 0; i < Schedule.MAX_PARTICIPANTS; i++) {
+            schedule.addParticipant(new Participant(1L, "user" + i, schedule.nextColorIndex()));
+        }
+
+        assertThatThrownBy(() -> schedule.addParticipant(new Participant(1L, "overflow", 0)))
+                .isInstanceOf(ParticipantLimitExceededException.class);
+    }
+
+    @Test
+    @DisplayName("addParticipant with duplicate name should throw (case-insensitive)")
+    void addParticipant_duplicateName_throws() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+        schedule.addParticipant(new Participant(1L, "Alice", 0));
+
+        assertThatThrownBy(() -> schedule.addParticipant(new Participant(1L, "alice", 1)))
+                .isInstanceOf(DuplicateParticipantException.class);
     }
 }

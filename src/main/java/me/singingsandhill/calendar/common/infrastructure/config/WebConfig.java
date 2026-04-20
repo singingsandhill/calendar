@@ -18,12 +18,20 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 
+import me.singingsandhill.calendar.datedate.infrastructure.security.OwnerPathInterceptor;
+
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Set;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    private final OwnerPathInterceptor ownerPathInterceptor;
+
+    public WebConfig(OwnerPathInterceptor ownerPathInterceptor) {
+        this.ownerPathInterceptor = ownerPathInterceptor;
+    }
 
     private static final Set<String> PUBLIC_SEO_PATHS = Set.of(
             "/", "/guide", "/privacy", "/terms"
@@ -69,6 +77,8 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(localeChangeInterceptor());
         registry.addInterceptor(cacheControlInterceptor());
+        registry.addInterceptor(ownerPathInterceptor)
+                .addPathPatterns("/api/owners/**");
     }
 
     @Bean

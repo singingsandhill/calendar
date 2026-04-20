@@ -30,3 +30,5 @@ const toast = {
         this.show(message, 'success');
     }
 };
+
+window.toast = toast;

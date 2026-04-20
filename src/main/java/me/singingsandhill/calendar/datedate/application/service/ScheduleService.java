@@ -1,14 +1,13 @@
 package me.singingsandhill.calendar.datedate.application.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import me.singingsandhill.calendar.datedate.application.exception.DuplicateScheduleException;
 import me.singingsandhill.calendar.datedate.application.exception.ScheduleNotFoundException;
-import me.singingsandhill.calendar.datedate.domain.owner.Owner;
-import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
 
@@ -17,11 +16,11 @@ import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
 public class ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
-    private final OwnerRepository ownerRepository;
+    private final OwnerService ownerService;
 
-    public ScheduleService(ScheduleRepository scheduleRepository, OwnerRepository ownerRepository) {
+    public ScheduleService(ScheduleRepository scheduleRepository, OwnerService ownerService) {
         this.scheduleRepository = scheduleRepository;
-        this.ownerRepository = ownerRepository;
+        this.ownerService = ownerService;
     }
 
     public Schedule getSchedule(Long scheduleId) {
@@ -30,12 +29,12 @@ public class ScheduleService {
     }
 
     public Schedule getScheduleByOwnerAndYearMonth(String ownerId, int year, int month) {
-        return scheduleRepository.findByOwnerIdAndYearMonth(ownerId, year, month)
+        return findScheduleByOwnerAndYearMonth(ownerId, year, month)
                 .orElseThrow(() -> new ScheduleNotFoundException(ownerId, year, month));
     }
 
-    public Schedule findScheduleByOwnerAndYearMonth(String ownerId, int year, int month) {
-        return scheduleRepository.findByOwnerIdAndYearMonth(ownerId, year, month).orElse(null);
+    public Optional<Schedule> findScheduleByOwnerAndYearMonth(String ownerId, int year, int month) {
+        return scheduleRepository.findByOwnerIdAndYearMonth(ownerId, year, month);
     }
 
     public List<Schedule> getSchedulesByOwnerId(String ownerId) {
@@ -44,7 +43,7 @@ public class ScheduleService {
 
     @Transactional
     public Schedule createSchedule(String ownerId, int year, int month, Integer weeks) {
-        ensureOwnerExists(ownerId);
+        ownerService.getOrCreateOwner(ownerId);
 
         if (scheduleRepository.existsByOwnerIdAndYearMonth(ownerId, year, month)) {
             throw new DuplicateScheduleException(ownerId, year, month);
@@ -67,25 +66,10 @@ public class ScheduleService {
                 .orElseThrow(() -> new ScheduleNotFoundException(ownerId, year, month));
 
         if (weeks != null) {
-            Schedule updatedSchedule = new Schedule(
-                    schedule.getId(),
-                    schedule.getOwnerId(),
-                    schedule.getYear(),
-                    schedule.getMonth(),
-                    weeks,
-                    schedule.getCreatedAt(),
-                    schedule.getParticipants()
-            );
-            return scheduleRepository.save(updatedSchedule);
+            schedule.changeWeeks(weeks);
+            return scheduleRepository.save(schedule);
         }
 
         return schedule;
-    }
-
-    private void ensureOwnerExists(String ownerId) {
-        if (!ownerRepository.existsById(ownerId)) {
-            Owner newOwner = new Owner(ownerId);
-            ownerRepository.save(newOwner);
-        }
     }
 }

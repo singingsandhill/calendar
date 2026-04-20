@@ -10,7 +10,6 @@ import me.singingsandhill.calendar.datedate.domain.participant.Participant;
 import me.singingsandhill.calendar.datedate.domain.participant.ParticipantColor;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
-import me.singingsandhill.calendar.datedate.infrastructure.persistence.converter.SelectionConverter;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.entity.OwnerJpaEntity;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.entity.ParticipantJpaEntity;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.entity.ScheduleJpaEntity;
@@ -109,7 +108,7 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
                 entity.getScheduleId(),
                 entity.getName(),
                 new ParticipantColor(entity.getColor()),
-                SelectionConverter.fromJson(entity.getSelections()),
+                entity.getSelections(),
                 entity.getUpdatedAt()
         );
     }

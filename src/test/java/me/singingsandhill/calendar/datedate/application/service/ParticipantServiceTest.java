@@ -48,8 +48,6 @@ class ParticipantServiceTest {
         Schedule schedule = new Schedule("test-user", 2025, 12);
         schedule.setId(1L);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
-        when(participantRepository.countByScheduleId(1L)).thenReturn(0);
-        when(participantRepository.existsByScheduleIdAndName(1L, "Alice")).thenReturn(false);
         when(participantRepository.save(any(Participant.class))).thenAnswer(i -> {
             Participant p = i.getArgument(0);
             p.setId(1L);
@@ -67,8 +65,10 @@ class ParticipantServiceTest {
     void addParticipant_limitExceeded_throwsException() {
         Schedule schedule = new Schedule("test-user", 2025, 12);
         schedule.setId(1L);
+        for (int i = 0; i < Schedule.MAX_PARTICIPANTS; i++) {
+            schedule.addParticipant(new Participant(1L, "user" + i, schedule.nextColorIndex()));
+        }
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
-        when(participantRepository.countByScheduleId(1L)).thenReturn(8);
 
         assertThatThrownBy(() -> participantService.addParticipant(1L, "Alice"))
                 .isInstanceOf(ParticipantLimitExceededException.class);
@@ -79,11 +79,10 @@ class ParticipantServiceTest {
     void addParticipant_duplicateName_throwsException() {
         Schedule schedule = new Schedule("test-user", 2025, 12);
         schedule.setId(1L);
+        schedule.addParticipant(new Participant(1L, "Alice", 0));
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
-        when(participantRepository.countByScheduleId(1L)).thenReturn(1);
-        when(participantRepository.existsByScheduleIdAndName(1L, "Alice")).thenReturn(true);
 
-        assertThatThrownBy(() -> participantService.addParticipant(1L, "Alice"))
+        assertThatThrownBy(() -> participantService.addParticipant(1L, "alice"))
                 .isInstanceOf(DuplicateParticipantException.class);
     }
 

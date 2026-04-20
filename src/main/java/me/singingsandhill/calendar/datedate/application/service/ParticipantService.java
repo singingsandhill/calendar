@@ -5,9 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import me.singingsandhill.calendar.datedate.application.exception.DuplicateParticipantException;
 import me.singingsandhill.calendar.datedate.application.exception.InvalidSelectionException;
-import me.singingsandhill.calendar.datedate.application.exception.ParticipantLimitExceededException;
 import me.singingsandhill.calendar.datedate.application.exception.ParticipantNotFoundException;
 import me.singingsandhill.calendar.datedate.application.exception.ScheduleNotFoundException;
 import me.singingsandhill.calendar.datedate.domain.participant.Participant;
@@ -18,8 +16,6 @@ import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
 @Service
 @Transactional(readOnly = true)
 public class ParticipantService {
-
-    private static final int MAX_PARTICIPANTS = 8;
 
     private final ParticipantRepository participantRepository;
     private final ScheduleRepository scheduleRepository;
@@ -44,16 +40,8 @@ public class ParticipantService {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ScheduleNotFoundException(scheduleId));
 
-        int currentCount = participantRepository.countByScheduleId(scheduleId);
-        if (currentCount >= MAX_PARTICIPANTS) {
-            throw new ParticipantLimitExceededException();
-        }
-
-        if (participantRepository.existsByScheduleIdAndName(scheduleId, name)) {
-            throw new DuplicateParticipantException(name);
-        }
-
-        Participant participant = new Participant(scheduleId, name, currentCount);
+        Participant participant = new Participant(scheduleId, name, schedule.nextColorIndex());
+        schedule.addParticipant(participant);
         return participantRepository.save(participant);
     }
 
@@ -73,16 +61,20 @@ public class ParticipantService {
                 .orElseThrow(() -> new ScheduleNotFoundException(participant.getScheduleId()));
 
         int totalDays = schedule.getTotalDays();
+        List<Integer> safeSelections = selections != null ? selections : List.of();
 
-        if (selections != null) {
-            for (Integer day : selections) {
-                if (day < 1 || day > totalDays) {
-                    throw new InvalidSelectionException(day, totalDays);
-                }
-            }
+        try {
+            participant.updateSelections(safeSelections, totalDays);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidSelectionException(extractInvalidDay(safeSelections, totalDays), totalDays);
         }
-
-        participant.updateSelections(selections != null ? selections : List.of(), totalDays);
         return participantRepository.save(participant);
+    }
+
+    private int extractInvalidDay(List<Integer> selections, int totalDays) {
+        return selections.stream()
+                .filter(d -> d < 1 || d > totalDays)
+                .findFirst()
+                .orElse(-1);
     }
 }
