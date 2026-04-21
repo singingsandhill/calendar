@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{trading/fragments/header :: header}"></head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+
+<nav th:replace="~{trading/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold mb-2 dark:text-white">Verification</h1>
+    <p class="text-sm text-gray-500 mb-6">
+        Bithumb 연동 상태를 점검합니다. <strong class="text-amber-500">자동 폴링은 비활성</strong> — 필요한 항목만 수동 실행하세요.
+    </p>
+
+    <div class="flex justify-end mb-4">
+        <button id="btn-run-full" type="button" class="btn-primary text-sm">Run Full Check</button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- API Config -->
+        <section id="card-config" class="card">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold dark:text-white">API Config</h2>
+                <button data-verify="config" type="button" class="btn-secondary text-xs">Test</button>
+            </div>
+            <div id="config-result" class="text-sm space-y-2 dark:text-gray-300">
+                <div class="text-gray-500">미실행</div>
+            </div>
+        </section>
+
+        <!-- Price -->
+        <section id="card-price" class="card">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold dark:text-white">Price (Public API)</h2>
+                <button data-verify="price" type="button" class="btn-secondary text-xs">Test</button>
+            </div>
+            <div id="price-result" class="text-sm space-y-2 dark:text-gray-300">
+                <div class="text-gray-500">미실행</div>
+            </div>
+        </section>
+
+        <!-- Balance -->
+        <section id="card-balance" class="card">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold dark:text-white">Balance (Private API)</h2>
+                <button data-verify="balance" type="button" class="btn-secondary text-xs">Test</button>
+            </div>
+            <div id="balance-result" class="text-sm space-y-2 dark:text-gray-300">
+                <div class="text-gray-500">미실행</div>
+            </div>
+        </section>
+
+        <!-- Test Order -->
+        <section id="card-test-order" class="card card-critical">
+            <div class="mb-3">
+                <h2 class="text-lg font-semibold dark:text-white">⚠ Test Order</h2>
+                <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    실제 자금이 사용됩니다. 최소 5,000원이 거래소에서 즉시 매수됩니다. "즉시 매도" 옵션을 켜면 매수 직후 자동 매도하여 원상 복구합니다 (슬리피지/수수료 발생).
+                </p>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div>
+                    <label for="test-amount" class="text-gray-500 block mb-1">금액 (KRW, 최소 5,000)</label>
+                    <input id="test-amount" type="number" min="5000" step="500" value="5500"
+                           class="w-32 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-800 dark:text-white" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="test-immediate-sell" type="checkbox" checked />
+                    <label for="test-immediate-sell" class="text-gray-700 dark:text-gray-300">매수 후 즉시 매도 (권장)</label>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+                <button id="btn-test-order" type="button" class="btn-danger text-sm">Run Test Order</button>
+            </div>
+
+            <div id="test-order-result" class="mt-4 text-sm dark:text-gray-300"></div>
+        </section>
+    </div>
+
+    <!-- Full check raw output -->
+    <section class="card mt-6" id="card-full-output" style="display:none;">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-semibold dark:text-white">Full Check Output</h2>
+            <span class="text-xs text-gray-500" id="full-output-time"></span>
+        </div>
+        <pre id="full-output" class="text-xs overflow-x-auto bg-gray-100 dark:bg-gray-800 p-3 rounded dark:text-gray-300" style="max-height:400px;"></pre>
+    </section>
+</main>
+
+<script defer th:src="@{/js/trading-confirm.js}"></script>
+<script defer th:src="@{/js/trading-globals.js}"></script>
+<script defer th:src="@{/js/trading-verify.js}"></script>
+
+</body>
+</html>

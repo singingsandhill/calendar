@@ -26,7 +26,10 @@ public class BotControlApiController {
         return ResponseEntity.ok(new BotStatusDto(
                 status.running(),
                 status.paused(),
-                status.market()
+                status.market(),
+                status.lastLoopAt() != null ? status.lastLoopAt().toString() : null,
+                status.lastTradeAt() != null ? status.lastTradeAt().toString() : null,
+                status.lastError()
         ));
     }
 
@@ -115,7 +118,14 @@ public class BotControlApiController {
     }
 
     // Request/Response DTOs
-    public record BotStatusDto(boolean running, boolean paused, String market) {}
+    public record BotStatusDto(
+            boolean running,
+            boolean paused,
+            String market,
+            String lastLoopAt,
+            String lastTradeAt,
+            String lastError
+    ) {}
 
     public record ManualOrderRequest(Double amount, Double volume) {}
 }

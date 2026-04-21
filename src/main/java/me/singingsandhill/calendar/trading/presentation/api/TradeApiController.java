@@ -67,6 +67,13 @@ public class TradeApiController {
     public ResponseEntity<ProfitSummaryDto> getProfitSummary() {
         ProfitService.ProfitSummary summary = profitService.getProfitSummary();
 
+        BigDecimal totalValue = summary.totalValue();
+        BigDecimal coinValue = summary.coinBalance().multiply(summary.currentPrice());
+        double coinRatio = 0.0;
+        if (totalValue != null && totalValue.signum() > 0) {
+            coinRatio = coinValue.divide(totalValue, 4, java.math.RoundingMode.HALF_UP).doubleValue();
+        }
+
         return ResponseEntity.ok(new ProfitSummaryDto(
                 summary.totalValue().doubleValue(),
                 summary.krwBalance().doubleValue(),
@@ -75,9 +82,32 @@ public class TradeApiController {
                 summary.unrealizedPnl().doubleValue(),
                 summary.unrealizedPnlPct().doubleValue(),
                 summary.realizedPnl().doubleValue(),
+                summary.totalFeesPaid() != null ? summary.totalFeesPaid().doubleValue() : 0,
                 summary.totalTrades(),
                 summary.winRate(),
-                summary.avgPnlPct().doubleValue()
+                summary.avgPnlPct().doubleValue(),
+                coinValue.doubleValue(),
+                coinRatio
+        ));
+    }
+
+    /**
+     * 오늘 요약 (글로벌 상태바 / Today P&L 카드용)
+     */
+    @GetMapping("/today")
+    public ResponseEntity<TodaySummaryDto> getTodaySummary() {
+        ProfitService.TodaySummary t = profitService.getTodaySummary();
+        double winRate = t.closedPositions() > 0
+                ? (double) t.wins() / t.closedPositions() * 100
+                : 0.0;
+        return ResponseEntity.ok(new TodaySummaryDto(
+                t.realizedPnl() != null ? t.realizedPnl().doubleValue() : 0,
+                t.closedPositions(),
+                t.wins(),
+                winRate,
+                t.doneTrades(),
+                t.failedTrades(),
+                t.openPositions()
         ));
     }
 
@@ -154,9 +184,22 @@ public class TradeApiController {
             double unrealizedPnl,
             double unrealizedPnlPct,
             double realizedPnl,
+            double totalFeesPaid,
             int totalTrades,
             double winRate,
-            double avgPnlPct
+            double avgPnlPct,
+            double coinValue,
+            double coinRatio
+    ) {}
+
+    public record TodaySummaryDto(
+            double realizedPnl,
+            int closedPositions,
+            int wins,
+            double winRate,
+            int doneTrades,
+            int failedTrades,
+            int openPositions
     ) {}
 
     public record DailySummaryDto(

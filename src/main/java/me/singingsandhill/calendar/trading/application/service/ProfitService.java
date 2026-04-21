@@ -7,7 +7,9 @@ import me.singingsandhill.calendar.trading.domain.account.DailySummaryRepository
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
+import me.singingsandhill.calendar.trading.domain.trade.Trade;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
+import me.singingsandhill.calendar.trading.domain.trade.TradeStatus;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
 import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbAccountResponse;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
@@ -201,6 +203,45 @@ public class ProfitService {
     }
 
     /**
+     * 오늘 요약 — 운영자 글로벌 상태바 / 카드용
+     * 봇이 돌아간 정상 결과(체결 수·실현 손익)와 비정상(실패·미실현) 분리해서 반환.
+     */
+    public TodaySummary getTodaySummary() {
+        String market = tradingProperties.getBot().getMarket();
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime now = LocalDateTime.now();
+
+        List<Position> closedToday = positionRepository.findByMarketAndStatusAndClosedAtBetween(
+                market, PositionStatus.CLOSED, startOfDay, now);
+
+        BigDecimal realizedPnl = closedToday.stream()
+                .map(Position::getRealizedPnl)
+                .filter(p -> p != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long winCount = closedToday.stream()
+                .filter(p -> p.getRealizedPnl() != null && p.getRealizedPnl().compareTo(BigDecimal.ZERO) > 0)
+                .count();
+
+        List<Trade> tradesToday = tradeRepository.findByMarketAndCreatedAtBetween(market, startOfDay, now);
+        long doneCount = tradesToday.stream().filter(t -> t.getStatus() == TradeStatus.DONE).count();
+        long failedCount = tradesToday.stream()
+                .filter(t -> t.getStatus() == TradeStatus.FAILED || t.getStatus() == TradeStatus.CANCEL)
+                .count();
+
+        long openPositionCount = positionRepository.countByMarketAndStatus(market, PositionStatus.OPEN);
+
+        return new TodaySummary(
+                realizedPnl,
+                closedToday.size(),
+                (int) winCount,
+                (int) doneCount,
+                (int) failedCount,
+                (int) openPositionCount
+        );
+    }
+
+    /**
      * 일별 손익 조회
      */
     public List<DailySummary> getDailySummaries(int days) {
@@ -230,5 +271,14 @@ public class ProfitService {
             int totalTrades,
             double winRate,
             BigDecimal avgPnlPct
+    ) {}
+
+    public record TodaySummary(
+            BigDecimal realizedPnl,
+            int closedPositions,
+            int wins,
+            int doneTrades,
+            int failedTrades,
+            int openPositions
     ) {}
 }

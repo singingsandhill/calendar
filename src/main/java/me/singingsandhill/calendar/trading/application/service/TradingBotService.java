@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.trading.application.service;
 
+import me.singingsandhill.calendar.trading.domain.event.TradingEventLevel;
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
@@ -40,6 +41,8 @@ public class TradingBotService {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean paused = new AtomicBoolean(false);
     private volatile Instant lastTradeTime = null;
+    private volatile Instant lastLoopAt = null;
+    private volatile String lastError = null;
 
     private final CandleService candleService;
     private final SignalService signalService;
@@ -50,6 +53,7 @@ public class TradingBotService {
     private final TradeRepository tradeRepository;
     private final PositionRepository positionRepository;
     private final TradingProperties tradingProperties;
+    private final TradingEventService tradingEventService;
 
     public TradingBotService(CandleService candleService,
                              SignalService signalService,
@@ -59,7 +63,8 @@ public class TradingBotService {
                              BithumbApiClient bithumbApiClient,
                              TradeRepository tradeRepository,
                              PositionRepository positionRepository,
-                             TradingProperties tradingProperties) {
+                             TradingProperties tradingProperties,
+                             TradingEventService tradingEventService) {
         this.candleService = candleService;
         this.signalService = signalService;
         this.indicatorService = indicatorService;
@@ -69,6 +74,7 @@ public class TradingBotService {
         this.tradeRepository = tradeRepository;
         this.positionRepository = positionRepository;
         this.tradingProperties = tradingProperties;
+        this.tradingEventService = tradingEventService;
     }
 
     /**
@@ -78,6 +84,8 @@ public class TradingBotService {
         if (running.compareAndSet(false, true)) {
             paused.set(false);
             log.info("Trading bot started");
+            tradingEventService.record(TradingEventLevel.NOTICE, "BOT_STARTED",
+                    tradingProperties.getBot().getMarket(), "트레이딩 봇 시작");
 
             // 초기 캔들 데이터 로드
             candleService.initializeCandles();
@@ -94,6 +102,8 @@ public class TradingBotService {
         if (running.compareAndSet(true, false)) {
             paused.set(false);
             log.info("Trading bot stopped");
+            tradingEventService.record(TradingEventLevel.WARNING, "BOT_STOPPED",
+                    tradingProperties.getBot().getMarket(), "트레이딩 봇 중지");
             return true;
         }
         log.warn("Trading bot is not running");
@@ -129,7 +139,10 @@ public class TradingBotService {
         return new BotStatus(
                 running.get(),
                 paused.get(),
-                tradingProperties.getBot().getMarket()
+                tradingProperties.getBot().getMarket(),
+                lastLoopAt,
+                lastTradeTime,
+                lastError
         );
     }
 
@@ -147,6 +160,9 @@ public class TradingBotService {
         log.debug("Executing trade loop for {}", market);
 
         try {
+            // 루프 진입 시각 기록 (운영 가시성)
+            this.lastLoopAt = Instant.now();
+
             // 1. 캔들 데이터 업데이트
             candleService.fetchAndSaveCandles();
 
@@ -185,8 +201,14 @@ public class TradingBotService {
             // 6. 신호에 따른 매매 실행
             executeTradeBySignal(market, signal);
 
+            // 정상 종료 시 마지막 오류 클리어
+            this.lastError = null;
+
         } catch (Exception e) {
             log.error("Error in trade loop", e);
+            this.lastError = e.getClass().getSimpleName() + ": " + e.getMessage();
+            tradingEventService.record(TradingEventLevel.WARNING, "LOOP_ERROR",
+                    market, "트레이드 루프 오류: " + this.lastError);
         }
     }
 
@@ -368,11 +390,17 @@ public class TradingBotService {
             positionRepository.save(position);
             log.info("Position opened: entry={}, volume={}, fee={}", entryPrice, volume, fee);
 
+            tradingEventService.record(TradingEventLevel.NOTICE, "BUY_EXECUTED", market,
+                    String.format("매수 체결 — 신호 점수 %d, 가격 %s, 수량 %s",
+                            signal.getTotalScore(), entryPrice.toPlainString(), volume.toPlainString()));
+
             // 쿨다운 갱신
             this.lastTradeTime = Instant.now();
 
         } catch (Exception e) {
             log.error("Failed to execute buy order", e);
+            tradingEventService.record(TradingEventLevel.WARNING, "BUY_FAILED", market,
+                    "매수 실패: " + e.getClass().getSimpleName() + " " + e.getMessage());
         }
     }
 
@@ -524,6 +552,14 @@ public class TradingBotService {
             log.info("Position closed: exit={}, pnl={}%, fee={}",
                     exitPrice, position.getRealizedPnlPct(), fee);
 
+            BigDecimal pnlPct = position.getRealizedPnlPct();
+            TradingEventLevel sellLevel = pnlPct != null && pnlPct.signum() >= 0
+                    ? TradingEventLevel.OK : TradingEventLevel.NOTICE;
+            tradingEventService.record(sellLevel, "SELL_EXECUTED", market,
+                    String.format("신호 매도 체결 — 점수 %d, 가격 %s, 손익률 %s%%",
+                            signal.getTotalScore(), exitPrice.toPlainString(),
+                            pnlPct != null ? pnlPct.toPlainString() : "-"));
+
             // 쿨다운 갱신
             this.lastTradeTime = Instant.now();
 
@@ -532,6 +568,8 @@ public class TradingBotService {
             log.warn("Position {} already closed: {}", position.getId(), e.getMessage());
         } catch (Exception e) {
             log.error("Failed to execute sell order", e);
+            tradingEventService.record(TradingEventLevel.WARNING, "SELL_FAILED", market,
+                    "매도 실패: " + e.getClass().getSimpleName() + " " + e.getMessage());
         }
     }
 
@@ -638,6 +676,8 @@ public class TradingBotService {
     public void emergencyClose() {
         String market = tradingProperties.getBot().getMarket();
         log.warn("Emergency close triggered");
+        tradingEventService.record(TradingEventLevel.CRITICAL, "EMERGENCY_CLOSE",
+                market, "긴급 청산 요청 — 봇 중지 + 모든 포지션 시장가 청산");
 
         // 봇 중지
         stop();
@@ -704,5 +744,17 @@ public class TradingBotService {
         return result;
     }
 
-    public record BotStatus(boolean running, boolean paused, String market) {}
+    public record BotStatus(
+            boolean running,
+            boolean paused,
+            String market,
+            Instant lastLoopAt,
+            Instant lastTradeAt,
+            String lastError
+    ) {
+        // 기존 3파라미터 호환용
+        public BotStatus(boolean running, boolean paused, String market) {
+            this(running, paused, market, null, null, null);
+        }
+    }
 }

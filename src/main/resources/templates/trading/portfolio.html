@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{trading/fragments/header :: header}"></head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+
+<nav th:replace="~{trading/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold mb-4 dark:text-white">Portfolio &amp; Rebalancing</h1>
+
+    <!-- Allocation card -->
+    <section id="allocation-card" class="card mb-6">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white">Allocation</h2>
+                <div class="text-sm text-gray-500" id="alloc-regime">Loading…</div>
+            </div>
+            <div class="text-sm">
+                <span class="text-gray-500">Cooldown:</span>
+                <span id="alloc-cooldown" class="font-medium dark:text-white">…</span>
+            </div>
+        </div>
+
+        <div class="space-y-3 mt-4">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-gray-500">현재 (Coin)</span>
+                    <span id="alloc-current-pct" class="font-medium dark:text-white">…</span>
+                </div>
+                <div class="gauge" style="height:10px;">
+                    <div id="alloc-current-bar" class="gauge-fill" style="width:0%; background:#3b82f6;"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-gray-500">목표 (Coin)</span>
+                    <span id="alloc-target-pct" class="font-medium dark:text-white">…</span>
+                </div>
+                <div class="gauge" style="height:10px;">
+                    <div id="alloc-target-bar" class="gauge-fill" style="width:0%; background:#22c55e;"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-sm pt-2 border-t border-gray-200 dark:border-gray-700">
+                <span class="text-gray-500">편차</span>
+                <span id="alloc-deviation" class="font-medium">…</span>
+            </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+            <button id="btn-rebalance-refresh" type="button" class="btn-secondary text-sm">Refresh</button>
+            <button id="btn-rebalance-now" type="button" class="btn-primary text-sm" disabled>Rebalance Now</button>
+        </div>
+        <div class="text-xs text-gray-500 mt-2" id="rebalance-help">…</div>
+    </section>
+
+    <!-- Holdings -->
+    <section class="card mb-6">
+        <h2 class="text-lg font-semibold mb-3 dark:text-white">Holdings</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="text-left py-2">Asset</th>
+                        <th class="text-right py-2">Quantity</th>
+                        <th class="text-right py-2">Price</th>
+                        <th class="text-right py-2">Value (KRW)</th>
+                        <th class="text-right py-2">Weight</th>
+                    </tr>
+                </thead>
+                <tbody id="holdings-body" class="dark:text-gray-300">
+                    <tr><td colspan="5" class="text-center py-4 text-gray-500">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Recent rebalance trades -->
+    <section class="card">
+        <h2 class="text-lg font-semibold mb-3 dark:text-white">Rebalancing History (recent trades with reason "Rebalancing")</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="text-left py-2">Time</th>
+                        <th class="text-left py-2">Side</th>
+                        <th class="text-right py-2">Price</th>
+                        <th class="text-right py-2">Amount</th>
+                        <th class="text-left py-2">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="rebalance-history-body" class="dark:text-gray-300">
+                    <tr><td colspan="5" class="text-center py-4 text-gray-500">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="text-xs text-gray-500 mt-2">최근 50개 거래 중 리밸런싱 매수/매도만 표시. 더 자세한 내역은 <a href="/trading/trades" class="text-blue-500 hover:underline">Trades</a>를 참고하세요.</div>
+    </section>
+</main>
+
+<script defer th:src="@{/js/trading-confirm.js}"></script>
+<script defer th:src="@{/js/trading-globals.js}"></script>
+<script defer th:src="@{/js/trading-portfolio.js}"></script>
+
+</body>
+</html>

@@ -56,4 +56,23 @@ public class TradingDashboardController {
         model.addAttribute("tradingProperties", tradingProperties);
         return "trading/settings";
     }
+
+    /**
+     * 포트폴리오 / 리밸런싱 페이지
+     */
+    @GetMapping("/portfolio")
+    public String portfolio(Model model) {
+        model.addAttribute("market", tradingProperties.getBot().getMarket());
+        model.addAttribute("rebalancing", tradingProperties.getRebalancing());
+        return "trading/portfolio";
+    }
+
+    /**
+     * 검증 페이지
+     */
+    @GetMapping("/verify")
+    public String verify(Model model) {
+        model.addAttribute("market", tradingProperties.getBot().getMarket());
+        return "trading/verify";
+    }
 }

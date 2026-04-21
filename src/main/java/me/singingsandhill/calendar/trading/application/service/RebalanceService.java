@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.trading.application.service;
 
 import me.singingsandhill.calendar.trading.application.dto.IndicatorResult;
+import me.singingsandhill.calendar.trading.domain.event.TradingEventLevel;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
@@ -35,17 +36,20 @@ public class RebalanceService {
     private final TradingProperties tradingProperties;
     private final TradeRepository tradeRepository;
     private final PositionRepository positionRepository;
+    private final TradingEventService tradingEventService;
 
     public RebalanceService(BithumbApiClient bithumbApiClient,
                             IndicatorService indicatorService,
                             TradingProperties tradingProperties,
                             TradeRepository tradeRepository,
-                            PositionRepository positionRepository) {
+                            PositionRepository positionRepository,
+                            TradingEventService tradingEventService) {
         this.bithumbApiClient = bithumbApiClient;
         this.indicatorService = indicatorService;
         this.tradingProperties = tradingProperties;
         this.tradeRepository = tradeRepository;
         this.positionRepository = positionRepository;
+        this.tradingEventService = tradingEventService;
     }
 
     /**
@@ -216,6 +220,10 @@ public class RebalanceService {
                     log.warn("Rebalance sell skipped: avgPnl={}% < {}% min threshold",
                             avgPnlPct.setScale(2, RoundingMode.HALF_UP),
                             minSellPnlPct * 100);
+                    tradingEventService.record(TradingEventLevel.NOTICE, "REBALANCE_SKIPPED", market,
+                            String.format("리밸런싱 매도 스킵 — 평균 손익률 %s%% < 임계 %s%%",
+                                    avgPnlPct.setScale(2, RoundingMode.HALF_UP),
+                                    minSellPnlPct * 100));
                     return new RebalanceResult(false, currentRatio, targetRatio,
                             currentRatio.subtract(targetRatio).abs(),
                             "Skipped: below min profit threshold (" + avgPnlPct.setScale(2, RoundingMode.HALF_UP) + "%)");
@@ -250,11 +258,22 @@ public class RebalanceService {
             log.info("Rebalance executed successfully. Next rebalance available after {} minutes",
                     tradingProperties.getRebalancing().getCooldownMinutes());
 
+            String direction = difference.compareTo(BigDecimal.ZERO) > 0 ? "매수" : "매도";
+            tradingEventService.record(TradingEventLevel.NOTICE, "REBALANCE_EXECUTED", market,
+                    String.format("리밸런싱 %s 체결 — 현재 %s%% → 목표 %s%% (편차 %s%%)",
+                            direction,
+                            currentRatio.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP),
+                            targetRatio.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP),
+                            currentRatio.subtract(targetRatio).multiply(BigDecimal.valueOf(100))
+                                    .setScale(2, RoundingMode.HALF_UP)));
+
             return new RebalanceResult(true, currentRatio, targetRatio,
                     currentRatio.subtract(targetRatio).abs());
         } catch (Exception e) {
             // Issue #1: Trade는 API 성공 후에만 저장하므로 별도의 상태 업데이트 불필요
             log.error("Failed to execute rebalance: {}", e.getMessage(), e);
+            tradingEventService.record(TradingEventLevel.WARNING, "REBALANCE_FAILED", market,
+                    "리밸런싱 실패: " + e.getClass().getSimpleName() + " " + e.getMessage());
             return new RebalanceResult(false, currentRatio, targetRatio,
                     currentRatio.subtract(targetRatio).abs());
         }
@@ -308,4 +327,92 @@ public class RebalanceService {
             this(executed, currentRatio, targetRatio, deviation, null);
         }
     }
+
+    /**
+     * 리밸런싱 상태 조회 (실행하지 않음)
+     */
+    public RebalanceStatus getStatus(String market) {
+        boolean enabled = tradingProperties.getRebalancing().isEnabled();
+        long cooldownMinutes = tradingProperties.getRebalancing().getCooldownMinutes();
+        long cooldownRemainingSec = 0;
+        if (lastRebalanceTime != null) {
+            Duration elapsed = Duration.between(lastRebalanceTime, Instant.now());
+            long remaining = cooldownMinutes * 60 - elapsed.getSeconds();
+            cooldownRemainingSec = Math.max(0, remaining);
+        }
+
+        BithumbAccountResponse krwAccount = bithumbApiClient.getKrwBalance();
+        BithumbAccountResponse coinAccount = bithumbApiClient.getCoinBalance();
+        Double currentPrice = bithumbApiClient.getCurrentPrice();
+
+        if (krwAccount == null || coinAccount == null || currentPrice == null) {
+            return new RebalanceStatus(enabled, null, null, null, null, null,
+                    cooldownRemainingSec, lastRebalanceTime, "UNKNOWN", null, null, null);
+        }
+
+        BigDecimal krwBalance = new BigDecimal(krwAccount.balance());
+        BigDecimal coinBalance = new BigDecimal(coinAccount.balance());
+        BigDecimal currentPriceBD = BigDecimal.valueOf(currentPrice);
+        BigDecimal coinValue = coinBalance.multiply(currentPriceBD);
+        BigDecimal totalValue = krwBalance.add(coinValue);
+
+        BigDecimal currentRatio = null;
+        if (totalValue.compareTo(BigDecimal.ZERO) > 0) {
+            currentRatio = coinValue.divide(totalValue, 4, RoundingMode.HALF_UP);
+        }
+
+        IndicatorResult indicators = indicatorService.calculate(market);
+        String marketRegime;
+        BigDecimal ma60 = indicators != null ? indicators.ma60() : null;
+        BigDecimal targetRatio;
+
+        if (indicators == null || indicators.ma60() == null) {
+            marketRegime = "INSUFFICIENT_DATA";
+            targetRatio = BigDecimal.valueOf(tradingProperties.getRebalancing().getDefaultRatio());
+        } else if (indicators.isPriceAboveMa60()) {
+            marketRegime = "BULL";
+            targetRatio = BigDecimal.valueOf(tradingProperties.getRebalancing().getBullRatio());
+        } else if (indicators.isPriceBelowMa60()) {
+            marketRegime = "BEAR";
+            targetRatio = BigDecimal.valueOf(tradingProperties.getRebalancing().getBearRatio());
+        } else {
+            marketRegime = "NEUTRAL";
+            targetRatio = BigDecimal.valueOf(tradingProperties.getRebalancing().getDefaultRatio());
+        }
+
+        BigDecimal deviation = null;
+        if (currentRatio != null) {
+            deviation = currentRatio.subtract(targetRatio);
+        }
+
+        return new RebalanceStatus(
+                enabled,
+                currentRatio,
+                targetRatio,
+                deviation,
+                krwBalance,
+                coinBalance,
+                cooldownRemainingSec,
+                lastRebalanceTime,
+                marketRegime,
+                currentPriceBD,
+                ma60,
+                BigDecimal.valueOf(tradingProperties.getRebalancing().getDeviationTrigger())
+        );
+    }
+
+    public record RebalanceStatus(
+        boolean enabled,
+        BigDecimal currentRatio,
+        BigDecimal targetRatio,
+        BigDecimal deviation,
+        BigDecimal krwBalance,
+        BigDecimal coinBalance,
+        long cooldownRemainingSec,
+        Instant lastRebalanceTime,
+        String marketRegime,
+        BigDecimal currentPrice,
+        BigDecimal ma60,
+        BigDecimal deviationTrigger
+    ) {}
 }

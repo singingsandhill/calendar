@@ -18,6 +18,10 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             padding: 1rem;
         }
+        .card-warning { border-left: 4px solid #f59e0b; }
+        .card-critical { border-left: 4px solid #dc2626; }
+        .card-notice  { border-left: 4px solid #3b82f6; }
+        .card-ok      { border-left: 4px solid #22c55e; }
         .btn-primary {
             background-color: #2563eb;
             color: #ffffff;
@@ -26,9 +30,8 @@
             border-radius: 0.5rem;
             transition: background-color 0.15s ease-in-out;
         }
-        .btn-primary:hover {
-            background-color: #1d4ed8;
-        }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-primary:disabled { background-color: #9ca3af; cursor: not-allowed; }
         .btn-danger {
             background-color: #dc2626;
             color: #ffffff;
@@ -37,9 +40,8 @@
             border-radius: 0.5rem;
             transition: background-color 0.15s ease-in-out;
         }
-        .btn-danger:hover {
-            background-color: #b91c1c;
-        }
+        .btn-danger:hover { background-color: #b91c1c; }
+        .btn-danger:disabled { background-color: #9ca3af; cursor: not-allowed; }
         .btn-success {
             background-color: #16a34a;
             color: #ffffff;
@@ -48,9 +50,15 @@
             border-radius: 0.5rem;
             transition: background-color 0.15s ease-in-out;
         }
-        .btn-success:hover {
-            background-color: #15803d;
+        .btn-success:hover { background-color: #15803d; }
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #111827;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
         }
+        .btn-secondary:hover { background-color: #d1d5db; }
         .stat-value {
             font-size: 1.5rem;
             line-height: 2rem;
@@ -63,16 +71,59 @@
         }
         .positive { color: #22c55e; }
         .negative { color: #ef4444; }
+        .badge {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-ok { background:#dcfce7; color:#166534; }
+        .badge-warning { background:#fef3c7; color:#92400e; }
+        .badge-critical { background:#fee2e2; color:#991b1b; }
+        .badge-notice { background:#dbeafe; color:#1e40af; }
+        .badge-neutral { background:#e5e7eb; color:#374151; }
+        .status-dot { width: 0.625rem; height: 0.625rem; border-radius: 9999px; display:inline-block; }
+        .status-dot-ok { background:#22c55e; }
+        .status-dot-warn { background:#f59e0b; }
+        .status-dot-crit { background:#dc2626; animation: pulse 1.5s infinite; }
+        .status-dot-unknown { background:#6b7280; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .gauge {
+            position: relative;
+            height: 6px;
+            background:#e5e7eb;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .gauge-fill {
+            position:absolute; top:0; left:0; height:100%;
+            background:#3b82f6;
+        }
+        .gauge-marker {
+            position:absolute; top:-3px; width:2px; height:12px; background:#111827;
+        }
+        .toast-container {
+            position: fixed; top: 1rem; right: 1rem; z-index: 9998;
+            display: flex; flex-direction: column; gap: 0.5rem; max-width: 360px;
+        }
+        .toast {
+            background:#ffffff; border-radius: 0.5rem; padding: 0.75rem 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            border-left: 4px solid #6b7280; font-size: 0.875rem; color:#111827;
+        }
+        .toast-ok { border-left-color: #22c55e; }
+        .toast-warning { border-left-color: #f59e0b; }
+        .toast-critical { border-left-color: #dc2626; }
         @media (prefers-color-scheme: dark) {
-            .card {
-                background-color: #1f2937;
-            }
-            .stat-value {
-                color: #ffffff;
-            }
-            .stat-label {
-                color: #9ca3af;
-            }
+            .card { background-color: #1f2937; }
+            .stat-value { color: #ffffff; }
+            .stat-label { color: #9ca3af; }
+            .btn-secondary { background-color: #374151; color:#f3f4f6; }
+            .btn-secondary:hover { background-color: #4b5563; }
+            .gauge { background:#374151; }
+            .gauge-marker { background:#f9fafb; }
+            .toast { background:#1f2937; color:#f9fafb; }
         }
     </style>
 </head>
@@ -80,22 +131,53 @@
 
 <nav th:fragment="navbar" class="bg-gray-900 text-white">
     <div class="container mx-auto px-4">
-        <div class="flex items-center justify-between h-16">
-            <div class="flex items-center space-x-8">
+        <div class="flex items-center justify-between h-16 flex-wrap">
+            <div class="flex items-center space-x-6">
                 <a href="/trading" class="text-xl font-bold">ADA Trading Bot</a>
-                <div class="hidden md:flex space-x-4">
+                <div class="hidden md:flex space-x-4 text-sm">
                     <a href="/trading" class="hover:text-blue-400 transition">Dashboard</a>
+                    <a href="/trading/portfolio" class="hover:text-blue-400 transition">Portfolio</a>
                     <a href="/trading/trades" class="hover:text-blue-400 transition">Trades</a>
+                    <a href="/trading/verify" class="hover:text-blue-400 transition">Verify</a>
                     <a href="/trading/settings" class="hover:text-blue-400 transition">Settings</a>
                 </div>
             </div>
             <div id="bot-status-indicator" class="flex items-center space-x-2">
-                <span class="w-3 h-3 rounded-full bg-gray-500" id="status-dot"></span>
-                <span id="status-text">Loading...</span>
+                <span class="status-dot status-dot-unknown" id="status-dot" aria-hidden="true"></span>
+                <span id="status-text" class="text-sm">Loading...</span>
             </div>
         </div>
     </div>
+
+    <!-- Global status bar (모든 trading 페이지 공통) -->
+    <div class="bg-gray-800 text-gray-200 text-xs border-t border-gray-700">
+        <div class="container mx-auto px-4 py-2 flex flex-wrap items-center gap-x-5 gap-y-1">
+            <div class="flex items-center gap-1">
+                <span id="gs-bot-dot" class="status-dot status-dot-unknown" aria-hidden="true"></span>
+                <span>Bot</span>
+                <span id="gs-bot-text" class="font-medium">…</span>
+                <span id="gs-bot-loop" class="text-gray-400"></span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span id="gs-exchange-dot" class="status-dot status-dot-unknown" aria-hidden="true"></span>
+                <span>거래소</span>
+                <span id="gs-exchange-text" class="font-medium">…</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span id="gs-data-dot" class="status-dot status-dot-unknown" aria-hidden="true"></span>
+                <span>데이터</span>
+                <span id="gs-data-text" class="font-medium">…</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-gray-400">갱신</span>
+                <span id="gs-updated" class="font-medium">…</span>
+            </div>
+            <div id="gs-alerts" class="ml-auto"></div>
+        </div>
+    </div>
 </nav>
+
+<div id="trading-toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
 </body>
 </html>

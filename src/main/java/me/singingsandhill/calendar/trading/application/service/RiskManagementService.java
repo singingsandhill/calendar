@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.trading.application.service;
 
+import me.singingsandhill.calendar.trading.domain.event.TradingEventLevel;
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
@@ -29,15 +30,18 @@ public class RiskManagementService {
     private final TradeRepository tradeRepository;
     private final BithumbApiClient bithumbApiClient;
     private final TradingProperties tradingProperties;
+    private final TradingEventService tradingEventService;
 
     public RiskManagementService(PositionRepository positionRepository,
                                   TradeRepository tradeRepository,
                                   BithumbApiClient bithumbApiClient,
-                                  TradingProperties tradingProperties) {
+                                  TradingProperties tradingProperties,
+                                  TradingEventService tradingEventService) {
         this.positionRepository = positionRepository;
         this.tradeRepository = tradeRepository;
         this.bithumbApiClient = bithumbApiClient;
         this.tradingProperties = tradingProperties;
+        this.tradingEventService = tradingEventService;
     }
 
     /**
@@ -229,10 +233,30 @@ public class RiskManagementService {
                     position.getEntryPrice(), actualExitPrice, exitPrice,
                     position.getRealizedPnl(), position.getRealizedPnlPct(), fee);
 
+            BigDecimal pnlPct = position.getRealizedPnlPct();
+            TradingEventLevel level = switch (reason) {
+                case TAKE_PROFIT -> TradingEventLevel.OK;
+                case TRAILING_STOP -> TradingEventLevel.NOTICE;
+                case STOP_LOSS -> TradingEventLevel.WARNING;
+                default -> TradingEventLevel.NOTICE;
+            };
+            tradingEventService.record(level, "POSITION_CLOSED_" + reason.name(),
+                    position.getMarket(),
+                    String.format("포지션 #%d 청산 (%s) — 가격 %s, 손익률 %s%%",
+                            position.getId(), reason.name(),
+                            actualExitPrice.toPlainString(),
+                            pnlPct != null ? pnlPct.toPlainString() : "-"));
+
         } catch (Exception e) {
             log.error("Failed to close position {}", position.getId(), e);
             // Issue #5: 예외 발생 시에도 청산 시도 상태 저장
             positionRepository.save(position);
+            tradingEventService.record(TradingEventLevel.CRITICAL, "POSITION_CLOSE_FAILED",
+                    position.getMarket(),
+                    String.format("포지션 #%d 청산 실패 (사유 %s, 시도 %d회): %s",
+                            position.getId(), reason.name(),
+                            position.getCloseAttemptCount(),
+                            e.getClass().getSimpleName() + " " + e.getMessage()));
         }
     }
 
@@ -360,6 +384,8 @@ public class RiskManagementService {
         Double currentPriceDouble = bithumbApiClient.getCurrentPrice();
         if (currentPriceDouble == null) {
             log.error("Cannot get current price for emergency close");
+            tradingEventService.record(TradingEventLevel.CRITICAL, "EMERGENCY_CLOSE_FAILED",
+                    market, "긴급 청산 실패 — 현재가 조회 불가");
             return;
         }
 
