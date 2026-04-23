@@ -27,6 +27,7 @@ import me.singingsandhill.calendar.datedate.application.service.MenuService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
 import me.singingsandhill.calendar.datedate.presentation.api.ScheduleApiController;
 import me.singingsandhill.calendar.runner.domain.AdminRepository;
+import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 
 @WebMvcTest(ScheduleApiController.class)
@@ -50,6 +51,9 @@ class ScheduleApiControllerTest {
 
     @MockitoBean
     private PasswordEncoder passwordEncoder;
+
+    @MockitoBean
+    private OwnerRepository ownerRepository;
 
     @Test
     @DisplayName("GET /api/owners/{ownerId}/schedules/{year}/{month} should return schedule")
@@ -118,6 +122,8 @@ class ScheduleApiControllerTest {
     @Test
     @DisplayName("DELETE /api/owners/{ownerId}/schedules/{year}/{month} should delete schedule")
     void deleteSchedule_existingSchedule_deletes() throws Exception {
+        when(ownerRepository.existsById("test-user")).thenReturn(true);
+
         mockMvc.perform(delete("/api/owners/test-user/schedules/2025/12"))
                 .andExpect(status().isNoContent());
     }

@@ -20,8 +20,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import me.singingsandhill.calendar.datedate.application.exception.DuplicateScheduleException;
 import me.singingsandhill.calendar.datedate.application.exception.ScheduleNotFoundException;
+import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
-import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
+import me.singingsandhill.calendar.datedate.domain.owner.Owner;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
 
@@ -32,13 +33,13 @@ class ScheduleServiceTest {
     private ScheduleRepository scheduleRepository;
 
     @Mock
-    private OwnerRepository ownerRepository;
+    private OwnerService ownerService;
 
     private ScheduleService scheduleService;
 
     @BeforeEach
     void setUp() {
-        scheduleService = new ScheduleService(scheduleRepository, ownerRepository);
+        scheduleService = new ScheduleService(scheduleRepository, ownerService);
     }
 
     @Test
@@ -78,7 +79,7 @@ class ScheduleServiceTest {
     @Test
     @DisplayName("createSchedule should create schedule successfully")
     void createSchedule_validInput_createsSchedule() {
-        when(ownerRepository.existsById("test-user")).thenReturn(true);
+        when(ownerService.getOrCreateOwner("test-user")).thenReturn(new Owner("test-user"));
         when(scheduleRepository.existsByOwnerIdAndYearMonth(anyString(), anyInt(), anyInt()))
                 .thenReturn(false);
         when(scheduleRepository.save(any(Schedule.class))).thenAnswer(i -> {
@@ -98,7 +99,7 @@ class ScheduleServiceTest {
     @Test
     @DisplayName("createSchedule should throw exception for duplicate")
     void createSchedule_duplicate_throwsException() {
-        when(ownerRepository.existsById("test-user")).thenReturn(true);
+        when(ownerService.getOrCreateOwner("test-user")).thenReturn(new Owner("test-user"));
         when(scheduleRepository.existsByOwnerIdAndYearMonth("test-user", 2025, 12))
                 .thenReturn(true);
 
