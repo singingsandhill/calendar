@@ -5,61 +5,233 @@
 
 <nav th:replace="~{stock/fragments/header :: navbar}"></nav>
 
-<main class="container mx-auto px-4 py-6">
-    <div class="flex items-center justify-between mb-6">
+<main class="container mx-auto px-4 py-6 space-y-4">
+
+    <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold dark:text-white">Position History</h1>
-        <div class="text-gray-500" th:text="${#temporals.format(tradingDate, 'yyyy-MM-dd')}">2024-01-01</div>
+        <div class="text-sm text-gray-500">
+            <span th:text="${#temporals.format(fromDate, 'yyyy-MM-dd')}">2026-04-01</span>
+            ~
+            <span th:text="${#temporals.format(toDate, 'yyyy-MM-dd')}">2026-04-23</span>
+        </div>
     </div>
 
-    <!-- All Positions Table -->
+    <!-- Filter Bar -->
+    <form method="get" action="/stock/history" class="card">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">From</label>
+                <input type="date" name="from"
+                       th:value="${#temporals.format(fromDate, 'yyyy-MM-dd')}"
+                       class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"/>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">To</label>
+                <input type="date" name="to"
+                       th:value="${#temporals.format(toDate, 'yyyy-MM-dd')}"
+                       class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"/>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Close Reason</label>
+                <select name="reason"
+                        class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+                    <option value="">전체</option>
+                    <option th:each="r : ${closeReasons}"
+                            th:value="${r}"
+                            th:text="${r}"
+                            th:selected="${r == filterReason}"></option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Stock Code</label>
+                <input type="text" name="stockCode" th:value="${filterStockCode}" placeholder="005930"
+                       class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-mono"/>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Sort</label>
+                <select name="sort" class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+                    <option value="time" th:selected="${sortField == 'time'}">시간</option>
+                    <option value="pnl" th:selected="${sortField == 'pnl'}">P&amp;L</option>
+                    <option value="code" th:selected="${sortField == 'code'}">종목</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <select name="order" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm">
+                    <option value="desc" th:selected="${sortOrder == 'desc'}">내림</option>
+                    <option value="asc" th:selected="${sortOrder == 'asc'}">오름</option>
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">적용</button>
+            </div>
+        </div>
+        <div class="flex gap-2 mt-3">
+            <span class="text-xs text-gray-500 self-center">Preset:</span>
+            <a href="/stock/history?preset=today" class="btn btn-sm" th:classappend="${preset == 'today'} ? 'btn-primary' : 'btn-secondary'">오늘</a>
+            <a href="/stock/history?preset=week"  class="btn btn-sm" th:classappend="${preset == 'week'}  ? 'btn-primary' : 'btn-secondary'">이번 주</a>
+            <a href="/stock/history?preset=month" class="btn btn-sm" th:classappend="${preset == 'month'} ? 'btn-primary' : 'btn-secondary'">이번 달</a>
+        </div>
+    </form>
+
+    <!-- KPI Summary -->
+    <div class="card">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+            <div>
+                <div class="text-xs text-gray-500">총 포지션</div>
+                <div class="text-2xl font-bold dark:text-white" th:text="${totalCount}">0</div>
+                <div class="text-xs text-gray-500">청산 <span th:text="${closedCount}">0</span></div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">승률</div>
+                <div class="text-2xl font-bold dark:text-white">
+                    <span th:text="${winRate} + '%'">0%</span>
+                </div>
+                <div class="text-xs text-gray-500">
+                    <span class="pnl-positive" th:text="${winCount}">0</span>
+                    /
+                    <span class="pnl-negative" th:text="${loseCount}">0</span>
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">실현 P&amp;L</div>
+                <div class="text-2xl font-bold"
+                     th:classappend="${totalPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'pnl-positive' : 'pnl-negative'">
+                    <span th:replace="~{stock/fragments/formats :: krwSigned(${totalPnl})}">₩0</span>
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">평균 P&amp;L</div>
+                <div class="text-xl font-bold"
+                     th:classappend="${avgPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'pnl-positive' : 'pnl-negative'">
+                    <span th:replace="~{stock/fragments/formats :: krwSigned(${avgPnl})}">₩0</span>
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">최고 이익</div>
+                <div class="text-xl font-bold pnl-positive">
+                    <span th:replace="~{stock/fragments/formats :: krwSigned(${bestPnl})}">₩0</span>
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">최대 손실</div>
+                <div class="text-xl font-bold pnl-negative">
+                    <span th:replace="~{stock/fragments/formats :: krwSigned(${worstPnl})}">₩0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribution charts (CSS only) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card">
+            <h3 class="text-sm font-semibold mb-3 dark:text-white">Close Reason 분포</h3>
+            <div th:if="${reasonCounts.isEmpty()}" class="text-sm text-gray-500 py-4 text-center">
+                청산된 포지션이 없습니다
+            </div>
+            <div th:each="entry : ${reasonCounts}" class="mb-2">
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    <span th:text="${entry.key}">TP1</span>
+                    <span th:text="${entry.value} + '건'">0건</span>
+                </div>
+                <div class="h-3 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div class="h-full"
+                         th:classappend="${#strings.startsWith(entry.key, 'TP')} ? 'bg-emerald-500' : (${entry.key == 'STOP_LOSS' or entry.key == 'TRAILING_STOP'} ? 'bg-red-500' : 'bg-amber-500')"
+                         th:style="'width:' + ${T(java.lang.Math).round(entry.value * 100.0 / reasonMax)} + '%'"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="text-sm font-semibold mb-3 dark:text-white">시간대별 승/패</h3>
+            <div th:each="bucket : ${hourBuckets}" class="mb-2">
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    <span th:text="${bucket.key}">09-10</span>
+                    <span>
+                        <span class="pnl-positive" th:text="${bucket.value[0]}">0</span> /
+                        <span class="pnl-negative" th:text="${bucket.value[1]}">0</span>
+                    </span>
+                </div>
+                <div class="h-3 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden flex">
+                    <div class="h-full bg-emerald-500"
+                         th:with="total=${bucket.value[0] + bucket.value[1]}"
+                         th:style="${total > 0} ? 'width:' + ${bucket.value[0] * 100 / (total == 0 ? 1 : total)} + '%' : 'width:0'"></div>
+                    <div class="h-full bg-red-500"
+                         th:with="total=${bucket.value[0] + bucket.value[1]}"
+                         th:style="${total > 0} ? 'width:' + ${bucket.value[1] * 100 / (total == 0 ? 1 : total)} + '%' : 'width:0'"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Position table -->
     <div class="card">
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+            <table class="data-table w-full text-sm">
+                <thead>
                     <tr>
-                        <th class="text-left py-3">Code</th>
-                        <th class="text-left py-3">Status</th>
-                        <th class="text-right py-3">Entry Price</th>
-                        <th class="text-right py-3">Qty (Entry)</th>
-                        <th class="text-right py-3">Qty (Remain)</th>
-                        <th class="text-right py-3">Avg Exit</th>
-                        <th class="text-right py-3">Realized P&L</th>
-                        <th class="text-left py-3">Close Reason</th>
-                        <th class="text-center py-3">TP</th>
-                        <th class="text-left py-3">Entry Time</th>
-                        <th class="text-left py-3">Close Time</th>
+                        <th class="text-left">Date</th>
+                        <th class="text-left">Code</th>
+                        <th class="text-left">Status</th>
+                        <th class="text-right">Entry</th>
+                        <th class="text-right">Qty (E/R)</th>
+                        <th class="text-right">Avg Exit</th>
+                        <th class="text-right">P&amp;L</th>
+                        <th class="text-right">P&amp;L %</th>
+                        <th class="text-left">Reason</th>
+                        <th class="text-center">TP</th>
+                        <th class="text-left">Entry Time</th>
+                        <th class="text-left">Close Time</th>
+                        <th class="text-right">Held</th>
                     </tr>
                 </thead>
-                <tbody class="dark:text-gray-300">
-                    <tr th:each="pos : ${positions}"
-                        class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="py-3 font-mono" th:text="${pos.stockCode}">005930</td>
-                        <td class="py-3">
+                <tbody>
+                    <tr th:each="pos : ${positions}">
+                        <td th:text="${#temporals.format(pos.tradingDate, 'MM/dd')}">04/23</td>
+                        <td class="font-mono" th:text="${pos.stockCode}">005930</td>
+                        <td>
                             <span class="state-badge"
-                                  th:classappend="${pos.status.name() == 'OPEN'} ? 'bg-green-100 text-green-800' : (${pos.status.name() == 'PARTIAL'} ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800')"
+                                  th:classappend="${pos.status.name() == 'OPEN'} ? 'state-entered' : (${pos.status.name() == 'PARTIAL'} ? 'state-pullback' : 'state-exited')"
                                   th:text="${pos.status.name()}">OPEN</span>
                         </td>
-                        <td class="py-3 text-right" th:text="${#numbers.formatDecimal(pos.entryPrice, 0, 0)}">75,000</td>
-                        <td class="py-3 text-right" th:text="${pos.entryQuantity}">100</td>
-                        <td class="py-3 text-right" th:text="${pos.remainingQuantity}">50</td>
-                        <td class="py-3 text-right"
-                            th:text="${pos.avgExitPrice != null} ? ${#numbers.formatDecimal(pos.avgExitPrice, 0, 0)} : '-'">76,000</td>
-                        <td class="py-3 text-right"
-                            th:classappend="${pos.realizedPnl != null && pos.realizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
-                            th:text="${pos.realizedPnl != null} ? ${#numbers.formatDecimal(pos.realizedPnl, 0, 0)} : '0'">+100,000</td>
-                        <td class="py-3" th:text="${pos.closeReason != null} ? ${pos.closeReason.name()} : '-'">TP1</td>
-                        <td class="py-3 text-center">
-                            <span th:class="${pos.tp1Executed} ? 'text-green-500' : 'text-gray-400'" title="TP1">1</span>
-                            <span th:class="${pos.tp2Executed} ? 'text-green-500' : 'text-gray-400'" title="TP2">2</span>
-                            <span th:class="${pos.tp3Executed} ? 'text-green-500' : 'text-gray-400'" title="TP3">3</span>
+                        <td class="text-right">
+                            <span th:replace="~{stock/fragments/formats :: krw(${pos.entryPrice})}">₩0</span>
                         </td>
-                        <td class="py-3 text-sm text-gray-500"
+                        <td class="text-right text-xs">
+                            <span th:text="${pos.entryQuantity}">0</span> /
+                            <span th:text="${pos.remainingQuantity}">0</span>
+                        </td>
+                        <td class="text-right">
+                            <span th:if="${pos.averageExitPrice != null}"
+                                  th:replace="~{stock/fragments/formats :: krw(${pos.averageExitPrice})}">₩0</span>
+                            <span th:if="${pos.averageExitPrice == null}" class="text-gray-400">-</span>
+                        </td>
+                        <td class="text-right">
+                            <span th:if="${pos.realizedPnl != null}"
+                                  th:replace="~{stock/fragments/formats :: krwSigned(${pos.realizedPnl})}">₩0</span>
+                            <span th:if="${pos.realizedPnl == null}" class="text-gray-400">-</span>
+                        </td>
+                        <td class="text-right">
+                            <span th:if="${pos.realizedPnlPercent != null}"
+                                  th:replace="~{stock/fragments/formats :: pctSigned(${pos.realizedPnlPercent})}">0%</span>
+                            <span th:if="${pos.realizedPnlPercent == null}" class="text-gray-400">-</span>
+                        </td>
+                        <td>
+                            <span th:if="${pos.closeReason != null}"
+                                  th:replace="~{stock/fragments/formats :: closeReason(${pos.closeReason.name()})}">-</span>
+                            <span th:if="${pos.closeReason == null}" class="text-gray-400">-</span>
+                        </td>
+                        <td class="text-center text-xs">
+                            <span th:classappend="${pos.tp1Executed} ? 'text-emerald-500 font-semibold' : 'text-gray-400'">1</span>
+                            <span th:classappend="${pos.tp2Executed} ? 'text-emerald-500 font-semibold' : 'text-gray-400'">2</span>
+                            <span th:classappend="${pos.tp3Executed} ? 'text-emerald-500 font-semibold' : 'text-gray-400'">3</span>
+                        </td>
+                        <td class="text-xs text-gray-500"
                             th:text="${pos.enteredAt != null} ? ${#temporals.format(pos.enteredAt, 'HH:mm:ss')} : '-'">09:15:30</td>
-                        <td class="py-3 text-sm text-gray-500"
+                        <td class="text-xs text-gray-500"
                             th:text="${pos.closedAt != null} ? ${#temporals.format(pos.closedAt, 'HH:mm:ss')} : '-'">10:30:45</td>
+                        <td class="text-right text-xs text-gray-500"
+                            th:text="${heldDurations.get(pos.id) != null} ? ${heldDurations.get(pos.id)} : '-'">00:00:00</td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(positions)}">
-                        <td colspan="11" class="py-8 text-center text-gray-500">No positions found</td>
+                        <td colspan="13" class="py-8 text-center text-gray-500">No positions found</td>
                     </tr>
                 </tbody>
             </table>
@@ -67,31 +239,25 @@
     </div>
 </main>
 
-<script>
-    // Update bot status indicator
+<script th:inline="javascript">
     async function updateBotStatus() {
         try {
             const response = await fetch('/api/stock/bot/status');
             const status = await response.json();
-
             const dot = document.getElementById('status-dot');
             const text = document.getElementById('status-text');
             const phase = document.getElementById('trading-phase');
-
+            if (!dot) return;
             if (status.running) {
-                dot.className = status.paused ? 'w-3 h-3 rounded-full bg-yellow-500' : 'w-3 h-3 rounded-full bg-green-500';
-                text.textContent = status.paused ? 'Paused' : 'Running';
+                dot.className = status.paused ? 'status-dot status-dot-paused' : 'status-dot status-dot-live';
+                if (text) text.textContent = status.paused ? 'Paused' : 'Running';
             } else {
-                dot.className = 'w-3 h-3 rounded-full bg-red-500';
-                text.textContent = 'Stopped';
+                dot.className = 'status-dot status-dot-stopped';
+                if (text) text.textContent = 'Stopped';
             }
-
-            phase.textContent = status.tradingPhase;
-        } catch (error) {
-            console.error('Failed to update bot status:', error);
-        }
+            if (phase) phase.textContent = status.tradingPhase;
+        } catch (e) { /* ignore */ }
     }
-
     document.addEventListener('DOMContentLoaded', () => {
         updateBotStatus();
         setInterval(updateBotStatus, 5000);

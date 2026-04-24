@@ -4,98 +4,288 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Trading Bot - Gap & Pullback</title>
-    <!-- Preconnect for faster CDN loading -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <!-- Tailwind CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" rel="stylesheet">
     <style>
+        :root {
+            --color-bg: #f3f4f6;
+            --color-card: #ffffff;
+            --color-card-border: #e5e7eb;
+            --color-text: #111827;
+            --color-muted: #6b7280;
+            --color-subtle: #9ca3af;
+
+            --status-live: #10b981;
+            --status-paused: #f59e0b;
+            --status-stopped: #6b7280;
+            --status-stale: #dc2626;
+
+            --risk-critical-fg: #b91c1c;
+            --risk-critical-bg: #fef2f2;
+            --risk-critical-border: #fecaca;
+            --risk-warning-fg: #b45309;
+            --risk-warning-bg: #fffbeb;
+            --risk-warning-border: #fde68a;
+            --risk-progress-fg: #1d4ed8;
+            --risk-progress-bg: #eff6ff;
+            --risk-progress-border: #bfdbfe;
+            --risk-safe-fg: #374151;
+            --risk-safe-bg: #f9fafb;
+            --risk-safe-border: #e5e7eb;
+
+            --pnl-positive: #059669;
+            --pnl-negative: #dc2626;
+            --pnl-neutral: #6b7280;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f172a;
+                --color-card: #1f2937;
+                --color-card-border: #374151;
+                --color-text: #f9fafb;
+                --color-muted: #9ca3af;
+                --color-subtle: #6b7280;
+
+                --risk-critical-fg: #fca5a5;
+                --risk-critical-bg: rgba(127, 29, 29, 0.35);
+                --risk-critical-border: rgba(220, 38, 38, 0.4);
+                --risk-warning-fg: #fcd34d;
+                --risk-warning-bg: rgba(120, 53, 15, 0.35);
+                --risk-warning-border: rgba(245, 158, 11, 0.4);
+                --risk-progress-fg: #93c5fd;
+                --risk-progress-bg: rgba(30, 58, 138, 0.35);
+                --risk-progress-border: rgba(59, 130, 246, 0.4);
+                --risk-safe-fg: #d1d5db;
+                --risk-safe-bg: rgba(55, 65, 81, 0.4);
+                --risk-safe-border: rgba(75, 85, 99, 0.6);
+
+                --pnl-positive: #34d399;
+                --pnl-negative: #f87171;
+                --pnl-neutral: #9ca3af;
+            }
+        }
+
         .card {
-            background-color: #ffffff;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            background-color: var(--color-card);
+            border: 1px solid var(--color-card-border);
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
             padding: 1rem;
         }
-        .btn-primary {
-            background-color: #2563eb;
-            color: #ffffff;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
+        .card-elevated {
+            background-color: var(--color-card);
+            border: 1px solid var(--color-card-border);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+            padding: 1.25rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.375rem;
+            font-weight: 500; padding: 0.5rem 1rem;
             border-radius: 0.5rem;
-            transition: background-color 0.15s ease-in-out;
-        }
-        .btn-primary:hover {
-            background-color: #1d4ed8;
-        }
-        .btn-danger {
-            background-color: #dc2626;
-            color: #ffffff;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: background-color 0.15s ease-in-out;
-        }
-        .btn-danger:hover {
-            background-color: #b91c1c;
-        }
-        .btn-success {
-            background-color: #16a34a;
-            color: #ffffff;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: background-color 0.15s ease-in-out;
-        }
-        .btn-success:hover {
-            background-color: #15803d;
-        }
-        .btn-warning {
-            background-color: #eab308;
-            color: #ffffff;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            transition: background-color 0.15s ease-in-out;
-        }
-        .btn-warning:hover {
-            background-color: #ca8a04;
-        }
-        .stat-value {
-            font-size: 1.5rem;
-            line-height: 2rem;
-            font-weight: 700;
-        }
-        .stat-label {
-            color: #6b7280;
+            transition: background-color 0.15s ease-in-out, opacity 0.15s;
+            cursor: pointer; border: 1px solid transparent;
             font-size: 0.875rem;
-            line-height: 1.25rem;
         }
-        .positive { color: #22c55e; }
-        .negative { color: #ef4444; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn[aria-busy="true"] { opacity: 0.7; pointer-events: none; }
+        .btn-primary { background-color: #2563eb; color: #fff; }
+        .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
+        .btn-secondary { background-color: transparent; color: var(--color-text); border-color: var(--color-card-border); }
+        .btn-secondary:hover:not(:disabled) { background-color: rgba(107,114,128,0.1); }
+        .btn-danger { background-color: #dc2626; color: #fff; }
+        .btn-danger:hover:not(:disabled) { background-color: #b91c1c; }
+        .btn-success { background-color: #16a34a; color: #fff; }
+        .btn-success:hover:not(:disabled) { background-color: #15803d; }
+        .btn-warning { background-color: #eab308; color: #fff; }
+        .btn-warning:hover:not(:disabled) { background-color: #ca8a04; }
+        .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8125rem; }
+
+        .spinner {
+            display: inline-block; width: 0.875rem; height: 0.875rem;
+            border: 2px solid currentColor; border-top-color: transparent;
+            border-radius: 50%; animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Stat values */
+        .stat-value { font-size: 1.5rem; line-height: 2rem; font-weight: 700; color: var(--color-text); }
+        .stat-label { color: var(--color-muted); font-size: 0.8125rem; line-height: 1.25rem; }
+        .stat-sublabel { color: var(--color-subtle); font-size: 0.75rem; }
+
+        /* Status dots */
+        .status-dot { width: 0.625rem; height: 0.625rem; border-radius: 9999px; display: inline-block; }
+        .status-dot-lg { width: 0.875rem; height: 0.875rem; }
+        .status-live { background-color: var(--status-live); box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+        .status-paused { background-color: var(--status-paused); box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+        .status-stopped { background-color: var(--status-stopped); }
+        .status-stale { background-color: var(--status-stale); animation: pulse 1s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
+            50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(220,38,38,0); }
+        }
+
+        /* P&L colors */
+        .pnl-positive { color: var(--pnl-positive); font-variant-numeric: tabular-nums; }
+        .pnl-negative { color: var(--pnl-negative); font-variant-numeric: tabular-nums; }
+        .pnl-neutral { color: var(--pnl-neutral); font-variant-numeric: tabular-nums; }
+
+        .positive { color: var(--pnl-positive); }
+        .negative { color: var(--pnl-negative); }
+
+        /* Risk levels */
+        .risk-critical, .risk-warning, .risk-progress, .risk-safe, .risk-trail {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            padding: 0.125rem 0.5rem; border-radius: 0.375rem;
+            font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em;
+            text-transform: uppercase; border: 1px solid transparent;
+        }
+        .risk-critical { color: var(--risk-critical-fg); background: var(--risk-critical-bg); border-color: var(--risk-critical-border); }
+        .risk-warning { color: var(--risk-warning-fg); background: var(--risk-warning-bg); border-color: var(--risk-warning-border); }
+        .risk-progress { color: var(--risk-progress-fg); background: var(--risk-progress-bg); border-color: var(--risk-progress-border); }
+        .risk-safe { color: var(--risk-safe-fg); background: var(--risk-safe-bg); border-color: var(--risk-safe-border); }
+        .risk-trail { color: #0e7490; background: #ecfeff; border-color: #a5f3fc; }
+        @media (prefers-color-scheme: dark) {
+            .risk-trail { color: #67e8f9; background: rgba(8,51,68,0.5); border-color: rgba(103,232,249,0.3); }
+        }
+
+        /* Alert strip */
+        .alert-strip {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1rem; border-radius: 0.5rem;
+            border: 1px solid transparent; font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        .alert-critical { color: var(--risk-critical-fg); background: var(--risk-critical-bg); border-color: var(--risk-critical-border); }
+        .alert-warning { color: var(--risk-warning-fg); background: var(--risk-warning-bg); border-color: var(--risk-warning-border); }
+
+        /* State badges */
         .state-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            line-height: 1rem;
-            font-weight: 500;
+            padding: 0.125rem 0.5rem; border-radius: 9999px;
+            font-size: 0.6875rem; line-height: 1rem; font-weight: 600;
+            letter-spacing: 0.02em; display: inline-block;
         }
         .state-watching { background-color: #dbeafe; color: #1e40af; }
         .state-high_formed { background-color: #f3e8ff; color: #6b21a8; }
         .state-pullback { background-color: #ffedd5; color: #9a3412; }
-        .state-entry_ready { background-color: #dcfce7; color: #166534; }
-        .state-entered { background-color: #22c55e; color: #ffffff; }
+        .state-entry_ready { background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; animation: pulse-soft 2s ease-in-out infinite; }
+        .state-entered { background-color: #22c55e; color: #fff; }
         .state-exited { background-color: #f3f4f6; color: #1f2937; }
         .state-filtered_out { background-color: #fee2e2; color: #991b1b; }
-        @media (prefers-color-scheme: dark) {
-            .card {
-                background-color: #1f2937;
-            }
-            .stat-value {
-                color: #ffffff;
-            }
-            .stat-label {
-                color: #9ca3af;
-            }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.75; }
         }
+        @media (prefers-color-scheme: dark) {
+            .state-watching { background-color: rgba(30,58,138,0.4); color: #93c5fd; }
+            .state-high_formed { background-color: rgba(88,28,135,0.4); color: #d8b4fe; }
+            .state-pullback { background-color: rgba(124,45,18,0.4); color: #fdba74; }
+            .state-entry_ready { background-color: rgba(146,64,14,0.45); color: #fcd34d; border-color: #d97706; }
+            .state-exited { background-color: rgba(55,65,81,0.5); color: #9ca3af; }
+            .state-filtered_out { background-color: rgba(127,29,29,0.35); color: #fca5a5; }
+        }
+
+        /* Progress bar for SL <-> TP */
+        .pos-progress {
+            position: relative; height: 0.375rem; border-radius: 9999px;
+            background: linear-gradient(to right,
+                var(--risk-critical-bg) 0%, var(--risk-critical-bg) 20%,
+                var(--risk-safe-bg) 20%, var(--risk-safe-bg) 80%,
+                var(--risk-progress-bg) 80%, var(--risk-progress-bg) 100%);
+            border: 1px solid var(--color-card-border);
+        }
+        .pos-progress-marker {
+            position: absolute; top: -0.25rem; width: 0.875rem; height: 0.875rem;
+            border-radius: 50%; background: var(--color-text);
+            border: 2px solid var(--color-card);
+            transform: translateX(-50%);
+            transition: left 0.5s ease-out;
+        }
+        .pos-progress-tick {
+            position: absolute; top: -0.125rem; height: 0.625rem;
+            width: 2px; background: var(--color-muted);
+            transform: translateX(-50%);
+        }
+        .pos-progress-label {
+            position: absolute; top: 0.75rem; font-size: 0.6875rem;
+            color: var(--color-subtle); transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed; top: 1rem; right: 1rem; z-index: 9999;
+            display: flex; flex-direction: column; gap: 0.5rem;
+            pointer-events: none;
+        }
+        .toast {
+            background: var(--color-card); border: 1px solid var(--color-card-border);
+            color: var(--color-text); padding: 0.75rem 1rem; border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            font-size: 0.875rem; min-width: 220px;
+            pointer-events: auto;
+            animation: toast-in 0.2s ease-out;
+        }
+        .toast-success { border-left: 4px solid var(--pnl-positive); }
+        .toast-error { border-left: 4px solid var(--pnl-negative); }
+        .toast-info { border-left: 4px solid #3b82f6; }
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Value change flash */
+        @keyframes flash-update {
+            0% { background-color: rgba(59,130,246,0.25); }
+            100% { background-color: transparent; }
+        }
+        .flash-update { animation: flash-update 0.6s ease-out; }
+
+        /* Tables */
+        .data-table { width: 100%; font-size: 0.875rem; border-collapse: collapse; }
+        .data-table thead th {
+            text-align: left; padding: 0.625rem 0.75rem;
+            color: var(--color-muted); font-weight: 600;
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
+            border-bottom: 1px solid var(--color-card-border);
+            position: sticky; top: 0; background: var(--color-card); z-index: 1;
+        }
+        .data-table tbody td {
+            padding: 0.625rem 0.75rem;
+            border-bottom: 1px solid var(--color-card-border);
+            color: var(--color-text);
+        }
+        .data-table tbody tr:hover td { background-color: rgba(107,114,128,0.06); }
+        .data-table tbody tr:last-child td { border-bottom: none; }
+        .num { font-variant-numeric: tabular-nums; text-align: right; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+        /* Collapsible section */
+        .group-toggle {
+            display: flex; align-items: center; gap: 0.5rem;
+            cursor: pointer; user-select: none;
+            padding: 0.5rem 0; color: var(--color-text);
+            font-weight: 600; font-size: 0.875rem;
+        }
+        .group-toggle .chevron { transition: transform 0.15s; }
+        .group-toggle[aria-expanded="false"] .chevron { transform: rotate(-90deg); }
+
+        /* Countdown button */
+        .btn-countdown {
+            position: relative; overflow: hidden;
+        }
+        .btn-countdown .countdown-bar {
+            position: absolute; bottom: 0; left: 0; height: 2px;
+            background: currentColor; opacity: 0.5;
+            transition: width 0.1s linear;
+        }
+
+        /* Sticky header offset */
+        main.stock-main { padding-top: 1rem; }
+
+        body { color: var(--color-text); background-color: var(--color-bg); }
     </style>
 </head>
 <body>
@@ -104,21 +294,23 @@
     <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-16">
             <div class="flex items-center space-x-8">
-                <a href="/stock" class="text-xl font-bold">Gap & Pullback Bot</a>
-                <div class="hidden md:flex space-x-4">
+                <a href="/stock" class="text-xl font-bold">Gap &amp; Pullback Bot</a>
+                <div class="hidden md:flex space-x-4 text-sm">
                     <a href="/stock" class="hover:text-blue-400 transition">Dashboard</a>
                     <a href="/stock/history" class="hover:text-blue-400 transition">History</a>
                     <a href="/stock/settings" class="hover:text-blue-400 transition">Settings</a>
                 </div>
             </div>
-            <div id="bot-status-indicator" class="flex items-center space-x-2">
-                <span class="w-3 h-3 rounded-full bg-gray-500" id="status-dot"></span>
+            <div id="bot-status-indicator" class="flex items-center space-x-2 text-sm">
+                <span class="status-dot status-stopped" id="status-dot" aria-hidden="true"></span>
                 <span id="status-text">Loading...</span>
-                <span class="ml-2 text-sm text-gray-400" id="trading-phase"></span>
+                <span class="ml-2 text-gray-400" id="trading-phase"></span>
             </div>
         </div>
     </div>
 </nav>
+
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
 </body>
 </html>

@@ -1,260 +1,938 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head th:replace="~{stock/fragments/header :: header}"></head>
-<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+<body class="min-h-screen">
 
 <nav th:replace="~{stock/fragments/header :: navbar}"></nav>
 
-<main class="container mx-auto px-4 py-6">
-    <!-- Bot Status Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <!-- Trading Phase -->
-        <div class="card">
-            <div class="stat-label">Trading Phase</div>
-            <div class="stat-value text-lg" th:text="${botStatus.tradingPhase()}">STOPPED</div>
-        </div>
+<main class="stock-main container mx-auto px-4 py-4 pb-12">
 
-        <!-- Watching Count -->
-        <div class="card">
-            <div class="stat-label">Watching Stocks</div>
-            <div class="stat-value" th:text="${botStatus.watchingCount()}">0</div>
-        </div>
-
-        <!-- Open Positions -->
-        <div class="card">
-            <div class="stat-label">Open Positions</div>
-            <div class="stat-value" th:text="${botStatus.positionCount()}">0</div>
-        </div>
-
-        <!-- Win/Lose -->
-        <div class="card">
-            <div class="stat-label">Win / Lose</div>
-            <div class="stat-value">
-                <span class="positive" th:text="${winCount}">0</span>
-                <span class="text-gray-400"> / </span>
-                <span class="negative" th:text="${loseCount}">0</span>
-            </div>
-        </div>
-
-        <!-- Realized P&L -->
-        <div class="card">
-            <div class="stat-label">Realized P&L</div>
-            <div class="stat-value"
-                 th:classappend="${totalRealizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'">
-                <span th:text="${#numbers.formatDecimal(totalRealizedPnl, 0, 0)}">0</span> KRW
-            </div>
-        </div>
-    </div>
-
-    <!-- Bot Control -->
-    <div class="card mb-6">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <h2 class="text-lg font-semibold dark:text-white">Bot Control</h2>
-                <div class="flex items-center space-x-2">
-                    <span class="w-4 h-4 rounded-full" aria-hidden="true"
-                          th:classappend="${botStatus.running()} ? (${botStatus.paused()} ? 'bg-yellow-500' : 'bg-green-500') : 'bg-red-500'"></span>
-                    <span class="font-medium dark:text-white"
-                          th:text="${botStatus.running()} ? (${botStatus.paused()} ? 'Paused' : 'Running') : 'Stopped'">Stopped</span>
+    <!-- ============ Status Hero ============ -->
+    <section class="card-elevated mb-4" id="status-hero" aria-label="봇 상태 요약">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <span id="hero-dot" class="status-dot status-dot-lg status-stopped" aria-hidden="true"></span>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="hero-status" class="text-lg font-bold">Loading...</span>
+                        <span id="hero-phase-sep" class="text-gray-400 hidden md:inline">·</span>
+                        <span id="hero-phase" class="text-sm font-medium text-gray-600 dark:text-gray-300">—</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-0.5" id="hero-sub">—</div>
                 </div>
             </div>
-            <div class="flex space-x-2">
-                <button onclick="toggleBot()" class="btn-primary" id="toggle-btn">
-                    <span th:text="${botStatus.running()} ? 'Stop' : 'Start'">Start</span>
-                </button>
-                <button onclick="pauseResumeBot()" class="btn-warning" id="pause-btn"
-                        th:disabled="${!botStatus.running()}">
-                    <span th:text="${botStatus.paused()} ? 'Resume' : 'Pause'">Pause</span>
-                </button>
-                <button onclick="emergencyClose()" class="btn-danger">Emergency Close</button>
+            <div class="flex items-center gap-4 text-sm">
+                <div class="text-right">
+                    <div class="stat-sublabel">Next</div>
+                    <div class="font-semibold" id="hero-next">—</div>
+                </div>
+                <div class="text-right">
+                    <div class="stat-sublabel">Last tick</div>
+                    <div class="font-semibold" id="hero-lasttick">—</div>
+                </div>
+                <div class="text-right">
+                    <div class="stat-sublabel">Started</div>
+                    <div class="font-semibold" id="hero-started">—</div>
+                </div>
             </div>
         </div>
-        <div class="mt-2 text-sm text-gray-500" th:if="${botStatus.startedAt()}">
-            Started at: <span th:text="${#temporals.format(botStatus.startedAt(), 'yyyy-MM-dd HH:mm:ss')}"></span>
+    </section>
+
+    <!-- ============ Alert Strip (조건부) ============ -->
+    <div id="alert-container" class="mb-4 space-y-2"></div>
+
+    <!-- ============ P&L Summary ============ -->
+    <section class="card mb-4" aria-label="오늘 손익 요약">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">Today</h2>
+            <span class="text-xs text-gray-500" th:text="${#temporals.format(tradingDate, 'yyyy-MM-dd')}">2026-04-23</span>
         </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+                <div class="stat-label">Realized P&amp;L</div>
+                <div class="stat-value" id="pnl-realized">—</div>
+                <div class="text-xs" id="pnl-realized-sub">—</div>
+            </div>
+            <div>
+                <div class="stat-label">Unrealized P&amp;L</div>
+                <div class="stat-value" id="pnl-unrealized">—</div>
+                <div class="text-xs text-gray-500" id="pnl-unrealized-sub">오픈 포지션 기준</div>
+            </div>
+            <div>
+                <div class="stat-label">Open / Watching</div>
+                <div class="stat-value">
+                    <span id="stat-open">0</span>
+                    <span class="text-gray-400 text-xl font-normal"> / </span>
+                    <span id="stat-watching" class="text-xl">0</span>
+                </div>
+                <div class="text-xs text-gray-500">포지션 / 감시</div>
+            </div>
+            <div>
+                <div class="stat-label">Win / Lose</div>
+                <div class="stat-value">
+                    <span class="pnl-positive" id="stat-win">0</span>
+                    <span class="text-gray-400 text-xl font-normal"> / </span>
+                    <span class="pnl-negative" id="stat-lose">0</span>
+                </div>
+                <div class="text-xs text-gray-500" id="stat-winrate">—</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ Open Positions ============ -->
+    <section class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                Open Positions <span class="text-gray-400 font-normal ml-1" id="open-count">(0)</span>
+            </h2>
+            <span class="text-xs text-gray-500">위험 순 정렬</span>
+        </div>
+        <div id="open-positions-container" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div class="card text-center text-gray-500 py-6" id="open-empty">No open positions</div>
+        </div>
+    </section>
+
+    <!-- ============ Watchlist Grouped ============ -->
+    <section class="card mb-4">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                Watchlist <span class="text-gray-400 font-normal ml-1" id="watchlist-total">(0)</span>
+            </h2>
+            <button type="button" class="btn btn-secondary btn-sm" id="watchlist-expand-all">전체 펼치기</button>
+        </div>
+        <div id="watchlist-container">
+            <div class="text-center text-gray-500 py-6">Loading…</div>
+        </div>
+    </section>
+
+    <!-- ============ Recent Events + Control ============ -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <section class="card lg:col-span-2">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">Recent Events</h2>
+                <span class="text-xs text-gray-500">최근 10건</span>
+            </div>
+            <div id="events-container" class="text-sm">
+                <div class="text-center text-gray-500 py-4">Loading…</div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300 mb-3">Bot Control</h2>
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button type="button" class="btn btn-primary" id="btn-toggle" onclick="StockBot.toggleBot()">
+                    <span class="btn-label">Start</span>
+                </button>
+                <button type="button" class="btn btn-warning" id="btn-pause" onclick="StockBot.pauseResumeBot()" disabled>
+                    <span class="btn-label">Pause</span>
+                </button>
+            </div>
+            <div class="text-xs text-gray-500" id="control-hint">봇이 중지되어 있습니다</div>
+
+            <!-- Emergency Zone (별도 격리) -->
+            <div class="mt-4 pt-4 border-t" style="border-color: var(--color-card-border)">
+                <button type="button" id="emergency-toggle"
+                        class="w-full text-left flex items-center justify-between text-sm font-semibold"
+                        style="color: var(--risk-critical-fg)"
+                        aria-expanded="false" aria-controls="emergency-body"
+                        onclick="StockBot.toggleEmergencyZone()">
+                    <span>⚠ Emergency Zone</span>
+                    <span id="emergency-chevron">▸</span>
+                </button>
+                <div id="emergency-body" class="hidden mt-3 space-y-3" style="color: var(--risk-critical-fg)">
+                    <div class="text-xs" style="color: var(--color-muted)">
+                        모든 오픈 포지션을 시장가로 즉시 청산합니다. 이 동작은 되돌릴 수 없습니다.
+                    </div>
+                    <div class="text-sm">
+                        청산 대상: <span class="font-bold" id="emergency-count">0</span>건
+                    </div>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--color-text)">
+                        <input type="checkbox" id="emergency-ack" onchange="StockBot.updateEmergencyGuard()">
+                        위험을 이해했습니다
+                    </label>
+                    <label class="block text-sm" style="color: var(--color-text)">
+                        확인 코드 입력 <span class="text-xs" style="color: var(--color-muted)">(EMERGENCY)</span>
+                        <input type="text" id="emergency-code" autocomplete="off"
+                               oninput="StockBot.updateEmergencyGuard()"
+                               class="mt-1 w-full px-2 py-1 text-sm rounded border"
+                               style="background: var(--color-bg); border-color: var(--color-card-border); color: var(--color-text)">
+                    </label>
+                    <button type="button" class="btn btn-danger w-full btn-countdown" id="btn-emergency"
+                            disabled onclick="StockBot.emergencyClose()">
+                        <span class="btn-label">청산 실행</span>
+                        <span class="countdown-bar" id="emergency-countdown-bar" style="width: 0"></span>
+                    </button>
+                    <div class="text-xs text-center" style="color: var(--color-muted)" id="emergency-hint">
+                        체크박스와 코드를 입력하면 활성화됩니다
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <!-- Watchlist Table -->
-    <div class="card mb-6">
-        <h3 class="text-lg font-semibold mb-4 dark:text-white">Watching Stocks (Gap Screening)</h3>
+    <!-- Recent Closed Positions -->
+    <section class="card mb-4">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">Recent Closed</h2>
+            <a href="/stock/history" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">전체 내역 →</a>
+        </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <th scope="col" class="text-left py-3">Code</th>
-                        <th scope="col" class="text-left py-3">Name</th>
-                        <th scope="col" class="text-left py-3">State</th>
-                        <th scope="col" class="text-right py-3">Gap %</th>
-                        <th scope="col" class="text-right py-3">Current</th>
-                        <th scope="col" class="text-right py-3">From Open</th>
-                        <th scope="col" class="text-right py-3">High</th>
-                        <th scope="col" class="text-right py-3">Pullback Low</th>
+                        <th>Code</th>
+                        <th class="num">Entry</th>
+                        <th class="num">Exit</th>
+                        <th class="num">P&amp;L</th>
+                        <th>Reason</th>
+                        <th class="num">Time</th>
                     </tr>
                 </thead>
-                <tbody class="dark:text-gray-300">
-                    <tr th:each="stock : ${watchlist}"
-                        class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="py-3 font-mono" th:text="${stock.stockCode}">005930</td>
-                        <td class="py-3" th:text="${stock.stockName}">Samsung</td>
-                        <td class="py-3">
-                            <span class="state-badge"
-                                  th:classappend="'state-' + ${stock.state.name().toLowerCase()}"
-                                  th:text="${stock.state.name()}">WATCHING</span>
-                        </td>
-                        <td class="py-3 text-right positive"
-                            th:text="${stock.gapPercent != null} ? ${#numbers.formatDecimal(stock.gapPercent, 1, 2) + '%'} : '-'">3.5%</td>
-                        <td class="py-3 text-right"
-                            th:text="${stock.currentPrice != null} ? ${#numbers.formatDecimal(stock.currentPrice, 0, 0)} : '-'">75,000</td>
-                        <td class="py-3 text-right"
-                            th:classappend="${stock.calculateReturnFromOpen() != null && stock.calculateReturnFromOpen().compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
-                            th:text="${stock.calculateReturnFromOpen() != null} ? ${#numbers.formatDecimal(stock.calculateReturnFromOpen(), 1, 2) + '%'} : '-'">+1.5%</td>
-                        <td class="py-3 text-right"
-                            th:text="${stock.highAfterOpen != null} ? ${#numbers.formatDecimal(stock.highAfterOpen, 0, 0)} : '-'">76,000</td>
-                        <td class="py-3 text-right"
-                            th:text="${stock.pullbackLow != null} ? ${#numbers.formatDecimal(stock.pullbackLow, 0, 0)} : '-'">74,500</td>
+                <tbody id="closed-body" class="mono">
+                    <tr th:if="${#lists.isEmpty(closedPositions)}" id="closed-empty">
+                        <td colspan="6" class="py-4 text-center text-gray-500">No closed positions today</td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(watchlist)}">
-                        <td colspan="8" class="py-8 text-center text-gray-500">No stocks in watchlist</td>
+                    <tr th:each="pos : ${closedPositions}">
+                        <td th:text="${pos.stockCode}">005930</td>
+                        <td class="num" th:text="${#numbers.formatInteger(pos.entryPrice, 0, 'COMMA')}">75,000</td>
+                        <td class="num"
+                            th:text="${pos.averageExitPrice != null} ? ${#numbers.formatInteger(pos.averageExitPrice, 0, 'COMMA')} : '-'">76,500</td>
+                        <td class="num"
+                            th:classappend="${pos.realizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'pnl-positive' : 'pnl-negative'"
+                            th:text="${pos.realizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? '+₩' + #numbers.formatInteger(pos.realizedPnl, 0, 'COMMA') : '-₩' + #numbers.formatInteger(pos.realizedPnl.abs(), 0, 'COMMA')">+₩100,000</td>
+                        <td>
+                            <span class="state-badge"
+                                  th:classappend="${pos.closeReason != null && (pos.closeReason.name() == 'TP1' or pos.closeReason.name() == 'TP2' or pos.closeReason.name() == 'TP3')} ? 'state-entered' : (${pos.closeReason != null && pos.closeReason.name() == 'STOP_LOSS'} ? 'state-filtered_out' : 'state-exited')"
+                                  th:text="${pos.closeReason != null} ? ${pos.closeReason.name()} : '-'">TP1</span>
+                        </td>
+                        <td class="num text-xs"
+                            th:text="${pos.closedAt != null} ? ${#temporals.format(pos.closedAt, 'HH:mm:ss')} : '-'">10:30:45</td>
                     </tr>
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 
-    <!-- Open Positions -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="card">
-            <h3 class="text-lg font-semibold mb-4 dark:text-white">Open Positions</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="text-gray-500 dark:text-gray-400">
-                        <tr>
-                            <th scope="col" class="text-left py-2">Code</th>
-                            <th scope="col" class="text-right py-2">Entry</th>
-                            <th scope="col" class="text-right py-2">Qty</th>
-                            <th scope="col" class="text-right py-2">SL</th>
-                            <th scope="col" class="text-center py-2">TP</th>
-                        </tr>
-                    </thead>
-                    <tbody class="dark:text-gray-300">
-                        <tr th:each="pos : ${openPositions}"
-                            class="border-t border-gray-200 dark:border-gray-700">
-                            <td class="py-2 font-mono" th:text="${pos.stockCode}">005930</td>
-                            <td class="py-2 text-right" th:text="${#numbers.formatDecimal(pos.entryPrice, 0, 0)}">75,000</td>
-                            <td class="py-2 text-right" th:text="${pos.remainingQuantity}">100</td>
-                            <td class="py-2 text-right negative" th:text="${#numbers.formatDecimal(pos.stopLossPrice, 0, 0)}">73,875</td>
-                            <td class="py-2 text-center">
-                                <span th:class="${pos.tp1Executed} ? 'text-green-500' : 'text-gray-400'">1</span>
-                                <span th:class="${pos.tp2Executed} ? 'text-green-500' : 'text-gray-400'">2</span>
-                                <span th:class="${pos.tp3Executed} ? 'text-green-500' : 'text-gray-400'">3</span>
-                            </td>
-                        </tr>
-                        <tr th:if="${#lists.isEmpty(openPositions)}">
-                            <td colspan="5" class="py-4 text-center text-gray-500">No open positions</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Recent Closed Positions -->
-        <div class="card">
-            <h3 class="text-lg font-semibold mb-4 dark:text-white">Recent Closed Positions</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="text-gray-500 dark:text-gray-400">
-                        <tr>
-                            <th class="text-left py-2">Code</th>
-                            <th class="text-right py-2">Entry</th>
-                            <th class="text-right py-2">Exit</th>
-                            <th class="text-right py-2">P&L</th>
-                            <th class="text-left py-2">Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody class="dark:text-gray-300">
-                        <tr th:each="pos : ${closedPositions}"
-                            class="border-t border-gray-200 dark:border-gray-700">
-                            <td class="py-2 font-mono" th:text="${pos.stockCode}">005930</td>
-                            <td class="py-2 text-right" th:text="${#numbers.formatDecimal(pos.entryPrice, 0, 0)}">75,000</td>
-                            <td class="py-2 text-right" th:text="${pos.avgExitPrice != null} ? ${#numbers.formatDecimal(pos.avgExitPrice, 0, 0)} : '-'">76,500</td>
-                            <td class="py-2 text-right"
-                                th:classappend="${pos.realizedPnl.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
-                                th:text="${#numbers.formatDecimal(pos.realizedPnl, 0, 0)}">+150,000</td>
-                            <td class="py-2" th:text="${pos.closeReason}">TP1</td>
-                        </tr>
-                        <tr th:if="${#lists.isEmpty(closedPositions)}">
-                            <td colspan="5" class="py-4 text-center text-gray-500">No closed positions today</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </main>
 
 <script th:inline="javascript">
-    // Bot control
-    async function toggleBot() {
-        const response = await fetch('/api/stock/bot/status');
-        const status = await response.json();
+(function() {
+    'use strict';
 
-        const endpoint = status.running ? '/api/stock/bot/stop' : '/api/stock/bot/start';
-        await fetch(endpoint, { method: 'POST' });
-        location.reload();
+    // --- Configuration ---
+    const POLL_INTERVAL_MS = 5000;
+    const POLL_INTERVAL_HIDDEN_MS = 30000;
+    const STALE_THRESHOLD_MS = 15000;
+    const FINAL_EXIT_TIME = /*[[${stockProperties != null ? stockProperties.exit.finalExitTime : '11:20'}]]*/ '11:20';
+    const EMERGENCY_COUNTDOWN_SEC = 3;
+
+    // --- State ---
+    let pollTimer = null;
+    let currentPollMs = POLL_INTERVAL_MS;
+    let lastTickAt = 0;
+    let lastBotStatus = null;
+    let lastOpenPositions = [];
+    let lastPnlSummary = null;
+    let lastWatchlist = [];
+    let lastEvents = [];
+    let controlsBusy = false;
+    let emergencyCountdownTimer = null;
+
+    // --- Toast ---
+    function toast(message, type = 'info', duration = 2000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const el = document.createElement('div');
+        el.className = `toast toast-${type}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => {
+            el.style.transition = 'opacity 0.2s';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 200);
+        }, duration);
+    }
+
+    // --- Formatters ---
+    function fmtKRW(v) {
+        if (v == null) return '-';
+        return '₩' + Math.round(Number(v)).toLocaleString('ko-KR');
+    }
+    function fmtKRWSigned(v) {
+        if (v == null) return '-';
+        const n = Number(v);
+        if (n > 0) return '+₩' + Math.round(n).toLocaleString('ko-KR');
+        if (n < 0) return '-₩' + Math.round(-n).toLocaleString('ko-KR');
+        return '₩0';
+    }
+    function fmtPct(v, digits = 2) {
+        if (v == null) return '-';
+        return Number(v).toFixed(digits) + '%';
+    }
+    function fmtPctSigned(v, digits = 2) {
+        if (v == null) return '-';
+        const n = Number(v);
+        return (n >= 0 ? '+' : '') + n.toFixed(digits) + '%';
+    }
+    function fmtTimeHHMMSS(dt) {
+        if (!dt) return '-';
+        const d = new Date(dt);
+        return d.toLocaleTimeString('ko-KR', { hour12: false });
+    }
+    function fmtElapsed(fromIso) {
+        if (!fromIso) return '-';
+        const ms = Date.now() - new Date(fromIso).getTime();
+        if (ms < 0) return '-';
+        const s = Math.floor(ms / 1000);
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+    }
+    function pnlClass(v) {
+        if (v == null) return 'pnl-neutral';
+        const n = Number(v);
+        if (n > 0) return 'pnl-positive';
+        if (n < 0) return 'pnl-negative';
+        return 'pnl-neutral';
+    }
+
+    // --- DOM helpers ---
+    function setText(id, text, opts = {}) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const prev = el.textContent;
+        if (prev !== text) {
+            el.textContent = text;
+            if (opts.flash) el.classList.add('flash-update');
+            if (opts.flash) setTimeout(() => el.classList.remove('flash-update'), 700);
+        }
+        if (opts.className !== undefined) {
+            el.className = opts.className;
+        }
+    }
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // --- Phase helpers ---
+    function phaseDisplayName(phase) {
+        const map = {
+            'PRE_MARKET_WAIT': '장 시작 전 대기',
+            'PRE_MARKET': '사전 준비',
+            'SCREENING': '갭 스크리닝',
+            'TRADING': '트레이딩',
+            'FINAL_EXIT': '최종 청산',
+            'MARKET_CLOSED': '장 마감',
+            'STOPPED': '중지됨',
+            'PAUSED': '일시정지',
+        };
+        return map[phase] || phase;
+    }
+    function nextPhaseInfo(phase) {
+        const targets = {
+            'PRE_MARKET_WAIT': { label: 'PRE_MARKET', time: '08:30' },
+            'PRE_MARKET': { label: 'SCREENING', time: '09:00' },
+            'SCREENING': { label: 'TRADING', time: '09:10' },
+            'TRADING': { label: 'FINAL_EXIT', time: FINAL_EXIT_TIME },
+            'FINAL_EXIT': { label: 'MARKET_CLOSED', time: '11:30' },
+        };
+        const t = targets[phase];
+        if (!t) return null;
+        const now = new Date();
+        const [hh, mm] = t.time.split(':').map(Number);
+        const target = new Date(now); target.setHours(hh, mm, 0, 0);
+        const diffMs = target - now;
+        if (diffMs <= 0) return { label: t.label, time: t.time, remaining: null };
+        const totalMin = Math.floor(diffMs / 60000);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        const rem = h > 0 ? `${h}h ${m}m` : `${m}m`;
+        return { label: t.label, time: t.time, remaining: rem };
+    }
+
+    // --- Risk classification ---
+    function classifyPosition(p) {
+        const entry = Number(p.entryPrice);
+        const sl = Number(p.stopLossPrice);
+        const current = p.currentPrice != null ? Number(p.currentPrice) : null;
+        const pnlPct = current != null ? ((current - entry) / entry) * 100 : null;
+
+        // Proximity to SL: |current - sl| / entry * 100  (smaller = more critical)
+        let slProximity = null;
+        if (current != null && sl > 0) {
+            slProximity = ((current - sl) / entry) * 100;
+        }
+
+        let level = 'safe';
+        let label = 'SAFE';
+        if (slProximity != null && slProximity <= 0.5) { level = 'critical'; label = 'SL 근접'; }
+        else if (pnlPct != null && pnlPct <= -0.5) { level = 'warning'; label = '손실'; }
+        else if (p.trailingStopPrice != null && current != null && Number(p.trailingStopPrice) > 0) { level = 'trail'; label = 'TRAIL'; }
+        else if (p.tp1Executed || p.tp2Executed) { level = 'progress'; label = 'TP 진행'; }
+
+        // Long hold warning
+        let heldMin = null;
+        if (p.enteredAt) heldMin = Math.floor((Date.now() - new Date(p.enteredAt).getTime()) / 60000);
+        if (level === 'safe' && heldMin != null && heldMin >= 60) {
+            level = 'warning'; label = '장기 보유';
+        }
+
+        return { level, label, pnlPct, slProximity, heldMin };
+    }
+    const RISK_ORDER = { critical: 0, warning: 1, trail: 2, progress: 3, safe: 4 };
+
+    // --- Alerts ---
+    function buildAlerts(status, positions, tickAgeMs) {
+        const alerts = [];
+        if (tickAgeMs > STALE_THRESHOLD_MS) {
+            alerts.push({ level: 'critical', text: `봇 응답 없음 ${Math.floor(tickAgeMs / 1000)}초+ — 프로세스/네트워크 확인 필요` });
+        }
+        const now = new Date();
+        const hhmm = now.getHours() * 100 + now.getMinutes();
+        const isWeekday = now.getDay() >= 1 && now.getDay() <= 5;
+        if (isWeekday && hhmm >= 900 && hhmm <= 1120 && status && !status.running) {
+            alerts.push({ level: 'critical', text: '장중 시간대인데 봇이 STOPPED 상태입니다' });
+        }
+        (positions || []).forEach(p => {
+            const c = classifyPosition(p);
+            if (c.level === 'critical') {
+                alerts.push({ level: 'warning', text: `종목 ${p.stockCode} — 손절가까지 ${c.slProximity != null ? c.slProximity.toFixed(2) + '%' : '근접'}` });
+            }
+        });
+        return alerts;
+    }
+    function renderAlerts(alerts) {
+        const container = document.getElementById('alert-container');
+        if (!container) return;
+        if (!alerts.length) { container.innerHTML = ''; return; }
+        container.innerHTML = alerts.map(a => `
+            <div class="alert-strip alert-${a.level === 'critical' ? 'critical' : 'warning'}" role="alert">
+                <span aria-hidden="true">${a.level === 'critical' ? '⛔' : '⚠'}</span>
+                <span>${escapeHtml(a.text)}</span>
+            </div>`).join('');
+    }
+
+    // --- Render: Status Hero ---
+    function renderHero(status, tickAgeMs) {
+        const dot = document.getElementById('hero-dot');
+        const stale = tickAgeMs > STALE_THRESHOLD_MS;
+        let dotClass = 'status-dot status-dot-lg ';
+        let statusText = 'Stopped';
+        if (!status || !status.running) { dotClass += 'status-stopped'; statusText = 'Stopped'; }
+        else if (stale) { dotClass += 'status-stale'; statusText = 'STALE'; }
+        else if (status.paused) { dotClass += 'status-paused'; statusText = 'Paused'; }
+        else { dotClass += 'status-live'; statusText = 'Running'; }
+        dot.className = dotClass;
+
+        setText('hero-status', statusText);
+        if (status) {
+            setText('hero-phase', phaseDisplayName(status.tradingPhase));
+            const next = nextPhaseInfo(status.tradingPhase);
+            if (next) {
+                setText('hero-next', next.remaining ? `${next.label} in ${next.remaining} (${next.time})` : `${next.label} ${next.time}`);
+            } else {
+                setText('hero-next', '—');
+            }
+            const parts = [];
+            if (status.watchingCount != null) parts.push(`감시 ${status.watchingCount}`);
+            if (status.positionCount != null) parts.push(`오픈 ${status.positionCount}`);
+            setText('hero-sub', parts.join(' · ') || '—');
+            setText('hero-started', status.startedAt ? fmtTimeHHMMSS(status.startedAt) : '—');
+        }
+        setText('hero-lasttick', tickAgeMs >= 0 ? `${Math.floor(tickAgeMs / 1000)}s ago` : '—');
+
+        // Navbar indicator sync
+        const navDot = document.getElementById('status-dot');
+        if (navDot) navDot.className = 'status-dot ' + (dotClass.includes('status-stale') ? 'status-stale' : dotClass.includes('status-live') ? 'status-live' : dotClass.includes('status-paused') ? 'status-paused' : 'status-stopped');
+        setText('status-text', statusText);
+        if (status) setText('trading-phase', status.tradingPhase || '');
+    }
+
+    // --- Render: P&L Summary ---
+    function renderPnl(summary, openPositions) {
+        if (summary) {
+            const realizedEl = document.getElementById('pnl-realized');
+            const n = Number(summary.totalRealizedPnl || 0);
+            realizedEl.textContent = fmtKRWSigned(n);
+            realizedEl.className = 'stat-value ' + pnlClass(n);
+            setText('pnl-realized-sub', `${summary.closedPositions || 0}건 청산`, {});
+            setText('stat-open', String(summary.openPositions || 0));
+            setText('stat-win', String(summary.winCount || 0));
+            setText('stat-lose', String(summary.loseCount || 0));
+            const winRate = summary.winRate != null ? Number(summary.winRate).toFixed(1) + '%' : '—';
+            setText('stat-winrate', `승률 ${winRate}`);
+        }
+        // Unrealized = sum of (current - entry) * remainingQuantity
+        let unrealized = 0;
+        let hasCurrent = false;
+        (openPositions || []).forEach(p => {
+            if (p.currentPrice != null) {
+                hasCurrent = true;
+                unrealized += (Number(p.currentPrice) - Number(p.entryPrice)) * Number(p.remainingQuantity);
+            }
+        });
+        const ue = document.getElementById('pnl-unrealized');
+        if (!openPositions || openPositions.length === 0) {
+            ue.textContent = '—';
+            ue.className = 'stat-value pnl-neutral';
+        } else if (!hasCurrent) {
+            ue.textContent = 'n/a';
+            ue.className = 'stat-value pnl-neutral';
+        } else {
+            ue.textContent = fmtKRWSigned(unrealized);
+            ue.className = 'stat-value ' + pnlClass(unrealized);
+        }
+    }
+
+    // --- Render: Open Positions as cards ---
+    function renderOpenPositions(positions) {
+        const container = document.getElementById('open-positions-container');
+        const countEl = document.getElementById('open-count');
+        if (!container) return;
+        const list = (positions || []).slice();
+        countEl.textContent = `(${list.length})`;
+
+        if (list.length === 0) {
+            container.innerHTML = '<div class="card text-center text-gray-500 py-6 lg:col-span-2">No open positions</div>';
+            return;
+        }
+
+        // Enrich with risk + sort
+        list.forEach(p => { p._risk = classifyPosition(p); });
+        list.sort((a, b) => (RISK_ORDER[a._risk.level] - RISK_ORDER[b._risk.level]));
+
+        container.innerHTML = list.map(p => {
+            const r = p._risk;
+            const entry = Number(p.entryPrice);
+            const sl = Number(p.stopLossPrice);
+            const current = p.currentPrice != null ? Number(p.currentPrice) : entry;
+            const tp1 = entry * 1.015;
+            const tp2 = p.dayHighPrice != null ? Number(p.dayHighPrice) : entry * 1.025;
+            const tp3 = tp2 * 1.01;
+
+            // Marker position: map [sl, tp3] -> [0%, 100%]
+            const lo = Math.min(sl, tp1) - (tp3 - sl) * 0.05;
+            const hi = tp3 + (tp3 - sl) * 0.05;
+            const pct = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+            const markerPos = pct(current);
+
+            const riskClass = `risk-${r.level === 'trail' ? 'trail' : r.level}`;
+            const pnlVal = (current - entry) * Number(p.remainingQuantity);
+            const pnlPctStr = r.pnlPct != null ? fmtPctSigned(r.pnlPct) : '—';
+
+            const tpMark = (done, label) => done
+                ? `<span class="pnl-positive font-bold">✓${label}</span>`
+                : `<span class="text-gray-400">—${label}</span>`;
+
+            return `
+            <div class="card">
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <div class="font-semibold"><span class="mono">${escapeHtml(p.stockCode)}</span></div>
+                        <div class="text-xs text-gray-500">Entered ${fmtTimeHHMMSS(p.enteredAt)} · Held ${fmtElapsed(p.enteredAt)}</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="${riskClass}">${escapeHtml(r.label)}</span>
+                        <div class="text-sm font-bold mt-1 ${pnlClass(pnlVal)}">${fmtKRWSigned(pnlVal)}</div>
+                        <div class="text-xs ${pnlClass(r.pnlPct)}">${pnlPctStr}</div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 mb-2">
+                    Entry <span class="mono">${fmtKRW(entry)}</span> × <span class="mono">${p.remainingQuantity}</span>주
+                    → Now <span class="mono font-medium" style="color: var(--color-text)">${fmtKRW(current)}</span>
+                </div>
+                <div class="pos-progress" aria-hidden="true">
+                    <span class="pos-progress-tick" style="left: ${pct(sl)}%"></span>
+                    <span class="pos-progress-tick" style="left: ${pct(tp1)}%"></span>
+                    <span class="pos-progress-tick" style="left: ${pct(tp2)}%"></span>
+                    <span class="pos-progress-tick" style="left: ${pct(tp3)}%"></span>
+                    <span class="pos-progress-marker" style="left: ${markerPos}%"></span>
+                </div>
+                <div class="flex justify-between mt-3 text-xs" style="color: var(--color-muted)">
+                    <span>SL <span class="mono">${fmtKRW(sl)}</span></span>
+                    <span>TP1</span>
+                    <span>TP2</span>
+                    <span>TP3</span>
+                </div>
+                <div class="flex items-center gap-2 mt-3 text-xs">
+                    <span>TP:</span> ${tpMark(p.tp1Executed, '1')} ${tpMark(p.tp2Executed, '2')} ${tpMark(p.tp3Executed, '3')}
+                    ${p.trailingStopPrice && Number(p.trailingStopPrice) > 0
+                        ? `<span class="ml-auto risk-trail">● TRAIL ${fmtKRW(p.trailingStopPrice)}</span>`
+                        : '<span class="ml-auto text-gray-400">trail off</span>'}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // --- Render: Watchlist grouped by state ---
+    const WATCH_GROUP_ORDER = ['ENTRY_READY', 'PULLBACK', 'HIGH_FORMED', 'WATCHING', 'FILTERED_OUT', 'EXITED', 'ENTERED'];
+    const WATCH_GROUP_DEFAULT_EXPANDED = new Set(['ENTRY_READY', 'PULLBACK']);
+    const watchlistUserExpanded = {}; // user overrides
+
+    function renderWatchlist(stocks) {
+        const container = document.getElementById('watchlist-container');
+        const totalEl = document.getElementById('watchlist-total');
+        if (!container) return;
+        const list = stocks || [];
+        totalEl.textContent = `(${list.length})`;
+        if (list.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-6">감시 중인 종목이 없습니다</div>';
+            return;
+        }
+        const groups = {};
+        list.forEach(s => {
+            const k = s.state || 'WATCHING';
+            (groups[k] = groups[k] || []).push(s);
+        });
+        const html = WATCH_GROUP_ORDER
+            .filter(k => groups[k] && groups[k].length > 0)
+            .map(k => {
+                const items = groups[k];
+                const expanded = watchlistUserExpanded[k] != null
+                    ? watchlistUserExpanded[k]
+                    : WATCH_GROUP_DEFAULT_EXPANDED.has(k);
+                const rows = items.map(s => {
+                    const gap = s.gapPercent != null ? fmtPctSigned(s.gapPercent) : '—';
+                    const curr = s.currentPrice != null ? fmtKRW(s.currentPrice) : '—';
+                    const ret = s.returnFromOpen;
+                    const retStr = ret != null ? fmtPctSigned(ret) : '—';
+                    const retCls = pnlClass(ret);
+                    const high = s.highAfterOpen != null ? fmtKRW(s.highAfterOpen) : '—';
+                    const low = s.pullbackLow != null ? fmtKRW(s.pullbackLow) : '—';
+                    return `
+                    <tr>
+                        <td class="mono">${escapeHtml(s.stockCode)}</td>
+                        <td>${escapeHtml(s.stockName || '—')}</td>
+                        <td class="num ${pnlClass(s.gapPercent)}">${gap}</td>
+                        <td class="num mono">${curr}</td>
+                        <td class="num ${retCls}">${retStr}</td>
+                        <td class="num mono text-xs" style="color: var(--color-muted)">${high}</td>
+                        <td class="num mono text-xs" style="color: var(--color-muted)">${low}</td>
+                    </tr>`;
+                }).join('');
+                return `
+                <div class="mb-3">
+                    <button type="button" class="group-toggle w-full justify-between"
+                            aria-expanded="${expanded}"
+                            data-group="${k}"
+                            onclick="StockBot._toggleWatchGroup('${k}')">
+                        <span class="flex items-center gap-2">
+                            <span class="state-badge state-${k.toLowerCase()}">${k}</span>
+                            <span class="text-gray-500 font-normal">(${items.length})</span>
+                        </span>
+                        <span class="chevron">▾</span>
+                    </button>
+                    <div class="${expanded ? '' : 'hidden'}" data-group-body="${k}">
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th><th>Name</th>
+                                        <th class="num">Gap %</th>
+                                        <th class="num">Current</th>
+                                        <th class="num">From Open</th>
+                                        <th class="num">High</th>
+                                        <th class="num">P.Low</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="mono">${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        container.innerHTML = html;
+    }
+
+    // --- Render: Recent Events ---
+    function renderEvents(events) {
+        const container = document.getElementById('events-container');
+        if (!container) return;
+        const list = events || [];
+        if (list.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-4">아직 이벤트가 없습니다</div>';
+            return;
+        }
+        const iconFor = (kind) => {
+            if (kind === 'TP1' || kind === 'TP2' || kind === 'TP3') return '<span class="pnl-positive font-bold">✓</span>';
+            if (kind === 'STOP_LOSS') return '<span class="pnl-negative font-bold">✗</span>';
+            if (kind === 'TRAILING_STOP') return '<span style="color: var(--risk-progress-fg)">◆</span>';
+            if (kind === 'ENTRY' || kind === 'ENTERED') return '<span class="pnl-positive">◆</span>';
+            if (kind === 'SIGNAL') return '<span style="color: var(--risk-warning-fg)">●</span>';
+            return '<span style="color: var(--color-muted)">⚙</span>';
+        };
+        container.innerHTML = list.map(e => {
+            const amt = e.amount != null ? fmtKRWSigned(e.amount) : '';
+            const pct = e.pnlPercent != null ? ` (${fmtPctSigned(e.pnlPercent)})` : '';
+            const amtCls = e.amount != null ? pnlClass(e.amount) : '';
+            return `
+            <div class="flex items-center gap-2 py-1.5 border-b" style="border-color: var(--color-card-border)">
+                <span class="mono text-xs" style="color: var(--color-muted); width: 4.5rem">${fmtTimeHHMMSS(e.time)}</span>
+                <span style="width: 1.25rem">${iconFor(e.kind)}</span>
+                <span class="text-xs font-semibold" style="width: 6rem">${escapeHtml(e.kind)}</span>
+                <span class="mono text-xs" style="width: 4.5rem">${escapeHtml(e.stockCode || '')}</span>
+                <span class="text-xs flex-1" style="color: var(--color-muted)">${escapeHtml(e.message || '')}</span>
+                <span class="mono text-xs ${amtCls}">${amt}${pct}</span>
+            </div>`;
+        }).join('');
+    }
+
+    // --- API calls ---
+    async function fetchJson(url, opts = {}) {
+        const res = await fetch(url, opts);
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return res.json();
+    }
+
+    async function pollAll() {
+        const startedAt = Date.now();
+        try {
+            const [status, summary, openPos, watch, events] = await Promise.all([
+                fetchJson('/api/stock/bot/status'),
+                fetchJson('/api/stock/positions/pnl/summary').catch(() => null),
+                fetchJson('/api/stock/positions/open').catch(() => []),
+                fetchJson('/api/stock/monitoring/active').catch(() => []),
+                fetchJson('/api/stock/events?limit=10').catch(() => []),
+            ]);
+            lastBotStatus = status;
+            lastPnlSummary = summary;
+            lastOpenPositions = openPos || [];
+            lastWatchlist = watch || [];
+            lastEvents = events || [];
+            lastTickAt = Date.now();
+
+            const tickAge = 0;
+            renderHero(status, tickAge);
+            renderPnl(summary, lastOpenPositions);
+            renderOpenPositions(lastOpenPositions);
+            renderWatchlist(lastWatchlist);
+            renderEvents(lastEvents);
+            renderAlerts(buildAlerts(status, lastOpenPositions, tickAge));
+            updateControlButtons(status, lastOpenPositions.length);
+            updateEmergencyCount(lastOpenPositions.length);
+        } catch (err) {
+            console.error('poll failed:', err);
+        }
+    }
+
+    // --- Control buttons ---
+    function updateControlButtons(status, openCount) {
+        if (controlsBusy) return;
+        const toggle = document.getElementById('btn-toggle');
+        const pause = document.getElementById('btn-pause');
+        const hint = document.getElementById('control-hint');
+        if (!toggle || !pause) return;
+
+        const running = !!(status && status.running);
+        const paused = !!(status && status.paused);
+        toggle.querySelector('.btn-label').textContent = running ? 'Stop' : 'Start';
+        toggle.className = 'btn ' + (running ? 'btn-danger' : 'btn-primary');
+        pause.querySelector('.btn-label').textContent = paused ? 'Resume' : 'Pause';
+        pause.disabled = !running;
+
+        let hintText = '';
+        if (!running) hintText = '봇이 중지되어 있습니다 · Start로 시작';
+        else if (paused) hintText = '일시정지 중 · Resume로 재개';
+        else hintText = `정상 가동 중 · 오픈 ${openCount}건`;
+        if (hint) hint.textContent = hintText;
+    }
+
+    async function clickBusy(btn, fn) {
+        if (!btn) return fn();
+        controlsBusy = true;
+        btn.setAttribute('aria-busy', 'true');
+        const label = btn.querySelector('.btn-label');
+        const prev = label ? label.textContent : '';
+        if (label) label.innerHTML = '<span class="spinner"></span>';
+        try {
+            await fn();
+        } finally {
+            btn.removeAttribute('aria-busy');
+            if (label) label.textContent = prev;
+            controlsBusy = false;
+        }
+    }
+
+    async function toggleBot() {
+        const btn = document.getElementById('btn-toggle');
+        await clickBusy(btn, async () => {
+            try {
+                const st = await fetchJson('/api/stock/bot/status');
+                const endpoint = st.running ? '/api/stock/bot/stop' : '/api/stock/bot/start';
+                const res = await fetchJson(endpoint, { method: 'POST' });
+                toast(res.message || 'OK', res.success ? 'success' : 'error');
+                await pollAll();
+            } catch (err) {
+                toast('요청 실패: ' + err.message, 'error');
+            }
+        });
     }
 
     async function pauseResumeBot() {
-        const response = await fetch('/api/stock/bot/status');
-        const status = await response.json();
-
-        const endpoint = status.paused ? '/api/stock/bot/resume' : '/api/stock/bot/pause';
-        await fetch(endpoint, { method: 'POST' });
-        location.reload();
-    }
-
-    async function emergencyClose() {
-        if (confirm('Are you sure you want to execute emergency close for all positions?')) {
-            await fetch('/api/stock/bot/emergency-close', { method: 'POST' });
-            location.reload();
-        }
-    }
-
-    // Update bot status
-    async function updateBotStatus() {
-        try {
-            const response = await fetch('/api/stock/bot/status');
-            const status = await response.json();
-
-            const dot = document.getElementById('status-dot');
-            const text = document.getElementById('status-text');
-            const phase = document.getElementById('trading-phase');
-            const toggleBtn = document.getElementById('toggle-btn');
-            const pauseBtn = document.getElementById('pause-btn');
-
-            if (status.running) {
-                dot.className = status.paused ? 'w-3 h-3 rounded-full bg-yellow-500' : 'w-3 h-3 rounded-full bg-green-500';
-                text.textContent = status.paused ? 'Paused' : 'Running';
-                toggleBtn.textContent = 'Stop';
-                pauseBtn.disabled = false;
-                pauseBtn.textContent = status.paused ? 'Resume' : 'Pause';
-            } else {
-                dot.className = 'w-3 h-3 rounded-full bg-red-500';
-                text.textContent = 'Stopped';
-                toggleBtn.textContent = 'Start';
-                pauseBtn.disabled = true;
+        const btn = document.getElementById('btn-pause');
+        await clickBusy(btn, async () => {
+            try {
+                const st = await fetchJson('/api/stock/bot/status');
+                const endpoint = st.paused ? '/api/stock/bot/resume' : '/api/stock/bot/pause';
+                const res = await fetchJson(endpoint, { method: 'POST' });
+                toast(res.message || 'OK', res.success ? 'success' : 'error');
+                await pollAll();
+            } catch (err) {
+                toast('요청 실패: ' + err.message, 'error');
             }
+        });
+    }
 
-            phase.textContent = status.tradingPhase;
-        } catch (error) {
-            console.error('Failed to update bot status:', error);
+    // --- Emergency Close ---
+    function toggleEmergencyZone() {
+        const body = document.getElementById('emergency-body');
+        const btn = document.getElementById('emergency-toggle');
+        const chev = document.getElementById('emergency-chevron');
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        if (open) {
+            body.classList.add('hidden');
+            btn.setAttribute('aria-expanded', 'false');
+            chev.textContent = '▸';
+            resetEmergencyGuard();
+        } else {
+            body.classList.remove('hidden');
+            btn.setAttribute('aria-expanded', 'true');
+            chev.textContent = '▾';
+        }
+    }
+    function updateEmergencyCount(n) {
+        setText('emergency-count', String(n));
+    }
+    function resetEmergencyGuard() {
+        const ack = document.getElementById('emergency-ack');
+        const code = document.getElementById('emergency-code');
+        const btn = document.getElementById('btn-emergency');
+        const bar = document.getElementById('emergency-countdown-bar');
+        const hint = document.getElementById('emergency-hint');
+        if (ack) ack.checked = false;
+        if (code) code.value = '';
+        if (btn) btn.disabled = true;
+        if (bar) bar.style.width = '0';
+        if (hint) hint.textContent = '체크박스와 코드를 입력하면 활성화됩니다';
+        if (emergencyCountdownTimer) { clearInterval(emergencyCountdownTimer); emergencyCountdownTimer = null; }
+    }
+    function updateEmergencyGuard() {
+        const ack = document.getElementById('emergency-ack').checked;
+        const code = document.getElementById('emergency-code').value.trim();
+        const btn = document.getElementById('btn-emergency');
+        const bar = document.getElementById('emergency-countdown-bar');
+        const hint = document.getElementById('emergency-hint');
+        const openCount = lastOpenPositions.length;
+
+        if (emergencyCountdownTimer) { clearInterval(emergencyCountdownTimer); emergencyCountdownTimer = null; }
+        bar.style.width = '0';
+
+        if (openCount === 0) { btn.disabled = true; hint.textContent = '오픈 포지션이 없습니다'; return; }
+        if (!ack) { btn.disabled = true; hint.textContent = '체크박스를 선택하세요'; return; }
+        if (code !== 'EMERGENCY') { btn.disabled = true; hint.textContent = 'EMERGENCY를 정확히 입력하세요'; return; }
+
+        // Start countdown
+        const total = EMERGENCY_COUNTDOWN_SEC * 1000;
+        const startedAt = Date.now();
+        hint.textContent = `${EMERGENCY_COUNTDOWN_SEC}초 후 활성화…`;
+        btn.disabled = true;
+        emergencyCountdownTimer = setInterval(() => {
+            const elapsed = Date.now() - startedAt;
+            const pct = Math.min(100, (elapsed / total) * 100);
+            bar.style.width = pct + '%';
+            const rem = Math.max(0, Math.ceil((total - elapsed) / 1000));
+            if (rem > 0) {
+                hint.textContent = `${rem}초 후 활성화…`;
+            } else {
+                clearInterval(emergencyCountdownTimer); emergencyCountdownTimer = null;
+                btn.disabled = false;
+                hint.textContent = '실행 가능 — 버튼을 눌러 청산하세요';
+            }
+        }, 100);
+    }
+    async function emergencyClose() {
+        const openCount = lastOpenPositions.length;
+        if (!confirm(`최종 확인: ${openCount}건의 오픈 포지션을 시장가로 즉시 청산합니다. 진행하시겠습니까?`)) return;
+        const btn = document.getElementById('btn-emergency');
+        await clickBusy(btn, async () => {
+            try {
+                const res = await fetchJson('/api/stock/bot/emergency-close', { method: 'POST' });
+                toast(res.message || 'Emergency close executed', res.success ? 'success' : 'error', 3000);
+                resetEmergencyGuard();
+                toggleEmergencyZone(); // close
+                await pollAll();
+            } catch (err) {
+                toast('긴급 청산 실패: ' + err.message, 'error', 4000);
+            }
+        });
+    }
+
+    // --- Visibility-aware polling ---
+    function startPolling() {
+        stopPolling();
+        pollAll();
+        pollTimer = setInterval(pollAll, currentPollMs);
+    }
+    function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+    function handleVisibility() {
+        const hidden = document.visibilityState === 'hidden';
+        const target = hidden ? POLL_INTERVAL_HIDDEN_MS : POLL_INTERVAL_MS;
+        if (target !== currentPollMs) {
+            currentPollMs = target;
+            startPolling();
+        } else if (!hidden) {
+            // active: immediate refresh
+            pollAll();
         }
     }
 
-    // Auto-refresh
+    // --- Last tick ticker (updates "Xs ago" every second) ---
+    function startTickTicker() {
+        setInterval(() => {
+            if (lastTickAt === 0) return;
+            const age = Date.now() - lastTickAt;
+            setText('hero-lasttick', `${Math.floor(age / 1000)}s ago`);
+            if (lastBotStatus) {
+                const alerts = buildAlerts(lastBotStatus, lastOpenPositions, age);
+                renderAlerts(alerts);
+                // Update dot to stale state if necessary
+                renderHero(lastBotStatus, age);
+            }
+        }, 1000);
+    }
+
+    // --- Expose ---
+    window.StockBot = {
+        toggleBot, pauseResumeBot, toggleEmergencyZone, updateEmergencyGuard, emergencyClose,
+        _toggleWatchGroup: function(group) {
+            const btn = document.querySelector(`[data-group="${group}"]`);
+            const body = document.querySelector(`[data-group-body="${group}"]`);
+            if (!btn || !body) return;
+            const expanded = btn.getAttribute('aria-expanded') === 'true';
+            const next = !expanded;
+            btn.setAttribute('aria-expanded', String(next));
+            body.classList.toggle('hidden', !next);
+            watchlistUserExpanded[group] = next;
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
-        setInterval(updateBotStatus, 5000);
-        setInterval(() => location.reload(), 30000); // Full page refresh every 30s
+        const expandAll = document.getElementById('watchlist-expand-all');
+        if (expandAll) {
+            expandAll.addEventListener('click', () => {
+                WATCH_GROUP_ORDER.forEach(k => { watchlistUserExpanded[k] = true; });
+                renderWatchlist(lastWatchlist);
+            });
+        }
+        document.addEventListener('visibilitychange', handleVisibility);
+        startPolling();
+        startTickTicker();
     });
+})();
 </script>
 
 </body>

@@ -17,6 +17,9 @@ public interface StockPositionJpaRepository extends JpaRepository<StockPositionJ
 
     List<StockPositionJpaEntity> findByTradingDate(LocalDate tradingDate);
 
+    List<StockPositionJpaEntity> findByTradingDateBetweenOrderByTradingDateDescEnteredAtDesc(
+        LocalDate from, LocalDate to);
+
     List<StockPositionJpaEntity> findByTradingDateAndStatus(LocalDate tradingDate, String status);
 
     @Query("SELECT p FROM StockPositionJpaEntity p WHERE p.tradingDate = :tradingDate " +

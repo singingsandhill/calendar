@@ -18,6 +18,8 @@ public interface StockPositionRepository {
 
     List<StockPosition> findByTradingDate(LocalDate tradingDate);
 
+    List<StockPosition> findByTradingDateBetween(LocalDate from, LocalDate to);
+
     List<StockPosition> findByTradingDateAndStatus(LocalDate tradingDate, StockPositionStatus status);
 
     List<StockPosition> findOpenPositions(LocalDate tradingDate);

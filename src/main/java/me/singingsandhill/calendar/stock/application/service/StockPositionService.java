@@ -265,4 +265,11 @@ public class StockPositionService {
     public List<StockPosition> getAllPositions(LocalDate tradingDate) {
         return positionRepository.findByTradingDate(tradingDate);
     }
+
+    /**
+     * 기간 내 포지션 조회 (history용)
+     */
+    public List<StockPosition> getPositionsInRange(LocalDate from, LocalDate to) {
+        return positionRepository.findByTradingDateBetween(from, to);
+    }
 }

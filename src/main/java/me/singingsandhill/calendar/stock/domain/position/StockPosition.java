@@ -83,6 +83,46 @@ public class StockPosition {
         return position;
     }
 
+    /**
+     * 저장소에서 불러온 엔티티를 도메인 객체로 복원. 인프라 레이어 전용.
+     */
+    public static StockPosition reconstitute(
+            Long id, Long stockId, String stockCode, LocalDate tradingDate,
+            StockPositionStatus status,
+            BigDecimal entryPrice, Integer entryQuantity, BigDecimal entryAmount,
+            LocalDateTime enteredAt, Integer remainingQuantity, BigDecimal averageExitPrice,
+            boolean tp1Executed, boolean tp2Executed, boolean tp3Executed,
+            BigDecimal dayHighPrice, BigDecimal stopLossPrice,
+            BigDecimal trailingHigh, BigDecimal trailingStopPrice, boolean trailingActive,
+            BigDecimal realizedPnl, BigDecimal realizedPnlPercent,
+            StockCloseReason closeReason, LocalDateTime closedAt,
+            LocalDateTime createdAt, LocalDateTime updatedAt) {
+        StockPosition p = new StockPosition(stockCode, tradingDate);
+        p.id = id;
+        p.stockId = stockId;
+        p.status = status != null ? status : StockPositionStatus.OPEN;
+        p.entryPrice = entryPrice;
+        p.entryQuantity = entryQuantity;
+        p.entryAmount = entryAmount;
+        p.enteredAt = enteredAt;
+        p.remainingQuantity = remainingQuantity;
+        p.averageExitPrice = averageExitPrice;
+        p.tp1Executed = tp1Executed;
+        p.tp2Executed = tp2Executed;
+        p.tp3Executed = tp3Executed;
+        p.dayHighPrice = dayHighPrice;
+        p.stopLossPrice = stopLossPrice;
+        p.trailingHigh = trailingHigh;
+        p.trailingStopPrice = trailingStopPrice;
+        p.trailingActive = trailingActive;
+        p.realizedPnl = realizedPnl != null ? realizedPnl : BigDecimal.ZERO;
+        p.realizedPnlPercent = realizedPnlPercent;
+        p.closeReason = closeReason;
+        p.closedAt = closedAt;
+        p.updatedAt = updatedAt != null ? updatedAt : p.createdAt;
+        return p;
+    }
+
     // ========== 손익 계산 ==========
 
     /**

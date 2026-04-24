@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 원화 금액: ₩ + 천단위 콤마. value(BigDecimal) -->
+<span th:fragment="krw(value)"
+      th:text="${value == null ? '-' : '₩' + #numbers.formatInteger(value, 0, 'COMMA')}">₩0</span>
+
+<!-- 부호 포함 원화 (P&L): +₩123 / -₩123 -->
+<span th:fragment="krwSigned(value)"
+      th:classappend="${value == null ? 'pnl-neutral' : (value.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? 'pnl-positive' : (value.compareTo(T(java.math.BigDecimal).ZERO) < 0 ? 'pnl-negative' : 'pnl-neutral'))}"
+      th:text="${value == null ? '-' : (value.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '+₩' + #numbers.formatInteger(value, 0, 'COMMA') : (value.compareTo(T(java.math.BigDecimal).ZERO) < 0 ? '-₩' + #numbers.formatInteger(value.abs(), 0, 'COMMA') : '₩0'))}">₩0</span>
+
+<!-- 퍼센트: 소수 2자리 + %. value(BigDecimal) -->
+<span th:fragment="pct(value)"
+      th:text="${value == null ? '-' : #numbers.formatDecimal(value, 1, 2) + '%'}">0.00%</span>
+
+<!-- 부호 포함 퍼센트: +1.23% / -1.23% -->
+<span th:fragment="pctSigned(value)"
+      th:classappend="${value == null ? 'pnl-neutral' : (value.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? 'pnl-positive' : (value.compareTo(T(java.math.BigDecimal).ZERO) < 0 ? 'pnl-negative' : 'pnl-neutral'))}"
+      th:text="${value == null ? '-' : (value.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '+' + #numbers.formatDecimal(value, 1, 2) + '%' : #numbers.formatDecimal(value, 1, 2) + '%')}">0.00%</span>
+
+<!-- 수량: 1,200주 -->
+<span th:fragment="qty(value)"
+      th:text="${value == null ? '-' : #numbers.formatInteger(value, 0, 'COMMA') + '주'}">0주</span>
+
+<!-- 시각 (오늘일 때): HH:mm:ss. value(LocalDateTime) -->
+<span th:fragment="timeOfDay(value)"
+      th:text="${value == null ? '-' : #temporals.format(value, 'HH:mm:ss')}">--:--:--</span>
+
+<!-- 시각 (오늘이 아닐 수 있음): MM/dd HH:mm -->
+<span th:fragment="dateTime(value)"
+      th:text="${value == null ? '-' : #temporals.format(value, 'MM/dd HH:mm')}">--/--</span>
+
+<!-- Close reason 배지 -->
+<span th:fragment="closeReason(reason)" class="state-badge"
+      th:classappend="${reason == null ? 'state-exited' : (reason == 'TP1' or reason == 'TP2' or reason == 'TP3' ? 'state-entered' : (reason == 'STOP_LOSS' ? 'state-filtered_out' : (reason == 'TRAILING_STOP' ? 'state-high_formed' : 'state-exited')))}"
+      th:text="${reason == null ? '-' : reason}">-</span>
+
+</body>
+</html>

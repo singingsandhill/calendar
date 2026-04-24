@@ -63,6 +63,14 @@ public class StockPositionRepositoryAdapter implements StockPositionRepository {
     }
 
     @Override
+    public List<StockPosition> findByTradingDateBetween(LocalDate from, LocalDate to) {
+        return jpaRepository.findByTradingDateBetweenOrderByTradingDateDescEnteredAtDesc(from, to)
+            .stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
     public List<StockPosition> findByTradingDateAndStatus(LocalDate tradingDate, StockPositionStatus status) {
         return jpaRepository.findByTradingDateAndStatus(tradingDate, status.name()).stream()
             .map(this::toDomain)
@@ -136,16 +144,38 @@ public class StockPositionRepositoryAdapter implements StockPositionRepository {
     }
 
     private StockPosition toDomain(StockPositionJpaEntity entity) {
-        StockPosition position = StockPosition.open(
+        StockCloseReason closeReason = entity.getCloseReason() != null
+            ? StockCloseReason.valueOf(entity.getCloseReason())
+            : null;
+        StockPositionStatus status = entity.getStatus() != null
+            ? StockPositionStatus.valueOf(entity.getStatus())
+            : StockPositionStatus.OPEN;
+        return StockPosition.reconstitute(
+            entity.getId(),
+            entity.getStockId(),
             entity.getStockCode(),
             entity.getTradingDate(),
+            status,
             entity.getEntryPrice(),
             entity.getEntryQuantity(),
+            entity.getEntryAmount(),
+            entity.getEnteredAt(),
+            entity.getRemainingQuantity(),
+            entity.getAverageExitPrice(),
+            Boolean.TRUE.equals(entity.getTp1Executed()),
+            Boolean.TRUE.equals(entity.getTp2Executed()),
+            Boolean.TRUE.equals(entity.getTp3Executed()),
+            entity.getDayHighPrice(),
             entity.getStopLossPrice(),
-            entity.getDayHighPrice()
+            entity.getTrailingHigh(),
+            entity.getTrailingStopPrice(),
+            Boolean.TRUE.equals(entity.getTrailingActive()),
+            entity.getRealizedPnl(),
+            entity.getRealizedPnlPercent(),
+            closeReason,
+            entity.getClosedAt(),
+            entity.getCreatedAt(),
+            entity.getUpdatedAt()
         );
-        position.setId(entity.getId());
-        position.setStockId(entity.getStockId());
-        return position;
     }
 }

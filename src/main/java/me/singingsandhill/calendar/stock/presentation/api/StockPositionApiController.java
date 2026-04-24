@@ -2,6 +2,8 @@ package me.singingsandhill.calendar.stock.presentation.api;
 
 import me.singingsandhill.calendar.stock.application.service.StockPositionService;
 import me.singingsandhill.calendar.stock.domain.position.StockPosition;
+import me.singingsandhill.calendar.stock.domain.stock.Stock;
+import me.singingsandhill.calendar.stock.domain.stock.StockRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,7 +11,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 주식 포지션 API
@@ -21,9 +25,12 @@ public class StockPositionApiController {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final StockPositionService positionService;
+    private final StockRepository stockRepository;
 
-    public StockPositionApiController(StockPositionService positionService) {
+    public StockPositionApiController(StockPositionService positionService,
+                                      StockRepository stockRepository) {
         this.positionService = positionService;
+        this.stockRepository = stockRepository;
     }
 
     /**
@@ -36,8 +43,9 @@ public class StockPositionApiController {
         LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
         List<StockPosition> positions = positionService.getOpenPositions(tradingDate);
 
+        Map<String, BigDecimal> priceMap = priceMap(positions, tradingDate);
         List<PositionResponse> response = positions.stream()
-            .map(this::toResponse)
+            .map(p -> toResponse(p, priceMap.get(p.getStockCode())))
             .toList();
 
         return ResponseEntity.ok(response);
@@ -53,8 +61,9 @@ public class StockPositionApiController {
         LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
         List<StockPosition> positions = positionService.getClosedPositions(tradingDate);
 
+        Map<String, BigDecimal> priceMap = priceMap(positions, tradingDate);
         List<PositionResponse> response = positions.stream()
-            .map(this::toResponse)
+            .map(p -> toResponse(p, priceMap.get(p.getStockCode())))
             .toList();
 
         return ResponseEntity.ok(response);
@@ -70,8 +79,9 @@ public class StockPositionApiController {
         LocalDate tradingDate = date != null ? LocalDate.parse(date) : LocalDate.now(KST);
         List<StockPosition> positions = positionService.getAllPositions(tradingDate);
 
+        Map<String, BigDecimal> priceMap = priceMap(positions, tradingDate);
         List<PositionResponse> response = positions.stream()
-            .map(this::toResponse)
+            .map(p -> toResponse(p, priceMap.get(p.getStockCode())))
             .toList();
 
         return ResponseEntity.ok(response);
@@ -107,6 +117,27 @@ public class StockPositionApiController {
 
         int openPositionCount = positionService.countOpenPositions(tradingDate);
 
+        List<StockPosition> openPositions = positionService.getOpenPositions(tradingDate);
+        Map<String, BigDecimal> priceMap = priceMap(openPositions, tradingDate);
+
+        BigDecimal totalUnrealizedPnl = BigDecimal.ZERO;
+        BigDecimal totalEntryAmount = BigDecimal.ZERO;
+        for (StockPosition p : openPositions) {
+            BigDecimal current = priceMap.get(p.getStockCode());
+            if (current != null && p.getEntryPrice() != null && p.getRemainingQuantity() > 0) {
+                BigDecimal diff = current.subtract(p.getEntryPrice());
+                totalUnrealizedPnl = totalUnrealizedPnl.add(
+                    diff.multiply(BigDecimal.valueOf(p.getRemainingQuantity())));
+                totalEntryAmount = totalEntryAmount.add(
+                    p.getEntryPrice().multiply(BigDecimal.valueOf(p.getRemainingQuantity())));
+            }
+        }
+
+        BigDecimal unrealizedPnlPercent = totalEntryAmount.compareTo(BigDecimal.ZERO) > 0
+            ? totalUnrealizedPnl.multiply(BigDecimal.valueOf(100))
+                .divide(totalEntryAmount, 4, java.math.RoundingMode.HALF_UP)
+            : BigDecimal.ZERO;
+
         return ResponseEntity.ok(new PnlSummaryResponse(
             tradingDate,
             allPositions.size(),
@@ -115,11 +146,35 @@ public class StockPositionApiController {
             (int) winCount,
             (int) loseCount,
             winRate,
-            totalRealizedPnl
+            totalRealizedPnl,
+            totalUnrealizedPnl,
+            unrealizedPnlPercent
         ));
     }
 
-    private PositionResponse toResponse(StockPosition position) {
+    private Map<String, BigDecimal> priceMap(List<StockPosition> positions, LocalDate tradingDate) {
+        Map<String, BigDecimal> map = new HashMap<>();
+        for (StockPosition position : positions) {
+            if (map.containsKey(position.getStockCode())) continue;
+            stockRepository.findByStockCodeAndTradingDate(position.getStockCode(), tradingDate)
+                .map(Stock::getCurrentPrice)
+                .ifPresent(price -> map.put(position.getStockCode(), price));
+        }
+        return map;
+    }
+
+    private PositionResponse toResponse(StockPosition position, BigDecimal currentPrice) {
+        BigDecimal unrealizedPnl = null;
+        BigDecimal unrealizedPnlPct = null;
+        if (currentPrice != null && position.getEntryPrice() != null
+            && position.getRemainingQuantity() > 0) {
+            BigDecimal diff = currentPrice.subtract(position.getEntryPrice());
+            unrealizedPnl = diff.multiply(BigDecimal.valueOf(position.getRemainingQuantity()));
+            if (position.getEntryPrice().compareTo(BigDecimal.ZERO) > 0) {
+                unrealizedPnlPct = diff.multiply(BigDecimal.valueOf(100))
+                    .divide(position.getEntryPrice(), 4, java.math.RoundingMode.HALF_UP);
+            }
+        }
         return new PositionResponse(
             position.getId(),
             position.getStockCode(),
@@ -137,7 +192,10 @@ public class StockPositionApiController {
             position.getRealizedPnl(),
             position.getCloseReason() != null ? position.getCloseReason().name() : null,
             position.getEnteredAt(),
-            position.getClosedAt()
+            position.getClosedAt(),
+            currentPrice,
+            unrealizedPnl,
+            unrealizedPnlPct
         );
     }
 
@@ -159,7 +217,10 @@ public class StockPositionApiController {
         BigDecimal realizedPnl,
         String closeReason,
         LocalDateTime enteredAt,
-        LocalDateTime closedAt
+        LocalDateTime closedAt,
+        BigDecimal currentPrice,
+        BigDecimal unrealizedPnl,
+        BigDecimal unrealizedPnlPercent
     ) {}
 
     public record PnlSummaryResponse(
@@ -170,6 +231,8 @@ public class StockPositionApiController {
         int winCount,
         int loseCount,
         BigDecimal winRate,
-        BigDecimal totalRealizedPnl
+        BigDecimal totalRealizedPnl,
+        BigDecimal totalUnrealizedPnl,
+        BigDecimal unrealizedPnlPercent
     ) {}
 }
