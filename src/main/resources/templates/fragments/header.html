@@ -33,11 +33,11 @@
                     <a th:href="@{/insights/trends}" class="nav-link" th:text="#{nav.insights}">인사이트</a>
                     <!-- Language Toggle -->
                     <div class="lang-toggle" role="group" aria-label="Language">
-                        <a href="?lang=ko" class="lang-btn"
+                        <a th:href="@{''(lang='ko')}" class="lang-btn"
                            th:classappend="${#locale.language == 'ko'} ? ' active' : ''"
                            aria-label="한국어">KO</a>
                         <span class="lang-divider" aria-hidden="true">|</span>
-                        <a href="?lang=en" class="lang-btn"
+                        <a th:href="@{''(lang='en')}" class="lang-btn"
                            th:classappend="${#locale.language == 'en'} ? ' active' : ''"
                            aria-label="English">EN</a>
                     </div>
@@ -71,11 +71,11 @@
                     <a th:href="@{/insights/trends}" class="nav-link-animated" th:text="#{nav.insights}">인사이트</a>
                     <!-- Language Toggle -->
                     <div class="lang-toggle" role="group" aria-label="Language">
-                        <a href="?lang=ko" class="lang-btn"
+                        <a th:href="@{''(lang='ko')}" class="lang-btn"
                            th:classappend="${#locale.language == 'ko'} ? ' active' : ''"
                            aria-label="한국어">KO</a>
                         <span class="lang-divider" aria-hidden="true">|</span>
-                        <a href="?lang=en" class="lang-btn"
+                        <a th:href="@{''(lang='en')}" class="lang-btn"
                            th:classappend="${#locale.language == 'en'} ? ' active' : ''"
                            aria-label="English">EN</a>
                     </div>

@@ -95,6 +95,7 @@ public class WebConfig implements WebMvcConfigurer {
                     response.setHeader("Pragma", "no-cache");
                 } else if (isPublicSeoPage(path)) {
                     response.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400");
+                    response.setHeader("Vary", "Cookie, Accept-Language");
                     response.setHeader("Pragma", "");
                 }
             }
