@@ -3,6 +3,11 @@ package me.singingsandhill.calendar.common.presentation.dto;
 /**
  * SEO 메타데이터를 캡슐화하는 DTO.
  * Thymeleaf 템플릿에서 메타 태그 생성에 사용됩니다.
+ *
+ * 다국어:
+ * - {@code canonical} 은 현재 요청 로케일에 맞춰 빌더에서 canonicalKo 또는 canonicalEn 으로 설정됨
+ * - {@code canonicalKo}/{@code canonicalEn} 은 hreflang 태그 렌더링에 사용됨 (양쪽 항상 채움)
+ * - {@code hreflangEnabled} 는 인덱싱 가능한 공개 페이지에만 true; noindex 페이지에선 false
  */
 public record SeoMetadata(
     String title,
@@ -10,12 +15,16 @@ public record SeoMetadata(
     String keywords,
     String robots,
     String canonical,
+    String canonicalKo,
+    String canonicalEn,
     String ogType,
     String ogTitle,
     String ogDescription,
     String ogImage,
+    String ogLocale,
     String jsonLd,
-    boolean adsEnabled
+    boolean adsEnabled,
+    boolean hreflangEnabled
 ) {
     public static Builder builder() {
         return new Builder();
@@ -24,15 +33,19 @@ public record SeoMetadata(
     public static class Builder {
         private String title;
         private String description;
-        private String keywords = "약속 잡기, 일정 조율, 날짜 선택, 그룹 스케줄링, 캘린더, 모임 일정, date picker, scheduling";
+        private String keywords;
         private String robots = "index, follow";
         private String canonical;
+        private String canonicalKo;
+        private String canonicalEn;
         private String ogType = "website";
         private String ogTitle;
         private String ogDescription;
         private String ogImage;
+        private String ogLocale;
         private String jsonLd;
         private boolean adsEnabled = false;
+        private boolean hreflangEnabled = true;
 
         public Builder title(String title) {
             this.title = title;
@@ -59,6 +72,16 @@ public record SeoMetadata(
             return this;
         }
 
+        public Builder canonicalKo(String canonicalKo) {
+            this.canonicalKo = canonicalKo;
+            return this;
+        }
+
+        public Builder canonicalEn(String canonicalEn) {
+            this.canonicalEn = canonicalEn;
+            return this;
+        }
+
         public Builder ogType(String ogType) {
             this.ogType = ogType;
             return this;
@@ -79,6 +102,11 @@ public record SeoMetadata(
             return this;
         }
 
+        public Builder ogLocale(String ogLocale) {
+            this.ogLocale = ogLocale;
+            return this;
+        }
+
         public Builder jsonLd(String jsonLd) {
             this.jsonLd = jsonLd;
             return this;
@@ -89,6 +117,11 @@ public record SeoMetadata(
             return this;
         }
 
+        public Builder hreflangEnabled(boolean hreflangEnabled) {
+            this.hreflangEnabled = hreflangEnabled;
+            return this;
+        }
+
         public SeoMetadata build() {
             return new SeoMetadata(
                 title,
@@ -96,12 +129,16 @@ public record SeoMetadata(
                 keywords,
                 robots,
                 canonical,
+                canonicalKo,
+                canonicalEn,
                 ogType,
                 ogTitle != null ? ogTitle : title,
                 ogDescription != null ? ogDescription : description,
                 ogImage,
+                ogLocale,
                 jsonLd,
-                adsEnabled
+                adsEnabled,
+                hreflangEnabled
             );
         }
     }

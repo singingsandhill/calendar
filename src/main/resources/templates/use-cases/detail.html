@@ -9,20 +9,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <main class="container use-case-page">
     <section class="use-case-hero animate-on-scroll">
-        <h1 th:text="${useCase.title()}">활용 사례</h1>
-        <p class="use-case-subtitle" th:text="${useCase.seoDescription()}">설명</p>
+        <h1 th:text="#{'seo.useCase.' + ${currentSlug} + '.title'}">Use Case</h1>
+        <p class="use-case-subtitle" th:text="#{'seo.useCase.' + ${currentSlug} + '.description'}">Description</p>
     </section>
 
     <section class="use-case-content animate-on-scroll">
-        <div class="use-case-body" th:text="${useCase.content()}">
-            본문 내용
+        <div class="use-case-body" th:text="#{'seo.useCase.' + ${currentSlug} + '.body'}">
+            Body
         </div>
 
         <div class="use-case-example">
-            <h3 th:text="#{usecase.example}">사용 예시</h3>
+            <h3 th:text="#{usecase.example}">Example</h3>
             <div class="use-case-example-url">
-                <span class="use-case-example-label" th:text="${useCase.exampleLabel()}">예시</span>
-                <code>datedate.site/<span th:text="${useCase.exampleId()}">example</span></code>
+                <span class="use-case-example-label" th:text="#{'seo.useCase.' + ${currentSlug} + '.exampleLabel'}">Example</span>
+                <code>datedate.site/<span th:text="#{'seo.useCase.' + ${currentSlug} + '.exampleId'}">example</span></code>
             </div>
         </div>
     </section>
@@ -31,23 +31,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div th:replace="~{fragments/ad-slot :: infeed(${seo.adsEnabled()})}"></div>
 
     <section class="use-case-cta animate-on-scroll">
-        <h2 th:text="#{usecase.cta.title}">지금 바로 시작하세요</h2>
-        <p th:text="#{usecase.cta.description}">가입도, 설치도, 비용도 없습니다.</p>
+        <h2 th:text="#{usecase.cta.title}">Get started right now</h2>
+        <p th:text="#{usecase.cta.description}">No sign-up, no installation, no cost.</p>
         <div class="use-case-cta-buttons">
-            <a href="/#start-form" class="btn-spring" th:text="#{usecase.cta.start}">일정 만들기</a>
-            <a th:href="@{/guide}" class="btn-text" th:text="#{usecase.cta.guide}">사용 가이드 보기 →</a>
+            <a href="/#start-form" class="btn-spring" th:text="#{usecase.cta.start}">Create Schedule</a>
+            <a th:href="@{/guide}" class="btn-text" th:text="#{usecase.cta.guide}">View User Guide →</a>
         </div>
     </section>
 
     <section class="use-case-others animate-on-scroll">
-        <h2 th:text="#{usecase.others.title}">다른 활용 사례</h2>
+        <h2 th:text="#{usecase.others.title}">Other Use Cases</h2>
         <div class="use-case-grid">
-            <th:block th:each="entry : ${allUseCases}">
-                <a th:if="${entry.key != currentSlug}"
-                   th:href="@{'/use-cases/' + ${entry.key}}"
+            <th:block th:each="slug : ${allSlugs}">
+                <a th:if="${slug != currentSlug}"
+                   th:href="@{'/use-cases/' + ${slug}}"
                    class="use-case-card">
-                    <h3 th:text="${entry.value.title()}">제목</h3>
-                    <p th:text="${entry.value.seoDescription()}">설명</p>
+                    <h3 th:text="#{'seo.useCase.' + ${slug} + '.title'}">Title</h3>
+                    <p th:text="#{'seo.useCase.' + ${slug} + '.description'}">Description</p>
                 </a>
             </th:block>
         </div>
