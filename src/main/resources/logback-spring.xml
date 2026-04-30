@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="datedate"/>
+
+    <!-- KST 기준 거래일 단위 로그 보관 -->
+    <timestamp key="kstToday" datePattern="yyyy-MM-dd" timeZone="Asia/Seoul"/>
+
+    <property name="LOG_DIR" value="logs"/>
+    <property name="CONSOLE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} %-5level [%X{stock.phase:--}|%X{stock.code:--}|%X{stock.tradeId:--}] %logger{36} : %msg%n"/>
+    <property name="FILE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} %-5level [%X{stock.phase:--}|%X{stock.code:--}|%X{stock.tradeId:--}] %logger{36} : %msg%n"/>
+    <property name="EVENT_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX, Asia/Seoul} phase=%X{stock.phase:--} tradingDate=%X{stock.tradingDate:--} stockCode=%X{stock.code:--} tradeId=%X{stock.tradeId:--} %msg%n"/>
+
+    <!-- 콘솔 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 통합 트레이딩 로그 (KST 자정 회전, 30 일 보관) -->
+    <appender name="STOCK_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/stock-trading.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/stock-trading-%d{yyyy-MM-dd, Asia/Seoul}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 거래 이벤트 전용 로그 (구조화 key=value) -->
+    <appender name="TRADE_EVENTS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/stock-events.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/stock-events-%d{yyyy-MM-dd, Asia/Seoul}.log</fileNamePattern>
+            <maxHistory>90</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${EVENT_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Hibernate SQL 노이즈 분리 (메인 로그 50% 차지하던 것) -->
+    <appender name="SQL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/stock-sql.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/stock-sql-%d{yyyy-MM-dd, Asia/Seoul}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS, Asia/Seoul} %-5level %logger{36} : %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 거래 이벤트 로거: 별도 appender 로만 흘려보내고 루트에 전파 안 함 -->
+    <logger name="me.singingsandhill.calendar.stock.trade" level="INFO" additivity="false">
+        <appender-ref ref="TRADE_EVENTS"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Hibernate SQL: 별도 파일로 격리 -->
+    <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+    </logger>
+    <logger name="org.hibernate.orm.jdbc.bind" level="TRACE" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+    </logger>
+
+    <!-- 애플리케이션 -->
+    <logger name="me.singingsandhill.calendar" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="STOCK_FILE"/>
+    </root>
+
+</configuration>

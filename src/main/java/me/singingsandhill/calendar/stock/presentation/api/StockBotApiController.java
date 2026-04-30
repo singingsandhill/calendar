@@ -1,9 +1,11 @@
 package me.singingsandhill.calendar.stock.presentation.api;
 
+import me.singingsandhill.calendar.stock.application.observability.StockBotMetrics;
 import me.singingsandhill.calendar.stock.application.service.GapPullbackBotService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -32,6 +34,9 @@ public class StockBotApiController {
             status.watchingCount(),
             status.positionCount(),
             status.tradingPhase(),
+            status.lastTradingTickAt(),
+            status.lastScreeningResult(),
+            status.apiCallsLast5min(),
             status.startedAt()
         ));
     }
@@ -103,6 +108,9 @@ public class StockBotApiController {
         int watchingCount,
         int positionCount,
         String tradingPhase,
+        Instant lastTradingTickAt,
+        StockBotMetrics.ScreeningSnapshot lastScreeningResult,
+        int apiCallsLast5min,
         LocalDateTime startedAt
     ) {}
 }
