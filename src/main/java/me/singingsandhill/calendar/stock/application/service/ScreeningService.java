@@ -1,5 +1,7 @@
 package me.singingsandhill.calendar.stock.application.service;
 
+import me.singingsandhill.calendar.stock.application.observability.StockBotMetrics;
+import me.singingsandhill.calendar.stock.application.observability.TradeEvents;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignal;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignalRepository;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
@@ -32,26 +34,23 @@ public class ScreeningService {
     private static final Logger log = LoggerFactory.getLogger(ScreeningService.class);
 
     private static final BigDecimal HUNDRED = new BigDecimal("100");
-    private static final BigDecimal GAP_CENTER = new BigDecimal("4.0");
-    private static final BigDecimal GAP_SIGMA = new BigDecimal("3.0");
-    private static final BigDecimal STRENGTH_MIN = new BigDecimal("95");
-    private static final BigDecimal STRENGTH_MAX = new BigDecimal("130");
-    private static final BigDecimal FLOOR_MAX_GAP = new BigDecimal("15");
-    private static final BigDecimal FLOOR_MIN_MARKET_CAP = new BigDecimal("50000000000");
 
     private final StockRepository stockRepository;
     private final StockSignalRepository signalRepository;
     private final KoreaInvestmentApiClient kisApiClient;
     private final StockProperties stockProperties;
+    private final StockBotMetrics metrics;
 
     public ScreeningService(StockRepository stockRepository,
                             StockSignalRepository signalRepository,
                             KoreaInvestmentApiClient kisApiClient,
-                            StockProperties stockProperties) {
+                            StockProperties stockProperties,
+                            StockBotMetrics metrics) {
         this.stockRepository = stockRepository;
         this.signalRepository = signalRepository;
         this.kisApiClient = kisApiClient;
         this.stockProperties = stockProperties;
+        this.metrics = metrics;
     }
 
     /**
@@ -83,11 +82,12 @@ public class ScreeningService {
 
         for (String stockCode : stockCodes) {
             try {
+                // PR-5: KisRestClient 의 Semaphore 가 동시성/속도를 제어하므로
+                // 종목 단위 Thread.sleep 폴링을 제거.
                 StockCandidate candidate = evaluateStock(stockCode, tradingDate, stats);
                 if (candidate != null) {
                     candidates.add(candidate);
                 }
-                Thread.sleep(100);
             } catch (Exception e) {
                 log.warn("Error screening stock {}: {}", stockCode, e.getMessage());
                 stats.errors++;
@@ -149,31 +149,36 @@ public class ScreeningService {
 
         BigDecimal gapPercent = quote.calculateGapPercent();
         BigDecimal floorGap = stockProperties.getScreening().getFloorGapPercent();
+        BigDecimal floorMaxGap = stockProperties.getScoring().getFloorMaxGap();
         BigDecimal tradeStrength = quote.calculateTradeStrength();
         BigDecimal floorStrength = stockProperties.getScreening().getFloorTradeStrength();
 
         // Floor 필터 2: 최소 갭
-        if (gapPercent.compareTo(floorGap) < 0 || gapPercent.compareTo(FLOOR_MAX_GAP) > 0) {
+        if (gapPercent.compareTo(floorGap) < 0 || gapPercent.compareTo(floorMaxGap) > 0) {
             stats.gapFiltered++;
-            log.debug("[{}] Floor 갭 탈락: gap={}% (기준: {}~{}%)", stockCode, gapPercent, floorGap, FLOOR_MAX_GAP);
+            log.debug("[{}] Floor 갭 탈락: gap={}% (기준: {}~{}%)", stockCode, gapPercent, floorGap, floorMaxGap);
             return null;
         }
 
         // Floor 필터 3: 최소 체결강도
-        // strength=0은 장 초반 KIS API 미집계 상태 — 필터 탈락이 아닌 데이터 부족으로 처리
+        // strength=0 은 장 초반 KIS API 미집계 상태. skipZeroStrength=true 면 스킵, false 면 통과시킴.
         if (tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
-            stats.dataInsufficient++;
-            log.debug("[{}] 체결강도 미집계(=0): 데이터 부족으로 스킵", stockCode);
-            return null;
-        }
-        if (tradeStrength.compareTo(floorStrength) < 0) {
+            if (stockProperties.getScreening().isSkipZeroStrength()) {
+                stats.dataInsufficient++;
+                log.debug("[{}] 체결강도 미집계(=0): 데이터 부족으로 스킵", stockCode);
+                return null;
+            }
+            log.debug("[{}] 체결강도 미집계(=0): skipZeroStrength=false 로 통과", stockCode);
+            tradeStrength = floorStrength; // 후속 점수 계산을 위해 보정
+        } else if (tradeStrength.compareTo(floorStrength) < 0) {
             stats.strengthFiltered++;
             log.debug("[{}] Floor 체결강도 탈락: strength={} (기준: {} 이상)", stockCode, tradeStrength, floorStrength);
             return null;
         }
 
         // Floor 필터 4: 최소 시가총액
-        if (quote.marketCap() != null && quote.marketCap().compareTo(FLOOR_MIN_MARKET_CAP) < 0) {
+        BigDecimal floorMinMarketCap = stockProperties.getScoring().getFloorMinMarketCap();
+        if (quote.marketCap() != null && quote.marketCap().compareTo(floorMinMarketCap) < 0) {
             stats.marketCapFiltered++;
             log.debug("[{}] Floor 시총 탈락: {}억", stockCode,
                 quote.marketCap().divide(BigDecimal.valueOf(100000000), 0, RoundingMode.HALF_UP));
@@ -239,54 +244,56 @@ public class ScreeningService {
      * 3~5% 최고점, 0.5% 및 15%로 갈수록 감소
      */
     BigDecimal normalizeGapScore(BigDecimal gapPercent) {
-        BigDecimal diff = gapPercent.subtract(GAP_CENTER);
+        StockProperties.Scoring s = stockProperties.getScoring();
+        BigDecimal diff = gapPercent.subtract(s.getGapCenter());
         BigDecimal exponent = diff.multiply(diff).negate()
-            .divide(GAP_SIGMA.multiply(GAP_SIGMA).multiply(new BigDecimal("2")), 10, RoundingMode.HALF_UP);
-        // e^exponent approximation using Math.exp
+            .divide(s.getGapSigma().multiply(s.getGapSigma()).multiply(new BigDecimal("2")), 10, RoundingMode.HALF_UP);
         double score = Math.exp(exponent.doubleValue());
         return BigDecimal.valueOf(score).setScale(4, RoundingMode.HALF_UP);
     }
 
     /**
-     * 체결강도 점수: 95~130 범위 선형 정규화
+     * 체결강도 점수: [strengthMin, strengthMax] 선형 정규화.
      */
     BigDecimal normalizeStrengthScore(BigDecimal strength) {
-        if (strength == null || strength.compareTo(STRENGTH_MIN) <= 0) {
+        StockProperties.Scoring s = stockProperties.getScoring();
+        if (strength == null || strength.compareTo(s.getStrengthMin()) <= 0) {
             return BigDecimal.ZERO;
         }
-        if (strength.compareTo(STRENGTH_MAX) >= 0) {
+        if (strength.compareTo(s.getStrengthMax()) >= 0) {
             return BigDecimal.ONE;
         }
-        return strength.subtract(STRENGTH_MIN)
-            .divide(STRENGTH_MAX.subtract(STRENGTH_MIN), 4, RoundingMode.HALF_UP);
+        return strength.subtract(s.getStrengthMin())
+            .divide(s.getStrengthMax().subtract(s.getStrengthMin()), 4, RoundingMode.HALF_UP);
     }
 
     /**
-     * 거래대금 점수: log 스케일 정규화 (5억~50억 범위)
+     * 거래대금 점수: log 스케일 정규화 [tradeValueMin, tradeValueMax].
      */
     BigDecimal normalizeTradeValueScore(BigDecimal tradeValue) {
         if (tradeValue == null || tradeValue.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
+        StockProperties.Scoring s = stockProperties.getScoring();
         double logValue = Math.log10(tradeValue.doubleValue());
-        double logMin = Math.log10(500_000_000.0);   // 5억
-        double logMax = Math.log10(50_000_000_000.0); // 500억
+        double logMin = Math.log10(s.getTradeValueMin().doubleValue());
+        double logMax = Math.log10(s.getTradeValueMax().doubleValue());
         double score = (logValue - logMin) / (logMax - logMin);
         return BigDecimal.valueOf(Math.max(0, Math.min(1, score))).setScale(4, RoundingMode.HALF_UP);
     }
 
     /**
-     * 스프레드 점수: 역비례 - 낮을수록 고점수 (0~0.5% 범위)
+     * 스프레드 점수: 역비례 - 낮을수록 고점수 [0, spreadMax].
      */
     BigDecimal normalizeSpreadScore(KisOrderbookResponse orderbook) {
         if (orderbook == null) {
-            return new BigDecimal("0.5"); // 데이터 없으면 중간값
+            return new BigDecimal("0.5");
         }
         BigDecimal spread = orderbook.calculateSpreadPercent();
         if (spread.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ONE;
         }
-        BigDecimal maxSpread = new BigDecimal("0.5");
+        BigDecimal maxSpread = stockProperties.getScoring().getSpreadMax();
         if (spread.compareTo(maxSpread) >= 0) {
             return BigDecimal.ZERO;
         }
@@ -294,15 +301,16 @@ public class ScreeningService {
     }
 
     /**
-     * 시가총액 점수: log 스케일 정규화 (500억~10조 범위)
+     * 시가총액 점수: log 스케일 정규화 [marketCapMin, marketCapMax].
      */
     BigDecimal normalizeMarketCapScore(BigDecimal marketCap) {
         if (marketCap == null || marketCap.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
+        StockProperties.Scoring s = stockProperties.getScoring();
         double logValue = Math.log10(marketCap.doubleValue());
-        double logMin = Math.log10(50_000_000_000.0);    // 500억
-        double logMax = Math.log10(10_000_000_000_000.0); // 10조
+        double logMin = Math.log10(s.getMarketCapMin().doubleValue());
+        double logMax = Math.log10(s.getMarketCapMax().doubleValue());
         double score = (logValue - logMin) / (logMax - logMin);
         return BigDecimal.valueOf(Math.max(0, Math.min(1, score))).setScale(4, RoundingMode.HALF_UP);
     }
@@ -317,6 +325,19 @@ public class ScreeningService {
             stats.apiFailures, stats.dataInsufficient, stats.errors);
         log.info("Floor filtered - Gap: {}, Strength: {}, MarketCap: {}",
             stats.gapFiltered, stats.strengthFiltered, stats.marketCapFiltered);
+
+        metrics.recordScreeningResult(total, floorPassed, selected,
+            stats.dataInsufficient, stats.gapFiltered);
+
+        TradeEvents.event("SCREENING_SUMMARY")
+            .with("total", total)
+            .with("floorPassed", floorPassed)
+            .with("selected", selected)
+            .with("dataInsufficient", stats.dataInsufficient)
+            .with("gapFiltered", stats.gapFiltered)
+            .with("strengthFiltered", stats.strengthFiltered)
+            .with("apiFailures", stats.apiFailures)
+            .log();
 
         if (!candidates.isEmpty()) {
             // 갭 분포
