@@ -1,6 +1,10 @@
 app:
   base-url: https://datedate.site
 
+# SEO 외부 인증 토큰 — 네이버 서치어드바이저 등록 후 발급된 값을 NAVER_SITE_VERIFICATION 환경변수로 주입
+seo:
+  naver-site-verification: ${NAVER_SITE_VERIFICATION:}
+
 spring:
   config:
     import: optional:file:.env[.properties]
@@ -86,8 +90,8 @@ logging:
   level:
     me.singingsandhill.calendar: DEBUG
     org.hibernate.SQL: DEBUG
-  file:
-    name: logs/stock-trading.log
+  # NOTE: logback-spring.xml 가 파일 회전(KST 기준)과 거래 이벤트 분리(stock-events.log)를 담당.
+  # logging.file.name 은 더 이상 사용하지 않는다 (이전: logs/stock-trading.log).
 
 # Trading Bot Configuration
 trading:
@@ -198,12 +202,101 @@ stock:
     position-size-ratio: 0.1
     time-decay-enabled: true
     min-profit-threshold-late: 0.001
+  universe:
+    # 항상 포함되는 핀 종목 (사용자 화이트리스트). 빈 배열이면 fallback-codes 만 사용.
+    pinned: []
+    # KIS 등락률/거래량 순위 API 도입 전 임시 풀.
+    # 갭 + 풀백 전략은 강세 모멘텀 종목에서만 작동하므로 변동성 높은 종목 위주 구성.
+    fallback-codes:
+      # === 코스피 대형주 ===
+      - "005930"
+      - "000660"
+      - "035420"
+      - "035720"
+      - "051910"
+      - "006400"
+      - "068270"
+      - "028260"
+      - "105560"
+      - "055550"
+      # === 2차전지/전기차 (고변동성) ===
+      - "373220"
+      - "247540"
+      - "086520"
+      - "012450"
+      - "003670"
+      - "006260"
+      - "011790"
+      - "011170"
+      - "298050"
+      - "003490"
+      # === 반도체/IT/게임 ===
+      - "042700"
+      - "000990"
+      - "035900"
+      - "352820"
+      - "259960"
+      - "293490"
+      - "036570"
+      - "251270"
+      - "263750"
+      - "112040"
+      # === 바이오/제약 ===
+      - "207940"
+      - "326030"
+      - "145020"
+      - "091990"
+      - "068760"
+      - "141080"
+      - "196170"
+      - "950170"
+      - "000120"
+      - "017800"
+      # === 코스닥 중소형 ===
+      - "277810"
+      - "067310"
+      - "131970"
+      - "214150"
+      - "215200"
+      - "357780"
+      - "036930"
+      - "005290"
+      - "240810"
+      - "095340"
+      # === 코스닥 성장주 ===
+      - "058470"
+      - "066970"
+      - "028300"
+      - "041510"
+      - "039030"
+      - "214370"
+      - "222800"
+      - "089030"
+      - "083310"
+      - "064260"
+      # === 금융/자동차 ===
+      - "086790"
+      - "024110"
+      - "316140"
+      - "000810"
+      - "032830"
+      - "005380"
+      - "000270"
+      - "012330"
+      - "018880"
+      - "161390"
+    rank-api-top: 0
   trading:
     pre-market-start: "08:30"
     market-open: "09:00"
-    screening-end: "09:20"  # [FIX #5] 09:15→09:20: 09:10 실행 시 여전히 strength=0 문제 지속 확인
+    # screening-end 는 의미가 모호해 호환용으로만 보존. 트레이딩 루프 가드는 trading-loop-start 사용.
+    screening-end: "09:20"
+    # 트레이딩 루프 가드 시작 시각. 보통 스크리닝 cron(StockTradingScheduler 의 0 20 9) 와 동일.
+    trading-loop-start: "09:20"
     trading-end: "11:30"
     polling-interval-seconds: 5
+    # KRX 휴일 (yyyy-MM-dd). 비워두면 주말만 거래 휴일.
+    holidays: []
 
 ---
 spring:

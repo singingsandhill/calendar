@@ -4,6 +4,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Component
 @ConfigurationProperties(prefix = "stock")
@@ -18,6 +23,7 @@ public class StockProperties {
     private Exit exit = new Exit();
     private Risk risk = new Risk();
     private Trading trading = new Trading();
+    private Universe universe = new Universe();
 
     public static class Kis {
         private String baseUrl = "https://openapi.koreainvestment.com:9443";
@@ -55,6 +61,15 @@ public class StockProperties {
         private boolean enabled = false;
         private int maxPositions = 5;
         private BigDecimal maxPositionSize = new BigDecimal("5000000");
+        /**
+         * 동작 모드:
+         *   LIVE     : 실주문 (기본값, 신중)
+         *   PAPER    : KIS 시세 사용 + 주문은 인메모리 시뮬레이션
+         *   BACKTEST : 모든 시세/주문을 시뮬레이션 (히스토리 fixture)
+         */
+        private Mode mode = Mode.LIVE;
+
+        public enum Mode { LIVE, PAPER, BACKTEST }
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -62,6 +77,8 @@ public class StockProperties {
         public void setMaxPositions(int maxPositions) { this.maxPositions = maxPositions; }
         public BigDecimal getMaxPositionSize() { return maxPositionSize; }
         public void setMaxPositionSize(BigDecimal maxPositionSize) { this.maxPositionSize = maxPositionSize; }
+        public Mode getMode() { return mode; }
+        public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.LIVE; }
     }
 
     public static class Screening {
@@ -74,6 +91,12 @@ public class StockProperties {
         private int maxWatchlistSize = 10;
         private BigDecimal floorGapPercent = new BigDecimal("0.5");
         private BigDecimal floorTradeStrength = new BigDecimal("95");
+        /**
+         * KIS quote 가 체결강도=0 (장 초반 미집계)을 반환했을 때 동작.
+         * true (기본): 데이터 부족으로 스킵 (현행), 안전.
+         * false: 0 도 그냥 통과시키고 점수 계산은 floorStrength 로 보정.
+         */
+        private boolean skipZeroStrength = true;
 
         public BigDecimal getMinGapPercent() { return minGapPercent; }
         public void setMinGapPercent(BigDecimal minGapPercent) { this.minGapPercent = minGapPercent; }
@@ -93,6 +116,8 @@ public class StockProperties {
         public void setFloorGapPercent(BigDecimal floorGapPercent) { this.floorGapPercent = floorGapPercent; }
         public BigDecimal getFloorTradeStrength() { return floorTradeStrength; }
         public void setFloorTradeStrength(BigDecimal floorTradeStrength) { this.floorTradeStrength = floorTradeStrength; }
+        public boolean isSkipZeroStrength() { return skipZeroStrength; }
+        public void setSkipZeroStrength(boolean skipZeroStrength) { this.skipZeroStrength = skipZeroStrength; }
     }
 
     public static class Scoring {
@@ -104,6 +129,18 @@ public class StockProperties {
         private int marketCapWeight = 10;
         private BigDecimal minScoreThreshold = new BigDecimal("40");
         private int minCandidates = 3;
+        // 정규화 파라미터 (이전 ScreeningService 하드코딩 상수 → 외부화)
+        private BigDecimal gapCenter = new BigDecimal("4.0");
+        private BigDecimal gapSigma = new BigDecimal("3.0");
+        private BigDecimal strengthMin = new BigDecimal("95");
+        private BigDecimal strengthMax = new BigDecimal("130");
+        private BigDecimal floorMaxGap = new BigDecimal("15");
+        private BigDecimal floorMinMarketCap = new BigDecimal("50000000000");
+        private BigDecimal tradeValueMin = new BigDecimal("500000000");      // 5억
+        private BigDecimal tradeValueMax = new BigDecimal("50000000000");    // 500억
+        private BigDecimal marketCapMin = new BigDecimal("50000000000");     // 500억
+        private BigDecimal marketCapMax = new BigDecimal("10000000000000");  // 10조
+        private BigDecimal spreadMax = new BigDecimal("0.5");
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -121,6 +158,28 @@ public class StockProperties {
         public void setMinScoreThreshold(BigDecimal minScoreThreshold) { this.minScoreThreshold = minScoreThreshold; }
         public int getMinCandidates() { return minCandidates; }
         public void setMinCandidates(int minCandidates) { this.minCandidates = minCandidates; }
+        public BigDecimal getGapCenter() { return gapCenter; }
+        public void setGapCenter(BigDecimal gapCenter) { this.gapCenter = gapCenter; }
+        public BigDecimal getGapSigma() { return gapSigma; }
+        public void setGapSigma(BigDecimal gapSigma) { this.gapSigma = gapSigma; }
+        public BigDecimal getStrengthMin() { return strengthMin; }
+        public void setStrengthMin(BigDecimal strengthMin) { this.strengthMin = strengthMin; }
+        public BigDecimal getStrengthMax() { return strengthMax; }
+        public void setStrengthMax(BigDecimal strengthMax) { this.strengthMax = strengthMax; }
+        public BigDecimal getFloorMaxGap() { return floorMaxGap; }
+        public void setFloorMaxGap(BigDecimal floorMaxGap) { this.floorMaxGap = floorMaxGap; }
+        public BigDecimal getFloorMinMarketCap() { return floorMinMarketCap; }
+        public void setFloorMinMarketCap(BigDecimal floorMinMarketCap) { this.floorMinMarketCap = floorMinMarketCap; }
+        public BigDecimal getTradeValueMin() { return tradeValueMin; }
+        public void setTradeValueMin(BigDecimal tradeValueMin) { this.tradeValueMin = tradeValueMin; }
+        public BigDecimal getTradeValueMax() { return tradeValueMax; }
+        public void setTradeValueMax(BigDecimal tradeValueMax) { this.tradeValueMax = tradeValueMax; }
+        public BigDecimal getMarketCapMin() { return marketCapMin; }
+        public void setMarketCapMin(BigDecimal marketCapMin) { this.marketCapMin = marketCapMin; }
+        public BigDecimal getMarketCapMax() { return marketCapMax; }
+        public void setMarketCapMax(BigDecimal marketCapMax) { this.marketCapMax = marketCapMax; }
+        public BigDecimal getSpreadMax() { return spreadMax; }
+        public void setSpreadMax(BigDecimal spreadMax) { this.spreadMax = spreadMax; }
     }
 
     public static class Entry {
@@ -209,12 +268,52 @@ public class StockProperties {
         public void setMinProfitThresholdLate(BigDecimal minProfitThresholdLate) { this.minProfitThresholdLate = minProfitThresholdLate; }
     }
 
+    public static class Universe {
+        /**
+         * 핀 종목 (항상 유니버스에 포함). 사용자 수동 지정.
+         */
+        private List<String> pinned = Collections.emptyList();
+        /**
+         * KIS 순위 API 도입 전 임시 풀 (대형주 + 변동성 종목).
+         */
+        private List<String> fallbackCodes = Collections.emptyList();
+        /**
+         * (예약) KIS 등락률 순위 API 결과 상위 N. 0 이면 비활성.
+         */
+        private int rankApiTop = 0;
+
+        public List<String> getPinned() { return pinned; }
+        public void setPinned(List<String> pinned) {
+            this.pinned = pinned != null ? pinned : Collections.emptyList();
+        }
+        public List<String> getFallbackCodes() { return fallbackCodes; }
+        public void setFallbackCodes(List<String> fallbackCodes) {
+            this.fallbackCodes = fallbackCodes != null ? fallbackCodes : Collections.emptyList();
+        }
+        public int getRankApiTop() { return rankApiTop; }
+        public void setRankApiTop(int rankApiTop) { this.rankApiTop = rankApiTop; }
+    }
+
     public static class Trading {
         private String preMarketStart = "08:30";
         private String marketOpen = "09:00";
-        private String screeningEnd = "09:10";
+        /**
+         * @deprecated 의미가 모호해 신규 키 {@link #tradingLoopStart} 로 대체. 미설정 시 폴백.
+         */
+        @Deprecated
+        private String screeningEnd = "09:20";
+        /**
+         * 트레이딩 루프 가드 시작 시각. 보통 스크리닝 cron 시각과 동일.
+         * 비워두면 screeningEnd 폴백.
+         */
+        private String tradingLoopStart;
         private String tradingEnd = "11:30";
         private int pollingIntervalSeconds = 5;
+        /**
+         * KRX 휴일 (yyyy-MM-dd 문자열). yml 에서 list 로 주입.
+         */
+        private List<String> holidays = Collections.emptyList();
+        private transient Set<LocalDate> holidaySet;
 
         public String getPreMarketStart() { return preMarketStart; }
         public void setPreMarketStart(String preMarketStart) { this.preMarketStart = preMarketStart; }
@@ -222,12 +321,38 @@ public class StockProperties {
         public void setMarketOpen(String marketOpen) { this.marketOpen = marketOpen; }
         public String getScreeningEnd() { return screeningEnd; }
         public void setScreeningEnd(String screeningEnd) { this.screeningEnd = screeningEnd; }
+        public String getTradingLoopStart() {
+            return tradingLoopStart != null ? tradingLoopStart : screeningEnd;
+        }
+        public void setTradingLoopStart(String tradingLoopStart) { this.tradingLoopStart = tradingLoopStart; }
         public String getTradingEnd() { return tradingEnd; }
         public void setTradingEnd(String tradingEnd) { this.tradingEnd = tradingEnd; }
         public int getPollingIntervalSeconds() { return pollingIntervalSeconds; }
         public void setPollingIntervalSeconds(int pollingIntervalSeconds) { this.pollingIntervalSeconds = pollingIntervalSeconds; }
+        public List<String> getHolidays() { return holidays; }
+        public void setHolidays(List<String> holidays) {
+            this.holidays = holidays != null ? holidays : Collections.emptyList();
+            this.holidaySet = null;
+        }
+
+        public boolean isHoliday(LocalDate date) {
+            if (holidaySet == null) {
+                Set<LocalDate> parsed = new HashSet<>();
+                for (String s : holidays) {
+                    try {
+                        parsed.add(LocalDate.parse(s.trim()));
+                    } catch (Exception ignored) {
+                        // 잘못된 항목은 무시
+                    }
+                }
+                holidaySet = parsed;
+            }
+            return holidaySet.contains(date);
+        }
     }
 
+    public Universe getUniverse() { return universe; }
+    public void setUniverse(Universe universe) { this.universe = universe; }
     public Kis getKis() { return kis; }
     public void setKis(Kis kis) { this.kis = kis; }
     public Mail getMail() { return mail; }
