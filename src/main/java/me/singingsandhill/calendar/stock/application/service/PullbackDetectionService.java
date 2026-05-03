@@ -1,5 +1,8 @@
 package me.singingsandhill.calendar.stock.application.service;
 
+import me.singingsandhill.calendar.stock.application.observability.TradeEvents;
+import me.singingsandhill.calendar.stock.domain.screening.EntryAttempt;
+import me.singingsandhill.calendar.stock.domain.screening.EntryAttemptRepository;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignal;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignalRepository;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
@@ -14,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.Closeable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,15 +37,18 @@ public class PullbackDetectionService {
     private final StockSignalRepository signalRepository;
     private final KoreaInvestmentApiClient kisApiClient;
     private final StockProperties stockProperties;
+    private final EntryAttemptRepository entryAttemptRepository;
 
     public PullbackDetectionService(StockRepository stockRepository,
                                      StockSignalRepository signalRepository,
                                      KoreaInvestmentApiClient kisApiClient,
-                                     StockProperties stockProperties) {
+                                     StockProperties stockProperties,
+                                     EntryAttemptRepository entryAttemptRepository) {
         this.stockRepository = stockRepository;
         this.signalRepository = signalRepository;
         this.kisApiClient = kisApiClient;
         this.stockProperties = stockProperties;
+        this.entryAttemptRepository = entryAttemptRepository;
     }
 
     /**
@@ -65,25 +72,36 @@ public class PullbackDetectionService {
      */
     @Transactional
     public void updateStockState(Stock stock) {
-        // 현재가 조회
-        KisQuoteResponse quote = kisApiClient.getQuote(stock.getStockCode());
-        if (quote == null) {
-            return;
+        try (Closeable ignored = TradeEvents.stockCode(stock.getStockCode())) {
+            KisQuoteResponse quote = kisApiClient.getQuote(stock.getStockCode());
+            if (quote == null) {
+                return;
+            }
+
+            BigDecimal currentPrice = quote.currentPrice();
+            stock.updateCurrentPrice(currentPrice);
+
+            StockState before = stock.getState();
+            switch (before) {
+                case WATCHING -> checkHighFormation(stock, currentPrice);
+                case HIGH_FORMED -> checkPullbackEntry(stock, currentPrice);
+                case PULLBACK -> checkBounceConfirmation(stock, currentPrice);
+                default -> {}
+            }
+            StockState after = stock.getState();
+            if (before != after) {
+                TradeEvents.event("STATE_CHANGED")
+                    .with("stockCode", stock.getStockCode())
+                    .with("from", before)
+                    .with("to", after)
+                    .with("price", currentPrice)
+                    .log();
+            }
+
+            stockRepository.save(stock);
+        } catch (java.io.IOException e) {
+            // Closeable 은 실제로는 throw 안 함
         }
-
-        BigDecimal currentPrice = quote.currentPrice();
-        stock.updateCurrentPrice(currentPrice);
-
-        StockState currentState = stock.getState();
-
-        switch (currentState) {
-            case WATCHING -> checkHighFormation(stock, currentPrice);
-            case HIGH_FORMED -> checkPullbackEntry(stock, currentPrice);
-            case PULLBACK -> checkBounceConfirmation(stock, currentPrice);
-            default -> {}
-        }
-
-        stockRepository.save(stock);
     }
 
     /**
@@ -181,9 +199,11 @@ public class PullbackDetectionService {
         int totalConditions = 3;
 
         // 조건 1: 체결강도 체크
+        // PR-4: tradeStrength null/0 도 FAIL 로 취급 (이전: null=PASS 위양성).
         BigDecimal tradeStrength = kisApiClient.getTradeStrength(stock.getStockCode());
-        boolean strengthPassed = tradeStrength == null
-            || tradeStrength.compareTo(entryConfig.getEntryMinStrength()) >= 0;
+        boolean strengthPassed = tradeStrength != null
+            && tradeStrength.compareTo(BigDecimal.ZERO) > 0
+            && tradeStrength.compareTo(entryConfig.getEntryMinStrength()) >= 0;
         if (strengthPassed) {
             passedConditions++;
         } else {
@@ -192,9 +212,13 @@ public class PullbackDetectionService {
         }
 
         // 조건 2: 호가 불균형 체크
+        // PR-4: orderbook null 시 자동 통과(=true) 위양성 제거 — null 은 데이터 없음 = FAIL.
         KisOrderbookResponse orderbook = kisApiClient.getOrderbook(stock.getStockCode());
-        boolean imbalancePassed = true;
-        if (orderbook != null) {
+        boolean imbalancePassed;
+        if (orderbook == null) {
+            imbalancePassed = false;
+            log.debug("Entry condition failed for {}: orderbook unavailable", stock.getStockCode());
+        } else {
             BigDecimal imbalance = orderbook.calculateOrderImbalance();
             imbalancePassed = imbalance.compareTo(entryConfig.getEntryMinImbalance()) >= 0;
             if (!imbalancePassed) {
@@ -226,6 +250,37 @@ public class PullbackDetectionService {
         int requiredConditions = softValidation ? 2 : totalConditions;
         boolean result = passedConditions >= requiredConditions;
 
+        String rejectReason = result ? null : firstReason(strengthPassed, imbalancePassed, timePassed);
+
+        TradeEvents.event("ENTRY_ATTEMPT")
+            .with("stockCode", stock.getStockCode())
+            .with("result", result ? "ACCEPTED" : "REJECTED")
+            .with("passed", passedConditions)
+            .with("required", requiredConditions)
+            .with("strength", strengthPassed ? "PASS" : "FAIL")
+            .with("imbalance", imbalancePassed ? "PASS" : "FAIL")
+            .with("time", timePassed ? "PASS" : "FAIL")
+            .with("soft", softValidation)
+            .with("rejectReason", rejectReason)
+            .log();
+
+        try {
+            entryAttemptRepository.save(EntryAttempt.of(
+                stock.getTradingDate(),
+                stock.getStockCode(),
+                result,
+                passedConditions,
+                requiredConditions,
+                strengthPassed,
+                imbalancePassed,
+                timePassed,
+                stock.getCurrentPrice(),
+                stock.getPullbackLow(),
+                rejectReason));
+        } catch (Exception e) {
+            log.warn("Failed to persist entry attempt for {}: {}", stock.getStockCode(), e.getMessage());
+        }
+
         if (!result) {
             log.debug("Entry rejected for {}: {}/{} conditions passed (required: {}, soft={})",
                 stock.getStockCode(), passedConditions, totalConditions, requiredConditions, softValidation);
@@ -235,6 +290,13 @@ public class PullbackDetectionService {
         }
 
         return result;
+    }
+
+    private static String firstReason(boolean strength, boolean imbalance, boolean time) {
+        if (!strength) return "strength";
+        if (!imbalance) return "imbalance";
+        if (!time) return "time";
+        return "unknown";
     }
 
     /**

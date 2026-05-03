@@ -208,20 +208,20 @@ public class StockPosition {
     }
 
     /**
-     * 2차 익절 조건 체크 (당일 고점)
+     * 2차 익절 조건 체크 (당일 고점). PR-4: TP1 선행 의존을 제거 — 독립 트리거.
      */
     public boolean shouldTp2(BigDecimal currentPrice) {
-        if (tp2Executed || !tp1Executed || dayHighPrice == null) {
+        if (tp2Executed || dayHighPrice == null) {
             return false;
         }
         return currentPrice.compareTo(dayHighPrice) >= 0;
     }
 
     /**
-     * 3차 익절 조건 체크 (고점 +1%)
+     * 3차 익절 조건 체크 (고점 +1%). PR-4: TP2 선행 의존을 제거 — 독립 트리거.
      */
     public boolean shouldTp3(BigDecimal currentPrice, BigDecimal tp3Percent) {
-        if (tp3Executed || !tp2Executed || dayHighPrice == null) {
+        if (tp3Executed || dayHighPrice == null) {
             return false;
         }
         BigDecimal targetPrice = dayHighPrice.multiply(

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -34,15 +35,18 @@ public class StockRiskService {
     private final StockPositionService positionService;
     private final KoreaInvestmentApiClient kisApiClient;
     private final StockProperties stockProperties;
+    private final Clock clock;
 
     public StockRiskService(StockPositionRepository positionRepository,
                             StockPositionService positionService,
                             KoreaInvestmentApiClient kisApiClient,
-                            StockProperties stockProperties) {
+                            StockProperties stockProperties,
+                            Clock clock) {
         this.positionRepository = positionRepository;
         this.positionService = positionService;
         this.kisApiClient = kisApiClient;
         this.stockProperties = stockProperties;
+        this.clock = clock;
     }
 
     /**
@@ -114,59 +118,42 @@ public class StockRiskService {
         BigDecimal commissionRate = stockProperties.getRisk().getCommissionRate();
         BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
         BigDecimal minProfitThreshold = calculateTimeDecayThreshold();
-        // minProfitThreshold는 비율(0.005=0.5%)이므로 % 단위로 변환
         BigDecimal minProfitPct = minProfitThreshold.multiply(new BigDecimal("100"));
+        BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
+            currentPrice, commissionRate, sellTaxRate);
 
-        // TP1: +1.5% → 50% 매도
+        // PR-4: 강한 트리거(TP3 > TP2 > TP1)부터 독립적으로 체크.
+        // 이전 단계 미발동이어도 상위 트리거가 매칭되면 즉시 발동 (잔여 수량 기준).
+        if (position.shouldTp3(currentPrice, tp3Percent)) {
+            tryFireTp(position, currentPrice, pnlPctWithFee, minProfitPct,
+                position.calculateTp3Quantity(), StockCloseReason.TP3, "TP3");
+            return;
+        }
+        if (position.shouldTp2(currentPrice)) {
+            tryFireTp(position, currentPrice, pnlPctWithFee, minProfitPct,
+                position.calculateTp2Quantity(), StockCloseReason.TP2, "TP2");
+            return;
+        }
         if (position.shouldTp1(currentPrice, tp1Percent)) {
-            BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
-                currentPrice, commissionRate, sellTaxRate);
-            if (pnlPctWithFee.compareTo(minProfitPct) < 0) {
-                log.debug("[{}] TP1 보류: 수수료 포함 수익률={}% < 최소 {}%",
-                    position.getStockCode(), pnlPctWithFee, minProfitPct);
-                return;
-            }
-            int quantity = position.calculateTp1Quantity();
-            if (quantity > 0) {
-                log.info("TP1 triggered for {}: {} shares @ {} (수수료 포함 수익률={}%)",
-                    position.getStockCode(), quantity, currentPrice, pnlPctWithFee);
-                positionService.executePartialExit(position, quantity, currentPrice, StockCloseReason.TP1);
-            }
+            tryFireTp(position, currentPrice, pnlPctWithFee, minProfitPct,
+                position.calculateTp1Quantity(), StockCloseReason.TP1, "TP1");
         }
+    }
 
-        // TP2: 당일 고점 → 잔여의 60% 매도
-        else if (position.shouldTp2(currentPrice)) {
-            BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
-                currentPrice, commissionRate, sellTaxRate);
-            if (pnlPctWithFee.compareTo(minProfitPct) < 0) {
-                log.debug("[{}] TP2 보류: 수수료 포함 수익률={}% < 최소 {}%",
-                    position.getStockCode(), pnlPctWithFee, minProfitPct);
-                return;
-            }
-            int quantity = position.calculateTp2Quantity();
-            if (quantity > 0) {
-                log.info("TP2 triggered for {}: {} shares @ {} (수수료 포함 수익률={}%)",
-                    position.getStockCode(), quantity, currentPrice, pnlPctWithFee);
-                positionService.executePartialExit(position, quantity, currentPrice, StockCloseReason.TP2);
-            }
+    private void tryFireTp(StockPosition position, BigDecimal currentPrice,
+                            BigDecimal pnlPctWithFee, BigDecimal minProfitPct,
+                            int quantity, StockCloseReason reason, String label) {
+        if (pnlPctWithFee.compareTo(minProfitPct) < 0) {
+            log.debug("[{}] {} 보류: 수수료 포함 수익률={}% < 최소 {}%",
+                position.getStockCode(), label, pnlPctWithFee, minProfitPct);
+            return;
         }
-
-        // TP3: 고점 +1% → 잔량 전량 매도
-        else if (position.shouldTp3(currentPrice, tp3Percent)) {
-            BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
-                currentPrice, commissionRate, sellTaxRate);
-            if (pnlPctWithFee.compareTo(minProfitPct) < 0) {
-                log.debug("[{}] TP3 보류: 수수료 포함 수익률={}% < 최소 {}%",
-                    position.getStockCode(), pnlPctWithFee, minProfitPct);
-                return;
-            }
-            int quantity = position.calculateTp3Quantity();
-            if (quantity > 0) {
-                log.info("TP3 triggered for {}: {} shares @ {} (수수료 포함 수익률={}%)",
-                    position.getStockCode(), quantity, currentPrice, pnlPctWithFee);
-                positionService.executePartialExit(position, quantity, currentPrice, StockCloseReason.TP3);
-            }
+        if (quantity <= 0) {
+            return;
         }
+        log.info("{} triggered for {}: {} shares @ {} (수수료 포함 수익률={}%)",
+            label, position.getStockCode(), quantity, currentPrice, pnlPctWithFee);
+        positionService.executePartialExit(position, quantity, currentPrice, reason);
     }
 
     /**
@@ -182,7 +169,7 @@ public class StockRiskService {
             return riskConfig.getMinProfitThreshold();
         }
 
-        LocalTime now = LocalTime.now();
+        LocalTime now = LocalTime.now(clock);
         LocalTime tradingStart = LocalTime.of(9, 10);
         LocalTime tradingEnd = LocalTime.of(15, 15);
 
