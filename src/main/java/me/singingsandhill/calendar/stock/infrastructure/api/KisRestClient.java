@@ -1,9 +1,11 @@
 package me.singingsandhill.calendar.stock.infrastructure.api;
 
+import me.singingsandhill.calendar.stock.application.observability.StockBotMetrics;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.*;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -39,18 +41,37 @@ public class KisRestClient {
     private static final Duration MAX_BACKOFF = Duration.ofSeconds(4);
     private static final BigDecimal HUNDRED_MILLION = new BigDecimal("100000000");
 
+    /**
+     * KIS API 동시 호출 제한 (병렬화 시 rate-limit / 토큰 동시성 제약 보호).
+     * KIS 가이드라인: 초당 20 TPS 권장. 보수적으로 8 동시.
+     */
+    private static final int MAX_CONCURRENT_CALLS = 8;
+    private static final Duration ACQUIRE_TIMEOUT = Duration.ofSeconds(15);
+    private final java.util.concurrent.Semaphore concurrencyGate =
+        new java.util.concurrent.Semaphore(MAX_CONCURRENT_CALLS, true);
+
     private final WebClient webClient;
     private final KisAuthService authService;
     private final StockProperties stockProperties;
+    private final ObjectProvider<StockBotMetrics> metricsProvider;
 
     public KisRestClient(WebClient.Builder webClientBuilder,
                          KisAuthService authService,
-                         StockProperties stockProperties) {
+                         StockProperties stockProperties,
+                         ObjectProvider<StockBotMetrics> metricsProvider) {
         this.authService = authService;
         this.stockProperties = stockProperties;
+        this.metricsProvider = metricsProvider;
         this.webClient = webClientBuilder
             .baseUrl(stockProperties.getKis().getBaseUrl())
             .build();
+    }
+
+    private void recordCall() {
+        StockBotMetrics m = metricsProvider.getIfAvailable();
+        if (m != null) {
+            m.recordApiCall();
+        }
     }
 
     // ========== 재시도 로직 ==========
@@ -90,11 +111,22 @@ public class KisRestClient {
      */
     private <T> T executeGetWithRetry(String operation,
                                        java.util.function.Function<WebClient, Mono<T>> requestBuilder) {
+        boolean acquired = false;
         try {
+            acquired = concurrencyGate.tryAcquire(ACQUIRE_TIMEOUT.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
+            if (!acquired) {
+                log.warn("KIS concurrency gate timeout for {} after {}ms", operation, ACQUIRE_TIMEOUT.toMillis());
+                return null;
+            }
+            recordCall();
             return requestBuilder.apply(webClient)
                 .retryWhen(buildRetrySpec(operation))
                 .timeout(TIMEOUT)
                 .block();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while waiting for KIS concurrency gate ({})", operation);
+            return null;
         } catch (Exception e) {
             if (e.getCause() != null && isRetryableException(e.getCause())) {
                 log.error("All {} retry attempts failed for {}: {}", MAX_RETRY_ATTEMPTS, operation, e.getMessage());
@@ -102,6 +134,10 @@ public class KisRestClient {
                 log.error("Error during {}: {}", operation, e.getMessage());
             }
             return null;
+        } finally {
+            if (acquired) {
+                concurrencyGate.release();
+            }
         }
     }
 
@@ -110,11 +146,22 @@ public class KisRestClient {
      */
     private <T> T executePostWithRetry(String operation,
                                         java.util.function.Function<WebClient, Mono<T>> requestBuilder) {
+        boolean acquired = false;
         try {
+            acquired = concurrencyGate.tryAcquire(ACQUIRE_TIMEOUT.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
+            if (!acquired) {
+                log.warn("KIS concurrency gate timeout for {} after {}ms", operation, ACQUIRE_TIMEOUT.toMillis());
+                return null;
+            }
+            recordCall();
             return requestBuilder.apply(webClient)
                 .retryWhen(buildRetrySpec(operation))
                 .timeout(TIMEOUT)
                 .block();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while waiting for KIS concurrency gate ({})", operation);
+            return null;
         } catch (Exception e) {
             if (e.getCause() != null && isRetryableException(e.getCause())) {
                 log.error("All {} retry attempts failed for {}: {}", MAX_RETRY_ATTEMPTS, operation, e.getMessage());
@@ -122,6 +169,10 @@ public class KisRestClient {
                 log.error("Error during {}: {}", operation, e.getMessage());
             }
             return null;
+        } finally {
+            if (acquired) {
+                concurrencyGate.release();
+            }
         }
     }
 

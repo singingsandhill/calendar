@@ -1,6 +1,8 @@
 package me.singingsandhill.calendar.stock.application.service;
 
+import me.singingsandhill.calendar.stock.application.concurrency.StockCodeLocks;
 import me.singingsandhill.calendar.stock.application.exception.InsufficientBalanceException;
+import me.singingsandhill.calendar.stock.application.observability.TradeEvents;
 import me.singingsandhill.calendar.stock.domain.position.StockCloseReason;
 import me.singingsandhill.calendar.stock.domain.position.StockPosition;
 import me.singingsandhill.calendar.stock.domain.position.StockPositionRepository;
@@ -41,19 +43,22 @@ public class StockPositionService {
     private final StockSignalRepository signalRepository;
     private final KoreaInvestmentApiClient kisApiClient;
     private final StockProperties stockProperties;
+    private final StockCodeLocks stockCodeLocks;
 
     public StockPositionService(StockPositionRepository positionRepository,
                                  StockTradeRepository tradeRepository,
                                  StockRepository stockRepository,
                                  StockSignalRepository signalRepository,
                                  KoreaInvestmentApiClient kisApiClient,
-                                 StockProperties stockProperties) {
+                                 StockProperties stockProperties,
+                                 StockCodeLocks stockCodeLocks) {
         this.positionRepository = positionRepository;
         this.tradeRepository = tradeRepository;
         this.stockRepository = stockRepository;
         this.signalRepository = signalRepository;
         this.kisApiClient = kisApiClient;
         this.stockProperties = stockProperties;
+        this.stockCodeLocks = stockCodeLocks;
     }
 
     /**
@@ -61,6 +66,10 @@ public class StockPositionService {
      */
     @Transactional
     public StockPosition openPosition(Stock stock) {
+        return stockCodeLocks.withLock(stock.getStockCode(), () -> doOpenPosition(stock));
+    }
+
+    private StockPosition doOpenPosition(Stock stock) {
         String stockCode = stock.getStockCode();
         LocalDate tradingDate = stock.getTradingDate();
 
@@ -168,6 +177,12 @@ public class StockPositionService {
     @Transactional
     public void executePartialExit(StockPosition position, int quantity,
                                     BigDecimal price, StockCloseReason reason) {
+        stockCodeLocks.withLock(position.getStockCode(),
+            () -> doExecutePartialExit(position, quantity, price, reason));
+    }
+
+    private void doExecutePartialExit(StockPosition position, int quantity,
+                                        BigDecimal price, StockCloseReason reason) {
         String stockCode = position.getStockCode();
         log.info("Executing partial exit for {}: {} shares @ {} ({})",
             stockCode, quantity, price, reason);
@@ -216,6 +231,16 @@ public class StockPositionService {
 
         log.info("Partial exit completed for {}: remaining {} shares",
             stockCode, position.getRemainingQuantity());
+
+        TradeEvents.event(position.getRemainingQuantity() == 0 ? "POSITION_CLOSED" : "PARTIAL_EXIT")
+            .with("stockCode", stockCode)
+            .with("positionId", position.getId())
+            .with("reason", reason)
+            .with("price", price)
+            .with("quantity", quantity)
+            .with("remaining", position.getRemainingQuantity())
+            .with("realizedPnl", position.getRealizedPnl())
+            .log();
     }
 
     /**
