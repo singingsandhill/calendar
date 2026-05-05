@@ -25,4 +25,12 @@ public record KisOrderResponse(
     public String getOrderId() {
         return output != null ? output.orderId() : null;
     }
+
+    /**
+     * PAPER/BACKTEST 모드용 가짜 주문 응답 생성.
+     */
+    public static KisOrderResponse simulated(String orderId) {
+        return new KisOrderResponse("0", "SIM", "simulated",
+            new OrderOutput(orderId, ""));
+    }
 }

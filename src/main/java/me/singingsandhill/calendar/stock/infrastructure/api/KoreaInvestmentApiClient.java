@@ -180,6 +180,9 @@ public class KoreaInvestmentApiClient {
      * 시장가 매수
      */
     public KisOrderResponse buyMarket(String stockCode, int quantity) {
+        if (!isLiveMode()) {
+            return simulateOrder(stockCode, quantity, BigDecimal.ZERO, "BUY_MARKET");
+        }
         log.info("Executing market buy: {} x {}", stockCode, quantity);
         return restClient.placeBuyOrder(stockCode, quantity, BigDecimal.ZERO, true);
     }
@@ -188,6 +191,9 @@ public class KoreaInvestmentApiClient {
      * 지정가 매수
      */
     public KisOrderResponse buyLimit(String stockCode, int quantity, BigDecimal price) {
+        if (!isLiveMode()) {
+            return simulateOrder(stockCode, quantity, price, "BUY_LIMIT");
+        }
         log.info("Executing limit buy: {} x {} @ {}", stockCode, quantity, price);
         return restClient.placeBuyOrder(stockCode, quantity, price, false);
     }
@@ -196,6 +202,9 @@ public class KoreaInvestmentApiClient {
      * 시장가 매도
      */
     public KisOrderResponse sellMarket(String stockCode, int quantity) {
+        if (!isLiveMode()) {
+            return simulateOrder(stockCode, quantity, BigDecimal.ZERO, "SELL_MARKET");
+        }
         log.info("Executing market sell: {} x {}", stockCode, quantity);
         return restClient.placeSellOrder(stockCode, quantity, BigDecimal.ZERO, true);
     }
@@ -204,8 +213,26 @@ public class KoreaInvestmentApiClient {
      * 지정가 매도
      */
     public KisOrderResponse sellLimit(String stockCode, int quantity, BigDecimal price) {
+        if (!isLiveMode()) {
+            return simulateOrder(stockCode, quantity, price, "SELL_LIMIT");
+        }
         log.info("Executing limit sell: {} x {} @ {}", stockCode, quantity, price);
         return restClient.placeSellOrder(stockCode, quantity, price, false);
+    }
+
+    private boolean isLiveMode() {
+        return stockProperties.getBot().getMode() == StockProperties.Bot.Mode.LIVE;
+    }
+
+    /**
+     * PAPER / BACKTEST 모드용 인메모리 주문 시뮬레이터.
+     * 항상 즉시 체결된 것으로 간주하고 주문 ID 만 픽션으로 만들어 반환한다.
+     */
+    private KisOrderResponse simulateOrder(String stockCode, int quantity, BigDecimal price, String label) {
+        String orderId = "SIM-" + System.nanoTime();
+        log.info("[{}] {} simulated: {} x {} @ {}",
+            stockProperties.getBot().getMode(), label, stockCode, quantity, price);
+        return KisOrderResponse.simulated(orderId);
     }
 
     /**
