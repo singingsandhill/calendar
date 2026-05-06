@@ -175,6 +175,20 @@ class SeoServiceI18nTest {
     }
 
     @Test
+    @DisplayName("Schedule SEO — 연도/월 플레이스홀더가 천 단위 구분자 없이 렌더링된다")
+    void scheduleSeo_yearNotGrouped() {
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+        SeoMetadata ko = service.getScheduleSeo("alice", 2026, 5);
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
+        SeoMetadata en = service.getScheduleSeo("alice", 2026, 5);
+
+        assertThat(ko.title()).contains("2026년 5월").doesNotContain("2,026");
+        assertThat(en.title()).contains("2026/5 Schedule").doesNotContain("2,026");
+        assertThat(ko.description()).contains("2026년 5월").doesNotContain("2,026");
+        assertThat(en.description()).contains("2026/5").doesNotContain("2,026");
+    }
+
+    @Test
     @DisplayName("Dashboard SEO — ownerId 플레이스홀더가 치환되어 제목에 반영된다")
     void dashboardSeo_ownerIdPlaceholder() {
         LocaleContextHolder.setLocale(Locale.KOREAN);

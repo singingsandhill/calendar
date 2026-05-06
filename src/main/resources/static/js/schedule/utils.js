@@ -1,3 +1,5 @@
+import { messages } from './state.js';
+
 export function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -8,7 +10,7 @@ export function copyLink() {
     const url = window.location.href;
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(url)
-            .then(() => alert('링크가 클립보드에 복사되었습니다!'))
+            .then(() => alert(messages.linkCopied))
             .catch(() => fallbackCopy(url));
     } else {
         fallbackCopy(url);
@@ -24,9 +26,9 @@ function fallbackCopy(text) {
     textarea.select();
     try {
         document.execCommand('copy');
-        alert('링크가 클립보드에 복사되었습니다!');
+        alert(messages.linkCopied);
     } catch (err) {
-        prompt('아래 링크를 복사하세요:', text);
+        prompt(messages.linkCopyPrompt, text);
     }
     document.body.removeChild(textarea);
 }

@@ -1,17 +1,17 @@
-import { schedule, locations, menus } from './state.js';
+import { schedule, locations, menus, messages, formatVotes } from './state.js';
 import { escapeHtml } from './utils.js';
 
 function getSelectedVoterName() {
     const select = document.getElementById('participantSelect');
     if (!select.value) {
-        alert('먼저 이름을 선택하세요');
+        alert(messages.selectName);
         return null;
     }
     return select.options[select.selectedIndex].text;
 }
 
 function updateItemUI(itemElement, item) {
-    itemElement.querySelector('.location-votes').textContent = item.voteCount + '표';
+    itemElement.querySelector('.location-votes').textContent = formatVotes(item.voteCount);
     const votersDiv = itemElement.querySelector('.location-voters');
     votersDiv.innerHTML = item.voters.map(v =>
         `<span class="voter-tag">${escapeHtml(v)}</span>`
@@ -37,7 +37,7 @@ export async function addLocation() {
     const input = document.getElementById('locationInput');
     const name = input.value.trim();
     if (!name) {
-        alert('장소를 입력하세요');
+        alert(messages.locationRequired);
         return;
     }
     try {
@@ -60,13 +60,13 @@ function addLocationToList(location) {
     item.innerHTML = `
         <div class="location-info">
             <span class="location-name">${escapeHtml(location.name)}</span>
-            <span class="location-votes">${location.voteCount}표</span>
+            <span class="location-votes">${escapeHtml(formatVotes(location.voteCount))}</span>
         </div>
         <div class="location-voters"></div>
         <div class="location-actions">
             <button class="btn btn-sm btn-primary vote-btn"
                     data-action="location.vote"
-                    data-location-id="${location.id}">투표</button>
+                    data-location-id="${location.id}">${escapeHtml(messages.voteLabel)}</button>
         </div>
     `;
     list.appendChild(item);
@@ -102,7 +102,7 @@ export async function addMenu() {
     const url = urlInput.value.trim() || null;
 
     if (!name) {
-        alert('메뉴를 입력하세요');
+        alert(messages.menuRequired);
         return;
     }
     try {
@@ -130,13 +130,13 @@ function addMenuToList(menu) {
         <div class="location-info">
             <span class="location-name">${escapeHtml(menu.name)}</span>
             ${urlLink}
-            <span class="location-votes">${menu.voteCount}표</span>
+            <span class="location-votes">${escapeHtml(formatVotes(menu.voteCount))}</span>
         </div>
         <div class="location-voters"></div>
         <div class="location-actions">
             <button class="btn btn-sm btn-primary menu-vote-btn"
                     data-action="menu.vote"
-                    data-menu-id="${menu.id}">투표</button>
+                    data-menu-id="${menu.id}">${escapeHtml(messages.voteLabel)}</button>
         </div>
     `;
     list.appendChild(item);

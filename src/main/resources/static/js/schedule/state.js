@@ -14,6 +14,11 @@ export const schedule = {
 export const participants = data.participants;
 export const locations = data.locations;
 export const menus = data.menus;
+export const messages = data.messages;
+
+export function formatVotes(count) {
+    return messages.votesTemplate.replace('{0}', count);
+}
 
 export const selection = {
     currentParticipantId: null,

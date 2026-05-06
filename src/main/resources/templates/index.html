@@ -26,8 +26,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Inline Start Form -->
     <div id="start-form" class="start-form-minimal fade-in-up" style="--delay: 0.35s">
-        <form th:action="@{/start}" method="post" id="startForm" novalidate>
-            <div class="input-group-minimal">
+        <form th:action="${@localeLinks.href('/start')}" method="post" id="startForm" novalidate>
+            <div class="input-group-minimal" id="ownerIdGroup">
                 <span class="input-prefix">datedate.site/</span>
                 <input type="text" name="ownerId" id="ownerId"
                        placeholder="your-id"
@@ -35,17 +35,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                        minlength="2"
                        maxlength="20"
                        required
-                       style="text-transform: lowercase;"
-                       oninput="this.value = this.value.toLowerCase()">
+                       autocomplete="off"
+                       autocapitalize="none"
+                       autocorrect="off"
+                       spellcheck="false"
+                       inputmode="latin"
+                       aria-describedby="ownerIdHelper"
+                       aria-invalid="false"
+                       style="text-transform: lowercase;">
             </div>
-            <p class="input-hint" style="text-align: center; margin-top: 0.75rem;" th:text="#{index.input.hint}">
-                2-20자, 영어, 숫자, - 만 사용 가능
-            </p>
+            <div class="input-helper" id="ownerIdHelper">
+                <span class="input-helper-message" role="status" aria-live="polite"
+                      th:text="#{index.input.hint}" th:data-default-text="#{index.input.hint}">
+                    2-20자, 영어, 숫자, - 만 사용 가능
+                </span>
+                <span class="input-helper-counter" id="ownerIdCounter" aria-hidden="true">0 / 20</span>
+            </div>
             <div class="form-actions-minimal">
                 <button type="button" class="btn-text" onclick="generateRandomId()" th:text="#{index.random}">
                     랜덤 생성
                 </button>
-                <button type="submit" class="btn-spring" th:text="#{index.start}">
+                <button type="submit" id="startBtn" class="btn-spring" disabled aria-disabled="true" th:text="#{index.start}">
                     시작하기
                 </button>
             </div>
@@ -128,7 +138,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
 
         <div class="popular-more animate-on-scroll">
-            <a th:href="@{/insights/trends}" class="btn-text" th:text="#{index.popular.more}">전체 순위 보기 →</a>
+            <a th:href="${@localeLinks.href('/insights/trends')}" class="btn-text" th:text="#{index.popular.more}">전체 순위 보기 →</a>
         </div>
     </section>
 
@@ -180,7 +190,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <span class="scenario-label" th:text="#{index.scenario.friend.example}">예시</span>
                     datedate.site/college-friends
                 </div>
-                <a th:href="@{/use-cases/friend-meetup}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
+                <a th:href="${@localeLinks.href('/use-cases/friend-meetup')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
             </div>
 
             <div class="scenario-card animate-on-scroll">
@@ -191,7 +201,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <span class="scenario-label" th:text="#{index.scenario.team.example}">예시</span>
                     datedate.site/marketing-team
                 </div>
-                <a th:href="@{/use-cases/team-meeting}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
+                <a th:href="${@localeLinks.href('/use-cases/team-meeting')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
             </div>
 
 <!--            <div class="scenario-card animate-on-scroll">-->
@@ -203,7 +213,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!--                    datedate.site/japan-trip-2025-->
 <!--                </div>-->
 <!--                <a th:href="@{/use-cases/travel-planning}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>-->
-<!--            </div>-->
+<!--            </div>
+go-->
 
             <div class="scenario-card animate-on-scroll">
                 <div class="scenario-emoji">📚</div>
@@ -213,7 +224,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <span class="scenario-label" th:text="#{index.scenario.study.example}">예시</span>
                     datedate.site/coding-study
                 </div>
-                <a th:href="@{/use-cases/study-group}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
+                <a th:href="${@localeLinks.href('/use-cases/study-group')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
             </div>
         </div>
     </section>
@@ -285,7 +296,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
 </main>
 
-<script>
+<script th:inline="javascript">
+const ID_MESSAGES = {
+    tooShort: /*[[#{index.id.tooShort}]]*/ '',
+    tooLong: /*[[#{index.id.tooLong}]]*/ '',
+    invalid: /*[[#{index.id.invalid}]]*/ '',
+    reserved: /*[[#{index.id.reserved}]]*/ ''
+};
+const RESERVED_IDS = new Set(/*[[${reservedOwnerIds}]]*/ []);
+
 // FAQ 토글 기능 (aria-expanded 포함)
 document.querySelectorAll('.faq-question').forEach(button => {
     button.addEventListener('click', () => {
@@ -295,31 +314,69 @@ document.querySelectorAll('.faq-question').forEach(button => {
     });
 });
 
-// Owner ID 클라이언트 검증
+// Owner ID 클라이언트 검증 - onChange 마스킹 + 인라인 헬퍼
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('startForm').addEventListener('submit', function(e) {
-        const input = document.getElementById('ownerId');
-        const value = input.value.trim();
-        const pattern = /^[a-z0-9-]+$/;
+    const form = document.getElementById('startForm');
+    const input = document.getElementById('ownerId');
+    const group = document.getElementById('ownerIdGroup');
+    const helper = document.getElementById('ownerIdHelper');
+    const helperMsg = helper.querySelector('.input-helper-message');
+    const counter = document.getElementById('ownerIdCounter');
+    const submitBtn = document.getElementById('startBtn');
+    const defaultMsg = helperMsg.dataset.defaultText || helperMsg.textContent.trim();
+    const MAX = 20;
+    const MIN = 2;
 
-        if (!value || value.length < 2) {
-            e.preventDefault();
-            toast.error('ID는 2자 이상 입력해주세요');
-            input.focus();
-            return;
+    function sanitize(raw) {
+        return raw.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, MAX);
+    }
+
+    function validate(value) {
+        if (value.length === 0) return { ok: false, msg: defaultMsg, error: false };
+        if (value.length < MIN) return { ok: false, msg: ID_MESSAGES.tooShort, error: true };
+        if (value.length > MAX) return { ok: false, msg: ID_MESSAGES.tooLong, error: true };
+        if (!/^[a-z0-9-]+$/.test(value)) return { ok: false, msg: ID_MESSAGES.invalid, error: true };
+        if (RESERVED_IDS.has(value)) return { ok: false, msg: ID_MESSAGES.reserved, error: true };
+        return { ok: true, msg: defaultMsg, error: false };
+    }
+
+    function refresh() {
+        const value = input.value;
+        const result = validate(value);
+        counter.textContent = `${value.length} / ${MAX}`;
+        helperMsg.textContent = result.msg;
+        helper.classList.toggle('input-helper--error', result.error);
+        group.classList.toggle('input-group-minimal--error', result.error);
+        input.setAttribute('aria-invalid', result.error ? 'true' : 'false');
+        submitBtn.disabled = !result.ok;
+        submitBtn.setAttribute('aria-disabled', result.ok ? 'false' : 'true');
+    }
+
+    // beforeinput: 허용되지 않는 문자 입력은 즉시 차단
+    input.addEventListener('beforeinput', function(e) {
+        if (e.inputType === 'insertText' && typeof e.data === 'string') {
+            if (!/^[A-Za-z0-9-]*$/.test(e.data)) {
+                e.preventDefault();
+            }
         }
-        if (value.length > 20) {
+    });
+
+    // input: 붙여넣기/IME 등 모든 입력 경로에서 정규화
+    input.addEventListener('input', function() {
+        const cleaned = sanitize(input.value);
+        if (cleaned !== input.value) input.value = cleaned;
+        refresh();
+    });
+
+    form.addEventListener('submit', function(e) {
+        const result = validate(input.value);
+        if (!result.ok) {
             e.preventDefault();
-            toast.error('ID는 20자 이하로 입력해주세요');
-            input.focus();
-            return;
-        }
-        if (!pattern.test(value)) {
-            e.preventDefault();
-            toast.error('ID는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다');
             input.focus();
         }
     });
+
+    refresh();
 });
 
 // 랜덤 아이디 생성
@@ -333,7 +390,9 @@ function generateRandomId() {
     const noun = nouns[Math.floor(Math.random() * nouns.length)];
     const num = Math.floor(Math.random() * 100);
 
-    document.getElementById('ownerId').value = `${adj}-${noun}-${num}`;
+    const input = document.getElementById('ownerId');
+    input.value = `${adj}-${noun}-${num}`;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 </script>
 

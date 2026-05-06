@@ -1,4 +1,4 @@
-import { schedule, participants, selection } from './state.js';
+import { schedule, participants, selection, messages } from './state.js';
 
 export function renderCalendar() {
     const calendarBody = document.getElementById('calendarBody');
@@ -20,26 +20,13 @@ function renderExtendedCalendar(calendarBody) {
         const currentDate = new Date(gridStart);
         currentDate.setDate(gridStart.getDate() + (index - 1));
 
-        const dayCell = document.createElement('div');
-        dayCell.className = 'calendar-day';
-        dayCell.dataset.day = index;
-
-        const dayNumber = document.createElement('span');
-        dayNumber.className = 'day-number';
-
         const displayDay = currentDate.getDate();
         const displayMonth = currentDate.getMonth() + 1;
+        const isOtherMonth = displayMonth !== schedule.month;
+        const label = isOtherMonth ? `${displayMonth}/${displayDay}` : String(displayDay);
 
-        if (displayMonth !== schedule.month) {
-            dayCell.classList.add('other-month');
-            dayNumber.textContent = `${displayMonth}/${displayDay}`;
-        } else {
-            dayNumber.textContent = displayDay;
-        }
-
-        dayCell.appendChild(dayNumber);
-        appendDots(dayCell, index);
-        dayCell.addEventListener('click', () => toggleDay(index, dayCell));
+        const dayCell = createDayCell(index, label, isOtherMonth);
+        decorateCell(dayCell, index);
         calendarBody.appendChild(dayCell);
     }
 }
@@ -52,41 +39,92 @@ function renderLegacyCalendar(calendarBody) {
     }
 
     for (let day = 1; day <= schedule.daysInMonth; day++) {
-        const dayCell = document.createElement('div');
-        dayCell.className = 'calendar-day';
-        dayCell.dataset.day = day;
-
-        const dayNumber = document.createElement('span');
-        dayNumber.className = 'day-number';
-        dayNumber.textContent = day;
-        dayCell.appendChild(dayNumber);
-
-        appendDots(dayCell, day);
-        dayCell.addEventListener('click', () => toggleDay(day, dayCell));
+        const dayCell = createDayCell(day, String(day), false);
+        decorateCell(dayCell, day);
         calendarBody.appendChild(dayCell);
     }
 }
 
-function appendDots(dayCell, dayIndex) {
-    const dotsContainer = document.createElement('div');
-    dotsContainer.className = 'participant-dots';
+function createDayCell(dayIndex, label, isOtherMonth) {
+    const dayCell = document.createElement('div');
+    dayCell.className = 'calendar-day';
+    dayCell.dataset.day = dayIndex;
+    dayCell.tabIndex = 0;
+    dayCell.setAttribute('role', 'button');
+    if (isOtherMonth) dayCell.classList.add('other-month');
 
-    participants.forEach(p => {
-        if (p.selections && p.selections.includes(dayIndex)) {
+    const dayNumber = document.createElement('span');
+    dayNumber.className = 'day-number';
+    dayNumber.textContent = label;
+    dayCell.appendChild(dayNumber);
+
+    dayCell.addEventListener('click', () => toggleDay(dayIndex, dayCell));
+    dayCell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleDay(dayIndex, dayCell);
+        }
+    });
+    return dayCell;
+}
+
+const HEAT_LEVELS = ['heat-1', 'heat-2', 'heat-3', 'heat-4', 'heat-5plus'];
+
+function decorateCell(cell, dayIndex) {
+    const available = participants.filter(p => p.selections && p.selections.includes(dayIndex));
+
+    cell.classList.remove('solo', ...HEAT_LEVELS);
+    cell.style.removeProperty('--solo-color');
+    cell.querySelector('.participant-dots')?.remove();
+    cell.querySelector('.cell-count-badge')?.remove();
+    cell.querySelector('.cell-tooltip')?.remove();
+
+    if (available.length === 1) {
+        cell.classList.add('solo');
+        cell.style.setProperty('--solo-color', available[0].color);
+    } else if (available.length >= 5) {
+        cell.classList.add('heat-5plus');
+    } else if (available.length >= 2) {
+        cell.classList.add('heat-' + available.length);
+    }
+
+    if (available.length >= 1) {
+        const dots = document.createElement('div');
+        dots.className = 'participant-dots';
+        dots.setAttribute('aria-hidden', 'true');
+        available.forEach(p => {
             const dot = document.createElement('span');
             dot.className = 'participant-dot';
             dot.style.backgroundColor = p.color;
-            dot.title = p.name;
-            dotsContainer.appendChild(dot);
-        }
-    });
+            dots.appendChild(dot);
+        });
+        cell.appendChild(dots);
+    }
 
-    dayCell.appendChild(dotsContainer);
+    if (available.length >= 2) {
+        const badge = document.createElement('span');
+        badge.className = 'cell-count-badge';
+        badge.setAttribute('aria-hidden', 'true');
+        badge.textContent = available.length;
+        cell.appendChild(badge);
+    }
+
+    const names = available.map(p => p.name);
+    if (names.length > 0) {
+        const tip = document.createElement('span');
+        tip.className = 'cell-tooltip';
+        tip.setAttribute('role', 'tooltip');
+        tip.textContent = names.join(', ');
+        cell.appendChild(tip);
+        cell.setAttribute('aria-label', `${dayIndex}: ${names.length} available — ${names.join(', ')}`);
+    } else {
+        cell.setAttribute('aria-label', `${dayIndex}`);
+    }
 }
 
 function toggleDay(day, cell) {
     if (!selection.currentParticipantId) {
-        alert('먼저 이름을 선택하세요');
+        alert(messages.selectName);
         return;
     }
 
@@ -111,7 +149,7 @@ export function updateCalendarDisplay() {
 
 export function resetSelections() {
     if (!selection.currentParticipantId) {
-        alert('먼저 이름을 선택하세요');
+        alert(messages.selectName);
         return;
     }
     selection.selectedDays.clear();
@@ -120,7 +158,7 @@ export function resetSelections() {
 
 export async function saveSelections() {
     if (!selection.currentParticipantId) {
-        alert('먼저 이름을 선택하세요');
+        alert(messages.selectName);
         return;
     }
 
@@ -132,7 +170,7 @@ export async function saveSelections() {
         }
         renderCalendar();
         updateCalendarDisplay();
-        window.toast.success('저장되었습니다!');
+        window.toast.success(messages.saveSuccess);
     } catch (error) {
         window.toast.error(error.message);
     }
