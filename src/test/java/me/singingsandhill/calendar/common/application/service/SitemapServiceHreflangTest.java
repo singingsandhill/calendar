@@ -17,8 +17,8 @@ class SitemapServiceHreflangTest {
 
     @BeforeEach
     void setUp() {
-        // RunRepository 는 선택적 의존성이므로 null 로 주입 → runner 엔트리는 repo 없으면 자동 제외
-        service = new SitemapService(BASE_URL, null);
+        // 선택적 의존성은 모두 null → runner/insights 데이터는 자동으로 빌드 시각으로 대체
+        service = new SitemapService(BASE_URL, null, null, null, null);
     }
 
     @Test
@@ -76,5 +76,78 @@ class SitemapServiceHreflangTest {
         // 공개 양방향 엔트리 11개(home, guide, privacy, terms, insights/trends, 4 use-cases, faq, date-diff)
         // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 11 * 2 * 3 = 66
         assertThat(count).isEqualTo(11 * 2 * 3);
+    }
+
+    @Test
+    @DisplayName("lastmod 은 ISO 8601 풀 정밀도 형식이어야 한다 — 같은 날 두 번 갱신 시 신호 손실 방지")
+    void lastmodIsIsoOffsetDateTime() {
+        String xml = service.generateSitemapXml();
+        // YYYY-MM-DDTHH:mm:ss[.SSS]±HH:mm 형식이어야 함 (LocalDate 의 YYYY-MM-DD 단독 X)
+        assertThat(xml).containsPattern("<lastmod>\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}");
+        assertThat(xml).doesNotContainPattern("<lastmod>\\d{4}-\\d{2}-\\d{2}</lastmod>");
+    }
+
+    @Test
+    @DisplayName("같은 빌드/입력에 대해 sitemap.xml 은 결정적(deterministic)이다 — LocalDate.now() 같은 변동 신호 금지")
+    void sitemapIsDeterministicAcrossCalls() {
+        String first = service.generateSitemapXml();
+        String second = service.generateSitemapXml();
+        // 데이터/리포지토리 변경 없이 두 번 호출하면 lastmod 포함 동일해야 함
+        assertThat(first).isEqualTo(second);
+    }
+
+    @Test
+    @DisplayName("XML 생성된 sitemap 은 well-formed XML 이어야 한다")
+    void sitemapIsWellFormedXml() throws Exception {
+        String xml = service.generateSitemapXml();
+        javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(
+                new java.io.ByteArrayInputStream(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+        );
+        assertThat(doc.getDocumentElement().getLocalName()).isEqualTo("urlset");
+    }
+
+    @Test
+    @DisplayName("escapeXml 은 5개 미리 정의된 엔티티(& < > \" ') 를 모두 escape 한다")
+    void xmlEscapeHandlesAllPredefinedEntities() {
+        assertThat(SitemapService.escapeXml("a&b")).isEqualTo("a&amp;b");
+        assertThat(SitemapService.escapeXml("a<b>c")).isEqualTo("a&lt;b&gt;c");
+        assertThat(SitemapService.escapeXml("a\"b'c")).isEqualTo("a&quot;b&apos;c");
+        // 예: UTM + lang 쿼리가 결합된 URL — 그대로 두면 invalid XML
+        assertThat(SitemapService.escapeXml("https://example.test/?utm=x&lang=en"))
+                .isEqualTo("https://example.test/?utm=x&amp;lang=en");
+    }
+
+    @Test
+    @DisplayName("모든 <loc> 의 URL 은 https 로 시작하고 절대 경로다 — 색인 일관성")
+    void allLocUrlsAreAbsoluteHttps() {
+        String xml = service.generateSitemapXml();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("<loc>([^<]+)</loc>").matcher(xml);
+        while (m.find()) {
+            String loc = m.group(1);
+            assertThat(loc).startsWith("https://");
+        }
+    }
+
+    @Test
+    @DisplayName("hreflang reciprocal — 모든 ko URL 블록은 en alternate 를 포함하고 그 반대도 성립한다")
+    void hreflangIsReciprocal() {
+        String xml = service.generateSitemapXml();
+        // bilingual 엔트리는 hreflang ko + en + x-default 를 항상 함께 가져야 함
+        java.util.regex.Matcher urlBlocks = java.util.regex.Pattern.compile(
+                "<url>(.*?)</url>", java.util.regex.Pattern.DOTALL).matcher(xml);
+        while (urlBlocks.find()) {
+            String block = urlBlocks.group(1);
+            boolean hasKo = block.contains("hreflang=\"ko\"");
+            boolean hasEn = block.contains("hreflang=\"en\"");
+            boolean hasXDefault = block.contains("hreflang=\"x-default\"");
+            // hreflang 이 하나라도 있으면 셋 다 있어야 함
+            if (hasKo || hasEn || hasXDefault) {
+                assertThat(hasKo).as("ko alt missing in block: " + block).isTrue();
+                assertThat(hasEn).as("en alt missing in block: " + block).isTrue();
+                assertThat(hasXDefault).as("x-default alt missing in block: " + block).isTrue();
+            }
+        }
     }
 }

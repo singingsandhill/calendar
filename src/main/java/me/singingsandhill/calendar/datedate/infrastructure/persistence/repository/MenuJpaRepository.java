@@ -1,6 +1,8 @@
 package me.singingsandhill.calendar.datedate.infrastructure.persistence.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -21,4 +23,7 @@ public interface MenuJpaRepository extends JpaRepository<MenuJpaEntity, Long> {
 
     @Query("SELECT COUNT(v) FROM MenuVoteJpaEntity v")
     long countAllVotes();
+
+    @Query("SELECT MAX(m.createdAt) FROM MenuJpaEntity m")
+    Optional<LocalDateTime> findLatestActivity();
 }

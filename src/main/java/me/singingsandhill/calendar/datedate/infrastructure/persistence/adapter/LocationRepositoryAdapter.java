@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.infrastructure.persistence.adapter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -94,6 +95,11 @@ public class LocationRepositoryAdapter implements LocationRepository {
     @Override
     public long countAllVotes() {
         return locationJpaRepository.countAllVotes();
+    }
+
+    @Override
+    public Optional<LocalDateTime> findLatestActivity() {
+        return locationJpaRepository.findLatestActivity();
     }
 
     private Location toDomain(LocationJpaEntity entity) {
