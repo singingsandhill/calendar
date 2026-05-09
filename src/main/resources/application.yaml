@@ -5,6 +5,14 @@ app:
 seo:
   naver-site-verification: ${NAVER_SITE_VERIFICATION:}
 
+# IndexNow (Bing/Yandex/Naver 호환) 능동 색인 통보
+indexnow:
+  enabled: ${INDEXNOW_ENABLED:false}
+  key: 1dfcb4404e1d4f6fae3423fd163f97b8
+  key-location: https://datedate.site/1dfcb4404e1d4f6fae3423fd163f97b8.txt
+  host: datedate.site
+  endpoint: https://api.indexnow.org/indexnow
+
 spring:
   config:
     import: optional:file:.env[.properties]

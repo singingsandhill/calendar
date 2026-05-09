@@ -22,6 +22,11 @@
     <!-- Google Site Verification -->
     <meta name="google-site-verification" content="YVK_KclWiLH24rqy7kAI9iNYSA5No9ljXbnSOvsQB4k" />
 
+    <!-- Naver Site Verification (한국 시장 색인용 — searchadvisor.naver.com 에서 발급) -->
+    <meta th:if="${@environment.getProperty('seo.naver-site-verification', '') != ''}"
+          name="naver-site-verification"
+          th:content="${@environment.getProperty('seo.naver-site-verification')}" />
+
     <!-- Robots -->
     <meta name="robots" th:content="${seo.robots()}">
 
@@ -46,6 +51,10 @@
     <meta property="og:image:height" content="780">
     <meta property="og:image:type" content="image/png">
     <meta property="og:locale" th:content="${seo.ogLocale() != null} ? ${seo.ogLocale()} : (${#locale.language == 'en'} ? 'en_US' : 'ko_KR')">
+    <!-- og:locale:alternate — 양방향 페이지(hreflangEnabled=true)일 때만 다른 언어 알림 -->
+    <th:block th:if="${seo.hreflangEnabled()}">
+        <meta property="og:locale:alternate" th:content="${#locale.language == 'en'} ? 'ko_KR' : 'en_US'">
+    </th:block>
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -89,26 +98,34 @@
     <link th:if="${extraStylesheets != null}" th:each="css : ${extraStylesheets}"
           rel="stylesheet" th:href="@{${css}}">
 
-    <!-- Google Fonts — preconnect then async load (font-display:swap prevents invisible text) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Web Fonts — async load with font-display:swap (CSS var fallbacks: Georgia, system-ui).
+         - Pretendard: dynamic-subset variant uses unicode-range to chunk by script,
+           so browsers only fetch the Korean/Latin slices actually used (~200-400 KiB total
+           vs 2 MiB for the full variable font).
+         - Noto Serif KR: only loaded for ko locale; en users get Georgia via --font-serif
+           fallback chain in style.css. Saves ~228 KiB for non-Korean visitors. -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preload"
-          href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&display=swap"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
           as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&display=swap"
+        <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
               rel="stylesheet">
     </noscript>
-    <link rel="preload"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
-          as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript>
-        <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
-              rel="stylesheet">
-    </noscript>
+    <th:block th:if="${#locale.language == 'ko'}">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="preload"
+              href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&display=swap"
+              as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript>
+            <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&display=swap"
+                  rel="stylesheet">
+        </noscript>
+    </th:block>
 
     <!-- Deferred Scripts -->
+    <script defer th:src="@{/js/locale-links.js}"></script>
     <script defer th:src="@{/js/navbar.js}"></script>
     <script defer th:src="@{/js/animations.js}"></script>
 </head>
