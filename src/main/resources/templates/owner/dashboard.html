@@ -11,12 +11,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <main class="container" id="main-content">
     <div class="dashboard-header">
         <h1 th:text="#{dashboard.title(${ownerId})}">Dashboard</h1>
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <!-- 일정이 하나라도 있을 때만 우상단 액션 노출. 빈 상태에선 본문 중앙 CTA 하나로 통일 -->
+        <div th:if="${!schedules.isEmpty()}"
+             style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
             <!-- 이번 달 일정 바로 열기 -->
-            <a th:href="@{'/' + ${ownerId} + '/' + ${#dates.format(#dates.createNow(), 'yyyy')} + '/' + ${#dates.format(#dates.createNow(), 'M')}}"
+            <a th:href="${@localeLinks.href('/' + ownerId + '/' + #dates.format(#dates.createNow(), 'yyyy') + '/' + #dates.format(#dates.createNow(), 'M'))}"
                class="btn btn-outline"
                th:text="#{dashboard.this.month}">이번 달</a>
-            <button class="btn btn-primary" onclick="openCreateModal()" th:text="#{dashboard.new.schedule}">+ 새 일정</button>
+            <button class="btn btn-primary" type="button" onclick="openCreateModal()" th:text="#{dashboard.new.schedule}">+ 일정 만들기</button>
         </div>
     </div>
 
@@ -29,7 +31,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <p th:text="#{dashboard.card.participants(${schedule.participantCount()})}">0명 참여</p>
             </div>
             <footer class="schedule-card-actions">
-                <a th:href="@{'/' + ${ownerId} + '/' + ${schedule.year()} + '/' + ${schedule.month()}}"
+                <a th:href="${@localeLinks.href('/' + ownerId + '/' + schedule.year() + '/' + schedule.month())}"
                    class="btn btn-secondary" th:text="#{dashboard.card.view}">보기</a>
                 <button class="btn btn-outline copy-link-btn"
                         th:data-owner="${ownerId}"
@@ -54,53 +56,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="empty-state-icon" aria-hidden="true">📅</div>
         <h2 th:text="#{dashboard.empty.title}">첫 일정을 만들어보세요</h2>
         <p th:text="#{dashboard.empty.desc}">링크 하나로 날짜·장소·메뉴를 함께 정하세요. 가입 없이 바로 시작할 수 있어요.</p>
-        <button class="btn btn-primary" style="font-size: 1.05rem; padding: 0.875rem 2rem;"
-                onclick="openCreateModal()" th:text="#{dashboard.empty.create}">+ 새 일정 만들기</button>
+        <button class="btn btn-primary" type="button" style="font-size: 1.05rem; padding: 0.875rem 2rem;"
+                onclick="openCreateModal()" th:text="#{dashboard.new.schedule}">+ 일정 만들기</button>
         <p style="margin-top: 1.25rem; font-size: 0.9rem;">
-            <a th:href="@{/guide}" th:text="#{dashboard.empty.guide}">사용 가이드 보기 →</a>
+            <a th:href="${@localeLinks.href('/guide')}" th:text="#{dashboard.empty.guide}">사용 가이드 보기 →</a>
         </p>
     </div>
 </main>
 
 <!-- Create Schedule Modal -->
-<div id="createModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="createModalTitle" th:text="#{dashboard.modal.title}">새 일정</h2>
-            <button class="modal-close" onclick="closeCreateModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="createScheduleForm">
-                <div class="form-group">
-                    <label for="year" th:text="#{dashboard.modal.year}">연도</label>
-                    <select id="year" name="year" required>
-                        <option value="2024">2024</option>
-                        <option value="2025" selected>2025</option>
-                        <option value="2026">2026</option>
-                        <option value="2027">2027</option>
-                        <option value="2028">2028</option>
-                        <option value="2029">2029</option>
-                        <option value="2030">2030</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="month" th:text="#{dashboard.modal.month}">월</label>
-                    <select id="month" name="month" required>
-                        <option th:each="m : ${#numbers.sequence(1, 12)}"
-                                th:value="${m}"
-                                th:text="#{dashboard.month.option(${m})}"
-                                th:selected="${m == 12}">12</option>
-                    </select>
-                </div>
-                <p id="createFormError" class="form-error-message" style="display:none" role="alert"></p>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()" th:text="#{dashboard.modal.cancel}">취소</button>
-                    <button type="submit" class="btn btn-primary" th:text="#{dashboard.modal.create}">만들기</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<div th:replace="~{fragments/create-schedule-modal :: modal}"></div>
 
 <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
@@ -109,6 +74,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script th:inline="javascript">
     window.OWNER_DATA = { ownerId: [[${ownerId}]] };
 </script>
+<script defer th:src="@{/js/create-schedule-modal.js}"></script>
 <script defer th:src="@{/js/owner-dashboard.js}"></script>
 </body>
 </html>
