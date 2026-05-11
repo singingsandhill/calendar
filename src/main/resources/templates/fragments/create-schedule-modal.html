@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  Create Schedule Modal fragment.
+  사용법: <div th:replace="~{fragments/create-schedule-modal :: modal}"></div>
+  의존: js/create-schedule-modal.js, window.OWNER_DATA?.ownerId | window.SCHEDULE_DATA?.ownerId
+-->
+<th:block th:fragment="modal">
+    <div id="createModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="createModalTitle" th:text="#{dashboard.modal.title}">새 일정</h2>
+                <button class="modal-close" type="button" data-create-modal-close th:aria-label="#{dashboard.modal.cancel}">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createScheduleForm">
+                    <div class="form-group">
+                        <label for="year" th:text="#{dashboard.modal.year}">연도</label>
+                        <select id="year" name="year" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="month" th:text="#{dashboard.modal.month}">월</label>
+                        <select id="month" name="month" required>
+                            <option th:each="m : ${#numbers.sequence(1, 12)}"
+                                    th:value="${m}"
+                                    th:text="#{dashboard.month.option(${m})}">12</option>
+                        </select>
+                    </div>
+                    <p id="createFormError" class="form-error-message" style="display:none" role="alert"></p>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" data-create-modal-close th:text="#{dashboard.modal.cancel}">취소</button>
+                        <button type="submit" class="btn btn-primary" th:text="#{dashboard.modal.create}">만들기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</th:block>
+
+</html>
