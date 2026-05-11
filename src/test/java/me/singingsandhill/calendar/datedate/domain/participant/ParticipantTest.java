@@ -18,7 +18,7 @@ class ParticipantTest {
         Participant participant = new Participant(1L, "Alice", 0);
 
         assertThat(participant.getName()).isEqualTo("Alice");
-        assertThat(participant.getColorHex()).isEqualTo("#E74C3C");
+        assertThat(participant.getColorHex()).isEqualTo("#E11D48");
         assertThat(participant.getSelections()).isEmpty();
     }
 

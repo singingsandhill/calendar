@@ -53,8 +53,8 @@ class ParticipantColorTest {
         ParticipantColor color0 = ParticipantColor.ofIndex(0);
         ParticipantColor color1 = ParticipantColor.ofIndex(1);
 
-        assertThat(color0.hexCode()).isEqualTo("#E74C3C");
-        assertThat(color1.hexCode()).isEqualTo("#3498DB");
+        assertThat(color0.hexCode()).isEqualTo("#E11D48");
+        assertThat(color1.hexCode()).isEqualTo("#F97316");
     }
 
     @Test

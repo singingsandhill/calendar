@@ -5,14 +5,14 @@ import java.util.List;
 public record ParticipantColor(String hexCode) {
 
     private static final List<String> PRESET_COLORS = List.of(
-            "#E74C3C", // Red
-            "#3498DB", // Blue
-            "#2ECC71", // Green
-            "#F39C12", // Orange
-            "#9B59B6", // Purple
-            "#1ABC9C", // Teal
-            "#E67E22", // Dark Orange
-            "#34495E"  // Dark
+            "#E11D48", // Red    — rose-600
+            "#F97316", // Orange — orange-500
+            "#CA8A04", // Yellow — amber-700 (AA against white as visual indicator)
+            "#16A34A", // Green  — green-600
+            "#0D9488", // Teal   — teal-600
+            "#2563EB", // Blue   — blue-600
+            "#4F46E5", // Indigo — indigo-600
+            "#7C3AED"  // Violet — violet-600
     );
 
     public ParticipantColor {
