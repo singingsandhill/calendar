@@ -1,5 +1,7 @@
 package me.singingsandhill.calendar.datedate.presentation.controller;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -7,10 +9,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import me.singingsandhill.calendar.common.application.exception.BusinessException;
+import me.singingsandhill.calendar.common.presentation.LocaleLinks;
 import me.singingsandhill.calendar.datedate.application.service.InsightsService;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.application.service.PopularityService;
 import me.singingsandhill.calendar.datedate.application.service.SeoService;
+import me.singingsandhill.calendar.datedate.domain.owner.ReservedOwnerIds;
 
 @Controller
 public class HomeController {
@@ -19,15 +24,21 @@ public class HomeController {
     private final SeoService seoService;
     private final PopularityService popularityService;
     private final InsightsService insightsService;
+    private final MessageSource messageSource;
+    private final LocaleLinks localeLinks;
 
     public HomeController(OwnerService ownerService,
                           SeoService seoService,
                           PopularityService popularityService,
-                          InsightsService insightsService) {
+                          InsightsService insightsService,
+                          MessageSource messageSource,
+                          LocaleLinks localeLinks) {
         this.ownerService = ownerService;
         this.seoService = seoService;
         this.popularityService = popularityService;
         this.insightsService = insightsService;
+        this.messageSource = messageSource;
+        this.localeLinks = localeLinks;
     }
 
     @GetMapping("/")
@@ -36,6 +47,7 @@ public class HomeController {
         model.addAttribute("popularLocations", popularityService.getPopularLocations());
         model.addAttribute("popularMenus", popularityService.getPopularMenus());
         model.addAttribute("overview", insightsService.getInsightsOverview());
+        model.addAttribute("reservedOwnerIds", ReservedOwnerIds.RESERVED);
         return "index";
     }
 
@@ -63,6 +75,12 @@ public class HomeController {
         return "faq";
     }
 
+    @GetMapping("/about")
+    public String about(Model model) {
+        model.addAttribute("seo", seoService.getAboutSeo());
+        return "about";
+    }
+
     @GetMapping("/tools/date-diff")
     public String dateDiff(Model model) {
         model.addAttribute("seo", seoService.getDateDiffSeo());
@@ -74,11 +92,33 @@ public class HomeController {
         try {
             String normalizedId = ownerId.toLowerCase();
             ownerService.getOrCreateOwner(normalizedId);
-            return "redirect:/" + normalizedId;
+            return localeLinks.redirect("/" + normalizedId);
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", resolveBusinessMessage(e));
+            return localeLinks.redirect("/");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return localeLinks.redirect("/");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "페이지를 만들 수 없습니다. 다시 시도해 주세요.");
-            return "redirect:/";
+            String fallback = messageSource.getMessage(
+                    "errors.startFailed",
+                    null,
+                    "Could not create the page. Please try again.",
+                    LocaleContextHolder.getLocale());
+            redirectAttributes.addFlashAttribute("errorMessage", fallback);
+            return localeLinks.redirect("/");
         }
+    }
+
+    private String resolveBusinessMessage(BusinessException e) {
+        if (e.getMessageKey() == null) {
+            return e.getMessage();
+        }
+        return messageSource.getMessage(
+                e.getMessageKey(),
+                e.getMessageArgs(),
+                e.getMessage(),
+                LocaleContextHolder.getLocale());
     }
 
 }

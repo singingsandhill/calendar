@@ -3,6 +3,8 @@ package me.singingsandhill.calendar.common.presentation.api;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.validation.FieldError;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -22,9 +24,16 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    private final MessageSource messageSource;
+
+    public GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        ErrorResponse response = new ErrorResponse(e.getCode(), e.getMessage());
+        String message = resolveMessage(e);
+        ErrorResponse response = new ErrorResponse(e.getCode(), message);
         return ResponseEntity.status(e.getStatus()).body(response);
     }
 
@@ -63,5 +72,16 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception: {}", e.getMessage(), e);
         ErrorResponse response = new ErrorResponse("INTERNAL_ERROR", "An unexpected error occurred");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    private String resolveMessage(BusinessException e) {
+        if (e.getMessageKey() == null) {
+            return e.getMessage();
+        }
+        return messageSource.getMessage(
+                e.getMessageKey(),
+                e.getMessageArgs(),
+                e.getMessage(),
+                LocaleContextHolder.getLocale());
     }
 }

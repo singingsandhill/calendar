@@ -11,7 +11,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import me.singingsandhill.calendar.datedate.application.exception.InvalidOwnerIdException;
 import me.singingsandhill.calendar.datedate.application.exception.OwnerNotFoundException;
+import me.singingsandhill.calendar.datedate.application.exception.ReservedOwnerIdException;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
+import me.singingsandhill.calendar.datedate.domain.owner.ReservedOwnerIds;
 
 /**
  * API 쓰기 요청 경로의 {ownerId}를 사전 검증한다.
@@ -44,6 +46,9 @@ public class OwnerPathInterceptor implements HandlerInterceptor {
         if (ownerId.length() < MIN_ID_LENGTH || ownerId.length() > MAX_ID_LENGTH
                 || !OWNER_ID_PATTERN.matcher(ownerId).matches()) {
             throw new InvalidOwnerIdException("Owner ID format is invalid: " + ownerId);
+        }
+        if (ReservedOwnerIds.isReserved(ownerId)) {
+            throw new ReservedOwnerIdException(ownerId);
         }
 
         if (isResourceMutation(request) && !ownerRepository.existsById(ownerId)) {

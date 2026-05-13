@@ -1,9 +1,11 @@
 package me.singingsandhill.calendar.datedate.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import me.singingsandhill.calendar.datedate.application.exception.ReservedOwnerIdException;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
@@ -102,6 +105,16 @@ class OwnerServiceTest {
         boolean result = ownerService.ownerExists("unknown");
 
         assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("getOrCreateOwner should reject reserved IDs without touching the repository")
+    void getOrCreateOwner_reservedId_throws() {
+        assertThatThrownBy(() -> ownerService.getOrCreateOwner("insights"))
+                .isInstanceOf(ReservedOwnerIdException.class)
+                .hasMessageContaining("insights");
+
+        verifyNoInteractions(ownerRepository);
     }
 
     @Test

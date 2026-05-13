@@ -5,8 +5,10 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import me.singingsandhill.calendar.datedate.application.exception.ReservedOwnerIdException;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
+import me.singingsandhill.calendar.datedate.domain.owner.ReservedOwnerIds;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
 
@@ -24,6 +26,9 @@ public class OwnerService {
 
     @Transactional
     public Owner getOrCreateOwner(String ownerId) {
+        if (ReservedOwnerIds.isReserved(ownerId)) {
+            throw new ReservedOwnerIdException(ownerId);
+        }
         return ownerRepository.findById(ownerId)
                 .orElseGet(() -> {
                     Owner newOwner = new Owner(ownerId);
