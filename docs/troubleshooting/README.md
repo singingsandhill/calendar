@@ -11,6 +11,7 @@ This directory contains solutions to common issues encountered during developmen
 | [Google Search Console Redirect](google-search-console-redirect.md) | GSC 색인 오류, 리디렉션 체인 문제 |
 | [JPA NonUniqueResultException](jpa-non-unique-result-exception.md) | 다중 결과 쿼리에서 Optional 사용 시 예외 |
 | [Nginx Configuration](nginx-configuration.md) | http2 deprecated, server_name 충돌, 리디렉션 설정 |
+| [Lighthouse Performance Audit](lighthouse-performance-audit.md) | datedate.site 폰트/manifest 최적화 — Pretendard 동적 서브셋, Noto 로케일 분기, manifest i18n |
 
 ## Quick Reference
 
@@ -29,6 +30,10 @@ This directory contains solutions to common issues encountered during developmen
   - See: [Google Search Console Redirect](google-search-console-redirect.md)
 - HTTP/HTTPS 또는 www/non-www URL 불일치
   - See: [Google Search Console Redirect](google-search-console-redirect.md#원인)
+
+### Performance / Frontend
+- LCP critical path 에서 manifest.json 이 2 s+ 점유, Pretendard woff2 2 MB
+  - See: [Lighthouse Performance Audit](lighthouse-performance-audit.md)
 
 ### Nginx Errors
 - `the "listen ... http2" directive is deprecated`
