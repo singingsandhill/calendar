@@ -9,7 +9,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <main class="container faq-page" id="main-content">
     <nav class="breadcrumb" aria-label="breadcrumb">
-        <a th:href="@{/}" th:text="#{faq.breadcrumb.home}">홈</a>
+        <a th:href="${@localeLinks.href('/')}" th:text="#{faq.breadcrumb.home}">홈</a>
         <span class="separator">/</span>
         <span class="current" th:text="#{faq.breadcrumb.current}">자주 묻는 질문</span>
     </nav>
@@ -110,8 +110,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <h2 th:text="#{faq.cta.title}">지금 바로 시작하세요</h2>
         <p th:text="#{faq.cta.description}">가입도, 설치도, 비용도 없습니다.</p>
         <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="/#start-form" class="btn-spring" th:text="#{faq.cta.start}">일정 만들기</a>
-            <a th:href="@{/guide}" class="btn-secondary" th:text="#{faq.cta.guide}">사용 가이드 →</a>
+            <a th:href="${@localeLinks.href('/#start-form')}" class="btn-spring" th:text="#{faq.cta.start}">일정 만들기</a>
+            <a th:href="${@localeLinks.href('/guide')}" class="btn-secondary" th:text="#{faq.cta.guide}">사용 가이드 →</a>
         </div>
     </section>
 </main>

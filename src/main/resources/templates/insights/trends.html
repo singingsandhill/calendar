@@ -11,7 +11,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <main class="container insights-page">
     <!-- Breadcrumb -->
     <nav class="breadcrumb" aria-label="breadcrumb">
-        <a th:href="@{/}" th:text="#{insights.breadcrumb.home}">홈</a>
+        <a th:href="${@localeLinks.href('/')}" th:text="#{insights.breadcrumb.home}">홈</a>
         <span class="separator">/</span>
         <span class="current" th:text="#{insights.breadcrumb.current}">인기 트렌드 & 이용 현황</span>
     </nav>
@@ -126,8 +126,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </p>
     </section>
 
-    <!-- 광고 슬롯: 인기 순위 소비 후, 이용 현황 직전 -->
-    <div th:replace="~{fragments/ad-slot :: leaderboard(${seo.adsEnabled()})}"></div>
+    <!-- 광고 슬롯: 인기 순위 소비 후, 이용 현황 직전.
+         PP-Full "콘텐츠가 거의 없는 화면" 가드 — 인기 데이터가 모두 비어 있으면 미렌더. -->
+    <th:block th:if="${!popularLocations.isEmpty() or !popularMenus.isEmpty()}">
+        <div th:replace="~{fragments/ad-slot :: leaderboard(${seo.adsEnabled()})}"></div>
+    </th:block>
 
     <!-- 이용 현황 섹션 -->
     <hr style="border: none; border-top: 1px solid var(--border-color); margin: 2rem 0 3rem;">
@@ -255,16 +258,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
     </section>
 
-    <!-- 광고 슬롯: 상세 통계 소비 후, CTA 직전 -->
-    <div th:replace="~{fragments/ad-slot :: infeed(${seo.adsEnabled()})}"></div>
+    <!-- 광고 슬롯: 상세 통계 소비 후, CTA 직전.
+         schedule 데이터가 0 이면 통계 카드들이 모두 의미 없는 0 이므로 광고 미렌더. -->
+    <th:block th:if="${stats.totalSchedules > 0}">
+        <div th:replace="~{fragments/ad-slot :: infeed(${seo.adsEnabled()})}"></div>
+    </th:block>
 
     <!-- CTA Section -->
     <section class="insights-cta-section animate-on-scroll" aria-labelledby="insights-cta-heading">
         <h2 id="insights-cta-heading" th:text="#{insights.cta.title}">지금 그룹 일정을 만들어보세요</h2>
         <p th:text="#{insights.cta.desc}">계정 없이, 링크 하나로 날짜·장소·메뉴를 함께 정하세요</p>
         <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a th:href="@{/}" class="btn-spring" th:text="#{insights.cta.button}">시작하기</a>
-            <a th:href="@{/guide}" class="btn-secondary" th:text="#{insights.cta.guide}">사용 가이드</a>
+            <a th:href="${@localeLinks.href('/')}" class="btn-spring" th:text="#{insights.cta.button}">시작하기</a>
+            <a th:href="${@localeLinks.href('/guide')}" class="btn-secondary" th:text="#{insights.cta.guide}">사용 가이드</a>
         </div>
     </section>
 </main>

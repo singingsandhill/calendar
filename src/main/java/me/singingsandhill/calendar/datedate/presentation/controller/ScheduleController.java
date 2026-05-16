@@ -11,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import me.singingsandhill.calendar.common.presentation.LocaleLinks;
 import me.singingsandhill.calendar.datedate.application.service.LocationService;
 import me.singingsandhill.calendar.datedate.application.service.MenuService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
@@ -27,14 +28,17 @@ public class ScheduleController {
     private final LocationService locationService;
     private final MenuService menuService;
     private final SeoService seoService;
+    private final LocaleLinks localeLinks;
 
     public ScheduleController(ScheduleService scheduleService,
                                LocationService locationService, MenuService menuService,
-                               SeoService seoService) {
+                               SeoService seoService,
+                               LocaleLinks localeLinks) {
         this.scheduleService = scheduleService;
         this.locationService = locationService;
         this.menuService = menuService;
         this.seoService = seoService;
+        this.localeLinks = localeLinks;
     }
 
     @GetMapping("/{ownerId}/{year:\\d{4}}/{month:\\d{1,2}}")
@@ -46,7 +50,7 @@ public class ScheduleController {
             Model model) {
 
         if (year < 2024 || year > 2100 || month < 1 || month > 12) {
-            return "redirect:/";
+            return localeLinks.redirect("/");
         }
 
         Optional<Schedule> scheduleOpt = scheduleService.findScheduleByOwnerAndYearMonth(ownerId, year, month);

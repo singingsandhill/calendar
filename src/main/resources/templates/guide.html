@@ -87,28 +87,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <section class="guide-cta animate-on-scroll">
         <h2 th:text="#{guide.cta.title}">지금 바로 시작하세요</h2>
         <p th:text="#{guide.cta.description}">가입도, 설치도, 비용도 없습니다.</p>
-        <a href="/#start-form" class="btn-spring" th:text="#{guide.cta.start}">일정 만들기</a>
+        <a th:href="${@localeLinks.href('/#start-form')}" class="btn-spring" th:text="#{guide.cta.start}">일정 만들기</a>
     </section>
 
     <section class="guide-use-cases animate-on-scroll">
         <h2 th:text="#{guide.usecases.title}">이런 상황에서 활용하세요</h2>
         <div class="guide-use-case-grid">
-            <a th:href="@{/use-cases/friend-meetup}" class="guide-use-case-card">
+            <a th:href="${@localeLinks.href('/use-cases/friend-meetup')}" class="guide-use-case-card">
                 <span class="guide-use-case-emoji">👥</span>
                 <h3 th:text="#{guide.usecase.friend}">친구 모임</h3>
                 <p th:text="#{guide.usecase.friend.desc}">동창 모임, 정기 모임 날짜 잡기</p>
             </a>
-            <a th:href="@{/use-cases/team-meeting}" class="guide-use-case-card">
+            <a th:href="${@localeLinks.href('/use-cases/team-meeting')}" class="guide-use-case-card">
                 <span class="guide-use-case-emoji">💼</span>
                 <h3 th:text="#{guide.usecase.team}">팀 회의</h3>
                 <p th:text="#{guide.usecase.team.desc}">킥오프, 리뷰 미팅 일정 조율</p>
             </a>
-            <a th:href="@{/use-cases/travel-planning}" class="guide-use-case-card">
+            <a th:href="${@localeLinks.href('/use-cases/travel-planning')}" class="guide-use-case-card">
                 <span class="guide-use-case-emoji">✈️</span>
                 <h3 th:text="#{guide.usecase.travel}">여행 계획</h3>
                 <p th:text="#{guide.usecase.travel.desc}">여행 멤버 일정 맞추기</p>
             </a>
-            <a th:href="@{/use-cases/study-group}" class="guide-use-case-card">
+            <a th:href="${@localeLinks.href('/use-cases/study-group')}" class="guide-use-case-card">
                 <span class="guide-use-case-emoji">📚</span>
                 <h3 th:text="#{guide.usecase.study}">스터디 그룹</h3>
                 <p th:text="#{guide.usecase.study.desc}">정기 모임 날짜 조율</p>

@@ -8,34 +8,95 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
 
 <main class="container use-case-page">
+    <!-- Hero (title + description) — always rendered -->
     <section class="use-case-hero animate-on-scroll">
         <h1 th:text="#{'seo.useCase.' + ${currentSlug} + '.title'}">Use Case</h1>
         <p class="use-case-subtitle" th:text="#{'seo.useCase.' + ${currentSlug} + '.description'}">Description</p>
     </section>
 
-    <section class="use-case-content animate-on-scroll">
-        <div class="use-case-body" th:text="#{'seo.useCase.' + ${currentSlug} + '.body'}">
-            Body
-        </div>
+    <!-- Intro — short context paragraph (~80 KO words). Falls back to legacy 'body' key while new content rolls out. -->
+    <section class="use-case-intro animate-on-scroll"
+             th:with="introBody=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.intro')}"
+             th:if="${introBody != null and !#strings.isEmpty(introBody)}">
+        <p class="use-case-intro-body" th:text="${introBody}">Intro</p>
+    </section>
 
-        <div class="use-case-example">
-            <h3 th:text="#{usecase.example}">Example</h3>
-            <div class="use-case-example-url">
-                <span class="use-case-example-label" th:text="#{'seo.useCase.' + ${currentSlug} + '.exampleLabel'}">Example</span>
-                <code>datedate.site/<span th:text="#{'seo.useCase.' + ${currentSlug} + '.exampleId'}">example</span></code>
-            </div>
+    <!-- When to use — 3 scenarios with concrete situations -->
+    <section class="use-case-when animate-on-scroll"
+             th:with="whenLead=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.whenToUse.lead')}"
+             th:if="${whenLead != null and !#strings.isEmpty(whenLead)}">
+        <h2 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.title'}">When to use</h2>
+        <p class="use-case-section-lead" th:text="${whenLead}">Lead</p>
+        <div class="use-case-scenarios">
+            <article class="use-case-scenario" th:each="i : ${#numbers.sequence(1, 3)}">
+                <h3 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.scenario' + ${i} + '.title'}">Scenario</h3>
+                <p th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.scenario' + ${i} + '.text'}">Scenario text</p>
+            </article>
         </div>
     </section>
 
-    <!-- 광고 슬롯: 콘텐츠 소비 후, CTA 직전 -->
+    <!-- Common mistakes — 3 problem/fix pairs -->
+    <section class="use-case-mistakes animate-on-scroll"
+             th:with="mistakesLead=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.mistakes.lead')}"
+             th:if="${mistakesLead != null and !#strings.isEmpty(mistakesLead)}">
+        <h2 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.title'}">Common mistakes</h2>
+        <p class="use-case-section-lead" th:text="${mistakesLead}">Lead</p>
+        <div class="use-case-mistakes-grid">
+            <article class="use-case-mistake" th:each="i : ${#numbers.sequence(1, 3)}">
+                <p class="use-case-mistake-problem">
+                    <strong th:text="#{usecase.mistake.problem}">Problem:</strong>
+                    <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.mistake' + ${i} + '.problem'}">Problem text</span>
+                </p>
+                <p class="use-case-mistake-fix">
+                    <strong th:text="#{usecase.mistake.fix}">Fix:</strong>
+                    <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.mistake' + ${i} + '.fix'}">Fix text</span>
+                </p>
+            </article>
+        </div>
+    </section>
+
+    <!-- Tips — checklist-style 4 items -->
+    <section class="use-case-tips animate-on-scroll"
+             th:with="tipsTitle=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.tips.title')}"
+             th:if="${tipsTitle != null and !#strings.isEmpty(tipsTitle)}">
+        <h2 th:text="${tipsTitle}">Tips</h2>
+        <ul class="use-case-tips-list">
+            <li th:each="i : ${#numbers.sequence(1, 4)}">
+                <strong th:text="#{'seo.useCase.' + ${currentSlug} + '.section.tips.tip' + ${i} + '.title'}">Tip</strong>
+                — <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.tips.tip' + ${i} + '.text'}">Tip text</span>
+            </li>
+        </ul>
+    </section>
+
+    <!-- FAQ — 5 expandable Q&A. Also feeds FAQPage JSON-LD. -->
+    <section class="use-case-faq animate-on-scroll"
+             th:with="firstFaq=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.faq.q1')}"
+             th:if="${firstFaq != null and !#strings.isEmpty(firstFaq)}">
+        <h2 th:text="#{usecase.faq.title}">자주 묻는 질문</h2>
+        <details class="use-case-faq-item" th:each="i : ${#numbers.sequence(1, 5)}">
+            <summary th:text="#{'seo.useCase.' + ${currentSlug} + '.section.faq.q' + ${i}}">Question</summary>
+            <p th:text="#{'seo.useCase.' + ${currentSlug} + '.section.faq.a' + ${i}}">Answer</p>
+        </details>
+    </section>
+
+    <!-- Example URL block — preserved from original layout -->
+    <section class="use-case-example animate-on-scroll">
+        <h3 th:text="#{usecase.example}">Example URL</h3>
+        <div class="use-case-example-url">
+            <span class="use-case-example-label" th:text="#{'seo.useCase.' + ${currentSlug} + '.exampleLabel'}">Example</span>
+            <code>datedate.site/<span th:text="#{'seo.useCase.' + ${currentSlug} + '.exampleId'}">example</span></code>
+        </div>
+    </section>
+
+    <!-- Ad slot — placed after substantive content, before CTA -->
     <div th:replace="~{fragments/ad-slot :: infeed(${seo.adsEnabled()})}"></div>
 
     <section class="use-case-cta animate-on-scroll">
         <h2 th:text="#{usecase.cta.title}">Get started right now</h2>
         <p th:text="#{usecase.cta.description}">No sign-up, no installation, no cost.</p>
         <div class="use-case-cta-buttons">
-            <a href="/#start-form" class="btn-spring" th:text="#{usecase.cta.start}">Create Schedule</a>
-            <a th:href="@{/guide}" class="btn-text" th:text="#{usecase.cta.guide}">View User Guide →</a>
+            <a th:href="${@localeLinks.href('/#start-form')}" class="btn-spring" th:text="#{usecase.cta.start}">Create Schedule</a>
+            <a th:href="${@localeLinks.href('/guide')}" class="btn-text" th:text="#{usecase.cta.guide}">View User Guide →</a>
         </div>
     </section>
 
@@ -44,7 +105,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="use-case-grid">
             <th:block th:each="slug : ${allSlugs}">
                 <a th:if="${slug != currentSlug}"
-                   th:href="@{'/use-cases/' + ${slug}}"
+                   th:href="${@localeLinks.href('/use-cases/' + slug)}"
                    class="use-case-card">
                     <h3 th:text="#{'seo.useCase.' + ${slug} + '.title'}">Title</h3>
                     <p th:text="#{'seo.useCase.' + ${slug} + '.description'}">Description</p>
