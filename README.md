@@ -1,13 +1,20 @@
 # Calendar — 멀티모듈 Spring Boot 웹 어플리케이션
 
-Spring Boot 4.0.0 / Java 21 기반의 4개 모듈로 구성된 웹 애플리케이션.
+Spring Boot 4.0.0 / Java 21 기반, 공통 인프라(`common`) 1개 + 도메인 4개로 구성된 웹 애플리케이션.
 
 | 모듈 | 패키지 | 설명 |
 |------|--------|------|
+| **Common** | `common` | i18n / SEO / 보안 / 예외 처리 / sitemap — 도메인 무소속 공통 인프라 |
 | **DateDate** | `datedate` | 그룹 일정 조율 - 여러 명이 가능한 날짜를 쉽게 찾아보는 서비스 |
 | **Runner** | `runner` | 러닝 크루(97 Runners) 출석 관리, 순위 대시보드 |
-| **Trading** | `trading` | Bithumb 암호화폐 자동매매 봇 (MA/RSI/Stochastic) |
+| **Trading** | `trading` | Bithumb 암호화폐 자동매매 봇 (8지표 컨센서스 ±135점) |
 | **Stock** | `stock` | 한국 주식 갭앤풀백 전략 봇 (한국투자증권 API) |
+
+### 추가 문서
+
+- [`docs/adr/`](docs/adr/) — 도메인별 / 관심사별 아키텍처 결정 기록 (36개 ADR)
+- [`CLAUDE.md`](CLAUDE.md) — 코드 기반 사실 / 빌드·실행·테스트 명령어
+- [`docs/architecture.md`](docs/architecture.md), [`docs/seo-evolution-playbook.md`](docs/seo-evolution-playbook.md), [`docs/stock-bot.md`](docs/stock-bot.md), [`docs/trading-bot.md`](docs/trading-bot.md) — 도메인 심화 자료
 
 ---
 

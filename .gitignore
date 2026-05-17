@@ -47,3 +47,4 @@ Thumbs.db
 .claude/settings.local.json
 logs/
 *.gz
+docs/git_commit.md

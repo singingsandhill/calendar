@@ -2,14 +2,19 @@
 
 Gap & Pullback trading bot for Korean stocks via Korea Investment Securities API.
 
+> 결정 근거 (UniverseBuilder, TP 비순차화, 동시성 3-레이어, PAPER/BACKTEST 모드 등)
+> 는 [`docs/adr/stock/`](../../../../../../../docs/adr/stock/) 참고.
+
 ## Trading Flow
 
 ```
-08:30  PreMarket    -> Collect prev day data
+08:30  PreMarket    -> UniverseBuilder.build() (pinned ∪ fallback-codes)
 09:20  Screening    -> Floor filter + composite score ranking (top N) + email alert
-09:20  Trading      -> Every 5 seconds: risk check -> state update -> enter if ready
+09:20~ Trading loop -> Every 5s (polling-interval-seconds): risk check -> state update -> enter if ready
 11:20  Final Exit   -> Force close all remaining positions
 ```
+
+휴일 차단: `stock.trading.holidays` (yyyy-MM-dd 리스트). 주말은 cron `MON-FRI` 으로 차단.
 
 ## State Machine
 
@@ -23,15 +28,25 @@ ENTERED       -> All exits completed            -> EXITED
 PULLBACK      -> Price < High x 0.970          -> FILTERED_OUT (too deep)
 ```
 
-## Exit Rules
+## Exit Rules (operating values from `application.yaml`)
 
-| Type | Condition | Action |
-|------|-----------|--------|
-| Stop Loss | Price <= Entry x 0.985 (-1.5%) | Sell 100% |
-| TP1 | Price >= Entry x 1.015 (+1.5%) | Sell 50% (fee-adjusted profit check) |
-| TP2 | Price >= DayHigh | Sell 60% remaining (fee-adjusted profit check) |
-| TP3 | Price >= DayHigh x 1.01 (+1% above day high) | Sell remaining (fee-adjusted profit check) |
-| Trailing | Price <= TrailingHigh x 0.992 (-0.8%) | Sell remaining |
-| Time Exit | Time >= 11:20 | Sell 100% |
+| Type | Condition (yaml) | Java default | Action |
+|------|----|----|----|
+| Stop Loss | `risk.stop-loss-percent: 5.0` (-5%) | -1.5% | Sell 100% |
+| TP1 | `entry.tp1-percent: 5.0` (+5%) | +1.5% | Sell `tp1-ratio: 0.5` (50%) |
+| TP2 | Price >= DayHigh | (same) | Sell `tp2-ratio: 0.6` (60% remaining) |
+| TP3 | `entry.tp3-percent: 10.0` (+10% above day high) | +1.0% | Sell remaining |
+| Trailing | `risk.trailing-stop-percent: 3.8` (-3.8% from high) | -0.8% | Sell remaining |
+| Time Exit | Time >= 11:20 KST | (same) | Sell 100% |
 
-Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (09:10) to 0.1% (15:15), making TP triggers easier to hit later in the session.
+TP1·TP2·TP3 는 *독립 트리거* (선행 의존 제거). 강한 트리거 우선 발동.
+
+Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (09:10) to
+0.1% (15:15), making TP triggers easier to hit later in the session. `Clock` 빈으로 시간
+의존 코드 결정성 테스트 가능.
+
+## 운영 모드 / 동시성 / 관측성
+
+- **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — 모든 주문 진입부 모드 가드.
+- **`Semaphore(8, fair)` (KisRestClient)** + **`StockCodeLocks` (per-symbol ReentrantLock)** + **`ThreadPoolTaskScheduler(pool=4)`** 동시성 3-레이어.
+- **`TradeEvents` 로거** + **KST 자정 회전** + **`BotStatus.{lastTradingTickAt, lastScreeningResult, apiCallsLast5min}`** 메트릭.

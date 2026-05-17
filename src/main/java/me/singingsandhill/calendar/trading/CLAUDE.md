@@ -2,6 +2,9 @@
 
 Crypto algorithmic trading bot for Bithumb. Uses MA/RSI/Stochastic with divergence detection.
 
+> 결정 근거: [`docs/adr/trading/strategy/`](../../../../../../../docs/adr/trading/strategy/) —
+> 8지표 컨센서스(±135), MA 수렴 억제, 적자 매매 방지 가드.
+
 ## Trading Flow
 
 ```

@@ -1,5 +1,8 @@
 # Runner Application Layer
 
+> 결정 근거: [`docs/adr/runner/`](../../../../../../../../docs/adr/runner/) —
+> anonymous 생성 vs 어드민 삭제 권한 분리.
+
 ## Services
 
 - **RunService** - Run CRUD (date, time, location, category)

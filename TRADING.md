@@ -1,344 +1,133 @@
-# 코인 트레이딩 봇
+# 트레이딩 봇 (코인 + 주식) — 통합 진입점
 
-Bithumb 거래소 기반 암호화폐 알고리즘 트레이딩 봇. 기술적 지표와 다이버전스 감지를 통한 자동 매매 시스템.
+이 문서는 두 봇(코인/주식) 의 *현재 코드 사실* 만 짧게 요약한다. 알고리즘 설명이나
+결정 근거는 다른 문서에 있다.
 
-## 1. 아키텍처
+| 알고 싶은 것 | 가야 할 곳 |
+|---|---|
+| 코인 봇 8지표 컨센서스 / 리스크 / 리밸런싱 상세 | [`docs/trading-bot.md`](docs/trading-bot.md), [`src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md`](src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md) |
+| 주식 봇 갭&풀백 / TP 비순차화 / 시간 감소 임계 | [`docs/stock-bot.md`](docs/stock-bot.md), [`src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md`](src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md) |
+| 결정 _왜_ (MA 수렴 억제, 적자 매매 가드, UniverseBuilder, KIS Semaphore 등) | [`docs/adr/trading/`](docs/adr/trading/), [`docs/adr/stock/`](docs/adr/stock/) |
+| 빌드·실행 / 환경변수 / 포트 | [`CLAUDE.md`](CLAUDE.md) |
 
-### 헥사고날 아키텍처
+---
+
+## 코인 봇 (Bithumb)
+
+### 점수 시스템 (`SignalService`)
+
+총 점수 범위 **±135** = 다음 8개 구성요소 합산:
+
+| 구성요소 | 매수 점수 | 매도 점수 |
+|---|---|---|
+| MA Cross 이벤트 또는 State (둘 중 하나만) | +25 (cross) / +10 (state) | -25 / -10 |
+| MA Trend (가격 vs MA60) | +15 | -15 |
+| RSI Divergence | +20 | -20 |
+| RSI Level (<35 / >65) | +15 | -15 |
+| Stoch Divergence | +15 | -15 |
+| Stoch Level (<25 / >75) | +15 | -15 |
+| Volume Divergence | +20 | -20 |
+| RSI Trend | +10 | -10 |
+
+매수 임계: score ≥ +40 AND RSI < 70 AND StochK < 85 AND 동의 지표 ≥ 3.
+매도 임계: score ≤ -40 AND RSI > 30 AND StochK > 15 AND 동의 지표 ≥ 3.
+
+MA 수렴 시 (|MA5−MA20|/MA20 < 0.2%) MA 크로스 점수는 0 으로 억제 ([ADR](docs/adr/trading/strategy/0002-ma-convergence-suppression.md)).
+
+### 리스크 (`application.yaml` 운영값)
+
+| 항목 | 값 | 비고 |
+|---|---|---|
+| stop-loss | -3% | yaml `trading.risk.stop-loss: -0.03` |
+| take-profit | +15% | yaml `trading.risk.take-profit: 0.15` |
+| trailing-activation | +10% 도달 시 활성화 | |
+| trailing-stop | High Water Mark 대비 -3% | |
+| taker fee | 0.25% | |
+| min profit threshold | 0.6% (왕복 수수료 + 마진) | |
+| 적자 매매 가드 | 평가손익 ≥ -2% 일 때만 강신호 매도, 리밸런싱 매도는 평균 P/L ≥ 0%, 트레일링 ≥ 손익분기점 | [ADR](docs/adr/trading/strategy/0003-loss-prevention-guards.md) |
+
+### 리밸런싱
+
+- 상승장 (price > MA60): 코인 70% / KRW 30%
+- 하락장 (price < MA60): 코인 30% / KRW 70%
+- 발동: 목표 대비 10% 이상 편차
+- 쿨다운: 8시간
+
+### REST API
+
+| Endpoint | 동작 |
+|---|---|
+| `GET /api/trading/bot/status` | 상태 조회 |
+| `POST /api/trading/bot/{start,stop,pause,resume}` | 제어 |
+| `POST /api/trading/bot/manual/{buy,sell}` | 수동 주문 |
+| `POST /api/trading/bot/emergency-close` | 긴급 청산 |
+| `GET /api/trading/{candles,ticker,trades,positions}` | 데이터 조회 |
+| `GET /api/trading/profit/{summary,daily}` | 손익 |
+
+대시보드: <http://localhost:8081/trading>.
+
+### 환경변수
 
 ```
-trading/
-├── domain/           # 도메인 모델 (candle, trade, position, signal, account)
-├── application/      # 비즈니스 로직 (서비스, 지표 계산, 신호 생성)
-├── infrastructure/   # 외부 연동 (Bithumb API, JPA, 스케줄러)
-└── presentation/     # 대시보드 컨트롤러, REST API
-```
-
-### 트레이딩 플로우
-
-```
-Bithumb API → 캔들 데이터 → 기술적 지표 → 다이버전스 → 신호 생성 → 매매 실행
-                                                              ↓
-                              리스크 관리 (손절/익절/추적손절) ← 포지션 추적
-                                          ↓
-                                    포트폴리오 리밸런싱
+BITHUMB_ACCESS_KEY=...
+BITHUMB_SECRET_KEY=...
+TRADING_BOT_ENABLED=false   # true 로 봇 자동 시작 활성화
 ```
 
 ---
 
-## 2. 핵심 서비스
+## 주식 봇 (한국투자증권 KIS)
 
-### TradingBotService (메인 오케스트레이터)
+### 전략: Gap & Pullback
 
-봇 생명주기 관리 및 1분 주기 메인 실행 루프.
+평일 09:20 갭 스크리닝 → 9:20~11:20 사이 갭 종목의 *눌림목 후 반등* 진입 → TP1/TP2/TP3
+독립 트리거로 부분 익절.
 
-| 메서드 | 설명 |
-|--------|------|
-| `start()` / `stop()` | 봇 시작/중지 |
-| `pause()` / `resume()` | 일시정지/재개 |
-| `executeTradeLoop()` | 1분 주기 메인 루프 |
-| `executeTradeBySignal()` | 신호 기반 매매 실행 (다중 포지션 지원) |
-| `executeBuy()` / `executeSell()` | 개별 매수/매도 실행 |
-| `calculateDynamicOrderRatio()` | ATR 기반 동적 주문 비율 계산 |
-| `extractExecutedPrice()` | 체결가 가중평균 계산 (부분 체결 대응) |
-| `emergencyClose()` | 긴급 청산 |
+### 스케줄 (KST, 평일만)
 
-**1분 실행 루프**:
-1. 캔들 데이터 업데이트
-2. 리스크 체크 (손절/익절/추적손절)
-3. 리밸런싱 체크
-4. 신호 생성 및 분석
-5. 신호에 따른 매매 실행
+| 시각 | 잡 |
+|---|---|
+| 08:30 | 프리마켓 — `UniverseBuilder.build()` (pinned ∪ fallback-codes) |
+| 09:20 | 스크리닝 — floor filter + 5요인 가중 score → top N + 메일 발송 |
+| 09:20~11:20 | 5초 polling 트레이딩 루프 |
+| 11:20 | 모든 포지션 강제 청산 |
 
-### IndicatorService (기술적 지표)
+휴일: `stock.trading.holidays` (yyyy-MM-dd 리스트).
 
-| 지표 | 메서드 | 기간 |
-|------|--------|------|
-| SMA (단순 이동평균) | `calculateMA()` | 5, 20, 60 |
-| RSI | `calculateRSI()` | 14 |
-| RSI 추세 | `calculateRsiTrend()` | 현재 vs 이전 RSI |
-| Stochastic %K | `calculateStochasticK()` | 14 |
-| Stochastic %D | `calculateStochasticD()` | 14 / 3 |
-| Volume MA | `calculateVolumeMA()` | 20 |
-| ATR | `calculateATR()` | 14 |
-| ATR % | `calculateATRPercent()` | 변동성 지표 |
+### 청산 규칙 (yaml 운영값)
 
-### SignalService (신호 생성)
+| Type | Condition | Action |
+|---|---|---|
+| Stop Loss | -5% (`risk.stop-loss-percent: 5.0`) | Sell 100% |
+| TP1 | +5% (`entry.tp1-percent: 5.0`) | Sell 50% |
+| TP2 | DayHigh 도달 | Sell 60% remaining |
+| TP3 | DayHigh + 10% (`entry.tp3-percent: 10.0`) | Sell remaining |
+| Trailing | TrailingHigh 대비 -3.8% (`risk.trailing-stop-percent: 3.8`) | Sell remaining |
+| Time Exit | 11:20 KST | Sell 100% |
 
-기술적 지표와 다이버전스를 종합하여 매매 신호 생성.
+TP1·TP2·TP3 는 *독립 트리거* — 선행 의존 제거 ([ADR](docs/adr/stock/algorithm/0004-tp-independent-triggers.md)).
+시간 감소 임계: 09:10 의 0.5% → 15:15 의 0.1% 로 선형 감소.
 
-**신호 조건**:
-```
-매수: score >= 40 AND RSI < 70 AND StochK < 85
-매도: score <= -40 AND RSI > 30 AND StochK > 15
-홀드: 그 외
-```
+### 운영 모드 / 동시성
 
-### DivergenceService (다이버전스 감지)
+- `Bot.Mode {LIVE, PAPER, BACKTEST}` ([ADR](docs/adr/stock/modes/0001-paper-backtest-mode-and-clock-bean.md))
+- `KisRestClient` `Semaphore(8, fair)` + `StockCodeLocks` (per-symbol) +
+  `ThreadPoolTaskScheduler(pool=4)` 동시성 3-레이어 ([ADR-0001](docs/adr/stock/infrastructure/0001-kis-rate-limit-semaphore.md), [-0002](docs/adr/stock/infrastructure/0002-per-symbol-reentrant-lock.md), [-0003](docs/adr/stock/infrastructure/0003-thread-pool-task-scheduler.md))
 
-- **상승 다이버전스**: 가격 저점↓ + 지표 저점↑ (바닥 반전 신호)
-- **하락 다이버전스**: 가격 고점↑ + 지표 고점↓ (천장 반전 신호)
-- **감지 대상**: RSI, Stochastic, Volume
-- **분석 기간**: 20 캔들 (최소 3캔들 간격)
+### REST API
 
-### RiskManagementService (리스크 관리)
+| Endpoint | 동작 |
+|---|---|
+| `GET /api/stock/bot/status` | 상태 (`lastTradingTickAt`, `lastScreeningResult`, `apiCallsLast5min` 포함) |
+| `POST /api/stock/bot/{start,stop,pause,resume,emergency-close}` | 제어 |
 
-매분 리스크 규칙 체크 및 자동 청산.
+대시보드: <http://localhost:8081/stock>.
 
-| 규칙 | 레벨 | 동작 |
-|------|------|------|
-| 손절 (Stop-Loss) | -8% | 즉시 청산 |
-| 익절 (Take-Profit) | +15% | 즉시 청산 |
-| 추적 손절 활성화 | +10% 도달 | High Water Mark 추적 시작 |
-| 추적 손절 발동 | HWM 대비 -3% | 청산 |
-
-### RebalanceService (리밸런싱)
-
-시장 상태에 따른 동적 비율 조정.
+### 환경변수
 
 ```
-시장 상태 → 목표 비율:
-- 상승장 (가격 > MA60): 코인 70% / KRW 30%
-- 하락장 (가격 < MA60): 코인 30% / KRW 70%
-- 중립 (기본값): 코인 50% / KRW 50%
-
-발동 조건: 목표 대비 10% 이상 편차
-```
-
----
-
-## 3. 신호 점수 시스템
-
-총 점수 범위: **-120 ~ +120**
-
-### 점수 구성 요소
-
-| 구성 요소 | 매수 점수 | 매도 점수 | 조건 |
-|-----------|-----------|-----------|------|
-| MA 크로스 (골든/데드) | +25 | -25 | 실제 크로스 발생 |
-| MA 추세 | +15 | -15 | 가격 vs MA60 |
-| RSI 다이버전스 | +20 | -20 | 상승/하락 다이버전스 |
-| RSI 레벨 | +15 | -15 | 과매도(<35) / 과매수(>65) |
-| Stochastic 다이버전스 | +15 | -15 | 상승/하락 다이버전스 |
-| Stochastic 레벨 | +15 | -15 | 과매도(<25) / 과매수(>75) |
-| Volume 다이버전스 | +20 | -20 | 상승/하락 다이버전스 |
-| RSI 추세 | +10 | -10 | RSI 상승/하락 추세 |
-
-### 매매 임계값
-
-```yaml
-thresholds:
-  signalBuy: 40       # 매수 신호 점수
-  signalSell: -40     # 매도 신호 점수
-  buyRsiMax: 70       # 매수 시 RSI 상한
-  buyStochKMax: 85    # 매수 시 StochK 상한
-  sellRsiMin: 30      # 매도 시 RSI 하한
-  sellStochKMin: 15   # 매도 시 StochK 하한
-```
-
----
-
-## 4. 리스크 관리 상세
-
-### 손익 계산
-
-**수수료 포함 P&L 계산** (`Position.calculateUnrealizedPnlPctWithFee()`):
-```java
-// 수수료 포함 미실현 손익
-BigDecimal currentValue = currentPrice × entryVolume;
-BigDecimal estimatedExitFee = currentValue × feeRate;
-BigDecimal totalFees = entryFee + estimatedExitFee;
-BigDecimal unrealizedPnl = currentValue - entryAmount - totalFees;
-```
-
-### 최소 수익률 임계값
-
-매도 신호 발생 시에도 **최소 0.6% 수익** 확보 후 매도:
-- 왕복 수수료: 0.5% (매수 0.25% + 매도 0.25%)
-- 마진: 0.1%
-- 합계: 0.6%
-
-### 추적 손절 (Trailing Stop)
-
-```
-1. 진입가 대비 +10% 도달 → 추적 손절 활성화
-2. High Water Mark (최고가) 갱신 시 → 추적 손절가 상향
-3. 추적 손절가 = High Water Mark × (1 - 0.03)
-4. 현재가 ≤ 추적 손절가 → 청산
-```
-
----
-
-## 5. 설정 옵션 (TradingProperties)
-
-### 봇 설정
-
-```yaml
-trading:
-  bot:
-    enabled: false          # 봇 활성화
-    market: "KRW-ADA"       # 거래 쌍
-    maxPositions: 2         # 최대 동시 포지션 수
-    orderRatio: 0.25        # 기본 주문 비율 (25%)
-    orderRatioMin: 0.15     # 최소 비율 (변동성 높음)
-    orderRatioMax: 0.35     # 최대 비율 (변동성 낮음)
-```
-
-### 동적 주문 비율 (ATR 기반)
-
-```
-ATR% ≥ 3%  → 15% (변동성 높음, 보수적)
-ATR% ≤ 1%  → 35% (변동성 낮음, 적극적)
-1% < ATR% < 3% → 선형 보간
-```
-
-### 지표 설정
-
-```yaml
-  indicators:
-    maShort: 5              # 단기 MA
-    maMid: 20               # 중기 MA
-    maLong: 60              # 장기 MA
-    rsiPeriod: 14           # RSI 기간
-    stochK: 14              # Stochastic K
-    stochD: 3               # Stochastic D
-    volumeMa: 20            # Volume MA
-    atrPeriod: 14           # ATR 기간
-```
-
-### 리스크 설정
-
-```yaml
-  risk:
-    stopLoss: -0.08              # 손절 -8%
-    takeProfit: 0.15             # 익절 +15%
-    trailingStop: 0.03           # 추적 손절 -3%
-    trailingActivation: 0.10     # 추적 활성화 +10%
-    takerFeeRate: 0.0025         # 수수료율 0.25%
-    minProfitThreshold: 0.006    # 최소 수익률 0.6%
-```
-
-### 리밸런싱 설정
-
-```yaml
-  rebalancing:
-    enabled: true
-    defaultRatio: 0.50      # 기본 비율
-    bullRatio: 0.70         # 상승장 코인 비율
-    bearRatio: 0.30         # 하락장 코인 비율
-    deviationTrigger: 0.10  # 편차 발동 조건
-```
-
----
-
-## 6. REST API
-
-### 봇 제어 API
-
-| 엔드포인트 | 메서드 | 설명 |
-|------------|--------|------|
-| `/api/trading/bot/status` | GET | 봇 상태 조회 |
-| `/api/trading/bot/start` | POST | 봇 시작 |
-| `/api/trading/bot/stop` | POST | 봇 중지 |
-| `/api/trading/bot/pause` | POST | 일시정지 |
-| `/api/trading/bot/resume` | POST | 재개 |
-| `/api/trading/bot/manual/buy` | POST | 수동 매수 (amount=KRW) |
-| `/api/trading/bot/manual/sell` | POST | 수동 매도 (volume=코인) |
-| `/api/trading/bot/emergency-close` | POST | 긴급 청산 |
-
-### 데이터 조회 API
-
-| 엔드포인트 | 메서드 | 설명 |
-|------------|--------|------|
-| `/api/trading/candles` | GET | 캔들 데이터 (count=200) |
-| `/api/trading/ticker` | GET | 실시간 시세 + 지표 |
-| `/api/trading/trades` | GET | 거래 내역 (페이지네이션) |
-| `/api/trading/positions` | GET | 포지션 내역 (페이지네이션) |
-| `/api/trading/profit/summary` | GET | 손익 요약 |
-| `/api/trading/profit/daily` | GET | 일별 손익 (days=30) |
-
----
-
-## 7. 도메인 모델
-
-### 엔티티
-
-| 서브도메인 | 엔티티 | 설명 |
-|------------|--------|------|
-| candle/ | Candle | OHLCV 캔들 데이터 |
-| trade/ | Trade | 개별 매수/매도 주문 |
-| position/ | Position | 진입/청산 포지션 (P&L 추적) |
-| signal/ | Signal | 기술적 분석 신호 |
-| account/ | AccountSnapshot, DailySummary | 계좌 스냅샷, 일별 요약 |
-
-### Enum
-
-```java
-TradeType: BUY, SELL
-TradeStatus: WAIT, DONE, CANCEL, FAILED
-PositionStatus: OPEN, CLOSED
-CloseReason: STOP_LOSS, TAKE_PROFIT, TRAILING_STOP, SIGNAL, MANUAL, REBALANCE
-SignalType: BUY, SELL, HOLD
-DivergenceType: BULLISH, BEARISH, NONE
-```
-
----
-
-## 8. 최근 변경 사항
-
-### 수수료 포함 P&L 계산
-- **변경 전**: `calculateUnrealizedPnlPct()` - 수수료 미포함
-- **변경 후**: `calculateUnrealizedPnlPctWithFee()` - 수수료 포함
-- **영향**: 매도 판단 시 실제 수익률 반영 → 손실 매도 방지
-
-### 체결가 가중평균 계산
-- **변경 전**: 첫 번째 체결가만 사용
-- **변경 후**: trades 리스트 전체 가중평균 계산
-- **영향**: 부분 체결 시 정확한 평균 진입가 반영
-
-### 다중 포지션 지원
-- 최대 2개 포지션 동시 보유 가능
-- 포지션별 독립적 리스크 관리
-
-### 동적 주문 비율
-- ATR 기반 변동성 측정
-- 변동성 높음: 15% (보수적)
-- 변동성 낮음: 35% (적극적)
-
----
-
-## 9. 파일 구조
-
-```
-trading/
-├── CLAUDE.md                    # 모듈 개요
-├── domain/
-│   ├── CLAUDE.md               # 도메인 모델 문서
-│   ├── candle/                 # Candle 엔티티
-│   ├── trade/                  # Trade 엔티티
-│   ├── position/               # Position 엔티티
-│   ├── signal/                 # Signal 엔티티
-│   └── account/                # AccountSnapshot, DailySummary
-├── application/
-│   ├── CLAUDE.md               # 서비스 문서
-│   ├── service/
-│   │   ├── TradingBotService.java
-│   │   ├── IndicatorService.java
-│   │   ├── SignalService.java
-│   │   ├── DivergenceService.java
-│   │   ├── RiskManagementService.java
-│   │   ├── RebalanceService.java
-│   │   ├── CandleService.java
-│   │   └── ProfitService.java
-│   └── dto/
-├── infrastructure/
-│   ├── CLAUDE.md               # 인프라 문서
-│   ├── api/                    # Bithumb API 클라이언트
-│   ├── persistence/            # JPA 엔티티, 레포지토리
-│   ├── config/                 # 설정 클래스
-│   └── scheduler/              # 스케줄러
-└── presentation/
-    ├── CLAUDE.md               # API 문서
-    ├── api/                    # REST 컨트롤러
-    └── controller/             # 웹 컨트롤러
+KIS_APP_KEY=...
+KIS_APP_SECRET=...
+KIS_ACCOUNT_NUMBER=...
+STOCK_BOT_ENABLED=false
 ```

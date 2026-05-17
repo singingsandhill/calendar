@@ -10,6 +10,23 @@ Multi-domain Spring Boot 4.0.0 / Java 21 web application with five modules:
 | Trading | `trading` | Crypto trading bot - Bithumb, technical analysis, automated trading |
 | Stock | `stock` | Korean stock Gap & Pullback bot - Korea Investment Securities API |
 
+도메인별 / 관심사별 아키텍처 결정 기록은 [`docs/adr/README.md`](docs/adr/README.md) 참고.
+
+## CLAUDE.md / ADR 동기화 규칙 (중요)
+
+이 파일과 모듈별 `CLAUDE.md` 들은 *현재 코드의 사실* 만 담는다. 결정의 *왜* 는 ADR 에
+있다. 두 종류의 변경에는 다음 규칙을 강제한다.
+
+| 변경 유형 | CLAUDE.md | ADR |
+|---|---|---|
+| 단순 사실 변경 (포트/경로/매직넘버 수치) | 수정 필수 | 불필요 |
+| 결정 변경 (정책/계수 임계/구조 전환) | 수정 필수 | **새 ADR 작성 또는 기존 ADR 의 Status 를 Superseded 로 갱신** |
+| 새 모듈/도메인 추가 | 표·진입점 추가 | 새 폴더 + ADR 0001 작성 |
+| 결정 무효화 (기능 제거) | 해당 항목 삭제 | 기존 ADR 을 `Deprecated` 로 표시 (삭제 X) |
+
+ADR 누락 사고 방지: PR 에서 `CLAUDE.md` 가 수정됐는데 `docs/adr/` 가 그대로면, 위 표의
+"결정 변경" 인지 리뷰어가 확인.
+
 ## Build Commands
 
 ```bash
@@ -73,8 +90,9 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 
 - 로케일 해석 순서: cookie `lang` → Accept-Language 헤더 → Korean fallback
 - 전환: `?lang=en` 또는 `?lang=ko` URL에 추가 → 이후 쿠키에 저장
-- 메시지 파일: `src/main/resources/messages.properties` (한국어, ~19KB), `messages_en.properties` (영어, ~11KB)
+- 메시지 파일: `src/main/resources/messages.properties` (한국어, 기본), `messages_en.properties` (영어)
 - `MessageSource`: `ReloadableResourceBundleMessageSource`, UTF-8, 시스템 로케일 폴백 없음
+- `MessageFormat` 의 number 인자는 `{n,number,#}` 패턴으로 천단위 그룹화 차단 (예: year=2026 이 "2,026" 출력 방지). 회귀 테스트 `SeoServiceI18nTest.scheduleSeo_yearNotGrouped` 가드.
 
 ## Exception Handling (Two-Layer)
 
@@ -136,7 +154,7 @@ CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트는 비활
 |-----------|-------------------|
 | `StockTradingScheduler` | 08:30 프리마켓; 09:20 갭 스크리닝; 09:20~11:20 5초마다 트레이딩 루프; 11:20 최종 청산 |
 
-`stock.bot.enabled=false`이면 모든 잡 스킵. 공휴일 제외 미구현.
+`stock.bot.enabled=false`이면 모든 잡 스킵. 공휴일은 `stock.trading.holidays` (yyyy-MM-dd 리스트) 에서 관리. 자동화 미구현 — 매년 갱신.
 
 ## External Integrations
 
@@ -147,6 +165,23 @@ CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트는 비활
 **Spring Mail (Gmail SMTP)** — Stock 모듈:
 - `StockMailService` — 09:20 스크리닝 후 HTML 결과 메일 발송
 - `stock.mail.enabled`, `stock.mail.to` 프로퍼티로 제어
+
+## Stock Bot — 운영 모드와 동시성
+
+- **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — `KoreaInvestmentApiClient` 의 모든 주문
+  진입부에 모드 가드. PAPER/BACKTEST 는 `simulateOrder()` 인메모리 체결.
+- **`Clock` 빈 (Asia/Seoul)** — `LocalTime.now(clock)` 사용 → `Clock.fixed` 로 시간 의존
+  코드 결정성 테스트.
+- **동시성 3-레이어:**
+  1. `KisRestClient` 의 `Semaphore(8, fair)` — KIS HTTP 동시 호출 제한.
+  2. `StockCodeLocks` — 종목별 `ReentrantLock` 으로 매수/매도 race 차단.
+  3. `StockSchedulerConfig` 의 `ThreadPoolTaskScheduler(pool=4)` — 스크리닝과 트레이딩
+     루프 병렬.
+- **관측성:** `TradeEvents` (`stock.trade` 카테고리) 로 거래 이벤트 한 줄 로깅,
+  `logback-spring.xml` 의 KST 자정 회전 + `stock-events.log` / `stock-sql.log` 분리,
+  `BotStatus` 에 `lastTradingTickAt` / `lastScreeningResult` / `apiCallsLast5min` 노출.
+
+상세 결정 근거: [ADR stock/](docs/adr/stock/).
 
 ## Template Structure
 
