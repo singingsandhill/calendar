@@ -19,7 +19,7 @@ public class SecurityConfig {
                 // 기존 앱 경로 - 모두 허용
                 .requestMatchers("/", "/start", "/index.html", "/privacy-policy", "/about").permitAll()
                 .requestMatchers("/api/**").permitAll()
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/image/**", "/favicon.*", "/manifest.json", "/robots.txt", "/sitemap.xml", "/ads.txt", "/og-image.svg", "/og-image.png").permitAll()
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/image/**", "/favicon.*", "/manifest.json", "/robots.txt", "/sitemap.xml", "/ads.txt", "/og-image.svg", "/og-image.png", "/1dfcb4404e1d4f6fae3423fd163f97b8.txt").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
 
                 // 러너 공개 경로

@@ -5,6 +5,16 @@ app:
 seo:
   naver-site-verification: ${NAVER_SITE_VERIFICATION:}
 
+# Google AdSense
+# - client: 비어 있으면 adsbygoogle.js 스크립트 자체를 로드하지 않음.
+# - slot-*: 비어 있으면 해당 ad-slot fragment 가 렌더되지 않음 (placeholder DOM 미노출).
+# 슬롯 ID 는 AdSense 심사 통과 후 콘솔에서 발급. 통과 전엔 환경변수 미설정으로 둔다. # ${ADSENSE_CLIENT:ca-pub-7334667748813914}
+adsense:
+  client:
+  slot-leaderboard: ${ADSENSE_SLOT_LEADERBOARD:}
+  slot-infeed: ${ADSENSE_SLOT_INFEED:}
+  slot-rectangle: ${ADSENSE_SLOT_RECTANGLE:}
+
 # IndexNow (Bing/Yandex/Naver 호환) 능동 색인 통보
 indexnow:
   enabled: ${INDEXNOW_ENABLED:false}
