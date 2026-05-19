@@ -168,6 +168,12 @@ export async function saveSelections() {
         if (participant) {
             participant.selections = Array.from(selection.selectedDays);
         }
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: 'selections_saved',
+            schedule_id: schedule.scheduleId,
+            days_count: selection.selectedDays.size
+        });
         renderCalendar();
         updateCalendarDisplay();
         window.toast.success(messages.saveSuccess);

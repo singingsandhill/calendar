@@ -53,6 +53,12 @@
 
             if (response.ok) {
                 const data = await response.json();
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({
+                    event: 'attendance_marked',
+                    run_id: runId,
+                    distance: data.distance
+                });
                 showMessage('출석이 등록되었습니다!', 'success');
                 addAttendanceToList(data.participantName, data.distance);
                 document.getElementById('attendanceForm').reset();

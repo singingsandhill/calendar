@@ -73,5 +73,15 @@
     </main>
 
     <footer th:replace="~{runners/fragments/footer :: footer}"></footer>
+
+    <script th:if="${run == null}">
+        document.querySelector('form').addEventListener('submit', function () {
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                event: 'run_created',
+                category: document.getElementById('category').value
+            });
+        });
+    </script>
 </body>
 </html>

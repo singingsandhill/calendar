@@ -80,6 +80,8 @@ export async function voteLocation(button) {
     const location = locations.find(l => l.id === locationId);
     if (!location) return;
 
+    const wasVoted = location.voters.some(v => v.toLowerCase() === voterName.toLowerCase());
+
     try {
         await toggleVoteFor(
             location,
@@ -87,6 +89,13 @@ export async function voteLocation(button) {
             window.api.voteLocation.bind(window.api),
             window.api.unvoteLocation.bind(window.api)
         );
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: 'vote_cast',
+            target: 'location',
+            target_id: locationId,
+            action: wasVoted ? 'unvote' : 'vote'
+        });
         updateItemUI(button.closest('.location-item'), location);
     } catch (error) {
         window.toast.error(error.message);
@@ -150,6 +159,8 @@ export async function voteMenu(button) {
     const menu = menus.find(m => m.id === menuId);
     if (!menu) return;
 
+    const wasVoted = menu.voters.some(v => v.toLowerCase() === voterName.toLowerCase());
+
     try {
         await toggleVoteFor(
             menu,
@@ -157,6 +168,13 @@ export async function voteMenu(button) {
             window.api.voteMenu.bind(window.api),
             window.api.unvoteMenu.bind(window.api)
         );
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: 'vote_cast',
+            target: 'menu',
+            target_id: menuId,
+            action: wasVoted ? 'unvote' : 'vote'
+        });
         updateItemUI(button.closest('.location-item'), menu);
     } catch (error) {
         window.toast.error(error.message);
