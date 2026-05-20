@@ -61,7 +61,7 @@ public class RunnerController {
                 .title("97 Runners - 함께 달리는 즐거움")
                 .description("97 Runners 러닝 크루 - 출석 체크, 거리 기록, 랭킹 확인. 함께 달리며 건강한 라이프스타일을 만들어갑니다.")
                 .keywords(KEYWORDS)
-                .robots("index, follow")
+                .robots("noindex, follow")
                 .canonical(baseUrl + "/runners")
                 .ogImage(ogImage)
                 .jsonLd("""
@@ -105,7 +105,7 @@ public class RunnerController {
                 .title("런 목록 - 97 Runners")
                 .description("97 Runners 러닝 크루의 정규런, 번개런 일정을 확인하고 출석 체크하세요.")
                 .keywords(KEYWORDS)
-                .robots("index, follow")
+                .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/runs")
                 .ogImage(ogImage)
                 .build());
@@ -126,6 +126,7 @@ public class RunnerController {
                 .title(runResponse.formattedDate() + " " + runResponse.categoryDisplayName() + " - 97 Runners")
                 .description("97 Runners " + runResponse.formattedDate() + " " + runResponse.categoryDisplayName() + " - " + runResponse.location() + "에서 함께 달려요!")
                 .keywords(KEYWORDS)
+                .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/runs/" + id)
                 .ogImage(ogImage)
                 .build());
@@ -145,7 +146,7 @@ public class RunnerController {
                 .title("출석 현황 - 97 Runners")
                 .description("97 Runners 러닝 크루 멤버들의 출석 현황과 누적 거리를 확인하세요.")
                 .keywords(KEYWORDS)
-                .robots("index, follow")
+                .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/members")
                 .ogImage(ogImage)
                 .build());

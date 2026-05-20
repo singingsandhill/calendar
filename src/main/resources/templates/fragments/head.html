@@ -86,9 +86,9 @@
     })(window,document,'script','dataLayer','GTM-PFPKQT7W');</script>
     <!-- End Google Tag Manager -->
 
-    <!-- Google AdSense (only on content pages) -->
-    <script th:if="${seo.adsEnabled()}" async
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7334667748813914"
+    <!-- Google AdSense (only on content pages; gated by env-driven publisher ID) -->
+    <script th:if="${seo.adsEnabled() and adsense.enabled}" async
+            th:src="|https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsense.client}|"
             crossorigin="anonymous"></script>
 
     <!-- CSS (render-blocking, loaded first for no FOUC) -->

@@ -7,14 +7,10 @@ Disallow: /runners/runs/new
 Disallow: /runners/runs/create
 
 # Allow public pages
+# /runners/* 는 default-allow 에 맡기고 색인 차단은 noindex 메타로 처리
+# (이전 Allow: /runners* 는 PP-Full/AS-Content 의 "사이트 테마와 무관한 페이지" 시그널 회피를 위해 제거).
 Allow: /$
 Allow: /insights/trends
-Allow: /runners
-Allow: /runners/runs
-Allow: /runners/runs/
-Allow: /runners/members
-Allow: /runners/members/
-Allow: /runners/announce
 Allow: /guide
 Allow: /privacy
 Allow: /terms
