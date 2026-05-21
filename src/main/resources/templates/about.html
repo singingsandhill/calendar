@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<main class="container policy-page">
+    <section class="policy-hero animate-on-scroll">
+        <h1 th:text="#{about.hero.title}">About DateDate</h1>
+        <p class="policy-updated" th:text="#{about.updated}">Last updated: May 10, 2026</p>
+        <p class="policy-subtitle" th:text="#{about.hero.subtitle}">A no-signup tool for groups to agree on a date, place, and meal</p>
+    </section>
+
+    <section class="policy-content animate-on-scroll">
+        <article class="policy-section">
+            <h2 th:text="#{about.section.intro.title}">What DateDate is</h2>
+            <p th:text="#{about.section.intro.body}">Body</p>
+        </article>
+
+        <article class="policy-section">
+            <h2 th:text="#{about.section.principles.title}">How we run the service</h2>
+            <p th:text="#{about.section.principles.body}">Body</p>
+            <ul>
+                <li th:utext="#{about.section.principles.list1}">List 1</li>
+                <li th:utext="#{about.section.principles.list2}">List 2</li>
+                <li th:utext="#{about.section.principles.list3}">List 3</li>
+                <li th:utext="#{about.section.principles.list4}">List 4</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2 th:text="#{about.section.audience.title}">Who finds it useful</h2>
+            <p th:text="#{about.section.audience.body}">Body</p>
+            <ul>
+                <li th:utext="#{about.section.audience.case1}">Case 1</li>
+                <li th:utext="#{about.section.audience.case2}">Case 2</li>
+                <li th:utext="#{about.section.audience.case3}">Case 3</li>
+                <li th:utext="#{about.section.audience.case4}">Case 4</li>
+            </ul>
+        </article>
+
+        <article class="policy-section">
+            <h2 th:text="#{about.section.contact.title}">Contact and feedback</h2>
+            <p th:text="#{about.section.contact.body}">Body</p>
+            <p>
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
+                   target="_blank" rel="noopener noreferrer"
+                   th:text="#{about.section.contact.formLabel}">Send feedback</a>
+            </p>
+            <p>
+                <span th:text="#{about.section.contact.note}">Note</span>
+                <a th:href="${@localeLinks.href('/privacy')}" th:text="#{about.section.contact.privacyLink}">Privacy policy</a>
+                ·
+                <a th:href="${@localeLinks.href('/terms')}" th:text="#{about.section.contact.termsLink}">Terms of service</a>
+            </p>
+        </article>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+</body>
+</html>
