@@ -17,8 +17,9 @@ class SitemapServiceHreflangTest {
 
     @BeforeEach
     void setUp() {
-        // 선택적 의존성은 모두 null → runner/insights 데이터는 자동으로 빌드 시각으로 대체
-        service = new SitemapService(BASE_URL, null, null, null, null);
+        // 선택적 의존성은 모두 null → insights 데이터는 자동으로 빌드 시각으로 대체.
+        // RunRepository 는 sitemap 에서 Runner 가 완전 제거된 이후 더 이상 의존성으로 받지 않는다.
+        service = new SitemapService(BASE_URL, null, null, null);
     }
 
     @Test
@@ -57,25 +58,40 @@ class SitemapServiceHreflangTest {
     }
 
     @Test
-    @DisplayName("Runner 경로는 한국어 전용이며 xhtml:link 를 포함하지 않는다")
-    void runnerPathsAreKoreanOnly() {
+    @DisplayName("Runner 경로는 sitemap 에서 완전히 제외된다 (AdSense 사이트 테마 정합성)")
+    void runnerPathsAreNotInSitemap() {
         String xml = service.generateSitemapXml();
 
-        // Runner URLs 는 한 번씩만 등장하고 ?lang=en 변종이 없어야 한다
-        assertThat(xml).contains("<loc>" + BASE_URL + "/runners</loc>");
+        // Runner URLs 는 어떤 형태로도 sitemap 에 나타나지 않아야 한다.
+        // (컨트롤러는 noindex 메타로 색인을 차단하므로 sitemap 에서도 제외해 신호 일관성을 유지)
+        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/runners</loc>");
         assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/runners?lang=en</loc>");
-        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/runners/runs?lang=en</loc>");
-        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/runners/members?lang=en</loc>");
+        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/runners/runs</loc>");
+        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/runners/members</loc>");
+        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/runners/announce</loc>");
     }
 
     @Test
-    @DisplayName("공개 페이지마다 양방향이면 xhtml:link 가 생긴다 — 공개 페이지 11개 × 2 url × 3 alt = 66개 이상")
+    @DisplayName("/about 페이지가 sitemap 에 양방향으로 포함된다")
+    void aboutPageIsBilingualInSitemap() {
+        String xml = service.generateSitemapXml();
+
+        assertThat(xml).contains("<loc>" + BASE_URL + "/about</loc>");
+        assertThat(xml).contains("<loc>" + BASE_URL + "/about?lang=en</loc>");
+        assertThat(xml).contains("<xhtml:link rel=\"alternate\" hreflang=\"ko\" href=\"" + BASE_URL + "/about\"/>");
+        assertThat(xml).contains("<xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"" + BASE_URL + "/about?lang=en\"/>");
+    }
+
+    @Test
+    @DisplayName("공개 페이지마다 양방향이면 xhtml:link 가 생긴다 — 공개 페이지 12개 × 2 url × 3 alt = 72개")
     void hreflangEntryCountReasonable() {
         String xml = service.generateSitemapXml();
         int count = xml.split("<xhtml:link", -1).length - 1;
-        // 공개 양방향 엔트리 11개(home, guide, privacy, terms, insights/trends, 4 use-cases, faq, date-diff)
-        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 11 * 2 * 3 = 66
-        assertThat(count).isEqualTo(11 * 2 * 3);
+        // 공개 양방향 엔트리 12개:
+        //   home, guide, about, privacy, terms, insights/trends, faq, date-diff,
+        //   use-cases x 4 (friend, team, travel, study)
+        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 12 * 2 * 3 = 72
+        assertThat(count).isEqualTo(12 * 2 * 3);
     }
 
     @Test
