@@ -36,6 +36,9 @@ public class SecurityConfig {
                 // use-cases 공개 경로
                 .requestMatchers("/use-cases", "/use-cases/**").permitAll()
 
+                // 도구 공개 경로 (날짜 계산기 등)
+                .requestMatchers("/tools", "/tools/**").permitAll()
+
                 // 러너 관리자 경로 - ADMIN 역할 필요
                 .requestMatchers("/runners/admin", "/runners/admin/**").hasRole("ADMIN")
 

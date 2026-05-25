@@ -36,7 +36,7 @@ Abstract base: subclasses implement `getStatus()` (HttpStatus) and `getCode()` (
 | Path Pattern | Access |
 |--------------|--------|
 | `/runners/admin/**` | ROLE_ADMIN (단, `/runners/admin/login` 은 permitAll) |
-| `/`, `/start`, `/api/**`, `/h2-console/**`, static assets, `/runners/**`, `/insights/**`, `/use-cases/**`, `/stock/**`, `/api/stock/**`, `/*`, `/*/*/*` | permitAll |
+| `/`, `/start`, `/api/**`, `/h2-console/**`, static assets, `/runners/**`, `/insights/**`, `/use-cases/**`, `/tools`, `/tools/**`, `/stock/**`, `/api/stock/**`, `/*`, `/*/*/*` | permitAll |
 | 그 외 | authenticated |
 
 CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트 비활성. 폼 로그인 페이지:

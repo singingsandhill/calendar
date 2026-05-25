@@ -125,7 +125,7 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 |--------------|--------|
 | `/runners/admin/**` | `ROLE_ADMIN` |
 | `/runners/admin/login` | permitAll |
-| `/runners/**`, `/insights/**`, `/stock/**`, `/api/**`, `/h2-console/**`, static assets, `/**` | permitAll |
+| `/runners/**`, `/insights/**`, `/tools/**`, `/stock/**`, `/api/**`, `/h2-console/**`, static assets, `/**` | permitAll |
 
 CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트는 비활성화.  
 로그인 URL: `/runners/admin/login` → 로그아웃 후 `/runners` 리다이렉트.
