@@ -1,4 +1,4 @@
-import { messages } from './state.js';
+import { messages, schedule } from './state.js';
 
 export function escapeHtml(text) {
     const div = document.createElement('div');
@@ -10,7 +10,10 @@ export function copyLink() {
     const url = window.location.href;
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(url)
-            .then(() => alert(messages.linkCopied))
+            .then(() => {
+                pushLinkShared('clipboard');
+                alert(messages.linkCopied);
+            })
             .catch(() => fallbackCopy(url));
     } else {
         fallbackCopy(url);
@@ -26,9 +29,19 @@ function fallbackCopy(text) {
     textarea.select();
     try {
         document.execCommand('copy');
+        pushLinkShared('execCommand');
         alert(messages.linkCopied);
     } catch (err) {
         prompt(messages.linkCopyPrompt, text);
     }
     document.body.removeChild(textarea);
+}
+
+function pushLinkShared(method) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+        event: 'link_shared',
+        schedule_id: schedule.scheduleId,
+        share_method: method
+    });
 }

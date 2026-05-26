@@ -45,6 +45,12 @@ export async function addLocation() {
         locations.push(newLocation);
         addLocationToList(newLocation);
         input.value = '';
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: 'location_added',
+            schedule_id: schedule.scheduleId,
+            location_count_after: document.querySelectorAll('#locationList .location-item').length
+        });
     } catch (error) {
         window.toast.error(error.message);
     }
@@ -120,6 +126,12 @@ export async function addMenu() {
         addMenuToList(newMenu);
         nameInput.value = '';
         urlInput.value = '';
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: 'menu_added',
+            schedule_id: schedule.scheduleId,
+            menu_count_after: document.querySelectorAll('#menuList .location-item').length
+        });
     } catch (error) {
         window.toast.error(error.message);
     }

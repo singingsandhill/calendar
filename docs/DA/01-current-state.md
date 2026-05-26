@@ -126,6 +126,11 @@
 | `vote_cast` | `static/js/schedule/voting.js` (×2) | toggle 성공 후 | `target('location'\|'menu'), target_id, action('vote'\|'unvote')` |
 | `run_created` | `templates/runners/admin/run-form.html` | form submit (생성 시만, `th:if="${run == null}"`) | `category` |
 | `attendance_marked` | `static/js/run-detail.js` | `response.ok` 분기 | `run_id, distance` |
+| `link_shared` | `static/js/schedule/utils.js` | clipboard / execCommand 성공 후 | `schedule_id, share_method` |
+| `location_added` | `static/js/schedule/voting.js` | `addLocation()` 성공 후 | `schedule_id, location_count_after` |
+| `menu_added` | `static/js/schedule/voting.js` | `addMenu()` 성공 후 | `schedule_id, menu_count_after` |
+| `schedule_viewed` | `templates/schedule/view.html` (인라인) | DOMContentLoaded | `schedule_id, is_owner, participant_count` |
+| `owner_dashboard_viewed` | `templates/owner/dashboard.html` (인라인) | DOMContentLoaded (비동기 해시 후) | `owner_id_hash, schedule_count` |
 
 ## 10. 도메인 DB
 
@@ -148,3 +153,4 @@
 | 2026-05 | BigQuery export 활성화 |
 | 2026-05 | Looker Studio 파이프라인 구성 |
 | 2026-05 | troubleshooting/lighthouse-performance-audit.md B 항목 정정 (`G-ERBDZ6V6VN` 오진 → 실제는 GTM Tag ID, destination = `G-9QTMK4CDDF`) |
+| 2026-05-24 | datedate dataLayer 이벤트 5종 추가 (`link_shared`, `location_added`, `menu_added`, `schedule_viewed`, `owner_dashboard_viewed`) — GTM 매핑 (P0-1) 함께 갱신 필요 |

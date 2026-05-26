@@ -14,17 +14,18 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 **작업** (`tagmanager.google.com → GTM-PFPKQT7W → 작업공간`):
 
 1. **사용자 정의 변수** (Data Layer Variable 유형):
-   `DLV - owner_id`, `DLV - schedule_id`, `DLV - target`, `DLV - target_id`, `DLV - action`, `DLV - days_count`, `DLV - participant_count_after`, `DLV - category`, `DLV - run_id`, `DLV - distance`, `DLV - year`, `DLV - month`
+   `DLV - owner_id`, `DLV - schedule_id`, `DLV - target`, `DLV - target_id`, `DLV - action`, `DLV - days_count`, `DLV - participant_count_after`, `DLV - category`, `DLV - run_id`, `DLV - distance`, `DLV - year`, `DLV - month`,
+   `DLV - share_method`, `DLV - location_count_after`, `DLV - menu_count_after`, `DLV - is_owner`, `DLV - participant_count`, `DLV - owner_id_hash`, `DLV - schedule_count`
 
 2. **트리거 1개** (Custom Event, 정규식):
    - 이름: `Custom - Business Events`
-   - 이벤트 이름: `^(schedule_created|participant_added|selections_saved|vote_cast|run_created|attendance_marked)$`
+   - 이벤트 이름: `^(schedule_created|participant_added|selections_saved|vote_cast|run_created|attendance_marked|link_shared|location_added|menu_added|schedule_viewed|owner_dashboard_viewed)$`
    - "이벤트 이름 일치 정규식 사용" 체크
 
 3. **태그 1개** (GA4 Event):
    - 구성 태그: 기존 Google Tag "datedate" (`G-9QTMK4CDDF`)
    - 이벤트 이름: `{{Event}}` (built-in, dataLayer 의 event 그대로 전달)
-   - 이벤트 매개변수: 위 12개 DLV 매핑 (없는 키는 빈 문자열로 안전)
+   - 이벤트 매개변수: 위 19개 DLV 매핑 (없는 키는 빈 문자열로 안전)
    - 트리거: `Custom - Business Events`
 
 4. **DebugView 검증** → 사이트에서 실제 행동 → 이벤트 흐름 확인 → **게시**
@@ -52,6 +53,15 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 | Vote Target ID | `target_id` | event | P2 |
 | Schedule Year | `year` | event | P2 |
 | Schedule Month | `month` | event | P2 |
+| Share Method | `share_method` | event | P1 |
+| Location Count After | `location_count_after` | event | P1 |
+| Menu Count After | `menu_count_after` | event | P1 |
+| Is Owner | `is_owner` | event | P0 |
+| Participant Count | `participant_count` | event | P1 |
+| Owner ID Hash | `owner_id_hash` | event | P0 |
+| Schedule Count | `schedule_count` | event | P1 |
+
+> 총 측정기준 수: 12 (기존) + 7 (본 작업) = 19. 무료 한도 50 내.
 
 **제한**: 무료 GA4 속성은 이벤트 범위 맞춤 측정기준 50개 한도. 본 프로젝트엔 충분.
 

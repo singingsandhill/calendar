@@ -28,6 +28,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+<script defer th:src="@{/js/analytics.js}"></script>
 
 <script th:inline="javascript">
     (function () {
@@ -49,6 +50,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     body: JSON.stringify({ year: year, month: month, weeks: null })
                 });
                 if (!res.ok) throw new Error('create failed: ' + res.status);
+                window.DDAnalytics?.markOwnedSchedule(ownerId);
                 window.dataLayer = window.dataLayer || [];
                 window.dataLayer.push({ event: 'schedule_created', owner_id: ownerId, year: year, month: month });
                 const target = '/' + encodeURIComponent(ownerId) + '/' + year + '/' + month;

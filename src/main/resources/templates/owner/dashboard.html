@@ -74,7 +74,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script th:inline="javascript">
     window.OWNER_DATA = { ownerId: [[${ownerId}]] };
 </script>
+<script defer th:src="@{/js/analytics.js}"></script>
 <script defer th:src="@{/js/create-schedule-modal.js}"></script>
 <script defer th:src="@{/js/owner-dashboard.js}"></script>
+<script th:inline="javascript">
+    (function () {
+        var ownerId = /*[[${ownerId}]]*/ '';
+        var scheduleCount = /*[[${schedules.size()}]]*/ 0;
+        var fire = function () {
+            if (!window.DDAnalytics || !window.DDAnalytics.sha256Hex) return;
+            window.DDAnalytics.sha256Hex(ownerId).then(function (hash) {
+                if (!hash) return; // PII 누출 방지: 해시 실패 시 push 안 함
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({
+                    event: 'owner_dashboard_viewed',
+                    owner_id_hash: hash,
+                    schedule_count: scheduleCount
+                });
+            });
+        };
+        if (document.readyState === 'loading') {
+            window.addEventListener('load', fire);
+        } else {
+            fire();
+        }
+    })();
+</script>
 </body>
 </html>

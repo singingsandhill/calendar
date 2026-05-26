@@ -198,6 +198,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
 <script defer th:src="@{/js/create-schedule-modal.js}"></script>
+<script defer th:src="@{/js/analytics.js}"></script>
 
 <!-- Schedule data injection for external script -->
 <script th:inline="javascript">
@@ -252,6 +253,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             votesTemplate: [[#{schedule.votes('{0}')}]]
         }
     };
+</script>
+<script th:inline="javascript">
+    (function () {
+        var ownerId = /*[[${ownerId}]]*/ '';
+        var scheduleId = /*[[${schedule.id()}]]*/ 0;
+        var participantCount = /*[[${schedule.participants().size()}]]*/ 0;
+        var fire = function () {
+            var isOwner = !!(window.DDAnalytics && window.DDAnalytics.isOwnedSchedule(ownerId));
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                event: 'schedule_viewed',
+                schedule_id: scheduleId,
+                is_owner: isOwner,
+                participant_count: participantCount
+            });
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fire);
+        } else {
+            fire();
+        }
+    })();
 </script>
 <script type="module" th:src="@{/js/schedule/main.js}"></script>
 </body>

@@ -71,6 +71,7 @@
 
         try {
             await api.createSchedule(ownerId, year, month);
+            window.DDAnalytics?.markOwnedSchedule(ownerId);
             window.dataLayer = window.dataLayer || [];
             window.dataLayer.push({ event: 'schedule_created', owner_id: ownerId, year, month });
             const target = `/${ownerId}/${year}/${month}`;
