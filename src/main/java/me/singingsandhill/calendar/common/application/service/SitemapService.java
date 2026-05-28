@@ -63,18 +63,21 @@ public class SitemapService {
     }
 
     public List<SitemapEntry> getSitemapEntries() {
-        OffsetDateTime insightsLastmod = computeInsightsLastmod();
-
         List<SitemapEntry> entries = new ArrayList<>(List.of(
-                new SitemapEntry(baseUrl + "/",                            buildTime,        "monthly", "1.0", true),
-                new SitemapEntry(baseUrl + "/guide",                       buildTime,        "monthly", "0.9", true),
-                new SitemapEntry(baseUrl + "/about",                       buildTime,        "monthly", "0.6", true),
-                new SitemapEntry(baseUrl + "/privacy",                     buildTime,        "yearly",  "0.4", true),
-                new SitemapEntry(baseUrl + "/terms",                       buildTime,        "yearly",  "0.4", true),
-                new SitemapEntry(baseUrl + "/insights/trends",             insightsLastmod, "weekly",  "0.8", true),
-                new SitemapEntry(baseUrl + "/faq",                         buildTime,        "monthly", "0.8", true),
-                new SitemapEntry(baseUrl + "/tools/date-diff",             buildTime,        "monthly", "0.7", true)
+                new SitemapEntry(baseUrl + "/",                            buildTime, "monthly", "1.0", true),
+                new SitemapEntry(baseUrl + "/guide",                       buildTime, "monthly", "0.9", true),
+                new SitemapEntry(baseUrl + "/about",                       buildTime, "monthly", "0.6", true),
+                new SitemapEntry(baseUrl + "/privacy",                     buildTime, "yearly",  "0.4", true),
+                new SitemapEntry(baseUrl + "/terms",                       buildTime, "yearly",  "0.4", true),
+                new SitemapEntry(baseUrl + "/faq",                         buildTime, "monthly", "0.8", true),
+                new SitemapEntry(baseUrl + "/tools/date-diff",             buildTime, "monthly", "0.7", true)
         ));
+
+        // /insights/trends 는 실제 인기 데이터가 있을 때만 sitemap 에 포함.
+        // 데이터가 없으면 SeoService 가 noindex 메타를 내보내므로, sitemap 에 광고하면 모순.
+        computeInsightsLastmodIfPresent().ifPresent(lastmod ->
+                entries.add(new SitemapEntry(baseUrl + "/insights/trends", lastmod, "weekly", "0.8", true))
+        );
 
         for (String slug : UseCaseSlugs.ALL) {
             entries.add(new SitemapEntry(
@@ -89,8 +92,11 @@ public class SitemapService {
         return entries;
     }
 
-    /** 인기 콘텐츠가 마지막으로 추가된 시각. 데이터가 없으면 배포 시각으로 대체 (LocalDate.now() 같은 거짓 신호 금지). */
-    private OffsetDateTime computeInsightsLastmod() {
+    /**
+     * 인기 콘텐츠가 마지막으로 추가된 시각. Location/Menu 둘 다 비어 있으면 {@link Optional#empty()} 반환
+     * (= /insights/trends 페이지가 InsightsController 에서 noindex 로 응답하므로 sitemap 에서도 제외).
+     */
+    private Optional<OffsetDateTime> computeInsightsLastmodIfPresent() {
         Optional<LocalDateTime> latestLocation = locationRepository != null
                 ? locationRepository.findLatestActivity()
                 : Optional.empty();
@@ -101,8 +107,7 @@ public class SitemapService {
         return latestLocation
                 .map(l -> latestMenu.map(m -> m.isAfter(l) ? m : l).orElse(l))
                 .or(() -> latestMenu)
-                .map(this::toOffsetDateTime)
-                .orElse(buildTime);
+                .map(this::toOffsetDateTime);
     }
 
     private OffsetDateTime toOffsetDateTime(LocalDateTime ldt) {

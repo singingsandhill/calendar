@@ -19,8 +19,10 @@
     <meta name="language" th:content="${#locale.toLanguageTag()}">
     <meta http-equiv="content-language" th:content="${#locale.toLanguageTag()}">
 
-    <!-- Google Site Verification -->
-    <meta name="google-site-verification" content="YVK_KclWiLH24rqy7kAI9iNYSA5No9ljXbnSOvsQB4k" />
+    <!-- Google Site Verification (Search Console) — env-driven; 기본값은 운영 토큰 -->
+    <meta th:if="${@environment.getProperty('seo.google-site-verification', '') != ''}"
+          name="google-site-verification"
+          th:content="${@environment.getProperty('seo.google-site-verification')}" />
 
     <!-- Naver Site Verification (한국 시장 색인용 — searchadvisor.naver.com 에서 발급) -->
     <meta th:if="${@environment.getProperty('seo.naver-site-verification', '') != ''}"

@@ -1,8 +1,11 @@
 app:
   base-url: https://datedate.site
 
-# SEO 외부 인증 토큰 — 네이버 서치어드바이저 등록 후 발급된 값을 NAVER_SITE_VERIFICATION 환경변수로 주입
+# SEO 외부 인증 토큰
+# - Google: Search Console 발급 토큰. 기본값은 datedate.site 운영 토큰; 다른 도메인 배포 시 GOOGLE_SITE_VERIFICATION 으로 오버라이드.
+# - Naver: searchadvisor.naver.com 발급 후 NAVER_SITE_VERIFICATION 으로 주입.
 seo:
+  google-site-verification: ${GOOGLE_SITE_VERIFICATION:YVK_KclWiLH24rqy7kAI9iNYSA5No9ljXbnSOvsQB4k}
   naver-site-verification: ${NAVER_SITE_VERIFICATION:}
 
 # Google AdSense

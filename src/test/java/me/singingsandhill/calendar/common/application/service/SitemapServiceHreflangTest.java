@@ -1,10 +1,18 @@
 package me.singingsandhill.calendar.common.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import me.singingsandhill.calendar.datedate.domain.location.LocationRepository;
+import me.singingsandhill.calendar.datedate.domain.menu.MenuRepository;
 
 /**
  * Sitemap 생성 결과에 xhtml:link hreflang 엔트리가 공개 SEO 페이지에만 포함되는지 검증한다.
@@ -17,7 +25,8 @@ class SitemapServiceHreflangTest {
 
     @BeforeEach
     void setUp() {
-        // 선택적 의존성은 모두 null → insights 데이터는 자동으로 빌드 시각으로 대체.
+        // 선택적 의존성은 모두 null → 인기 데이터 없음 → /insights/trends 는 sitemap 에서 제외
+        // (SeoService 가 noindex 메타로 응답하므로 sitemap 광고는 모순).
         // RunRepository 는 sitemap 에서 Runner 가 완전 제거된 이후 더 이상 의존성으로 받지 않는다.
         service = new SitemapService(BASE_URL, null, null, null);
     }
@@ -83,15 +92,44 @@ class SitemapServiceHreflangTest {
     }
 
     @Test
-    @DisplayName("공개 페이지마다 양방향이면 xhtml:link 가 생긴다 — 공개 페이지 12개 × 2 url × 3 alt = 72개")
+    @DisplayName("인기 데이터 없을 때 — 공개 페이지 11개 × 2 url × 3 alt = 66개 (insights/trends 제외)")
     void hreflangEntryCountReasonable() {
         String xml = service.generateSitemapXml();
         int count = xml.split("<xhtml:link", -1).length - 1;
-        // 공개 양방향 엔트리 12개:
-        //   home, guide, about, privacy, terms, insights/trends, faq, date-diff,
+        // setUp 의 null 리포지토리로 인해 /insights/trends 는 제외.
+        // 공개 양방향 엔트리 11개:
+        //   home, guide, about, privacy, terms, faq, date-diff,
         //   use-cases x 4 (friend, team, travel, study)
-        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 12 * 2 * 3 = 72
-        assertThat(count).isEqualTo(12 * 2 * 3);
+        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 11 * 2 * 3 = 66
+        assertThat(count).isEqualTo(11 * 2 * 3);
+    }
+
+    @Test
+    @DisplayName("인기 데이터 없으면 /insights/trends 는 sitemap 에서 제외된다 (noindex 와 모순 회피)")
+    void insightsTrendsExcludedWhenNoData() {
+        String xml = service.generateSitemapXml();
+
+        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/insights/trends</loc>");
+        assertThat(xml).doesNotContain("<loc>" + BASE_URL + "/insights/trends?lang=en</loc>");
+    }
+
+    @Test
+    @DisplayName("Location/Menu 활동이 존재하면 /insights/trends 가 sitemap 에 양방향으로 포함된다")
+    void insightsTrendsIncludedWhenDataPresent() {
+        LocationRepository locationRepo = mock(LocationRepository.class);
+        MenuRepository menuRepo = mock(MenuRepository.class);
+        LocalDateTime activity = LocalDateTime.of(2026, 1, 15, 10, 30);
+        when(locationRepo.findLatestActivity()).thenReturn(Optional.of(activity));
+        when(menuRepo.findLatestActivity()).thenReturn(Optional.empty());
+
+        SitemapService withData = new SitemapService(BASE_URL, null, locationRepo, menuRepo);
+        String xml = withData.generateSitemapXml();
+
+        assertThat(xml).contains("<loc>" + BASE_URL + "/insights/trends</loc>");
+        assertThat(xml).contains("<loc>" + BASE_URL + "/insights/trends?lang=en</loc>");
+        assertThat(xml).contains("<xhtml:link rel=\"alternate\" hreflang=\"ko\" href=\"" + BASE_URL + "/insights/trends\"/>");
+        // lastmod 은 활동 시각 기반이어야 함 (KST offset)
+        assertThat(xml).contains("<lastmod>2026-01-15T10:30:00+09:00</lastmod>");
     }
 
     @Test
