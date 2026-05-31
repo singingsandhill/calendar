@@ -63,13 +63,22 @@ public class TradingProperties {
 
     public static class Bot {
         private boolean enabled = false;
-        private String market = "wslKRW-ADA";
+        private String market = "KRW-ADA";  // P2-14: 오타(wslKRW-ADA) 정정. yaml 이 항상 override.
         private int maxPositions = 2;
         private double orderRatio = 0.25;
         private double orderRatioMin = 0.15;  // 변동성 높을 때 최소 비율
         private double orderRatioMax = 0.35;  // 변동성 낮을 때 최대 비율
         private long signalCooldownMinutes = 10;  // 매매 간 최소 간격 (휩소 방지)
         private long minHoldingMinutes = 15;      // 포지션 최소 보유 시간
+        private Mode mode = Mode.LIVE;             // 운영 모드. LIVE 가 아니면 실주문 대신 인메모리 시뮬레이션 (P0-1)
+
+        /**
+         * 봇 운영 모드.
+         * - LIVE: 실제 Bithumb 주문 전송 (기본값 — 기존 운영 동작 유지)
+         * - PAPER: 실주문 없이 현재가 기반 인메모리 체결 시뮬레이션 (파라미터 검증 권장 모드)
+         * - BACKTEST: 저장된 캔들 리플레이용 (PAPER 와 동일하게 실주문 차단)
+         */
+        public enum Mode { LIVE, PAPER, BACKTEST }
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -87,6 +96,8 @@ public class TradingProperties {
         public void setSignalCooldownMinutes(long signalCooldownMinutes) { this.signalCooldownMinutes = signalCooldownMinutes; }
         public long getMinHoldingMinutes() { return minHoldingMinutes; }
         public void setMinHoldingMinutes(long minHoldingMinutes) { this.minHoldingMinutes = minHoldingMinutes; }
+        public Mode getMode() { return mode; }
+        public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.LIVE; }
     }
 
     public static class Indicators {
@@ -165,10 +176,13 @@ public class TradingProperties {
         private double takeProfit = 0.15;
         private double trailingStop = 0.03;
         private double trailingActivation = 0.10;
-        private double takerFeeRate = 0.0025;        // 0.25% Bithumb taker fee
-        private double minProfitThreshold = 0.006;   // 0.6% (왕복 수수료 0.5% + 마진 0.1%)
+        private double takerFeeRate = 0.0025;        // 0.25% Bithumb taker fee (maker 동일; 0.04% 쿠폰 보유 시 0.0004 로 설정)
+        private double minProfitThreshold = 0.001;   // P1-8: 순수 net 마진 0.1%. 왕복 수수료/슬리피지는 PnL(calculateUnrealizedPnlPctWithFee)에서 이미 차감 → 이중계상 제거
         private double strongSignalMaxLoss = -0.02;  // 강한 신호 매도 시 최대 허용 손실률 -2%
         private double slippageBuffer = 0.005;       // 슬리피지 버퍼 0.5%
+        private boolean circuitBreakerEnabled = true;// P0-2: 서킷브레이커 on/off
+        private double maxDailyLossPct = -0.05;      // P0-2: 일일 실현손익이 시작자본 대비 이 비율 이하면 신규 진입 차단
+        private int maxConsecutiveLosses = 3;        // P0-2: 연속 손실 횟수 도달 시 신규 진입 차단
 
         public double getStopLoss() { return stopLoss; }
         public void setStopLoss(double stopLoss) { this.stopLoss = stopLoss; }
@@ -186,6 +200,12 @@ public class TradingProperties {
         public void setStrongSignalMaxLoss(double strongSignalMaxLoss) { this.strongSignalMaxLoss = strongSignalMaxLoss; }
         public double getSlippageBuffer() { return slippageBuffer; }
         public void setSlippageBuffer(double slippageBuffer) { this.slippageBuffer = slippageBuffer; }
+        public boolean isCircuitBreakerEnabled() { return circuitBreakerEnabled; }
+        public void setCircuitBreakerEnabled(boolean circuitBreakerEnabled) { this.circuitBreakerEnabled = circuitBreakerEnabled; }
+        public double getMaxDailyLossPct() { return maxDailyLossPct; }
+        public void setMaxDailyLossPct(double maxDailyLossPct) { this.maxDailyLossPct = maxDailyLossPct; }
+        public int getMaxConsecutiveLosses() { return maxConsecutiveLosses; }
+        public void setMaxConsecutiveLosses(int maxConsecutiveLosses) { this.maxConsecutiveLosses = maxConsecutiveLosses; }
     }
 
     public static class Rebalancing {
