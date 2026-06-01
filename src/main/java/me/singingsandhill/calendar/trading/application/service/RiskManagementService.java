@@ -13,15 +13,17 @@ import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperti
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-@Transactional(readOnly = true)
 public class RiskManagementService {
 
     private static final Logger log = LoggerFactory.getLogger(RiskManagementService.class);
@@ -31,17 +33,24 @@ public class RiskManagementService {
     private final BithumbApiClient bithumbApiClient;
     private final TradingProperties tradingProperties;
     private final TradingEventService tradingEventService;
+    private final TradingCircuitBreaker circuitBreaker;
+    // P0-3b: 영속화만 짧은 트랜잭션. 주문 HTTP/sleep 은 트랜잭션 밖.
+    private final TransactionTemplate txTemplate;
 
     public RiskManagementService(PositionRepository positionRepository,
                                   TradeRepository tradeRepository,
                                   BithumbApiClient bithumbApiClient,
                                   TradingProperties tradingProperties,
-                                  TradingEventService tradingEventService) {
+                                  TradingEventService tradingEventService,
+                                  TradingCircuitBreaker circuitBreaker,
+                                  PlatformTransactionManager transactionManager) {
         this.positionRepository = positionRepository;
         this.tradeRepository = tradeRepository;
         this.bithumbApiClient = bithumbApiClient;
         this.tradingProperties = tradingProperties;
         this.tradingEventService = tradingEventService;
+        this.circuitBreaker = circuitBreaker;
+        this.txTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -49,7 +58,6 @@ public class RiskManagementService {
      * 손절/익절/트레일링스탑 조건 충족 시 즉시 시장가 청산
      * Issue #8: 각 포지션 처리 전 가격 갱신
      */
-    @Transactional
     public CloseReason checkAndExecuteRiskRules(String market) {
         // 모든 열린 포지션 조회
         List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
@@ -103,7 +111,7 @@ public class RiskManagementService {
         log.debug("Risk check - Position {}: Entry={}, Current={}, PnL%={} (fee-adjusted)",
                 position.getId(), position.getEntryPrice(), currentPrice, pnlPct);
 
-        // 1. 손절 체크 (-8%)
+        // 1. 손절 체크 (stop-loss, 기본 -1.5% — P1-1)
         double stopLoss = tradingProperties.getRisk().getStopLoss();
         if (pnlPct.compareTo(BigDecimal.valueOf(stopLoss * 100)) <= 0) {
             log.warn("Stop-loss triggered for position {}! PnL: {}%", position.getId(), pnlPct);
@@ -168,7 +176,14 @@ public class RiskManagementService {
             return CloseReason.TAKE_PROFIT;
         }
 
-        // 7. Position 저장 (trailing stop 상태 유지)
+        // 7. P2-8: 정체 포지션 시간 청산 (maxHold 초과 + 손익분기 이상 → 자본 회수)
+        if (shouldTimeExit(position, pnlPct)) {
+            log.info("Time-exit triggered for position {} (stale > maxHold, PnL: {}%)", position.getId(), pnlPct);
+            closePosition(position, currentPrice, CloseReason.TIME_EXIT);
+            return CloseReason.TIME_EXIT;
+        }
+
+        // 8. Position 저장 (trailing stop 상태 유지)
         positionRepository.save(position);
 
         return null;
@@ -180,7 +195,6 @@ public class RiskManagementService {
      * Issue #3: 체결가 재시도 로직
      * Issue #5: 실패 시 청산 시도 추적
      */
-    @Transactional
     public void closePosition(Position position, BigDecimal exitPrice, CloseReason reason) {
         log.info("Closing position {} with reason: {}", position.getId(), reason);
 
@@ -223,11 +237,18 @@ public class RiskManagementService {
                     "Risk management: " + reason.name()
             );
             trade.markExecuted(actualExitPrice, position.getEntryVolume(), fee);
-            tradeRepository.save(trade);
 
             // 포지션 상태 업데이트 (실제 체결가 사용)
             position.close(actualExitPrice, position.getEntryVolume(), reason, fee);
-            positionRepository.save(position);
+
+            // P0-3b: 영속화만 짧은 트랜잭션 (주문 HTTP/sleep 은 위에서 완료)
+            txTemplate.executeWithoutResult(status -> {
+                tradeRepository.save(trade);
+                positionRepository.save(position);
+            });
+
+            // P0-2: 서킷브레이커 연속 손실 스트릭 갱신
+            circuitBreaker.recordOutcome(position.getRealizedPnl());
 
             log.info("Position closed - Entry: {}, Exit: {} (expected: {}), PnL: {} ({}%), Fee: {}",
                     position.getEntryPrice(), actualExitPrice, exitPrice,
@@ -349,6 +370,21 @@ public class RiskManagementService {
     }
 
     /**
+     * P2-8: 정체 포지션 시간 청산 판정.
+     * maxHoldMinutes 초과 + 수수료차감 PnL ≥ 0%(손익분기) 이면 자본 회수 청산.
+     * (적자 포지션은 손절(-1.5%)이 처리 — 시간 청산으로 손실 강제 안 함.)
+     */
+    boolean shouldTimeExit(Position position, BigDecimal pnlPct) {
+        long maxHold = tradingProperties.getBot().getMaxHoldMinutes();
+        if (maxHold <= 0 || position.getOpenedAt() == null || pnlPct == null) {
+            return false;
+        }
+        long ageMinutes = ChronoUnit.MINUTES.between(position.getOpenedAt(), LocalDateTime.now());
+        // 정체(maxHold 초과) + 손익분기 이상(net) → 자본 회수 청산. 적자는 손절이 처리.
+        return ageMinutes >= maxHold && pnlPct.signum() >= 0;
+    }
+
+    /**
      * 손절가 계산
      */
     public BigDecimal calculateStopLossPrice(BigDecimal entryPrice) {
@@ -369,7 +405,6 @@ public class RiskManagementService {
     /**
      * 긴급 청산 (모든 포지션)
      */
-    @Transactional
     public void emergencyClose(String market) {
         log.warn("Emergency close triggered for {}", market);
 

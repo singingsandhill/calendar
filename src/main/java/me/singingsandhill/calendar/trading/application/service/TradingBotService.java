@@ -1,5 +1,7 @@
 package me.singingsandhill.calendar.trading.application.service;
 
+import me.singingsandhill.calendar.trading.domain.account.AccountSnapshot;
+import me.singingsandhill.calendar.trading.domain.account.AccountSnapshotRepository;
 import me.singingsandhill.calendar.trading.domain.event.TradingEventLevel;
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
 import me.singingsandhill.calendar.trading.domain.position.Position;
@@ -15,7 +17,8 @@ import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperti
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
 
@@ -25,15 +28,16 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
-@Transactional(readOnly = true)
 public class TradingBotService {
 
     private static final Logger log = LoggerFactory.getLogger(TradingBotService.class);
@@ -54,6 +58,10 @@ public class TradingBotService {
     private final PositionRepository positionRepository;
     private final TradingProperties tradingProperties;
     private final TradingEventService tradingEventService;
+    private final TradingCircuitBreaker circuitBreaker;
+    private final AccountSnapshotRepository accountSnapshotRepository;
+    // P0-3: 영속화만 짧은 트랜잭션으로 감싼다. 주문 HTTP/sleep 은 트랜잭션 밖.
+    private final TransactionTemplate txTemplate;
 
     public TradingBotService(CandleService candleService,
                              SignalService signalService,
@@ -64,7 +72,11 @@ public class TradingBotService {
                              TradeRepository tradeRepository,
                              PositionRepository positionRepository,
                              TradingProperties tradingProperties,
-                             TradingEventService tradingEventService) {
+                             TradingEventService tradingEventService,
+                             TradingCircuitBreaker circuitBreaker,
+                             AccountSnapshotRepository accountSnapshotRepository,
+                             PlatformTransactionManager transactionManager) {
+        this.txTemplate = new TransactionTemplate(transactionManager);
         this.candleService = candleService;
         this.signalService = signalService;
         this.indicatorService = indicatorService;
@@ -75,6 +87,8 @@ public class TradingBotService {
         this.positionRepository = positionRepository;
         this.tradingProperties = tradingProperties;
         this.tradingEventService = tradingEventService;
+        this.circuitBreaker = circuitBreaker;
+        this.accountSnapshotRepository = accountSnapshotRepository;
     }
 
     /**
@@ -150,7 +164,6 @@ public class TradingBotService {
      * 1분 주기 메인 실행 로직
      * Issue #10: 강한 신호는 리밸런싱보다 우선
      */
-    @Transactional
     public void executeTradeLoop() {
         if (!running.get() || paused.get()) {
             return;
@@ -217,7 +230,6 @@ public class TradingBotService {
      * Issue #2: 강한 SELL 신호는 수익률 무관하게 실행
      * 휩소 방지: 매매 간 쿨다운 + 최소 보유 시간 적용
      */
-    @Transactional
     public void executeTradeBySignal(String market, Signal signal) {
         // 쿨다운 체크: 마지막 거래 후 최소 간격 확인
         if (!isSignalCooldownElapsed()) {
@@ -309,8 +321,17 @@ public class TradingBotService {
      * 매수 실행
      * Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (고아 레코드 방지)
      */
-    @Transactional
     public void executeBuy(String market, Signal signal) {
+        // P0-2: 서킷브레이커 — 연속 손실/일일 손실 한도 도달 시 신규 매수 차단 (리스크 청산은 계속 허용)
+        if (circuitBreaker.isEntryBlocked(dayStartEquity(market), realizedPnlToday(market))) {
+            log.warn("Circuit breaker active - skipping BUY for {} (consecutive losses: {})",
+                    market, circuitBreaker.getConsecutiveLosses());
+            tradingEventService.record(TradingEventLevel.CRITICAL, "CIRCUIT_BREAKER", market,
+                    String.format("서킷브레이커 작동 — 신규 매수 차단 (연속손실 %d회)",
+                            circuitBreaker.getConsecutiveLosses()));
+            return;
+        }
+
         BithumbAccountResponse krwAccount = bithumbApiClient.getKrwBalance();
         if (krwAccount == null) {
             log.warn("Cannot get KRW balance");
@@ -323,6 +344,25 @@ public class TradingBotService {
         if (availableKrw.compareTo(minOrderAmount) < 0) {
             log.info("Insufficient KRW balance: {}", availableKrw);
             return;
+        }
+
+        // P2-10/P2-12: 진입 가드 — 물타기 차단 + 코인 노출 상한
+        Double currentPriceForGuard = bithumbApiClient.getCurrentPrice();
+        if (currentPriceForGuard != null) {
+            BigDecimal currentPrice = BigDecimal.valueOf(currentPriceForGuard);
+            List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
+            if (blocksAveragingDown(openPositions, currentPrice)) {
+                log.info("Skipping BUY for {} - averaging-down blocked (기존 포지션 손실 중)", market);
+                return;
+            }
+            BithumbAccountResponse coinAccount = bithumbApiClient.getCoinBalance();
+            BigDecimal coinBalance = coinAccount != null ? new BigDecimal(coinAccount.balance()) : BigDecimal.ZERO;
+            BigDecimal coinValue = coinBalance.multiply(currentPrice);
+            BigDecimal totalEquity = availableKrw.add(coinValue);
+            if (exceedsExposureCap(coinValue, totalEquity)) {
+                log.info("Skipping BUY for {} - coin exposure cap reached (코인 비중 상한)", market);
+                return;
+            }
         }
 
         // ATR 기반 동적 비율 계산 (변동성에 따라 15~35% 조정)
@@ -380,22 +420,26 @@ public class TradingBotService {
                     "Auto buy signal"
             );
             trade.markExecuted(entryPrice, volume, fee);
-            tradeRepository.save(trade);
-            log.info("Trade record created: uuid={}", uuid);
 
             // Position 생성 (수수료 포함)
             Position position = Position.open(
                     market, entryPrice, volume, stopLossPrice, takeProfitPrice, fee
             );
-            positionRepository.save(position);
-            log.info("Position opened: entry={}, volume={}, fee={}", entryPrice, volume, fee);
+
+            // P0-3: 영속화만 짧은 트랜잭션 (Trade+Position 원자적 저장). 주문 HTTP/sleep 은 이미 위에서 완료.
+            txTemplate.executeWithoutResult(status -> {
+                tradeRepository.save(trade);
+                positionRepository.save(position);
+            });
+            log.info("Trade+Position persisted: uuid={}, entry={}, volume={}, fee={}", uuid, entryPrice, volume, fee);
 
             tradingEventService.record(TradingEventLevel.NOTICE, "BUY_EXECUTED", market,
                     String.format("매수 체결 — 신호 점수 %d, 가격 %s, 수량 %s",
                             signal.getTotalScore(), entryPrice.toPlainString(), volume.toPlainString()));
 
-            // 쿨다운 갱신
+            // 쿨다운 갱신 (P2-11: 리밸런스 쿨다운도 갱신해 엔진 핑퐁 방지)
             this.lastTradeTime = Instant.now();
+            rebalanceService.markRebalanceCooldown();
 
         } catch (Exception e) {
             log.error("Failed to execute buy order", e);
@@ -497,7 +541,6 @@ public class TradingBotService {
      * 매도 실행
      * Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (고아 레코드 방지)
      */
-    @Transactional
     public void executeSell(String market, Signal signal, Position position) {
         log.info("Executing SELL order for position: {}", position.getId());
 
@@ -543,12 +586,15 @@ public class TradingBotService {
                     "Auto sell signal"
             );
             trade.markExecuted(exitPrice, position.getEntryVolume(), fee);
-            tradeRepository.save(trade);
-            log.info("Trade record created: uuid={}", uuid);
 
             // Position 청산 (수수료 포함)
             position.close(exitPrice, position.getEntryVolume(), CloseReason.SIGNAL, fee);
-            positionRepository.save(position);
+
+            // P0-3: 영속화만 짧은 트랜잭션. 주문 HTTP/sleep 은 이미 위에서 완료.
+            txTemplate.executeWithoutResult(status -> {
+                tradeRepository.save(trade);
+                positionRepository.save(position);
+            });
             log.info("Position closed: exit={}, pnl={}%, fee={}",
                     exitPrice, position.getRealizedPnlPct(), fee);
 
@@ -560,8 +606,12 @@ public class TradingBotService {
                             signal.getTotalScore(), exitPrice.toPlainString(),
                             pnlPct != null ? pnlPct.toPlainString() : "-"));
 
-            // 쿨다운 갱신
+            // P0-2: 서킷브레이커 연속 손실 스트릭 갱신
+            circuitBreaker.recordOutcome(position.getRealizedPnl());
+
+            // 쿨다운 갱신 (P2-11: 리밸런스 쿨다운도 갱신해 엔진 핑퐁 방지)
             this.lastTradeTime = Instant.now();
+            rebalanceService.markRebalanceCooldown();
 
         } catch (IllegalStateException e) {
             // Issue #4: 이미 닫힌 포지션
@@ -576,45 +626,40 @@ public class TradingBotService {
     /**
      * 수동 매수
      */
-    @Transactional
     public boolean manualBuy(BigDecimal amount) {
         String market = tradingProperties.getBot().getMarket();
         log.info("Manual buy: {} KRW", amount);
 
-        // 현재가 조회 (Trade 생성용)
-        Double orderPriceDouble = bithumbApiClient.getCurrentPrice();
-        if (orderPriceDouble == null) {
-            log.warn("Cannot get current price for manual buy");
-            return false;
-        }
-        BigDecimal orderPrice = BigDecimal.valueOf(orderPriceDouble);
-
-        String uuid = UUID.randomUUID().toString();
-        Trade trade = Trade.createBuyOrder(
-                uuid,
-                market,
-                orderPrice,
-                amount,
-                "market",
-                null,  // 수동 매수는 신호 점수 없음
-                "Manual buy"
-        );
-
         try {
-            // Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (executeBuy와 동일 패턴)
+            // Issue #1: API 호출 먼저, 성공 시에만 저장
             BithumbOrderResponse response = bithumbApiClient.placeMarketBuyOrder(amount);
-            if (response != null) {
-                log.info("Manual buy order placed: {}", response.uuid());
-                BigDecimal fee = extractFee(response);
-                Double currentPrice = bithumbApiClient.getCurrentPrice();
-                BigDecimal price = currentPrice != null ? BigDecimal.valueOf(currentPrice) : orderPrice;
-                BigDecimal volume = amount.divide(price, 8, RoundingMode.DOWN);
-                trade.markExecuted(price, volume, fee);
-                tradeRepository.save(trade);
-                return true;
-            } else {
+            if (response == null) {
                 log.warn("Manual buy order failed - no response from API");
+                return false;
             }
+            BigDecimal fee = extractFee(response);
+            BigDecimal entryPrice = extractExecutedPriceWithRetry(response, 3);
+            if (entryPrice == null) {
+                log.error("Manual buy: cannot determine entry price. uuid={}", response.uuid());
+                return false;
+            }
+            BigDecimal volume = amount.divide(entryPrice, 8, RoundingMode.DOWN);
+            // #3: 수동 매수도 추적 Position(SL/TP) 생성 → 리스크 루프가 보호
+            BigDecimal stopLoss = riskManagementService.calculateStopLossPrice(entryPrice);
+            BigDecimal takeProfit = riskManagementService.calculateTakeProfitPrice(entryPrice);
+
+            String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
+            Trade trade = Trade.createBuyOrder(uuid, market, entryPrice, amount, "market", null, "Manual buy");
+            trade.markExecuted(entryPrice, volume, fee);
+            Position position = Position.open(market, entryPrice, volume, stopLoss, takeProfit, fee);
+
+            txTemplate.executeWithoutResult(status -> {
+                tradeRepository.save(trade);
+                positionRepository.save(position);
+            });
+            log.info("Manual buy: opened tracked position - entry={}, volume={}, SL={}, TP={}",
+                    entryPrice, volume, stopLoss, takeProfit);
+            return true;
         } catch (Exception e) {
             log.error("Failed to execute manual buy", e);
         }
@@ -624,45 +669,31 @@ public class TradingBotService {
     /**
      * 수동 매도
      */
-    @Transactional
     public boolean manualSell(BigDecimal volume) {
         String market = tradingProperties.getBot().getMarket();
         log.info("Manual sell: {} coins", volume);
 
-        // 현재가 조회 (Trade 생성용)
-        Double orderPriceDouble = bithumbApiClient.getCurrentPrice();
-        if (orderPriceDouble == null) {
-            log.warn("Cannot get current price for manual sell");
-            return false;
-        }
-        BigDecimal orderPrice = BigDecimal.valueOf(orderPriceDouble);
-
-        String uuid = UUID.randomUUID().toString();
-        Trade trade = Trade.createSellOrder(
-                uuid,
-                null,  // 수동 매도는 포지션 ID 없음
-                market,
-                orderPrice,
-                volume,
-                "market",
-                null,  // 수동 매도는 신호 점수 없음
-                "Manual sell"
-        );
-
         try {
-            // Issue #1: API 호출 먼저, 성공 시에만 Trade 저장 (executeSell과 동일 패턴)
+            // Issue #1: API 호출 먼저, 성공 시에만 저장
             BithumbOrderResponse response = bithumbApiClient.placeMarketSellOrder(volume);
-            if (response != null) {
-                log.info("Manual sell order placed: {}", response.uuid());
-                BigDecimal fee = extractFee(response);
-                Double currentPrice = bithumbApiClient.getCurrentPrice();
-                BigDecimal price = currentPrice != null ? BigDecimal.valueOf(currentPrice) : orderPrice;
-                trade.markExecuted(price, volume, fee);
-                tradeRepository.save(trade);
-                return true;
-            } else {
+            if (response == null) {
                 log.warn("Manual sell order failed - no response from API");
+                return false;
             }
+            BigDecimal fee = extractFee(response);
+            BigDecimal exitPrice = extractExecutedPriceWithRetry(response, 3);
+            if (exitPrice == null) {
+                log.error("Manual sell: cannot determine exit price. uuid={}", response.uuid());
+                return false;
+            }
+            String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
+            Trade trade = Trade.createSellOrder(uuid, null, market, exitPrice, volume, "market", null, "Manual sell");
+            trade.markExecuted(exitPrice, volume, fee);
+            tradeRepository.save(trade);
+
+            // #3: 추적 OPEN 포지션을 FIFO 로 청산 기록 (추가 주문 없이 회계 정합)
+            reconcilePositionsAfterManualSell(market, volume, exitPrice);
+            return true;
         } catch (Exception e) {
             log.error("Failed to execute manual sell", e);
         }
@@ -672,7 +703,6 @@ public class TradingBotService {
     /**
      * 긴급 청산
      */
-    @Transactional
     public void emergencyClose() {
         String market = tradingProperties.getBot().getMarket();
         log.warn("Emergency close triggered");
@@ -684,6 +714,85 @@ public class TradingBotService {
 
         // 포지션 청산
         riskManagementService.emergencyClose(market);
+    }
+
+    /**
+     * P0-2: 당일(KST 자정 이후) 실현손익 합계 (DB only). 손실이면 음수.
+     */
+    private BigDecimal realizedPnlToday(String market) {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime now = LocalDateTime.now();
+        return positionRepository.findByMarketAndStatusAndClosedAtBetween(
+                        market, PositionStatus.CLOSED, startOfDay, now)
+                .stream()
+                .map(Position::getRealizedPnl)
+                .filter(p -> p != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * P0-2: 당일 시작 자본 (첫 계좌 스냅샷의 총자산). 스냅샷 부재 시 null → 일일 손실 가드 스킵.
+     */
+    private BigDecimal dayStartEquity(String market) {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime now = LocalDateTime.now();
+        return accountSnapshotRepository.findFirstByMarketAndDateRange(market, startOfDay, now)
+                .map(AccountSnapshot::getTotalValueKrw)
+                .orElse(null);
+    }
+
+    /**
+     * P2-10: 물타기 차단 — 보유 중인 OPEN 포지션 중 현재가 기준 손실인 것이 있으면 추가 매수 차단.
+     */
+    boolean blocksAveragingDown(List<Position> openPositions, BigDecimal currentPrice) {
+        if (!tradingProperties.getBot().isBlockAveragingDown() || currentPrice == null) {
+            return false;
+        }
+        for (Position p : openPositions) {
+            if (p.getEntryPrice() != null && currentPrice.compareTo(p.getEntryPrice()) < 0) {
+                return true; // 손실 중인 포지션 존재 → 물타기 차단
+            }
+        }
+        return false;
+    }
+
+    /**
+     * P2-12: 코인 노출 상한 — 코인 가치/총자본이 maxCoinExposurePct 이상이면 신규 매수 스킵.
+     */
+    /**
+     * #3: 수동 매도 후 추적 OPEN 포지션을 FIFO 로 청산 기록 (추가 주문 없이 회계 정합 — 실제 매도는
+     * 이미 manual 주문으로 체결됨). 남은 청산량이 0 이 될 때까지 오래된 포지션부터 닫는다.
+     */
+    void reconcilePositionsAfterManualSell(String market, BigDecimal soldVolume, BigDecimal exitPrice) {
+        List<Position> open = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN).stream()
+                .sorted(Comparator.comparing(Position::getOpenedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+        BigDecimal remaining = soldVolume;
+        for (Position p : open) {
+            if (remaining.signum() <= 0) {
+                break;
+            }
+            if (!p.canClose()) {
+                continue;
+            }
+            final Position pos = p;
+            // 실제 매도는 manual 주문으로 이미 체결됨 → 추가 주문 없이 Position 청산 기록만 (회계 정합)
+            txTemplate.executeWithoutResult(status -> {
+                pos.close(exitPrice, pos.getEntryVolume(), CloseReason.MANUAL, BigDecimal.ZERO);
+                positionRepository.save(pos);
+            });
+            circuitBreaker.recordOutcome(pos.getRealizedPnl());
+            remaining = remaining.subtract(pos.getEntryVolume());
+        }
+    }
+
+    boolean exceedsExposureCap(BigDecimal coinValue, BigDecimal totalEquity) {
+        double cap = tradingProperties.getBot().getMaxCoinExposurePct();
+        if (cap <= 0 || coinValue == null || totalEquity == null || totalEquity.signum() <= 0) {
+            return false;
+        }
+        BigDecimal ratio = coinValue.divide(totalEquity, 6, RoundingMode.HALF_UP);
+        return ratio.compareTo(BigDecimal.valueOf(cap)) >= 0;
     }
 
     /**
