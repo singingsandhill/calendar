@@ -18,11 +18,11 @@
 | **common**   | — | — | — | 7 | 3 | — | — | — | 2 | 12 |
 | **datedate** | 3 | — | 6 | — | — | — | — | — | — | 9 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
-| **trading**  | — | — | — | — | — | — | 3 | — | — | 3 |
+| **trading**  | — | 1 | — | — | — | — | 14 | 1 | — | 16 |
 | **stock**    | — | 4 (동시성 포함) | — | — | — | 1 | 4 | 1 | — | 10 |
-| **합계** | 5 | 4 | 6 | 7 | 3 | 1 | 7 | 1 | 2 | **36** |
+| **합계** | 5 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 2 | **49** |
 
-총 **36개 ADR**.
+총 **49개 ADR**.
 
 ---
 
@@ -67,6 +67,19 @@
 | 2026-05-01 | datedate/ux | [0001 참가자 색 ↔ 셀 강조 동기화](datedate/ux/0001-participant-color-cell-sync.md) | 누가 선택했는지 식별 불가 |
 | 2026-05-01 | datedate/ux | [0002 온보딩 배너 영구화](datedate/ux/0002-onboarding-banner-persistence.md) | 다시 열 방법 부재 |
 | 2026-05-01 | datedate/ux | [0003 링크 4-state + 카드 어포던스](datedate/ux/0003-link-state-and-card-affordance.md) | 탭 오인 / :visited 보라 |
+| 2026-05-30 | trading/modes | [0001 PAPER 기본 모드 + 주문 게이트](trading/modes/0001-paper-mode-default-and-order-gate.md) | 수익성 감사 P0-1 — 실거래 사고 방지 / 백테스트 |
+| 2026-05-30 | trading/risk | [0001 서킷브레이커(일일·연속 손실)](trading/risk/0001-circuit-breaker-daily-and-consecutive-loss.md) | 수익성 감사 P0-2 — 데스스파이럴 차단 |
+| 2026-05-30 | trading/risk | [0002 리밸런싱 회계 정합](trading/risk/0002-rebalance-position-accounting.md) | 수익성 감사 P1-3 — 유령 코인/잔고 드리프트 |
+| 2026-05-30 | trading/risk | [0003 진입·시간 리스크 가드](trading/risk/0003-entry-and-time-risk-guards.md) | 수익성 감사 P2-8/10/12 — 정체/물타기/과집중 |
+| 2026-05-30 | trading/risk | [0004 수동매매 정합 + 엔진 핑퐁 방지](trading/risk/0004-manual-trade-position-consistency-and-engine-coordination.md) | 수익성 감사 #3/P2-11/P2-9 |
+| 2026-05-30 | trading/infrastructure | [0001 주문 실행 트랜잭션 경계](trading/infrastructure/0001-order-execution-transaction-boundary.md) | 수익성 감사 P0-3 — HTTP/sleep in tx |
+| 2026-05-30 | trading/strategy | [0004 수수료 비용모델/순수 마진 임계](trading/strategy/0004-fee-cost-model-and-net-margin-threshold.md) | 수익성 감사 P1-8/P1-9 — 수수료 이중계상 |
+| 2026-05-30 | trading/strategy | [0005 출구 R:R 재보정](trading/strategy/0005-exit-risk-reward-recalibration.md) | 수익성 감사 P1-1/P1-2 — 보상/위험 역전 |
+| 2026-05-30 | trading/strategy | [0006 Wilder RSI](trading/strategy/0006-wilder-rsi.md) | 수익성 감사 P2-4 — 비표준 RSI |
+| 2026-05-30 | trading/strategy | [0007 다이버전스 피벗 강화](trading/strategy/0007-divergence-pivot-strengthening.md) | 수익성 감사 P2-1 — 1분봉 잡음 피벗 |
+| 2026-05-30 | trading/strategy | [0008 지표 잡음 감소(Slow Stoch/RSI추세)](trading/strategy/0008-indicator-noise-reduction.md) | 수익성 감사 P2-5/P2-6 |
+| 2026-05-30 | trading/strategy | [0009 형성봉 제외(기본 OFF)](trading/strategy/0009-exclude-forming-candle.md) | 수익성 감사 P2-2 — 룩어헤드/리페인트 |
+| 2026-05-30 | trading/strategy | [0010 모멘텀 가중 하향](trading/strategy/0010-momentum-weight-reduction.md) | 수익성 감사 P2-7 — ADR-0001 ±135 정련 |
 
 ---
 
@@ -80,7 +93,10 @@
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs
-- [trading/strategy/](trading/strategy/) — 3 ADRs
+- [trading/strategy/](trading/strategy/) — 10 ADRs
+- [trading/modes/](trading/modes/) — 1 ADR
+- [trading/risk/](trading/risk/) — 4 ADRs
+- [trading/infrastructure/](trading/infrastructure/) — 1 ADR
 - [stock/algorithm/](stock/algorithm/) — 4 ADRs
 - [stock/infrastructure/](stock/infrastructure/) — 4 ADRs
 - [stock/modes/](stock/modes/) — 1 ADR
