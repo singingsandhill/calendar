@@ -14,17 +14,20 @@ import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperti
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import me.singingsandhill.calendar.trading.domain.position.CloseReason;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-@Transactional(readOnly = true)
 public class RebalanceService {
 
     private static final Logger log = LoggerFactory.getLogger(RebalanceService.class);
@@ -37,25 +40,105 @@ public class RebalanceService {
     private final TradeRepository tradeRepository;
     private final PositionRepository positionRepository;
     private final TradingEventService tradingEventService;
+    private final RiskManagementService riskManagementService;
+    // P0-3b: 영속화만 짧은 트랜잭션. 주문 HTTP 는 트랜잭션 밖.
+    private final TransactionTemplate txTemplate;
 
     public RebalanceService(BithumbApiClient bithumbApiClient,
                             IndicatorService indicatorService,
                             TradingProperties tradingProperties,
                             TradeRepository tradeRepository,
                             PositionRepository positionRepository,
-                            TradingEventService tradingEventService) {
+                            TradingEventService tradingEventService,
+                            RiskManagementService riskManagementService,
+                            PlatformTransactionManager transactionManager) {
         this.bithumbApiClient = bithumbApiClient;
         this.indicatorService = indicatorService;
         this.tradingProperties = tradingProperties;
         this.tradeRepository = tradeRepository;
         this.positionRepository = positionRepository;
         this.tradingEventService = tradingEventService;
+        this.riskManagementService = riskManagementService;
+        this.txTemplate = new TransactionTemplate(transactionManager);
+    }
+
+    /**
+     * P1-3: 리밸런싱 매도 — OPEN 포지션을 FIFO(오래된 것부터) 로 청산.
+     * 각 포지션 수수료차감 PnL ≥ min-sell-pnl 일 때만 청산(적자 청산 방지),
+     * 목표 매도량(targetVolume) 도달 시 중단. 청산은 RiskManagementService 재사용.
+     * @return 실제 청산된 코인 수량 합계
+     */
+    BigDecimal sellByClosingProfitablePositions(String market, BigDecimal targetVolume, BigDecimal currentPrice) {
+        List<Position> open = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
+        if (open.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
+        BigDecimal minSellPnl = BigDecimal.valueOf(tradingProperties.getRebalancing().getMinSellPnlPct() * 100);
+
+        // FIFO: 오래된 포지션부터
+        List<Position> fifo = open.stream()
+                .sorted(Comparator.comparing(Position::getOpenedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+
+        BigDecimal sold = BigDecimal.ZERO;
+        for (Position p : fifo) {
+            if (sold.compareTo(targetVolume) >= 0) {
+                break;
+            }
+            BigDecimal pnlPct = p.calculateUnrealizedPnlPctWithFee(currentPrice, feeRate);
+            if (pnlPct.compareTo(minSellPnl) < 0) {
+                log.debug("Rebalance sell: skipping position {} - pnl {}% < {}% (적자 청산 방지)",
+                        p.getId(), pnlPct, minSellPnl);
+                continue;
+            }
+            riskManagementService.closePosition(p, currentPrice, CloseReason.REBALANCE);
+            sold = sold.add(p.getEntryVolume());
+        }
+        return sold;
+    }
+
+    /**
+     * P1-3: 리밸런싱 매수 — 실주문 후 추적 Position 을 생성(SL/TP 포함)하여 리스크 루프가 보호하게 한다.
+     * @return 성공 여부
+     */
+    boolean buyAndOpenPosition(String market, BigDecimal krwAmount, BigDecimal currentPrice) {
+        BithumbOrderResponse response = bithumbApiClient.placeMarketBuyOrder(krwAmount);
+        if (response == null) {
+            log.warn("Rebalance buy failed - no response from API");
+            return false;
+        }
+        BigDecimal fee = extractFee(response);
+        // #4 fix: 실체결가 사용 (파라미터 currentPrice 가 아닌 — 슬리피지/시뮬레이션 체결가 반영)
+        BigDecimal entryPrice = extractExecutedPrice(response);
+        if (entryPrice == null) {
+            entryPrice = currentPrice; // 체결가 미확보 시 파라미터 폴백
+        }
+        BigDecimal volume = krwAmount.divide(entryPrice, 8, RoundingMode.DOWN);
+        BigDecimal stopLoss = riskManagementService.calculateStopLossPrice(entryPrice);
+        BigDecimal takeProfit = riskManagementService.calculateTakeProfitPrice(entryPrice);
+
+        String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
+        Trade trade = Trade.createBuyOrder(uuid, market, entryPrice, krwAmount, "market", null, "Rebalancing buy");
+        trade.markExecuted(entryPrice, volume, fee);
+
+        // P1-3: 리밸런스 매수도 추적 Position 생성 → 리스크 루프(SL/TP/트레일링)가 보호
+        Position position = Position.open(market, entryPrice, volume, stopLoss, takeProfit, fee);
+
+        // P0-3b: 영속화만 짧은 트랜잭션 (주문 HTTP 는 위에서 완료)
+        txTemplate.executeWithoutResult(status -> {
+            tradeRepository.save(trade);
+            positionRepository.save(position);
+        });
+        log.info("Rebalance buy: opened tracked position - volume {}, SL {}, TP {}, fee {}",
+                volume, stopLoss, takeProfit, fee);
+        return true;
     }
 
     /**
      * 리밸런싱 필요 여부 확인 및 실행
      */
-    @Transactional
     public RebalanceResult checkAndExecute(String market) {
         if (!tradingProperties.getRebalancing().isEnabled()) {
             return new RebalanceResult(false, null, null, null);
@@ -112,6 +195,13 @@ public class RebalanceService {
 
         // 리밸런싱 실행
         return executeRebalance(currentRatio, targetRatio, totalValue, currentPriceBD, coinBalance, krwBalance);
+    }
+
+    /**
+     * P2-11: 외부(신호) 매매 실행 시 리밸런스 쿨다운도 갱신 — 엔진 핑퐁 방지.
+     */
+    public void markRebalanceCooldown() {
+        this.lastRebalanceTime = Instant.now();
     }
 
     /**
@@ -188,68 +278,23 @@ public class RebalanceService {
 
         try {
             if (difference.compareTo(BigDecimal.ZERO) > 0) {
-                // 코인 비중 부족 → 매수
-                // Issue #1: API 호출 먼저
-                BithumbOrderResponse response = bithumbApiClient.placeMarketBuyOrder(adjustedDifference.abs());
-                if (response != null) {
-                    log.info("Rebalance buy order placed: uuid={}", response.uuid());
-                    BigDecimal fee = extractFee(response);
-                    BigDecimal volume = adjustedDifference.abs().divide(currentPrice, 8, RoundingMode.DOWN);
-
-                    // Issue #1: 성공 시에만 Trade 저장
-                    String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
-                    Trade trade = Trade.createBuyOrder(
-                            uuid, market, currentPrice, adjustedDifference.abs(),
-                            "market", null, "Rebalancing buy"
-                    );
-                    trade.markExecuted(currentPrice, volume, fee);
-                    tradeRepository.save(trade);
-                    log.info("Rebalance buy completed - Volume: {}, Fee: {} KRW", volume, fee);
-                } else {
-                    log.warn("Rebalance buy failed - no response from API");
+                // 코인 비중 부족 → 매수 (P1-3: 추적 Position 생성, SL/TP 포함)
+                boolean ok = buyAndOpenPosition(market, adjustedDifference.abs(), currentPrice);
+                if (!ok) {
                     return new RebalanceResult(false, currentRatio, targetRatio,
                             currentRatio.subtract(targetRatio).abs());
                 }
             } else {
-                // 코인 비중 과다 → 매도
-                // 손익 체크: 열린 포지션들의 평균 손익률 확인
-                BigDecimal avgPnlPct = calculateAveragePnlPct(market, currentPrice);
-                double minSellPnlPct = tradingProperties.getRebalancing().getMinSellPnlPct();
-
-                if (avgPnlPct.compareTo(BigDecimal.valueOf(minSellPnlPct * 100)) < 0) {
-                    log.warn("Rebalance sell skipped: avgPnl={}% < {}% min threshold",
-                            avgPnlPct.setScale(2, RoundingMode.HALF_UP),
-                            minSellPnlPct * 100);
+                // 코인 비중 과다 → 매도 (P1-3: OPEN 포지션 FIFO 청산, 수익 포지션만 — 적자 청산 방지)
+                BigDecimal targetSellVolume = adjustedDifference.abs().divide(currentPrice, 8, RoundingMode.DOWN);
+                BigDecimal sold = sellByClosingProfitablePositions(market, targetSellVolume, currentPrice);
+                if (sold.compareTo(BigDecimal.ZERO) <= 0) {
+                    log.warn("Rebalance sell skipped: no eligible (profitable) positions to close");
                     tradingEventService.record(TradingEventLevel.NOTICE, "REBALANCE_SKIPPED", market,
-                            String.format("리밸런싱 매도 스킵 — 평균 손익률 %s%% < 임계 %s%%",
-                                    avgPnlPct.setScale(2, RoundingMode.HALF_UP),
-                                    minSellPnlPct * 100));
+                            "리밸런싱 매도 스킵 — 청산 가능한(수익) 포지션 없음 (적자 청산 방지)");
                     return new RebalanceResult(false, currentRatio, targetRatio,
                             currentRatio.subtract(targetRatio).abs(),
-                            "Skipped: below min profit threshold (" + avgPnlPct.setScale(2, RoundingMode.HALF_UP) + "%)");
-                }
-
-                BigDecimal sellVolume = adjustedDifference.abs().divide(currentPrice, 8, RoundingMode.DOWN);
-                // Issue #1: API 호출 먼저
-                BithumbOrderResponse response = bithumbApiClient.placeMarketSellOrder(sellVolume);
-                if (response != null) {
-                    log.info("Rebalance sell order placed: uuid={}", response.uuid());
-                    BigDecimal fee = extractFee(response);
-
-                    // Issue #1: 성공 시에만 Trade 저장
-                    String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
-                    Trade trade = Trade.createSellOrder(
-                            uuid, null, market, currentPrice, sellVolume,
-                            "market", null, "Rebalancing sell"
-                    );
-                    trade.markExecuted(currentPrice, sellVolume, fee);
-                    tradeRepository.save(trade);
-                    log.info("Rebalance sell completed - Volume: {}, Fee: {} KRW, avgPnl: {}%",
-                            sellVolume, fee, avgPnlPct.setScale(2, RoundingMode.HALF_UP));
-                } else {
-                    log.warn("Rebalance sell failed - no response from API");
-                    return new RebalanceResult(false, currentRatio, targetRatio,
-                            currentRatio.subtract(targetRatio).abs());
+                            "Skipped: no profitable positions to close");
                 }
             }
 
@@ -294,25 +339,30 @@ public class RebalanceService {
     }
 
     /**
-     * 열린 포지션들의 평균 손익률 계산 (수수료 포함)
+     * #4: BithumbOrderResponse 의 trades 가중평균 체결가 추출 (부분체결 대응). 없으면 null.
      */
-    private BigDecimal calculateAveragePnlPct(String market, BigDecimal currentPrice) {
-        List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
-
-        if (openPositions.isEmpty()) {
-            // 포지션이 없으면 매도 허용 (리밸런싱 목적)
-            return BigDecimal.valueOf(100);  // 높은 값 반환하여 조건 통과
+    private BigDecimal extractExecutedPrice(BithumbOrderResponse response) {
+        if (response.trades() == null || response.trades().isEmpty()) {
+            return null;
         }
-
-        BigDecimal feeRate = BigDecimal.valueOf(tradingProperties.getRisk().getTakerFeeRate());
-        BigDecimal totalPnlPct = BigDecimal.ZERO;
-
-        for (Position position : openPositions) {
-            BigDecimal pnlPct = position.calculateUnrealizedPnlPctWithFee(currentPrice, feeRate);
-            totalPnlPct = totalPnlPct.add(pnlPct);
+        BigDecimal totalValue = BigDecimal.ZERO;
+        BigDecimal totalVolume = BigDecimal.ZERO;
+        for (BithumbOrderResponse.TradeDetail trade : response.trades()) {
+            if (trade.price() != null && trade.volume() != null
+                    && !trade.price().isEmpty() && !trade.volume().isEmpty()) {
+                try {
+                    BigDecimal price = new BigDecimal(trade.price());
+                    BigDecimal volume = new BigDecimal(trade.volume());
+                    totalValue = totalValue.add(price.multiply(volume));
+                    totalVolume = totalVolume.add(volume);
+                } catch (NumberFormatException e) {
+                    log.warn("Failed to parse rebalance trade: price={}, volume={}", trade.price(), trade.volume());
+                }
+            }
         }
-
-        return totalPnlPct.divide(BigDecimal.valueOf(openPositions.size()), 4, RoundingMode.HALF_UP);
+        return totalVolume.compareTo(BigDecimal.ZERO) > 0
+                ? totalValue.divide(totalVolume, 8, RoundingMode.HALF_UP)
+                : null;
     }
 
     public record RebalanceResult(
