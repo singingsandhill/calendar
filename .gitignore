@@ -48,3 +48,6 @@ Thumbs.db
 logs/
 *.gz
 docs/git_commit.md
+
+# Logo generator dev preview
+scripts/logo_preview_*.png
