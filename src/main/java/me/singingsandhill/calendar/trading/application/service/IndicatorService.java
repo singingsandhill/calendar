@@ -35,24 +35,32 @@ public class IndicatorService {
             return null;
         }
 
+        // currentPrice 는 라이브 가격(index 0 tradePrice) 유지
         BigDecimal currentPrice = candles.get(0).getTradePrice();
-        BigDecimal currentVolume = candles.get(0).getVolume();
-        int rsiTrend = calculateRsiTrend(candles, tradingProperties.getIndicators().getRsiPeriod());
+
+        // P2-2: 형성 중(미완성) 현재봉 제외 — 지표는 종료봉만으로 계산 (스케줄러 5초 지연 의도와 정합).
+        // 기본 OFF. Bithumb 이 index 0 을 형성봉으로 반환함을 확인한 뒤 ON 권장.
+        List<Candle> indicatorCandles = candles;
+        if (tradingProperties.getIndicators().isExcludeFormingCandle() && candles.size() > 1) {
+            indicatorCandles = candles.subList(1, candles.size());
+        }
+
+        BigDecimal currentVolume = indicatorCandles.get(0).getVolume();
+        int rsiTrend = calculateRsiTrend(indicatorCandles, tradingProperties.getIndicators().getRsiPeriod());
 
         return new IndicatorResult(
                 currentPrice,
-                calculateMA(candles, tradingProperties.getIndicators().getMaShort()),
-                calculateMA(candles, tradingProperties.getIndicators().getMaMid()),
-                calculateMA(candles, tradingProperties.getIndicators().getMaLong()),
-                calculateRSI(candles, tradingProperties.getIndicators().getRsiPeriod()),
-                calculateStochasticK(candles, tradingProperties.getIndicators().getStochK()),
-                calculateStochasticD(candles, tradingProperties.getIndicators().getStochK(),
+                calculateMA(indicatorCandles, tradingProperties.getIndicators().getMaShort()),
+                calculateMA(indicatorCandles, tradingProperties.getIndicators().getMaMid()),
+                calculateMA(indicatorCandles, tradingProperties.getIndicators().getMaLong()),
+                calculateRSI(indicatorCandles, tradingProperties.getIndicators().getRsiPeriod()),
+                // P2-5: 스코어링용 stochK = slow %K (fast %K 의 stochSlow SMA) — dead config 활용 + 1분봉 평활
+                calculateStochasticD(indicatorCandles, tradingProperties.getIndicators().getStochK(),
+                        tradingProperties.getIndicators().getStochSlow()),
+                calculateStochasticD(indicatorCandles, tradingProperties.getIndicators().getStochK(),
                         tradingProperties.getIndicators().getStochD()),
-                calculateMA(candles.stream()
-                        .map(c -> new Candle(c.getId(), c.getMarket(), c.getCandleDateTime(),
-                                c.getVolume(), c.getVolume(), c.getVolume(), c.getVolume(),
-                                c.getVolume(), c.getAccTradePrice(), c.getCreatedAt()))
-                        .toList(), tradingProperties.getIndicators().getVolumeMa()),
+                // P2-13: 거래량 MA 는 전용 메서드로 직접 계산 (Candle 생성자 악용 제거 — 동작 동일)
+                calculateVolumeMA(indicatorCandles, tradingProperties.getIndicators().getVolumeMa()),
                 currentVolume,
                 rsiTrend
         );
@@ -82,23 +90,35 @@ public class IndicatorService {
             return null;
         }
 
+        // P2-4: Wilder 평활 RSI (표준). 캔들은 최신순(DESC) → 시간순 변화는 j = n-2(오래된) .. 0(최신).
+        int n = candles.size();
         BigDecimal avgGain = BigDecimal.ZERO;
         BigDecimal avgLoss = BigDecimal.ZERO;
 
-        // 첫 번째 평균 계산
-        for (int i = 0; i < period; i++) {
-            BigDecimal change = candles.get(i).getTradePrice()
-                    .subtract(candles.get(i + 1).getTradePrice());
-
+        // 1) 시드: 가장 오래된 period 개의 변화 단순평균
+        for (int j = n - 2; j >= n - 1 - period; j--) {
+            BigDecimal change = candles.get(j).getTradePrice()
+                    .subtract(candles.get(j + 1).getTradePrice());
             if (change.compareTo(BigDecimal.ZERO) > 0) {
                 avgGain = avgGain.add(change);
             } else {
                 avgLoss = avgLoss.add(change.abs());
             }
         }
-
         avgGain = avgGain.divide(BigDecimal.valueOf(period), 8, RoundingMode.HALF_UP);
         avgLoss = avgLoss.divide(BigDecimal.valueOf(period), 8, RoundingMode.HALF_UP);
+
+        // 2) Wilder 평활: 나머지(더 최신) 변화에 대해 재귀 평활 avg = (avg*(p-1) + x)/p
+        BigDecimal periodBD = BigDecimal.valueOf(period);
+        BigDecimal periodMinus1 = BigDecimal.valueOf(period - 1);
+        for (int j = n - 2 - period; j >= 0; j--) {
+            BigDecimal change = candles.get(j).getTradePrice()
+                    .subtract(candles.get(j + 1).getTradePrice());
+            BigDecimal gain = change.compareTo(BigDecimal.ZERO) > 0 ? change : BigDecimal.ZERO;
+            BigDecimal loss = change.compareTo(BigDecimal.ZERO) < 0 ? change.abs() : BigDecimal.ZERO;
+            avgGain = avgGain.multiply(periodMinus1).add(gain).divide(periodBD, 8, RoundingMode.HALF_UP);
+            avgLoss = avgLoss.multiply(periodMinus1).add(loss).divide(periodBD, 8, RoundingMode.HALF_UP);
+        }
 
         if (avgLoss.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.valueOf(100);
@@ -175,23 +195,33 @@ public class IndicatorService {
      * 현재 RSI가 이전 RSI보다 상승 중이면 상승 추세
      */
     public int calculateRsiTrend(List<Candle> candles, int period) {
-        if (candles.size() < period + 3) {
+        // P2-6: 인접봉(1봉) 대신 lookback 봉 전 RSI 와 비교 + 최소 델타 요구 (1분봉 잡음 제거)
+        int lookback = tradingProperties.getIndicators().getRsiTrendLookback();
+        if (candles.size() < period + 1 + lookback) {
             return 0;
         }
 
         BigDecimal currentRsi = calculateRSI(candles, period);
-        List<Candle> prevCandles = candles.subList(1, candles.size());
-        BigDecimal prevRsi = calculateRSI(prevCandles, period);
+        BigDecimal pastRsi = calculateRSI(candles.subList(lookback, candles.size()), period);
 
-        if (currentRsi == null || prevRsi == null) {
+        if (currentRsi == null || pastRsi == null) {
             return 0;
         }
 
-        int comparison = currentRsi.compareTo(prevRsi);
-        if (comparison > 0) {
-            return 1;  // 상승 추세
-        } else if (comparison < 0) {
-            return -1; // 하락 추세
+        return rsiTrend(currentRsi, pastRsi);
+    }
+
+    /**
+     * P2-6: RSI 추세 판정 (순수 결정). |current − past| 가 minRsiTrendDelta 초과해야 추세 인정.
+     */
+    int rsiTrend(BigDecimal currentRsi, BigDecimal pastRsi) {
+        BigDecimal minDelta = BigDecimal.valueOf(tradingProperties.getIndicators().getMinRsiTrendDelta());
+        BigDecimal delta = currentRsi.subtract(pastRsi);
+        if (delta.compareTo(minDelta) > 0) {
+            return 1;
+        }
+        if (delta.compareTo(minDelta.negate()) < 0) {
+            return -1;
         }
         return 0;
     }

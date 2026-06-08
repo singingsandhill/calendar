@@ -56,7 +56,7 @@
 ## References
 
 - 관련 코드:
-  - `src/main/java/me/singingsandhill/calendar/trading/application/service/SignalScoringService.java`
+  - `src/main/java/me/singingsandhill/calendar/trading/application/service/SignalService.java`
   - `src/main/java/me/singingsandhill/calendar/trading/application/service/TradingBotService.java`
 - 관련 docs: `docs/trading-bot.md`
 - 관련 커밋: `git log -1 cbcd9e0`, `git log -1 b09a467`

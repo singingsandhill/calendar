@@ -50,6 +50,6 @@ MA 수렴 임계 검출 + 크로스 점수 억제.
 ## References
 
 - 관련 코드:
-  - `src/main/java/me/singingsandhill/calendar/trading/application/service/SignalScoringService.java`
+  - `src/main/java/me/singingsandhill/calendar/trading/application/service/SignalService.java`
 - 관련 docs: `docs/trading-bot.md` (MA 수렴 억제 단락)
 - 관련 커밋: `git log -1 ffecbbf`
