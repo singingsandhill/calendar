@@ -17,7 +17,8 @@ import java.util.List;
 public class DivergenceService {
 
     private static final int LOOKBACK_PERIOD = 20;  // 다이버전스 감지를 위한 캔들 수
-    private static final int MIN_DISTANCE = 3;       // 피크/밸리 간 최소 거리
+    private static final int MIN_DISTANCE = 5;       // P2-1: 피크/밸리 간 최소 거리 (3→5, 잡음 감소)
+    private static final int PIVOT_STRENGTH = 3;     // P2-1: 로컬 극값 좌우 비교 봉 수 (1분봉 단일봉 잡음 제거)
 
     private final CandleRepository candleRepository;
     private final IndicatorService indicatorService;
@@ -39,6 +40,11 @@ public class DivergenceService {
 
         if (candles.size() < LOOKBACK_PERIOD) {
             return DivergenceResult.none();
+        }
+
+        // P2-2: 형성 중(미완성) 현재봉 제외 (IndicatorService.calculate 와 동일 정책)
+        if (tradingProperties.getIndicators().isExcludeFormingCandle() && candles.size() > 1) {
+            candles = candles.subList(1, candles.size());
         }
 
         return new DivergenceResult(
@@ -142,10 +148,19 @@ public class DivergenceService {
      */
     private List<Integer> findLocalMinima(List<BigDecimal> values, int lookback) {
         List<Integer> minima = new ArrayList<>();
+        int k = PIVOT_STRENGTH;
+        int end = Math.min(values.size() - k, lookback);
 
-        for (int i = 1; i < Math.min(values.size() - 1, lookback); i++) {
-            if (values.get(i).compareTo(values.get(i - 1)) < 0 &&
-                values.get(i).compareTo(values.get(i + 1)) < 0) {
+        for (int i = k; i < end; i++) {
+            boolean isMin = true;
+            for (int d = 1; d <= k && isMin; d++) {
+                // 좌우 k봉 모두보다 엄격히 낮아야 로컬 밸리 (잡음 단일봉 제거)
+                if (values.get(i).compareTo(values.get(i - d)) >= 0
+                        || values.get(i).compareTo(values.get(i + d)) >= 0) {
+                    isMin = false;
+                }
+            }
+            if (isMin) {
                 minima.add(i);
             }
         }
@@ -158,10 +173,19 @@ public class DivergenceService {
      */
     private List<Integer> findLocalMaxima(List<BigDecimal> values, int lookback) {
         List<Integer> maxima = new ArrayList<>();
+        int k = PIVOT_STRENGTH;
+        int end = Math.min(values.size() - k, lookback);
 
-        for (int i = 1; i < Math.min(values.size() - 1, lookback); i++) {
-            if (values.get(i).compareTo(values.get(i - 1)) > 0 &&
-                values.get(i).compareTo(values.get(i + 1)) > 0) {
+        for (int i = k; i < end; i++) {
+            boolean isMax = true;
+            for (int d = 1; d <= k && isMax; d++) {
+                // 좌우 k봉 모두보다 엄격히 높아야 로컬 피크 (잡음 단일봉 제거)
+                if (values.get(i).compareTo(values.get(i - d)) <= 0
+                        || values.get(i).compareTo(values.get(i + d)) <= 0) {
+                    isMax = false;
+                }
+            }
+            if (isMax) {
                 maxima.add(i);
             }
         }
