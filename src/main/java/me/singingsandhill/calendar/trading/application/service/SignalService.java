@@ -129,9 +129,9 @@ public class SignalService {
 
         // 크로스 이벤트가 아니면 현재 상태에 따라 낮은 점수 부여
         if (indicators.isMa5AboveMa20()) {
-            return 10;  // MA5 > MA20 상태 유지 (기존 25 → 10으로 완화)
+            return 5;   // P2-7: MA5 > MA20 상태 ±10→±5 (모멘텀 가중 하향)
         } else if (indicators.isMa5BelowMa20()) {
-            return -10; // MA5 < MA20 상태 유지 (기존 -25 → -10으로 완화)
+            return -5;  // MA5 < MA20 상태
         }
         return 0;
     }
@@ -146,9 +146,9 @@ public class SignalService {
         }
 
         if (indicators.isPriceAboveMa60()) {
-            return 15;
+            return 8;   // P2-7: ±15→±8 (모멘텀이 과매도 평균회귀를 ±40 임계 근처에서 상쇄하지 않도록)
         } else if (indicators.isPriceBelowMa60()) {
-            return -15;
+            return -8;
         }
         return 0;
     }
