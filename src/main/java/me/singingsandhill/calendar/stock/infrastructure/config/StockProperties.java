@@ -274,11 +274,11 @@ public class StockProperties {
          */
         private List<String> pinned = Collections.emptyList();
         /**
-         * KIS 순위 API 도입 전 임시 풀 (대형주 + 변동성 종목).
+         * 정적 안전망 풀 (대형주 + 변동성 종목). 거래량순위 API 실패/0건 시에만 사용.
          */
         private List<String> fallbackCodes = Collections.emptyList();
         /**
-         * (예약) KIS 등락률 순위 API 결과 상위 N. 0 이면 비활성.
+         * KIS 거래량순위(FHPST01710000) 결과 상위 N 을 동적 유니버스로 사용. 0 이면 비활성.
          */
         private int rankApiTop = 0;
 

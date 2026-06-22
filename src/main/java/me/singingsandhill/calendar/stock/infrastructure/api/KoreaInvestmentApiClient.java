@@ -78,6 +78,13 @@ public class KoreaInvestmentApiClient {
     }
 
     /**
+     * 거래량 순위 상위 종목코드 (유니버스 동적 소스). 실패 시 빈 리스트.
+     */
+    public List<String> getTopVolumeCodes(int count) {
+        return restClient.getTopVolumeCodes(count);
+    }
+
+    /**
      * 전일 종가 조회
      */
     public BigDecimal getPreviousClose(String stockCode) {

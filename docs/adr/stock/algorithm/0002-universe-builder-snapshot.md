@@ -59,7 +59,7 @@ floor 통과해 의미 없는 진입 시도가 발생. 안전한 default 가 더
     풀에 남음 (현재 거래정지 종목은 KIS 가 응답 거부 → 진입 시도가 자연 차단).
 - **후속:**
   - ADR-0003 (진입 검증 위양성 제거) 가 strength null/0 처리 정책을 같은 결로 정렬.
-  - rank-api-top placeholder 는 다음 ADR 로 이어질 자리.
+  - rank-api-top placeholder 는 **ADR-0005 (거래량순위 동적 유니버스)** 로 구현됨.
 
 ## References
 

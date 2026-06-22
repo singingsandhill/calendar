@@ -134,8 +134,8 @@ trading:
     market: KRW-ADA
     max-positions: 2
     order-ratio: 0.25
-    signal-cooldown-minutes: 10    # 매매 간 최소 간격 (휩소 방지)
-    min-holding-minutes: 15        # 포지션 최소 보유 시간
+    signal-cooldown-minutes: 30    # [P2-9] 10→30: 1분봉 과회전·수수료 churn 억제 (감사 권장 ≥60, PAPER 백테스트로 조정)
+    min-holding-minutes: 30        # [P2-9] 15→30: 최소 보유 시간 상향
   indicators:
     ma-short: 5
     ma-mid: 20
@@ -245,7 +245,7 @@ stock:
   universe:
     # 항상 포함되는 핀 종목 (사용자 화이트리스트). 빈 배열이면 fallback-codes 만 사용.
     pinned: []
-    # KIS 등락률/거래량 순위 API 도입 전 임시 풀.
+    # 정적 안전망 풀: KIS 거래량순위(rank-api-top)가 실패하거나 0건일 때만 사용한다.
     # 갭 + 풀백 전략은 강세 모멘텀 종목에서만 작동하므로 변동성 높은 종목 위주 구성.
     fallback-codes:
       # === 코스피 대형주 ===
@@ -325,7 +325,8 @@ stock:
       - "012330"
       - "018880"
       - "161390"
-    rank-api-top: 0
+    # KIS 거래량순위(FHPST01710000) 상위 N 을 그날의 동적 유니버스로 사용. 0 이면 비활성(폴백만).
+    rank-api-top: 30
   trading:
     pre-market-start: "08:30"
     market-open: "09:00"

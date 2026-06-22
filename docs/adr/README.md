@@ -16,13 +16,13 @@
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | **common**   | — | — | — | 7 | 3 | — | — | — | 2 | 12 |
-| **datedate** | 3 | — | 6 | — | — | — | — | — | — | 9 |
+| **datedate** | 4 | — | 6 | — | — | — | — | — | — | 10 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 1 | — | — | — | — | 14 | 1 | — | 16 |
 | **stock**    | — | 4 (동시성 포함) | — | — | — | 1 | 4 | 1 | — | 10 |
-| **합계** | 5 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 2 | **49** |
+| **합계** | 6 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 2 | **50** |
 
-총 **49개 ADR**.
+총 **50개 ADR**.
 
 ---
 
@@ -70,6 +70,7 @@
 | 2026-05-30 | trading/modes | [0001 PAPER 기본 모드 + 주문 게이트](trading/modes/0001-paper-mode-default-and-order-gate.md) | 수익성 감사 P0-1 — 실거래 사고 방지 / 백테스트 |
 | 2026-05-30 | trading/risk | [0001 서킷브레이커(일일·연속 손실)](trading/risk/0001-circuit-breaker-daily-and-consecutive-loss.md) | 수익성 감사 P0-2 — 데스스파이럴 차단 |
 | 2026-05-30 | trading/risk | [0002 리밸런싱 회계 정합](trading/risk/0002-rebalance-position-accounting.md) | 수익성 감사 P1-3 — 유령 코인/잔고 드리프트 |
+| 2026-06-03 | stock/algorithm | [0005 거래량순위 동적 유니버스](stock/algorithm/0005-dynamic-universe-volume-rank.md) | 봇 로그 분석 P0-2 — rank=0 정적 대형주 풀 |
 | 2026-05-30 | trading/risk | [0003 진입·시간 리스크 가드](trading/risk/0003-entry-and-time-risk-guards.md) | 수익성 감사 P2-8/10/12 — 정체/물타기/과집중 |
 | 2026-05-30 | trading/risk | [0004 수동매매 정합 + 엔진 핑퐁 방지](trading/risk/0004-manual-trade-position-consistency-and-engine-coordination.md) | 수익성 감사 #3/P2-11/P2-9 |
 | 2026-05-30 | trading/infrastructure | [0001 주문 실행 트랜잭션 경계](trading/infrastructure/0001-order-execution-transaction-boundary.md) | 수익성 감사 P0-3 — HTTP/sleep in tx |
@@ -80,6 +81,7 @@
 | 2026-05-30 | trading/strategy | [0008 지표 잡음 감소(Slow Stoch/RSI추세)](trading/strategy/0008-indicator-noise-reduction.md) | 수익성 감사 P2-5/P2-6 |
 | 2026-05-30 | trading/strategy | [0009 형성봉 제외(기본 OFF)](trading/strategy/0009-exclude-forming-candle.md) | 수익성 감사 P2-2 — 룩어헤드/리페인트 |
 | 2026-05-30 | trading/strategy | [0010 모멘텀 가중 하향](trading/strategy/0010-momentum-weight-reduction.md) | 수익성 감사 P2-7 — ADR-0001 ±135 정련 |
+| 2026-06-11 | datedate/domain | [0004 GET owner 자동 생성 제거 → 404 + 빈 대시보드](datedate/domain/0004-no-owner-auto-create-on-get-dashboard.md) | AdSense 재심사 감사 — 소프트 404 / GET mutation |
 
 ---
 
@@ -89,7 +91,7 @@
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 1 ADR
-- [datedate/domain/](datedate/domain/) — 3 ADRs
+- [datedate/domain/](datedate/domain/) — 4 ADRs
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs

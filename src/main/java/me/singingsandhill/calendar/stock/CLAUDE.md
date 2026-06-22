@@ -8,7 +8,7 @@ Gap & Pullback trading bot for Korean stocks via Korea Investment Securities API
 ## Trading Flow
 
 ```
-08:30  PreMarket    -> UniverseBuilder.build() (pinned ∪ fallback-codes)
+08:30  PreMarket    -> UniverseBuilder.refresh() (pinned ∪ KIS 거래량순위 top-N, 실패 시 fallback-codes)
 09:20  Screening    -> Floor filter + composite score ranking (top N) + email alert
 09:20~ Trading loop -> Every 5s (polling-interval-seconds): risk check -> state update -> enter if ready
 11:20  Final Exit   -> Force close all remaining positions
@@ -50,3 +50,5 @@ Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (0
 - **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — 모든 주문 진입부 모드 가드.
 - **`Semaphore(8, fair)` (KisRestClient)** + **`StockCodeLocks` (per-symbol ReentrantLock)** + **`ThreadPoolTaskScheduler(pool=4)`** 동시성 3-레이어.
 - **`TradeEvents` 로거** + **KST 자정 회전** + **`BotStatus.{lastTradingTickAt, lastScreeningResult, apiCallsLast5min}`** 메트릭.
+- **`StockBotConfigValidator`** — 기동 시(`ApplicationReadyEvent`) 유효 설정 1줄 요약 + 위험/부정합(LIVE 모드, 빈 유니버스, floor>entry, 메일 미설정) WARN. 진단 전용, 동작 불변.
+- **스크리닝 침묵 실패 가드** — 유니버스가 있는데 `Selected: 0` 이면 최다 탈락 버킷을 WARN.

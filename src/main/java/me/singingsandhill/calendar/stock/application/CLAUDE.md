@@ -6,10 +6,14 @@
 
 ## 유니버스 (UniverseBuilder)
 
-`pinned` (관심 종목) ∪ `fallback-codes` (안정 후보) 합집합으로 그날 유니버스를
-스냅샷으로 캐시. 거래일 변경 시 재빌드. 빈 유니버스 시 `SCREENING_SKIPPED` 이벤트 +
-조기 리턴.
-[ADR](../../../../../../../../docs/adr/stock/algorithm/0002-universe-builder-snapshot.md).
+`pinned` (관심 종목) ∪ **KIS 거래량순위 상위 N** (`rank-api-top`, FHPST01710000) 으로 그날
+유니버스를 스냅샷 캐시. 거래량순위가 실패/0건이면 정적 `fallback-codes` 로 폴백(무회귀).
+거래일 1회(pre-market) 호출되어 거래일 변경 시 재빌드. 빈 유니버스 시 `SCREENING_SKIPPED`
+이벤트 + 조기 리턴.
+[ADR-0002](../../../../../../../../docs/adr/stock/algorithm/0002-universe-builder-snapshot.md)
+(스냅샷) ·
+[ADR-0005](../../../../../../../../docs/adr/stock/algorithm/0005-dynamic-universe-volume-rank.md)
+(거래량순위 동적 소스).
 
 ## Screening (ScreeningService)
 
