@@ -225,7 +225,8 @@ public class KisRestClient {
             parseBigDecimal(output.get("hts_avls")).multiply(HUNDRED_MILLION),
             parseBigDecimal(output.get("vol_tnrt")),
             parseBigDecimal(output.get("seln_cntg_smtn")),
-            parseBigDecimal(output.get("shnu_cntg_smtn"))
+            parseBigDecimal(output.get("shnu_cntg_smtn")),
+            parseBigDecimal(output.get("cttr"))
         );
     }
 
@@ -331,6 +332,75 @@ public class KisRestClient {
             (String) output.get("prdy_vrss_sign"),
             parseBigDecimal(output.get("prdy_ctrt"))
         );
+    }
+
+    /**
+     * 거래량 순위 상위 종목코드 조회 (국내주식 순위분석 &gt; 거래량순위, FHPST01710000).
+     *
+     * Gap &amp; Pullback 유니버스의 동적 소스. 거래일 1회(pre-market) 호출되어 스냅샷 캐시되며,
+     * 어떤 사유로든 실패하면 빈 리스트를 반환해 호출측이 정적 fallback-codes 로 폴백한다(무회귀).
+     *
+     * @param count 상위 N 종목코드 (응답 순위 상위부터)
+     * @return 단축 종목코드 리스트 (실패 시 빈 리스트)
+     */
+    public List<String> getTopVolumeCodes(int count) {
+        if (count <= 0 || !authService.isConfigured()) {
+            return Collections.emptyList();
+        }
+        log.debug("Fetching top {} volume-ranked codes", count);
+
+        Map<String, String> headers = authService.buildAuthHeaders("FHPST01710000");
+
+        Map<String, Object> response = executeGetWithRetry("getTopVolumeCodes",
+            client -> client.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/uapi/domestic-stock/v1/quotations/volume-rank")
+                    .queryParam("FID_COND_MRKT_DIV_CODE", "J")    // KRX
+                    .queryParam("FID_COND_SCR_DIV_CODE", "20171")  // 거래량순위 화면
+                    .queryParam("FID_INPUT_ISCD", "0000")          // 전체
+                    .queryParam("FID_DIV_CLS_CODE", "0")           // 전체(보통주+우선주)
+                    .queryParam("FID_BLNG_CLS_CODE", "0")          // 평균거래량 기준
+                    .queryParam("FID_TRGT_CLS_CODE", "111111111")  // 증거금 전체
+                    .queryParam("FID_TRGT_EXLS_CLS_CODE", "0000000000") // 제외 없음
+                    .queryParam("FID_INPUT_PRICE_1", "0")          // 가격 하한
+                    .queryParam("FID_INPUT_PRICE_2", "1000000")    // 가격 상한
+                    .queryParam("FID_VOL_CNT", "100000")           // 최소 거래량
+                    .queryParam("FID_INPUT_DATE_1", "")
+                    .build())
+                .headers(h -> headers.forEach(h::set))
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
+
+        if (response == null || !"0".equals(response.get("rt_cd"))) {
+            log.warn("Volume-rank API returned no data (rt_cd={})",
+                response != null ? response.get("rt_cd") : "null");
+            return Collections.emptyList();
+        }
+        if (!(response.get("output") instanceof List<?> rows)) {
+            return Collections.emptyList();
+        }
+
+        List<String> codes = new ArrayList<>();
+        for (Object row : rows) {
+            if (codes.size() >= count) {
+                break;
+            }
+            if (row instanceof Map<?, ?> m) {
+                // 거래량순위 응답의 단축코드 필드는 mksc_shrn_iscd; 일부 TR 호환 위해 폴백.
+                Object code = m.get("mksc_shrn_iscd");
+                if (code == null) {
+                    code = m.get("stck_shrn_iscd");
+                }
+                if (code != null) {
+                    String c = code.toString().trim();
+                    if (!c.isEmpty()) {
+                        codes.add(c);
+                    }
+                }
+            }
+        }
+        log.debug("Volume-rank returned {} codes", codes.size());
+        return codes;
     }
 
     // ========== 계좌 조회 APIs ==========
