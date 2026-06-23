@@ -326,6 +326,13 @@ public class ScreeningService {
         log.info("Floor filtered - Gap: {}, Strength: {}, MarketCap: {}",
             stats.gapFiltered, stats.strengthFiltered, stats.marketCapFiltered);
 
+        // 침묵 실패 가드: 유니버스가 있는데 0건 선정이면 비정상 — 최다 탈락 버킷을 WARN.
+        if (total > 0 && selected == 0) {
+            log.warn("0 selected from {} universe — 최다 탈락 버킷: gap={}, dataInsufficient={}, strength={}, marketCap={}, apiFail={}. 유니버스/임계 점검 필요.",
+                total, stats.gapFiltered, stats.dataInsufficient, stats.strengthFiltered,
+                stats.marketCapFiltered, stats.apiFailures);
+        }
+
         metrics.recordScreeningResult(total, floorPassed, selected,
             stats.dataInsufficient, stats.gapFiltered);
 
