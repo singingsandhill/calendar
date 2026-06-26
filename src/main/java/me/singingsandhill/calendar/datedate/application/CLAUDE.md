@@ -5,7 +5,10 @@
 
 ## Services
 
-- **OwnerService** - 멱등 owner 생성 (`getOrCreateOwner`)
+- **OwnerService** - 멱등 owner 생성 (`getOrCreateOwner`). 단, GET `/{ownerId}` 는
+  owner 를 생성하지 않음 — 미존재 owner 는 dashboard 빈 상태 + HTTP 404
+  ([ADR](../../../../../../../../docs/adr/datedate/domain/0004-no-owner-auto-create-on-get-dashboard.md)).
+  생성 경로는 POST /start 와 schedule 생성뿐.
 - **ScheduleService** - (ownerId, year, month) 기준 CRUD. 일정 미존재 시 자동 생성 X →
   create 페이지 분기 ([ADR](../../../../../../../../docs/adr/datedate/domain/0003-no-auto-create-on-missing-schedule.md)).
 - **ParticipantService** - 스케줄당 최대 8명 / 중복 이름 검증.
