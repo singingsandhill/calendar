@@ -115,8 +115,79 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </a>
         </div>
     </section>
+
+    <section class="guide-troubleshooting animate-on-scroll" id="troubleshooting" aria-labelledby="troubleshooting-heading">
+        <h2 id="troubleshooting-heading" th:text="#{guide.troubleshooting.title}">자주 겪는 문제 해결</h2>
+        <div class="faq-list">
+            <div class="faq-item animate-on-scroll">
+                <button class="faq-question" aria-expanded="false" aria-controls="guide-faq-1">
+                    <span th:text="#{guide.troubleshooting.q1}">링크를 공유했는데 참여자가 투표를 못 해요</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
+                </button>
+                <div class="faq-answer" id="guide-faq-1" role="region">
+                    <p th:text="#{guide.troubleshooting.a1}">Answer</p>
+                </div>
+            </div>
+            <div class="faq-item animate-on-scroll">
+                <button class="faq-question" aria-expanded="false" aria-controls="guide-faq-2">
+                    <span th:text="#{guide.troubleshooting.q2}">원하는 페이지 ID가 이미 사용 중이에요</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
+                </button>
+                <div class="faq-answer" id="guide-faq-2" role="region">
+                    <p th:text="#{guide.troubleshooting.a2}">Answer</p>
+                </div>
+            </div>
+            <div class="faq-item animate-on-scroll">
+                <button class="faq-question" aria-expanded="false" aria-controls="guide-faq-3">
+                    <span th:text="#{guide.troubleshooting.q3}">8명보다 많은 인원은 어떻게 하나요?</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
+                </button>
+                <div class="faq-answer" id="guide-faq-3" role="region">
+                    <p th:text="#{guide.troubleshooting.a3}">Answer</p>
+                </div>
+            </div>
+            <div class="faq-item animate-on-scroll">
+                <button class="faq-question" aria-expanded="false" aria-controls="guide-faq-4">
+                    <span th:text="#{guide.troubleshooting.q4}">일정을 수정하거나 삭제하고 싶어요</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
+                </button>
+                <div class="faq-answer" id="guide-faq-4" role="region">
+                    <p th:text="#{guide.troubleshooting.a4}">Answer</p>
+                </div>
+            </div>
+            <div class="faq-item animate-on-scroll">
+                <button class="faq-question" aria-expanded="false" aria-controls="guide-faq-5">
+                    <span th:text="#{guide.troubleshooting.q5}">내 데이터는 언제까지 보관되나요?</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
+                </button>
+                <div class="faq-answer" id="guide-faq-5" role="region">
+                    <p th:text="#{guide.troubleshooting.a5}">Answer</p>
+                </div>
+            </div>
+            <div class="faq-item animate-on-scroll">
+                <button class="faq-question" aria-expanded="false" aria-controls="guide-faq-6">
+                    <span th:text="#{guide.troubleshooting.q6}">링크를 열었더니 다른 달이 보여요</span>
+                    <span class="faq-toggle" aria-hidden="true">+</span>
+                </button>
+                <div class="faq-answer" id="guide-faq-6" role="region">
+                    <p th:text="#{guide.troubleshooting.a6}">Answer</p>
+                </div>
+            </div>
+        </div>
+    </section>
 </main>
 
 <div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+
+<script>
+// FAQ 토글 (index.html 과 동일 메커니즘 — 전역 .faq-item.open CSS 사용)
+document.querySelectorAll('.faq-question').forEach(button => {
+    button.addEventListener('click', () => {
+        const faqItem = button.parentElement;
+        const isOpen = faqItem.classList.toggle('open');
+        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+});
+</script>
 </body>
 </html>
