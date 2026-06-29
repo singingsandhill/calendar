@@ -48,6 +48,7 @@ public class RunnerAdminController {
                 .keywords("97 runners, 관리자")
                 .robots("noindex, nofollow")
                 .canonical(baseUrl + "/runners/admin")
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .build();
     }

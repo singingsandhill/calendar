@@ -63,6 +63,7 @@ public class RunnerController {
                 .keywords(KEYWORDS)
                 .robots("noindex, follow")
                 .canonical(baseUrl + "/runners")
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .jsonLd("""
                     [{
@@ -107,6 +108,7 @@ public class RunnerController {
                 .keywords(KEYWORDS)
                 .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/runs")
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .build());
         return "runners/run-list";
@@ -128,6 +130,7 @@ public class RunnerController {
                 .keywords(KEYWORDS)
                 .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/runs/" + id)
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .build());
 
@@ -148,6 +151,7 @@ public class RunnerController {
                 .keywords(KEYWORDS)
                 .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/members")
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .build());
         return "runners/member-list";
@@ -182,6 +186,7 @@ public class RunnerController {
                 .keywords(KEYWORDS)
                 .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/members/" + name)
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .build());
 
@@ -196,6 +201,7 @@ public class RunnerController {
                 .keywords(KEYWORDS)
                 .robots("noindex, follow")
                 .canonical(baseUrl + "/runners/announce")
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .build());
         return "runners/announce";
@@ -210,6 +216,7 @@ public class RunnerController {
                 .keywords(KEYWORDS)
                 .robots("noindex, nofollow")
                 .canonical(baseUrl + "/runners/runs/new")
+                .hreflangEnabled(false)
                 .ogImage(ogImage)
                 .build());
         return "runners/run-form";
@@ -229,6 +236,7 @@ public class RunnerController {
                     .keywords(KEYWORDS)
                     .robots("noindex, nofollow")
                     .canonical(baseUrl + "/runners/runs/new")
+                    .hreflangEnabled(false)
                     .ogImage(ogImage)
                     .build());
             return "runners/run-form";

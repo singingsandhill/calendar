@@ -35,8 +35,8 @@
     <!-- Canonical URL -->
     <link rel="canonical" th:href="${seo.canonical()}">
 
-    <!-- hreflang (indexable public pages only) -->
-    <th:block th:if="${seo.hreflangEnabled()}">
+    <!-- hreflang (indexable public pages only; canonicalKo/En 둘 다 채워진 양방향 페이지에서만) -->
+    <th:block th:if="${seo.hreflangEnabled() and seo.canonicalKo() != null and seo.canonicalEn() != null}">
         <link rel="alternate" hreflang="ko" th:href="${seo.canonicalKo()}">
         <link rel="alternate" hreflang="en" th:href="${seo.canonicalEn()}">
         <link rel="alternate" hreflang="x-default" th:href="${seo.canonicalKo()}">
@@ -53,8 +53,8 @@
     <meta property="og:image:height" content="780">
     <meta property="og:image:type" content="image/png">
     <meta property="og:locale" th:content="${seo.ogLocale() != null} ? ${seo.ogLocale()} : (${#locale.language == 'en'} ? 'en_US' : 'ko_KR')">
-    <!-- og:locale:alternate — 양방향 페이지(hreflangEnabled=true)일 때만 다른 언어 알림 -->
-    <th:block th:if="${seo.hreflangEnabled()}">
+    <!-- og:locale:alternate — 양방향(hreflang) 페이지에서만 다른 언어 알림 (canonicalKo/En 둘 다 채워졌을 때) -->
+    <th:block th:if="${seo.hreflangEnabled() and seo.canonicalKo() != null and seo.canonicalEn() != null}">
         <meta property="og:locale:alternate" th:content="${#locale.language == 'en'} ? 'ko_KR' : 'en_US'">
     </th:block>
 
