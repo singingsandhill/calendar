@@ -215,16 +215,36 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <a th:href="${@localeLinks.href('/use-cases/travel-planning')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
             </div>
 
-<!--            <div class="scenario-card animate-on-scroll">-->
-<!--                <div class="scenario-emoji">📚</div>-->
-<!--                <h3 th:text="#{index.scenario.study.title}">스터디 그룹</h3>-->
-<!--                <p th:text="#{index.scenario.study.desc}">스터디, 독서 모임, 동아리. 각자 되는 날을 한곳에 모아 정기 일정을 잡으세요.</p>-->
-<!--                <div class="scenario-example">-->
-<!--                    <span class="scenario-label" th:text="#{index.scenario.study.example}">예시</span>-->
-<!--                    datedate.site/coding-study-->
-<!--                </div>-->
-<!--                <a th:href="${@localeLinks.href('/use-cases/study-group')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>-->
-<!--            </div>-->
+            <div class="scenario-card animate-on-scroll">
+                <div class="scenario-emoji">📚</div>
+                <h3 th:text="#{index.scenario.study.title}">스터디 그룹</h3>
+                <p th:text="#{index.scenario.study.desc}">스터디, 독서 모임, 동아리. 각자 되는 날을 한곳에 모아 정기 일정을 잡으세요.</p>
+                <div class="scenario-example">
+                    <span class="scenario-label" th:text="#{index.scenario.study.example}">예시</span>
+                    datedate.site/coding-study
+                </div>
+                <a th:href="${@localeLinks.href('/use-cases/study-group')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why DateDate — editorial content section -->
+    <section class="features-section why-section">
+        <h2 class="animate-on-scroll" th:text="#{index.why.title}">단톡방 대신 DateDate를 쓰는 이유</h2>
+        <p class="section-subtitle animate-on-scroll" th:text="#{index.why.lead}">단톡방은 일정 조율에 맞지 않는 도구입니다.</p>
+        <div class="why-content">
+            <article class="why-item animate-on-scroll">
+                <h3 th:text="#{index.why.problem.title}">"언제 돼?"의 무한 반복</h3>
+                <p th:text="#{index.why.problem.desc}">단톡방에 던진 질문은 제각각 흩어집니다.</p>
+            </article>
+            <article class="why-item animate-on-scroll">
+                <h3 th:text="#{index.why.how.title}">DateDate가 동작하는 방식</h3>
+                <p th:text="#{index.why.how.desc}">한 화면에서 가능한 날이 자동으로 드러납니다.</p>
+            </article>
+            <article class="why-item animate-on-scroll">
+                <h3 th:text="#{index.why.limits.title}">솔직한 한계</h3>
+                <p th:text="#{index.why.limits.desc}">날짜 단위, 8명 권장, 링크 기반 접근.</p>
+            </article>
         </div>
     </section>
 

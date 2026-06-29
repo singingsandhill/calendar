@@ -15,7 +15,8 @@ public final class UseCaseSlugs {
             "friend-meetup",
             "team-meeting",
             "travel-planning",
-            "study-group"
+            "study-group",
+            "club-activity"
     );
 
     private UseCaseSlugs() {

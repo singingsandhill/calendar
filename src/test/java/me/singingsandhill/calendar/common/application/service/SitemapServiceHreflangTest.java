@@ -92,16 +92,16 @@ class SitemapServiceHreflangTest {
     }
 
     @Test
-    @DisplayName("인기 데이터 없을 때 — 공개 페이지 11개 × 2 url × 3 alt = 66개 (insights/trends 제외)")
+    @DisplayName("인기 데이터 없을 때 — 공개 페이지 12개 × 2 url × 3 alt = 72개 (insights/trends 제외)")
     void hreflangEntryCountReasonable() {
         String xml = service.generateSitemapXml();
         int count = xml.split("<xhtml:link", -1).length - 1;
         // setUp 의 null 리포지토리로 인해 /insights/trends 는 제외.
-        // 공개 양방향 엔트리 11개:
+        // 공개 양방향 엔트리 12개:
         //   home, guide, about, privacy, terms, faq, date-diff,
-        //   use-cases x 4 (friend, team, travel, study)
-        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 11 * 2 * 3 = 66
-        assertThat(count).isEqualTo(11 * 2 * 3);
+        //   use-cases x 5 (friend, team, travel, study, club-activity)
+        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 12 * 2 * 3 = 72
+        assertThat(count).isEqualTo(12 * 2 * 3);
     }
 
     @Test

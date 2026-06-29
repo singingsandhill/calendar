@@ -50,10 +50,10 @@
             <div class="footer-section">
                 <span class="footer-section-title" th:text="#{footer.section.usecases}">활용 사례</span>
                 <div class="footer-section-links">
-                    <a th:href="${@localeLinks.href('/use-cases/friend-meetup')}" class="footer-link" th:text="#{footer.usecase.friend}">친구 모임</a>
-                    <a th:href="${@localeLinks.href('/use-cases/team-meeting')}" class="footer-link" th:text="#{footer.usecase.team}">팀 회의</a>
-                    <a th:href="${@localeLinks.href('/use-cases/travel-planning')}" class="footer-link" th:text="#{footer.usecase.travel}">여행 계획</a>
-                    <a th:href="${@localeLinks.href('/use-cases/study-group')}" class="footer-link" th:text="#{footer.usecase.study}">스터디 그룹</a>
+                    <a th:each="slug : ${useCaseSlugs}"
+                       th:href="${@localeLinks.href('/use-cases/' + slug)}"
+                       class="footer-link"
+                       th:text="#{'seo.useCase.' + ${slug} + '.navLabel'}">활용 사례</a>
                 </div>
             </div>
         </div>

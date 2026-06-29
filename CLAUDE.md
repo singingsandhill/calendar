@@ -93,6 +93,7 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 - 메시지 파일: `src/main/resources/messages.properties` (한국어, 기본), `messages_en.properties` (영어)
 - `MessageSource`: `ReloadableResourceBundleMessageSource`, UTF-8, 시스템 로케일 폴백 없음
 - `MessageFormat` 의 number 인자는 `{n,number,#}` 패턴으로 천단위 그룹화 차단 (예: year=2026 이 "2,026" 출력 방지). 회귀 테스트 `SeoServiceI18nTest.scheduleSeo_yearNotGrouped` 가드.
+- **작은따옴표 이스케이프:** `alwaysUseMessageFormat=false` (WebConfig) → 인자 없는 메시지는 MessageFormat 미적용. 따옴표 `''` 이스케이프는 인자 있는 메시지(`{0}` 포함, 예: `dashboard.title`)에서만 사용. 인자 없는 일반 콘텐츠(use-case·SEO·홈 본문 등)는 `'` 1개를 그대로 쓴다 — 인자 없는 메시지에 `''` 를 쓰면 화면에 `''` 가 노출됨.
 
 ## Exception Handling (Two-Layer)
 
@@ -130,10 +131,13 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트는 비활성화.  
 로그인 URL: `/runners/admin/login` → 로그아웃 후 `/runners` 리다이렉트.
 
+CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하도록 허용 (`CorsConfig`, 무자격증명).
+결정 근거: [ADR 0002](docs/adr/common/security/0002-cors-for-apps-in-toss-miniapp.md).
+
 ## DateDate Module (추가 기능)
 
 - `InsightsService` + `InsightsController` → `/insights/trends.html` (집계 인기 통계)
-- `UseCaseController` → `/use-cases/detail.html` (콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹)
+- `UseCaseController` → `/use-cases/detail.html` (콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹, 동호회). 슬러그 단일 진실원 `UseCaseSlugs.ALL` (라우팅·사이트맵·푸터 자동 반영). 슬러그별 워크드 예시(`sample.*`)로 템플릿 차별화.
 - `SeoService` — 페이지별 JSON-LD 스키마 포함 SEO 메타데이터 생성
 - `PopularityService` — 시간 가중 점수 기반 장소/메뉴 인기 순위
 

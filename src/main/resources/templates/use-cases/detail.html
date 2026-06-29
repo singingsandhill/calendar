@@ -21,6 +21,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <p class="use-case-intro-body" th:text="${introBody}">Intro</p>
     </section>
 
+    <!-- Worked example — per-slug differentiation (breaks the single-template look, adds unique content) -->
+    <section class="use-case-sample animate-on-scroll"
+             th:classappend="${'use-case-sample-' + currentSlug}"
+             th:with="sampleTitle=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.sample.title')}"
+             th:if="${sampleTitle != null and !#strings.isEmpty(sampleTitle)}">
+        <div class="use-case-sample-icon" th:switch="${currentSlug}">
+            <span th:case="'friend-meetup'">🎉</span>
+            <span th:case="'team-meeting'">💼</span>
+            <span th:case="'travel-planning'">✈️</span>
+            <span th:case="'study-group'">📚</span>
+            <span th:case="'club-activity'">🎾</span>
+            <span th:case="*">📅</span>
+        </div>
+        <h2 th:text="${sampleTitle}">Worked example</h2>
+        <p class="use-case-sample-body" th:text="#{'seo.useCase.' + ${currentSlug} + '.sample.body'}">Example walkthrough</p>
+    </section>
+
     <!-- When to use — 3 scenarios with concrete situations -->
     <section class="use-case-when animate-on-scroll"
              th:with="whenLead=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.whenToUse.lead')}"
