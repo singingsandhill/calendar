@@ -2,6 +2,7 @@ package me.singingsandhill.calendar.common.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -15,6 +16,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // CORS: /api/** 를 앱인토스 미니앱(다른 origin)에서 호출 가능하게 함 (CorsConfig 빈 사용).
+            .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
                 // 기존 앱 경로 - 모두 허용
                 .requestMatchers("/", "/start", "/index.html", "/privacy-policy", "/about").permitAll()

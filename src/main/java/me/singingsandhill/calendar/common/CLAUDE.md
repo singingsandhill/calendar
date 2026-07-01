@@ -42,7 +42,11 @@ Abstract base: subclasses implement `getStatus()` (HttpStatus) and `getCode()` (
 CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트 비활성. 폼 로그인 페이지:
 `/runners/admin/login` → 로그아웃 후 `/runners`.
 
-관련 ADR: [`common/security/0001`](../../../../../../../docs/adr/common/security/0001-runner-admin-only-form-login.md).
+CORS: `CorsConfig` 가 `/api/**` 한정 `CorsConfigurationSource` 빈을 제공하고 `SecurityConfig` 가
+`.cors()` 로 활성화. 앱인토스 미니앱(다른 origin)의 공개 API 호출 허용 (무자격증명, allowedOriginPatterns `*`).
+
+관련 ADR: [`common/security/0001`](../../../../../../../docs/adr/common/security/0001-runner-admin-only-form-login.md),
+[`common/security/0002`](../../../../../../../docs/adr/common/security/0002-cors-for-apps-in-toss-miniapp.md).
 
 ## i18n / SEO 메모
 
