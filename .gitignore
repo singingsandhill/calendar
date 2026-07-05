@@ -48,3 +48,5 @@ Thumbs.db
 logs/
 *.gz
 docs/git_commit.md
+
+.claude/*

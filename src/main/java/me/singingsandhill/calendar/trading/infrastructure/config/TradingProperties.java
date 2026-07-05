@@ -70,6 +70,9 @@ public class TradingProperties {
         private double orderRatioMax = 0.35;  // 변동성 낮을 때 최대 비율
         private long signalCooldownMinutes = 10;  // 매매 간 최소 간격 (휩소 방지)
         private long minHoldingMinutes = 15;      // 포지션 최소 보유 시간
+        private long maxHoldMinutes = 360;        // P2-8: 정체 포지션 최대 보유(분). 초과+손익분기 이상이면 청산. 0=비활성
+        private double maxCoinExposurePct = 0.8;  // P2-12: 코인 노출 상한(총자본 대비). 초과 시 신규 매수 스킵. 0=비활성
+        private boolean blockAveragingDown = true;// P2-10: 손실 포지션 보유 중 추가 매수 차단(물타기 방지)
         private Mode mode = Mode.LIVE;             // 운영 모드. LIVE 가 아니면 실주문 대신 인메모리 시뮬레이션 (P0-1)
 
         /**
@@ -96,6 +99,12 @@ public class TradingProperties {
         public void setSignalCooldownMinutes(long signalCooldownMinutes) { this.signalCooldownMinutes = signalCooldownMinutes; }
         public long getMinHoldingMinutes() { return minHoldingMinutes; }
         public void setMinHoldingMinutes(long minHoldingMinutes) { this.minHoldingMinutes = minHoldingMinutes; }
+        public long getMaxHoldMinutes() { return maxHoldMinutes; }
+        public void setMaxHoldMinutes(long maxHoldMinutes) { this.maxHoldMinutes = maxHoldMinutes; }
+        public double getMaxCoinExposurePct() { return maxCoinExposurePct; }
+        public void setMaxCoinExposurePct(double maxCoinExposurePct) { this.maxCoinExposurePct = maxCoinExposurePct; }
+        public boolean isBlockAveragingDown() { return blockAveragingDown; }
+        public void setBlockAveragingDown(boolean blockAveragingDown) { this.blockAveragingDown = blockAveragingDown; }
         public Mode getMode() { return mode; }
         public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.LIVE; }
     }
@@ -110,6 +119,9 @@ public class TradingProperties {
         private int stochSlow = 3;
         private int volumeMa = 20;
         private int atrPeriod = 14;  // ATR 계산 기간
+        private int rsiTrendLookback = 3;       // P2-6: RSI 추세 비교 봉 수 (인접봉 잡음 회피)
+        private double minRsiTrendDelta = 2.0;  // P2-6: RSI 추세 인정 최소 변화폭(점)
+        private boolean excludeFormingCandle = false; // P2-2: 지표 계산 시 형성 중(index 0) 봉 제외. 기본 OFF — Bithumb index 0 = 형성봉 확인 후 ON
 
         public int getMaShort() { return maShort; }
         public void setMaShort(int maShort) { this.maShort = maShort; }
@@ -129,6 +141,12 @@ public class TradingProperties {
         public void setVolumeMa(int volumeMa) { this.volumeMa = volumeMa; }
         public int getAtrPeriod() { return atrPeriod; }
         public void setAtrPeriod(int atrPeriod) { this.atrPeriod = atrPeriod; }
+        public int getRsiTrendLookback() { return rsiTrendLookback; }
+        public void setRsiTrendLookback(int rsiTrendLookback) { this.rsiTrendLookback = rsiTrendLookback; }
+        public double getMinRsiTrendDelta() { return minRsiTrendDelta; }
+        public void setMinRsiTrendDelta(double minRsiTrendDelta) { this.minRsiTrendDelta = minRsiTrendDelta; }
+        public boolean isExcludeFormingCandle() { return excludeFormingCandle; }
+        public void setExcludeFormingCandle(boolean excludeFormingCandle) { this.excludeFormingCandle = excludeFormingCandle; }
     }
 
     public static class Thresholds {
