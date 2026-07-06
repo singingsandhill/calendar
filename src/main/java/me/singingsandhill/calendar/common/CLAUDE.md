@@ -36,10 +36,15 @@ Abstract base: subclasses implement `getStatus()` (HttpStatus) and `getCode()` (
 | Path Pattern | Access |
 |--------------|--------|
 | `/runners/admin/**` | ROLE_ADMIN (단, `/runners/admin/login` 은 permitAll) |
+| `/api/trading/**`, `/trading`, `/trading/**` | ROLE_ADMIN (봇 제어·실주문·제어 대시보드, [ADR 0003](../../../../../../../docs/adr/common/security/0003-admin-only-trading-control-api.md)) |
 | `/`, `/start`, `/api/**`, `/h2-console/**`, static assets, `/runners/**`, `/insights/**`, `/use-cases/**`, `/tools`, `/tools/**`, `/stock/**`, `/api/stock/**`, `/*`, `/*/*/*` | permitAll |
 | 그 외 | authenticated |
 
-CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트 비활성. 폼 로그인 페이지:
+트레이딩 ROLE_ADMIN 규칙은 포괄 `permitAll`(`/api/**`, `/*`)보다 **먼저** 선언해야 함(첫 매칭 우선).
+회귀 가드: `TradingApiSecurityTest`.
+
+CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트 비활성. `/api/trading/**` 는 `ROLE_ADMIN`
++ 무자격증명 CORS 로 무인증/교차출처 노출을 차단(CSRF 토큰화는 후속 과제). 폼 로그인 페이지:
 `/runners/admin/login` → 로그아웃 후 `/runners`.
 
 CORS: `CorsConfig` 가 `/api/**` 한정 `CorsConfigurationSource` 빈을 제공하고 `SecurityConfig` 가

@@ -126,13 +126,16 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 |--------------|--------|
 | `/runners/admin/**` | `ROLE_ADMIN` |
 | `/runners/admin/login` | permitAll |
+| `/api/trading/**`, `/trading`, `/trading/**` | `ROLE_ADMIN` (봇 제어·실주문·제어 대시보드, P0-1) |
 | `/runners/**`, `/insights/**`, `/tools/**`, `/stock/**`, `/api/**`, `/h2-console/**`, static assets, `/**` | permitAll |
+
+> 트레이딩 규칙은 포괄 `permitAll`(`/api/**`, `/*`)보다 **먼저** 선언해야 매칭 우선순위가 보장됨. 근거: [ADR 0003](docs/adr/common/security/0003-admin-only-trading-control-api.md).
 
 CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트는 비활성화.  
 로그인 URL: `/runners/admin/login` → 로그아웃 후 `/runners` 리다이렉트.
 
 CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하도록 허용 (`CorsConfig`, 무자격증명).
-결정 근거: [ADR 0002](docs/adr/common/security/0002-cors-for-apps-in-toss-miniapp.md).
+결정 근거: [ADR 0002](docs/adr/common/security/0002-cors-for-apps-in-toss-miniapp.md). 트레이딩 API 는 `ROLE_ADMIN`(세션 인증) + 무자격증명 CORS 조합으로 교차출처 호출이 차단됨.
 
 ## DateDate Module (추가 기능)
 

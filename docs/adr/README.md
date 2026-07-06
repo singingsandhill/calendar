@@ -82,6 +82,7 @@
 | 2026-05-30 | trading/strategy | [0009 형성봉 제외(기본 OFF)](trading/strategy/0009-exclude-forming-candle.md) | 수익성 감사 P2-2 — 룩어헤드/리페인트 |
 | 2026-05-30 | trading/strategy | [0010 모멘텀 가중 하향](trading/strategy/0010-momentum-weight-reduction.md) | 수익성 감사 P2-7 — ADR-0001 ±135 정련 |
 | 2026-06-11 | datedate/domain | [0004 GET owner 자동 생성 제거 → 404 + 빈 대시보드](datedate/domain/0004-no-owner-auto-create-on-get-dashboard.md) | AdSense 재심사 감사 — 소프트 404 / GET mutation |
+| 2026-07-06 | common/security | [0003 트레이딩 제어·실주문 API 관리자 전용](common/security/0003-admin-only-trading-control-api.md) | 운영 리뷰 P0-1 — 무인증 실주문 API 노출 |
 
 ---
 

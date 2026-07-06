@@ -19,6 +19,11 @@ public class SecurityConfig {
             // CORS: /api/** 를 앱인토스 미니앱(다른 origin)에서 호출 가능하게 함 (CorsConfig 빈 사용).
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
+                // 트레이딩 봇 제어·실주문 API 및 제어 대시보드는 관리자 전용 (P0-1).
+                // 반드시 아래 /api/** · /* 포괄 permitAll 규칙보다 먼저 선언해야 매칭 우선순위가 보장된다.
+                .requestMatchers("/api/trading/**").hasRole("ADMIN")
+                .requestMatchers("/trading", "/trading/**").hasRole("ADMIN")
+
                 // 기존 앱 경로 - 모두 허용
                 .requestMatchers("/", "/start", "/index.html", "/privacy-policy", "/about").permitAll()
                 .requestMatchers("/api/**").permitAll()
