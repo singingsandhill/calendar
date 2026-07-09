@@ -12,12 +12,19 @@ This directory contains solutions to common issues encountered during developmen
 | [JPA NonUniqueResultException](jpa-non-unique-result-exception.md) | 다중 결과 쿼리에서 Optional 사용 시 예외 |
 | [Nginx Configuration](nginx-configuration.md) | http2 deprecated, server_name 충돌, 리디렉션 설정 |
 | [Lighthouse Performance Audit](lighthouse-performance-audit.md) | datedate.site 폰트/manifest 최적화 — Pretendard 동적 서브셋, Noto 로케일 분기, manifest i18n |
+| [Spring Security @WebMvcTest](spring-security-webmvctest.md) | 보안 슬라이스 테스트 — 컨텍스트 로딩 실패(전이 의존성), @WithMockUser 미적용 → post-processor |
 
 ## Quick Reference
 
 ### Build Errors
 - `package org.springframework.boot.test.autoconfigure.web.servlet does not exist`
   - See: [Spring Boot 4.0 Migration](spring-boot-4-migration.md#webmvctest-import-error)
+
+### Test Errors
+- `@WebMvcTest` 컨텍스트 로딩 실패: `NoSuchBeanDefinitionException: OwnerRepository`
+  - See: [Spring Security @WebMvcTest](spring-security-webmvctest.md#증상-1--컨텍스트-로딩-실패-nosuchbeandefinitionexception)
+- `@WithMockUser` 인데 인증 사용자가 `Status expected:<200> but was:<302>`
+  - See: [Spring Security @WebMvcTest](spring-security-webmvctest.md#증상-2--withmockuser-가-무시되고-인증-사용자가-302로그인-리다이렉트로-처리됨)
 
 ### Runtime Errors
 - `/api/schedules/undefined/participants` - 500 error
