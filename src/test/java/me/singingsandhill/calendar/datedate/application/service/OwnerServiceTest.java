@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import me.singingsandhill.calendar.datedate.application.exception.OwnerAlreadyLinkedException;
+import me.singingsandhill.calendar.datedate.application.exception.OwnerNotFoundException;
 import me.singingsandhill.calendar.datedate.application.exception.ReservedOwnerIdException;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
@@ -127,5 +130,46 @@ class OwnerServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getOwnerId()).isEqualTo("test-user");
+    }
+
+    @Test
+    @DisplayName("로그인 상태 getOrCreateOwner 는 미연결 오너를 현재 유저에 자동 연결한다")
+    void getOrCreateOwnerLinksUserWhenUnlinked() {
+        when(ownerRepository.findById("my-crew")).thenReturn(Optional.empty());
+        when(ownerRepository.save(any(Owner.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Owner owner = ownerService.getOrCreateOwner("my-crew", 42L);
+
+        assertThat(owner.getUserId()).isEqualTo(42L);
+    }
+
+    @Test
+    @DisplayName("비로그인(userId null) getOrCreateOwner 는 연결하지 않는다")
+    void getOrCreateOwnerWithoutUserKeepsUnlinked() {
+        when(ownerRepository.findById("my-crew")).thenReturn(Optional.empty());
+        when(ownerRepository.save(any(Owner.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Owner owner = ownerService.getOrCreateOwner("my-crew", null);
+
+        assertThat(owner.getUserId()).isNull();
+    }
+
+    @Test
+    @DisplayName("linkOwnerToUser: 미존재 오너는 OwnerNotFoundException")
+    void linkOwnerToUserThrowsWhenOwnerMissing() {
+        when(ownerRepository.findById("ghost")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> ownerService.linkOwnerToUser("ghost", 42L))
+                .isInstanceOf(OwnerNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("linkOwnerToUser: 타 유저 선점 오너는 OwnerAlreadyLinkedException")
+    void linkOwnerToUserThrowsWhenClaimedByOther() {
+        Owner claimed = new Owner("my-crew", LocalDateTime.now(), List.of(), 7L);
+        when(ownerRepository.findById("my-crew")).thenReturn(Optional.of(claimed));
+
+        assertThatThrownBy(() -> ownerService.linkOwnerToUser("my-crew", 42L))
+                .isInstanceOf(OwnerAlreadyLinkedException.class);
     }
 }

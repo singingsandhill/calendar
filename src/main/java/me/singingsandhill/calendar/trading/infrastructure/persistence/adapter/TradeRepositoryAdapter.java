@@ -97,7 +97,8 @@ public class TradeRepositoryAdapter implements TradeRepository {
                 trade.getSignalReason(),
                 trade.getOrderedAt(),
                 trade.getExecutedAt(),
-                trade.getCreatedAt()
+                trade.getCreatedAt(),
+                trade.getClientOrderId()
         );
         if (trade.getId() != null) {
             entity.setId(trade.getId());
@@ -123,7 +124,8 @@ public class TradeRepositoryAdapter implements TradeRepository {
                 entity.getSignalReason(),
                 entity.getOrderedAt(),
                 entity.getExecutedAt(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getClientOrderId()
         );
     }
 }

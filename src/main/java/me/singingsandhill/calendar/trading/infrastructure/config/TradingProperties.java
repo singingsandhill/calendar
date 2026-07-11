@@ -52,6 +52,18 @@ public class TradingProperties {
         private String baseUrl = "https://api.bithumb.com";
         private String accessKey;
         private String secretKey;
+        // P0-2: 주문에 client_order_id(멱등키)를 부여하고 null 응답 시 재조회로 정합화. v1 POST /v1/orders
+        // 의 client_order_id 지원이 문서상 불확실하므로 기본 OFF — 소액 라이브 검증(또는 v2 생성 마이그레이션)
+        // 후 활성화. 근거: docs/audit/coin-trading-operational-review-2026-07-06.md P0-2.
+        private boolean clientOrderIdEnabled = false;
+
+        // Phase 1: 주문 생성/취소 API 버전. 기본 V1(기존 동작). V2 는 client_order_id·time_in_force 확정 지원.
+        // enum 타입이라 잘못된 값은 기동 시 바인딩 실패로 fail-fast (§8-F).
+        // 근거: docs/trading-bithumb-v2-migration-plan.md
+        private OrderApiVersion orderApiVersion = OrderApiVersion.V1;
+
+        /** 주문 생성/취소에 사용할 Bithumb API 버전. */
+        public enum OrderApiVersion { V1, V2 }
 
         public String getBaseUrl() { return baseUrl; }
         public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
@@ -59,6 +71,12 @@ public class TradingProperties {
         public void setAccessKey(String accessKey) { this.accessKey = accessKey; }
         public String getSecretKey() { return secretKey; }
         public void setSecretKey(String secretKey) { this.secretKey = secretKey; }
+        public boolean isClientOrderIdEnabled() { return clientOrderIdEnabled; }
+        public void setClientOrderIdEnabled(boolean clientOrderIdEnabled) { this.clientOrderIdEnabled = clientOrderIdEnabled; }
+        public OrderApiVersion getOrderApiVersion() { return orderApiVersion; }
+        public void setOrderApiVersion(OrderApiVersion orderApiVersion) {
+            this.orderApiVersion = orderApiVersion != null ? orderApiVersion : OrderApiVersion.V1;
+        }
     }
 
     public static class Bot {

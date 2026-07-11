@@ -64,6 +64,23 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
   HTTP/sleep 을 트랜잭션 밖에서 수행, `Trade`+`Position` 영속화만 `TransactionTemplate`
   로 원자적 저장. P0-3b 로 `RiskManagementService`/`RebalanceService` 청산·매수 경로에도
   동일 패턴 적용 → **모든 주문 경로에서 HTTP-in-tx 제거** [ADR infrastructure/0001].
+- **주문 선영속화 + 틱 스윕 (§8-B)** — cid 부착 구성(`supportsClientOrderId()` = v2 또는
+  v1+`clientOrderIdEnabled`)이면 `executeBuy`/`executeSell`(신호 경로)이 주문 전송 **전에**
+  `Trade(SUBMITTED, client_order_id)` 선영속화(매도는 positionId 연결). 응답 null/`UNKNOWN`/
+  예외 시 SUBMITTED 유지 → 스윕(`reconcileSubmittedOrders`, 루프 시작부 + `start()` 기동
+  직후 1회 §8-G)이 grace(10초) 경과분을 cid 재조회로 정합화: 매수 체결 → DONE +
+  **Position(SL/TP) 생성**, 매도 체결 → DONE + **연결 포지션 청산**(이미 닫혔으면 Trade 만),
+  취소 → CANCEL, 만료(2분) 미발견 → FAILED. 미해결 SUBMITTED 존재 시 신규 매수 차단,
+  같은 포지션 미해결 매도 존재 시 재매도 차단. 기본 구성(V1+OFF)은 선영속화 꺼짐 — 운영
+  동작 불변 [ADR infrastructure/0002].
+- **Bithumb v2 주문 API (Phase 1)** — `trading.bithumb.order-api-version` enum(`V1`|`V2`,
+  기본 V1, fail-fast). v2 는 생성 `POST /v2/orders`·취소 `DELETE /v2/order` 만이고 조회는
+  영구 v1 — `BithumbV2OrderApi` 가 `GET /v1/order` 재조회(최대 3회 선형 백오프, 기본
+  300ms)로 v1 형태(`BithumbOrderResponse`, trades 포함)로 정규화해 application 계층은
+  버전 무관. 생성 에러/응답유실은 재전송 금지, cid 재조회로 복구(중복 cid 에러 포함 §8-E).
+  취소 422(처리 중)는 1회 재시도. 재조회 전부 실패 시 `state=UNKNOWN` 부분 응답 →
+  §8-B 스윕이 수습. cid 는 `t1-`/`t2-` 버전 프리픽스로 추적. 지정가는 미사용 경로라 v1
+  유지 + cid 부착만 [ADR infrastructure/0003].
 - **포지션 리스크 가드 (P2)** — `maxHoldMinutes`(360) 정체 포지션 손익분기 이상이면
   `TIME_EXIT` 청산 / `blockAveragingDown`(true) 손실 포지션 보유 중 추가 매수 차단 /
   `maxCoinExposurePct`(0.8) 코인 비중 상한 초과 시 신규 매수 스킵 [ADR risk/0003].

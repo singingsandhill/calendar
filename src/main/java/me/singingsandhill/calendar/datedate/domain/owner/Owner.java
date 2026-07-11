@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import me.singingsandhill.calendar.datedate.application.exception.OwnerAlreadyLinkedException;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 
 public class Owner {
@@ -17,16 +18,23 @@ public class Owner {
     private final String ownerId;
     private final LocalDateTime createdAt;
     private final List<Schedule> schedules;
+    private Long userId;
 
     public Owner(String ownerId) {
-        this(ownerId, LocalDateTime.now(), new ArrayList<>());
+        this(ownerId, LocalDateTime.now(), new ArrayList<>(), null);
     }
 
     public Owner(String ownerId, LocalDateTime createdAt, List<Schedule> schedules) {
+        this(ownerId, createdAt, schedules, null);
+    }
+
+    /** first-claim 연결 (ADR datedate/domain/0005): 소유 증명 수단이 없어 선점 정책. */
+    public Owner(String ownerId, LocalDateTime createdAt, List<Schedule> schedules, Long userId) {
         validateOwnerId(ownerId);
         this.ownerId = ownerId;
         this.createdAt = createdAt;
         this.schedules = new ArrayList<>(schedules);
+        this.userId = userId;
     }
 
     private void validateOwnerId(String ownerId) {
@@ -60,5 +68,23 @@ public class Owner {
 
     public int getScheduleCount() {
         return schedules.size();
+    }
+
+    public void linkUser(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId cannot be null");
+        }
+        if (this.userId != null && !this.userId.equals(userId)) {
+            throw new OwnerAlreadyLinkedException(ownerId);
+        }
+        this.userId = userId;
+    }
+
+    public boolean isLinkedTo(Long userId) {
+        return this.userId != null && this.userId.equals(userId);
+    }
+
+    public Long getUserId() {
+        return userId;
     }
 }

@@ -11,6 +11,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -25,6 +26,7 @@ class BithumbApiClientModeTest {
 
     private BithumbPublicApi publicApi;
     private BithumbPrivateApi privateApi;
+    private BithumbV2OrderApi v2Api;
     private TradingProperties props;
     private BithumbApiClient client;
 
@@ -32,11 +34,12 @@ class BithumbApiClientModeTest {
     void setUp() {
         publicApi = mock(BithumbPublicApi.class);
         privateApi = mock(BithumbPrivateApi.class);
+        v2Api = mock(BithumbV2OrderApi.class);
         props = new TradingProperties();
         props.getBot().setMarket("KRW-ADA");
         props.getRisk().setSlippageBuffer(0.005);
         props.getRisk().setTakerFeeRate(0.0025);
-        client = new BithumbApiClient(publicApi, privateApi, props);
+        client = new BithumbApiClient(publicApi, privateApi, v2Api, props);
 
         // 중간가 1000 (ask 1001 / bid 999)
         BithumbOrderbookResponse ob = new BithumbOrderbookResponse(
@@ -76,6 +79,44 @@ class BithumbApiClientModeTest {
         assertThat(new BigDecimal(res.trades().get(0).price())).isEqualByComparingTo("995");
         // 수수료 = 995 * 100 * 0.25% = 248.75
         assertThat(new BigDecimal(res.paidFee())).isEqualByComparingTo("248.75");
+    }
+
+    // §8-A: 모드 게이트 커버리지 — PAPER/BACKTEST 는 취소·지정가·미결조회로도 실계정(privateApi)을 건드리면 안 된다.
+
+    @Test
+    void paperMode_cancelAllPendingOrders_doesNotTouchPrivateApi() {
+        props.getBot().setMode(TradingProperties.Bot.Mode.PAPER);
+
+        client.cancelAllPendingOrders();
+
+        // 실계정 조회/취소가 나가면 안 됨 (emergencyClose 가 PAPER 에서 이 경로를 호출)
+        verify(privateApi, never()).getOrders(anyString(), anyString(), anyInt(), anyInt());
+        verify(privateApi, never()).cancelOrder(anyString());
+    }
+
+    @Test
+    void paperMode_getPendingOrders_returnsEmptyWithoutPrivateApi() {
+        props.getBot().setMode(TradingProperties.Bot.Mode.PAPER);
+
+        assertThat(client.getPendingOrders()).isEmpty();
+        verify(privateApi, never()).getOrders(anyString(), anyString(), anyInt(), anyInt());
+    }
+
+    @Test
+    void paperMode_cancelOrder_doesNotCallPrivateApi() {
+        props.getBot().setMode(TradingProperties.Bot.Mode.PAPER);
+
+        assertThat(client.cancelOrder("some-uuid")).isNull();
+        verify(privateApi, never()).cancelOrder(anyString());
+    }
+
+    @Test
+    void paperMode_limitBuy_doesNotCallPrivateApi() {
+        props.getBot().setMode(TradingProperties.Bot.Mode.PAPER);
+
+        client.placeLimitBuyOrder(new BigDecimal("100"), new BigDecimal("1000"));
+
+        verify(privateApi, never()).placeLimitOrder(anyString(), anyString(), any(), any());
     }
 
     @Test

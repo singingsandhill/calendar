@@ -25,12 +25,22 @@ public class OwnerJpaEntity {
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ScheduleJpaEntity> schedules = new ArrayList<>();
 
+    /** 카카오 사용자 연결 (nullable, first-claim). AppUserJpaEntity.id 참조. */
+    @Column(name = "user_id")
+    private Long userId;
+
     protected OwnerJpaEntity() {
     }
 
     public OwnerJpaEntity(String ownerId, LocalDateTime createdAt) {
         this.ownerId = ownerId;
         this.createdAt = createdAt;
+    }
+
+    public OwnerJpaEntity(String ownerId, LocalDateTime createdAt, Long userId) {
+        this.ownerId = ownerId;
+        this.createdAt = createdAt;
+        this.userId = userId;
     }
 
     public String getOwnerId() {
@@ -48,5 +58,13 @@ public class OwnerJpaEntity {
     public void addSchedule(ScheduleJpaEntity schedule) {
         schedules.add(schedule);
         schedule.setOwner(this);
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

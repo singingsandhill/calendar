@@ -13,12 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import me.singingsandhill.calendar.common.infrastructure.config.CorsConfig;
 import me.singingsandhill.calendar.common.infrastructure.config.SecurityConfig;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
+import me.singingsandhill.calendar.datedate.infrastructure.security.KakaoOAuth2UserService;
 import me.singingsandhill.calendar.runner.domain.AdminRepository;
 import me.singingsandhill.calendar.trading.application.service.TradingBotService;
 
@@ -44,6 +46,12 @@ class TradingApiSecurityTest {
 
     @MockitoBean
     private OwnerRepository ownerRepository;
+
+    @MockitoBean
+    private ClientRegistrationRepository clientRegistrationRepository;
+
+    @MockitoBean
+    private KakaoOAuth2UserService kakaoOAuth2UserService;
 
     @Test
     @DisplayName("미인증 사용자의 긴급청산 호출은 로그인으로 리다이렉트되고 서비스까지 도달하지 않는다")

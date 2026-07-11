@@ -4774,3 +4774,9 @@ footer {
     .tool-page--almanac .tool-cta { padding: var(--space-12) var(--space-6); }
     .tool-page--almanac .tool-cta::after { right: 16px; top: 14px; }
 }
+
+/* Header auth (카카오 로그인 / 프로필) */
+.nav-logout-form { display: inline; margin: 0; }
+.nav-logout-btn { background: none; border: none; cursor: pointer; font: inherit; }
+.nav-profile-img { border-radius: 50%; vertical-align: middle; margin-right: 4px; }
+.nav-kakao-login { background: #FEE500; border-radius: 8px; padding: 6px 12px; color: rgba(0, 0, 0, 0.85); }

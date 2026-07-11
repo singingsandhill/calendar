@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
+
+<main class="recap-page">
+    <!-- 빈 상태 -->
+    <section class="recap-card recap-empty" th:if="${recap.empty()}">
+        <h1 th:text="#{recap.title(${recap.year()})}">2026 모임 리캡</h1>
+        <p th:text="#{recap.empty(${recap.year()})}">아직 기록이 없어요.</p>
+        <a th:href="${@localeLinks.href('/')}" class="recap-cta" th:text="#{nav.create}">일정 만들기</a>
+    </section>
+
+    <th:block th:unless="${recap.empty()}">
+        <section class="recap-card recap-intro">
+            <h1 th:text="#{recap.intro(${recap.nickname()}, ${recap.year()})}">지수님의 2026 모임 리캡</h1>
+        </section>
+
+        <section class="recap-card">
+            <h2 th:text="#{recap.created.label}">만든 일정</h2>
+            <p class="recap-big" th:text="#{recap.created.value(${recap.schedulesCreated()}, ${recap.totalParticipants()})}">3개의 일정</p>
+        </section>
+
+        <section class="recap-card">
+            <h2 th:text="#{recap.participated.label}">참여한 모임</h2>
+            <p class="recap-big" th:text="#{recap.participated.value(${recap.participationCount()}, ${recap.daysSelected()})}">2개의 일정</p>
+        </section>
+
+        <section class="recap-card" th:if="${recap.topWeekday() != null}">
+            <h2 th:text="#{recap.weekday.label}">가장 많이 모인 요일</h2>
+            <p class="recap-big" th:text="#{'recap.weekday.' + ${recap.topWeekday()}}">금요일</p>
+        </section>
+
+        <section class="recap-card" th:if="${recap.busiestMonth() != null}">
+            <h2 th:text="#{recap.month.label}">가장 바빴던 달</h2>
+            <p class="recap-big" th:text="#{recap.month.value(${recap.busiestMonth()})}">5월</p>
+        </section>
+
+        <section class="recap-card" th:if="${!recap.topLocations().isEmpty() or !recap.topMenus().isEmpty()}">
+            <h2 th:text="#{recap.votes.locations}">투표한 장소 TOP</h2>
+            <ol><li th:each="name : ${recap.topLocations()}" th:text="${name}">성수 카페</li></ol>
+            <h2 th:text="#{recap.votes.menus}">투표한 메뉴 TOP</h2>
+            <ol><li th:each="name : ${recap.topMenus()}" th:text="${name}">마라탕</li></ol>
+        </section>
+
+        <section class="recap-card" th:if="${!recap.topCompanions().isEmpty()}">
+            <h2 th:text="#{recap.companions.label}">자주 함께한 사람</h2>
+            <ol><li th:each="name : ${recap.topCompanions()}" th:text="${name}">민준</li></ol>
+        </section>
+
+        <section class="recap-card">
+            <a th:href="${@localeLinks.href('/')}" class="recap-cta" th:text="#{nav.create}">일정 만들기</a>
+        </section>
+    </th:block>
+</main>
+
+<style>
+    .recap-page { max-width: 480px; margin: 0 auto; padding: 2rem 1rem; }
+    .recap-card { padding: 3rem 1.5rem; margin-bottom: 1rem; border-radius: 16px;
+                  background: linear-gradient(160deg, #f7f4ff, #fff); text-align: center; }
+    .recap-big { font-size: 1.5rem; font-weight: 700; margin-top: 0.75rem; }
+    .recap-cta { display: inline-block; padding: 12px 20px; border-radius: 10px;
+                 background: #6c5ce7; color: #fff; border: none; cursor: pointer; text-decoration: none; }
+</style>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+<th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+</html>

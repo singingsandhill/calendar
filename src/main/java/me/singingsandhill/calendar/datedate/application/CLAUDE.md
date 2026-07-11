@@ -17,6 +17,12 @@
 - **PopularityService** - 시간 가중 점수 기반 장소/메뉴 인기 순위.
 - **SeoService** - 페이지 타입별 SEO 메타데이터 (i18n + JSON-LD 포함).
 - **InsightsService** - 집계 인기 통계 (`/insights/trends`).
+- **AppUserService** - 카카오 프로필 upsert (`kakaoId` unique, 재로그인 시 닉네임·프로필·lastLoginAt 갱신).
+- **UserActivityService** - 로그인 사용자 활동 이벤트(참여·투표·일정생성) append-only 기록,
+  (userId, type, targetId) 중복 방지, REQUIRES_NEW + 예외 삼킴으로 본 동작 무영향
+  ([ADR](../../../../../../../../docs/adr/datedate/domain/0005-user-activity-event-recap.md)).
+- **RecapService** - 연간 recap on-the-fly 집계 (오너 계열 + 활동 계열), 스냅샷 없음.
+- **RecapShareService** - (userId, year) 멱등 공유 토큰 발급, 연도 범위 검증(2024~현재).
 
 ## 도메인 불변식 위치
 

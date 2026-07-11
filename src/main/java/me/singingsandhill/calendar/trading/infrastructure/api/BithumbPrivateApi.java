@@ -138,7 +138,16 @@ public class BithumbPrivateApi {
      * @param price 주문 가격
      */
     public BithumbOrderResponse placeLimitOrder(String market, String side, BigDecimal volume, BigDecimal price) {
-        log.info("Placing limit {} order for {} - volume: {}, price: {}", side, market, volume, price);
+        return placeLimitOrder(market, side, volume, price, null);
+    }
+
+    /**
+     * 지정가 주문 — client_order_id(멱등키) 부착 오버로드 (Phase 0b: placeMarket* 과 동일 P0-2 의미론).
+     */
+    public BithumbOrderResponse placeLimitOrder(String market, String side, BigDecimal volume, BigDecimal price,
+                                                String clientOrderId) {
+        log.info("Placing limit {} order for {} - volume: {}, price: {}, clientOrderId: {}",
+                side, market, volume, price, clientOrderId);
 
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("market", market);
@@ -146,6 +155,9 @@ public class BithumbPrivateApi {
         params.put("volume", volume.toPlainString());
         params.put("price", price.toPlainString());
         params.put("ord_type", "limit");
+        if (clientOrderId != null) {
+            params.put("client_order_id", clientOrderId);
+        }
 
         return executeOrder(params);
     }
@@ -156,13 +168,25 @@ public class BithumbPrivateApi {
      * @param price 총 매수 금액
      */
     public BithumbOrderResponse placeMarketBuyOrder(String market, BigDecimal price) {
-        log.info("Placing market buy order for {} - total amount: {}", market, price);
+        return placeMarketBuyOrder(market, price, null);
+    }
+
+    /**
+     * 시장가 매수 (총 금액 지정) — client_order_id 멱등키 포함 (P0-2).
+     * clientOrderId 는 executeWithRetry 진입 '전에' params 에 삽입되므로 429 재전송 시에도 동일 키가 유지된다.
+     * @param clientOrderId 클라이언트 지정 주문 ID(1~36자, [A-Za-z0-9-_]). null 이면 미부착(기존 동작).
+     */
+    public BithumbOrderResponse placeMarketBuyOrder(String market, BigDecimal price, String clientOrderId) {
+        log.info("Placing market buy order for {} - total amount: {}, clientOrderId: {}", market, price, clientOrderId);
 
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("market", market);
         params.put("side", "bid");
         params.put("price", price.toPlainString());
         params.put("ord_type", "price");
+        if (clientOrderId != null) {
+            params.put("client_order_id", clientOrderId);
+        }
 
         return executeOrder(params);
     }
@@ -173,13 +197,24 @@ public class BithumbPrivateApi {
      * @param volume 매도 수량
      */
     public BithumbOrderResponse placeMarketSellOrder(String market, BigDecimal volume) {
-        log.info("Placing market sell order for {} - volume: {}", market, volume);
+        return placeMarketSellOrder(market, volume, null);
+    }
+
+    /**
+     * 시장가 매도 (수량 지정) — client_order_id 멱등키 포함 (P0-2).
+     * @param clientOrderId 클라이언트 지정 주문 ID. null 이면 미부착(기존 동작).
+     */
+    public BithumbOrderResponse placeMarketSellOrder(String market, BigDecimal volume, String clientOrderId) {
+        log.info("Placing market sell order for {} - volume: {}, clientOrderId: {}", market, volume, clientOrderId);
 
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("market", market);
         params.put("side", "ask");
         params.put("volume", volume.toPlainString());
         params.put("ord_type", "market");
+        if (clientOrderId != null) {
+            params.put("client_order_id", clientOrderId);
+        }
 
         return executeOrder(params);
     }
@@ -320,6 +355,42 @@ public class BithumbPrivateApi {
                 })
                 .onErrorResume(Exception.class, e -> {
                     log.error("Error fetching order {}: {}", uuid, e.getMessage());
+                    return Mono.empty();
+                })
+                .block();
+    }
+
+    /**
+     * client_order_id 로 개별 주문 조회 (P0-2 재조회/정합화용).
+     * 주문 응답이 null(타임아웃 등)로 uuid 를 확보하지 못했을 때, 클라이언트가 부여한 client_order_id 로
+     * 실제 접수 여부를 되찾는다. GET /v1/order 는 v1 에서 client_order_id 파라미터를 지원한다.
+     */
+    public BithumbOrderResponse getOrderByClientOrderId(String clientOrderId) {
+        log.debug("Fetching order by client_order_id: {}", clientOrderId);
+
+        if (!jwtGenerator.isConfigured()) {
+            log.warn("API keys not configured, skipping order fetch");
+            return null;
+        }
+
+        Map<String, Object> params = Map.of("client_order_id", clientOrderId);
+        String authToken = jwtGenerator.generateAuthorizationHeader(params);
+
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/v1/order")
+                        .queryParam("client_order_id", clientOrderId)
+                        .build())
+                .header("Authorization", authToken)
+                .retrieve()
+                .bodyToMono(BithumbOrderResponse.class)
+                .timeout(TIMEOUT)
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    logApiError("fetching order by client_order_id " + clientOrderId, e);
+                    return Mono.empty();
+                })
+                .onErrorResume(Exception.class, e -> {
+                    log.error("Error fetching order by client_order_id {}: {}", clientOrderId, e.getMessage());
                     return Mono.empty();
                 })
                 .block();

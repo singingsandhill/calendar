@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -17,6 +18,8 @@ import jakarta.validation.Valid;
 import me.singingsandhill.calendar.datedate.application.service.LocationService;
 import me.singingsandhill.calendar.datedate.application.service.MenuService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
+import me.singingsandhill.calendar.datedate.application.service.UserActivityService;
+import me.singingsandhill.calendar.datedate.domain.activity.ActivityType;
 import me.singingsandhill.calendar.datedate.domain.location.Location;
 import me.singingsandhill.calendar.datedate.domain.menu.Menu;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
@@ -24,6 +27,7 @@ import me.singingsandhill.calendar.datedate.presentation.dto.request.ScheduleCre
 import me.singingsandhill.calendar.datedate.presentation.dto.request.ScheduleUpdateRequest;
 import me.singingsandhill.calendar.datedate.presentation.dto.response.ScheduleDetailResponse;
 import me.singingsandhill.calendar.datedate.presentation.dto.response.ScheduleResponse;
+import me.singingsandhill.calendar.datedate.presentation.support.AuthenticatedUsers;
 
 @RestController
 @RequestMapping("/api/owners/{ownerId}/schedules")
@@ -32,12 +36,14 @@ public class ScheduleApiController {
     private final ScheduleService scheduleService;
     private final LocationService locationService;
     private final MenuService menuService;
+    private final UserActivityService userActivityService;
 
     public ScheduleApiController(ScheduleService scheduleService, LocationService locationService,
-                                  MenuService menuService) {
+                                  MenuService menuService, UserActivityService userActivityService) {
         this.scheduleService = scheduleService;
         this.locationService = locationService;
         this.menuService = menuService;
+        this.userActivityService = userActivityService;
     }
 
     @GetMapping("/{year}/{month}")
@@ -54,13 +60,17 @@ public class ScheduleApiController {
     @PostMapping
     public ResponseEntity<ScheduleResponse> createSchedule(
             @PathVariable String ownerId,
-            @Valid @RequestBody ScheduleCreateRequest request) {
+            @Valid @RequestBody ScheduleCreateRequest request,
+            Authentication authentication) {
         Schedule schedule = scheduleService.createSchedule(
                 ownerId,
                 request.year(),
                 request.month(),
                 request.weeks()
         );
+        AuthenticatedUsers.currentUserId(authentication).ifPresent(userId ->
+                userActivityService.record(userId, ActivityType.SCHEDULE_CREATED,
+                        schedule.getId(), schedule.getId(), ownerId));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ScheduleResponse.from(schedule));
     }

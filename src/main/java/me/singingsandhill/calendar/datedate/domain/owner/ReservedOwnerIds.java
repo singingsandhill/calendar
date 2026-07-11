@@ -15,6 +15,8 @@ public final class ReservedOwnerIds {
             "privacy", "terms", "feedback", "api", "admin", "login",
             "logout", "signup", "settings", "dashboard", "random",
             "trading", "stock", "runners",
+            // 카카오 로그인/리캡 라우트 (ADR common/security/0004)
+            "me", "recap", "oauth2",
             // 이 프로젝트의 추가 정적 라우트 / 도메인
             "faq", "start", "tools", "use-cases",
             // SecurityConfig permitAll 또는 외부 도구가 점유하는 경로

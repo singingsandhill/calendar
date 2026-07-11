@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import me.singingsandhill.calendar.datedate.application.exception.OwnerAlreadyLinkedException;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
 
 class OwnerTest {
@@ -82,5 +83,27 @@ class OwnerTest {
         assertThatThrownBy(() -> new Owner("test user"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("lowercase");
+    }
+
+    @Test
+    @DisplayName("미연결 오너는 유저에 연결할 수 있고 멱등이다")
+    void linkUserIsIdempotentForSameUser() {
+        Owner owner = new Owner("my-crew");
+
+        owner.linkUser(42L);
+        owner.linkUser(42L);
+
+        assertThat(owner.getUserId()).isEqualTo(42L);
+        assertThat(owner.isLinkedTo(42L)).isTrue();
+    }
+
+    @Test
+    @DisplayName("이미 다른 유저에 연결된 오너 연결 시도는 409 예외")
+    void linkUserRejectsDifferentUser() {
+        Owner owner = new Owner("my-crew");
+        owner.linkUser(42L);
+
+        assertThatThrownBy(() -> owner.linkUser(43L))
+                .isInstanceOf(OwnerAlreadyLinkedException.class);
     }
 }

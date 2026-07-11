@@ -23,6 +23,8 @@
 - **다음 작업(우선순위):**
   1. (사용자 실행) Phase 0a/2/3 소액 라이브 검증 → `order-api-version=v2` 전환 (§8 롤아웃 게이트).
   2. Phase 4 Private WS v2 — **Phase 3(전량 전환) 이후** 착수 (게이트가 LIVE 관찰이라 선행 구현 보류, 계획 §5).
+  3. **감사 P0-3·P1·P2·P3 미해결 전체** — [`trading-remaining-work.md`](trading-remaining-work.md) 백로그 참고
+     (v2 마이그레이션과 독립. 권고 우선순위: P0-3+P1-4 수동주문 가드 → P1-9 defaults → P1-5 Clock/리스크 테스트 …).
 - **커밋 상태:** 2026-07-06 분은 `docs/git_commit.md` **Section T**, 2026-07-08 분은 **Section U**(§8-B 본체)와
   **Section V**(잔여 마감 — 매도 확장·422·지정가 cid·기동 스윕·프리픽스)에 관심사별로 정리됨(미커밋).
   직접 `git commit` 금지(저장소 관례). 워킹트리에 선재 미커밋 변경도 섞여 있으니 파일별 `git diff` 확인 필요.

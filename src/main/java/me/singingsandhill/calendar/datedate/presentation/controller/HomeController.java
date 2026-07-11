@@ -2,6 +2,7 @@ package me.singingsandhill.calendar.datedate.presentation.controller;
 
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,7 @@ import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.application.service.PopularityService;
 import me.singingsandhill.calendar.datedate.application.service.SeoService;
 import me.singingsandhill.calendar.datedate.domain.owner.ReservedOwnerIds;
+import me.singingsandhill.calendar.datedate.presentation.support.AuthenticatedUsers;
 
 @Controller
 public class HomeController {
@@ -88,10 +90,13 @@ public class HomeController {
     }
 
     @PostMapping("/start")
-    public String start(@RequestParam String ownerId, RedirectAttributes redirectAttributes) {
+    public String start(@RequestParam String ownerId,
+                        Authentication authentication,
+                        RedirectAttributes redirectAttributes) {
         try {
             String normalizedId = ownerId.toLowerCase();
-            ownerService.getOrCreateOwner(normalizedId);
+            Long userId = AuthenticatedUsers.currentUserId(authentication).orElse(null);
+            ownerService.getOrCreateOwner(normalizedId, userId);
             return localeLinks.redirect("/" + normalizedId);
         } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("errorMessage", resolveBusinessMessage(e));

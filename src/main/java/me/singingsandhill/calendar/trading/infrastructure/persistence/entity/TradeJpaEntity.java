@@ -60,12 +60,17 @@ public class TradeJpaEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    // §8-B: 클라이언트 부여 멱등키. nullable — 선영속화 경로(v2 또는 clientOrderIdEnabled)에서만 채워짐.
+    @Column(name = "client_order_id", length = 36)
+    private String clientOrderId;
+
     protected TradeJpaEntity() {}
 
     public TradeJpaEntity(String uuid, Long positionId, String market, String tradeType, String orderType,
                           BigDecimal price, BigDecimal volume, BigDecimal executedPrice, BigDecimal executedVolume,
                           BigDecimal fee, String status, Integer signalScore, String signalReason,
-                          LocalDateTime orderedAt, LocalDateTime executedAt, LocalDateTime createdAt) {
+                          LocalDateTime orderedAt, LocalDateTime executedAt, LocalDateTime createdAt,
+                          String clientOrderId) {
         this.uuid = uuid;
         this.positionId = positionId;
         this.market = market;
@@ -82,6 +87,7 @@ public class TradeJpaEntity {
         this.orderedAt = orderedAt;
         this.executedAt = executedAt;
         this.createdAt = createdAt;
+        this.clientOrderId = clientOrderId;
     }
 
     // Getters and Setters
@@ -119,4 +125,6 @@ public class TradeJpaEntity {
     public void setExecutedAt(LocalDateTime executedAt) { this.executedAt = executedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getClientOrderId() { return clientOrderId; }
+    public void setClientOrderId(String clientOrderId) { this.clientOrderId = clientOrderId; }
 }

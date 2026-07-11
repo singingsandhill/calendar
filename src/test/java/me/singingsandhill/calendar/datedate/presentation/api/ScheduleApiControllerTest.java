@@ -25,6 +25,7 @@ import me.singingsandhill.calendar.datedate.application.exception.ScheduleNotFou
 import me.singingsandhill.calendar.datedate.application.service.LocationService;
 import me.singingsandhill.calendar.datedate.application.service.MenuService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
+import me.singingsandhill.calendar.datedate.application.service.UserActivityService;
 import me.singingsandhill.calendar.datedate.presentation.api.ScheduleApiController;
 import me.singingsandhill.calendar.runner.domain.AdminRepository;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
@@ -45,6 +46,9 @@ class ScheduleApiControllerTest {
 
     @MockitoBean
     private MenuService menuService;
+
+    @MockitoBean
+    private UserActivityService userActivityService;
 
     @MockitoBean
     private AdminRepository adminRepository;

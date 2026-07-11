@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:lang="${#locale.language}">
 
 <!--
   Navbar fragments — 기본/미니멀 네비게이션 바.
@@ -32,6 +34,21 @@
                     <a th:href="${@localeLinks.href('/guide')}" class="nav-link" th:text="#{nav.guide}">가이드</a>
                     <a th:href="${@localeLinks.href('/insights/trends')}" class="nav-link" th:text="#{nav.insights}">인사이트</a>
                     <a th:href="${@localeLinks.href('/tools/date-diff')}" class="nav-link" th:text="#{nav.dateDiff}">날짜 계산기</a>
+                    <!-- Auth (카카오 로그인 / 프로필) -->
+                    <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
+                       class="nav-link nav-kakao-login" th:text="#{nav.login.kakao}">카카오 로그인</a>
+                    <th:block sec:authorize="hasRole('USER')">
+                        <a th:href="@{/me}" class="nav-link nav-profile">
+                            <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
+                                 th:src="${#authentication.principal.attributes['appProfileImage']}"
+                                 class="nav-profile-img" alt="" width="24" height="24"/>
+                            <span th:text="${#authentication.principal.attributes['appNickname']}">닉네임</span>
+                        </a>
+                        <a th:href="@{/recap}" class="nav-link" th:text="#{nav.recap}">나의 리캡</a>
+                        <form th:action="@{/logout}" method="post" class="nav-logout-form">
+                            <button type="submit" class="nav-link nav-logout-btn" th:text="#{nav.logout}">로그아웃</button>
+                        </form>
+                    </th:block>
                     <!-- Language Toggle -->
                     <div class="lang-toggle" role="group" aria-label="Language">
                         <a th:href="@{''(lang='ko')}" class="lang-btn"
@@ -74,6 +91,21 @@
                     <a th:href="${@localeLinks.href('/guide')}" class="nav-link-animated" th:text="#{nav.guide}">가이드</a>
                     <a th:href="${@localeLinks.href('/insights/trends')}" class="nav-link-animated" th:text="#{nav.insights}">인사이트</a>
                     <a th:href="${@localeLinks.href('/tools/date-diff')}" class="nav-link-animated" th:text="#{nav.dateDiff}">날짜 계산기</a>
+                    <!-- Auth (카카오 로그인 / 프로필) -->
+                    <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
+                       class="nav-link-animated nav-kakao-login" th:text="#{nav.login.kakao}">카카오 로그인</a>
+                    <th:block sec:authorize="hasRole('USER')">
+                        <a th:href="@{/me}" class="nav-link-animated nav-profile">
+                            <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
+                                 th:src="${#authentication.principal.attributes['appProfileImage']}"
+                                 class="nav-profile-img" alt="" width="24" height="24"/>
+                            <span th:text="${#authentication.principal.attributes['appNickname']}">닉네임</span>
+                        </a>
+                        <a th:href="@{/recap}" class="nav-link-animated" th:text="#{nav.recap}">나의 리캡</a>
+                        <form th:action="@{/logout}" method="post" class="nav-logout-form">
+                            <button type="submit" class="nav-link-animated nav-logout-btn" th:text="#{nav.logout}">로그아웃</button>
+                        </form>
+                    </th:block>
                     <!-- Language Toggle -->
                     <div class="lang-toggle" role="group" aria-label="Language">
                         <a th:href="@{''(lang='ko')}" class="lang-btn"

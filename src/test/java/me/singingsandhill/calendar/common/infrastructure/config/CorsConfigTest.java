@@ -10,12 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
+import me.singingsandhill.calendar.datedate.infrastructure.security.KakaoOAuth2UserService;
 import me.singingsandhill.calendar.datedate.presentation.api.OwnerApiController;
 import me.singingsandhill.calendar.runner.domain.AdminRepository;
 
@@ -38,6 +40,12 @@ class CorsConfigTest {
 
     @MockitoBean
     private OwnerRepository ownerRepository;
+
+    @MockitoBean
+    private ClientRegistrationRepository clientRegistrationRepository;
+
+    @MockitoBean
+    private KakaoOAuth2UserService kakaoOAuth2UserService;
 
     @Test
     @DisplayName("/api/** preflight 는 교차출처를 허용한다 (앱인토스 미니앱)")

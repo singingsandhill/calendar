@@ -1,8 +1,10 @@
 package me.singingsandhill.calendar.datedate.presentation.controller;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,9 +14,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import me.singingsandhill.calendar.datedate.application.exception.OwnerNotFoundException;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.application.service.SeoService;
+import me.singingsandhill.calendar.datedate.domain.owner.Owner;
 import me.singingsandhill.calendar.datedate.domain.owner.ReservedOwnerIds;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.presentation.dto.response.ScheduleResponse;
+import me.singingsandhill.calendar.datedate.presentation.support.AuthenticatedUsers;
 
 @Controller
 public class OwnerController {
@@ -28,7 +32,8 @@ public class OwnerController {
     }
 
     @GetMapping("/{ownerId:[a-z0-9-]{2,20}}")
-    public String dashboard(@PathVariable String ownerId, Model model, HttpServletResponse response) {
+    public String dashboard(@PathVariable String ownerId, Model model, HttpServletResponse response,
+                            Authentication authentication) {
         if (ReservedOwnerIds.isReserved(ownerId)) {
             throw new OwnerNotFoundException(ownerId);
         }
@@ -39,6 +44,13 @@ public class OwnerController {
             // sendError() 는 error 페이지로 포워딩되므로 setStatus() 를 사용해야 한다.
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
+        Optional<Long> currentUserId = AuthenticatedUsers.currentUserId(authentication);
+        Owner owner = ownerService.getOwner(ownerId);
+        boolean linkedToMe = owner != null && currentUserId.isPresent()
+                && owner.isLinkedTo(currentUserId.get());
+        boolean canLink = owner != null && currentUserId.isPresent() && owner.getUserId() == null;
+        model.addAttribute("linkedToMe", linkedToMe);
+        model.addAttribute("canLink", canLink);
         List<Schedule> schedules = ownerService.getOwnerSchedules(ownerId);
 
         List<ScheduleResponse> scheduleResponses = schedules.stream()

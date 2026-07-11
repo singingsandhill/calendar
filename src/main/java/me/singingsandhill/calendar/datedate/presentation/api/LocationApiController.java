@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,19 +16,24 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import me.singingsandhill.calendar.datedate.application.service.LocationService;
+import me.singingsandhill.calendar.datedate.application.service.UserActivityService;
+import me.singingsandhill.calendar.datedate.domain.activity.ActivityType;
 import me.singingsandhill.calendar.datedate.domain.location.Location;
 import me.singingsandhill.calendar.datedate.presentation.dto.request.LocationCreateRequest;
 import me.singingsandhill.calendar.datedate.presentation.dto.request.VoteRequest;
 import me.singingsandhill.calendar.datedate.presentation.dto.response.LocationResponse;
+import me.singingsandhill.calendar.datedate.presentation.support.AuthenticatedUsers;
 
 @RestController
 @RequestMapping("/api")
 public class LocationApiController {
 
     private final LocationService locationService;
+    private final UserActivityService userActivityService;
 
-    public LocationApiController(LocationService locationService) {
+    public LocationApiController(LocationService locationService, UserActivityService userActivityService) {
         this.locationService = locationService;
+        this.userActivityService = userActivityService;
     }
 
     @GetMapping("/schedules/{scheduleId}/locations")
@@ -57,8 +63,12 @@ public class LocationApiController {
     @PostMapping("/locations/{locationId}/votes")
     public ResponseEntity<LocationResponse> vote(
             @PathVariable Long locationId,
-            @Valid @RequestBody VoteRequest request) {
+            @Valid @RequestBody VoteRequest request,
+            Authentication authentication) {
         Location location = locationService.vote(locationId, request.voterName());
+        AuthenticatedUsers.currentUserId(authentication).ifPresent(userId ->
+                userActivityService.record(userId, ActivityType.LOCATION_VOTE,
+                        location.getScheduleId(), locationId, location.getName()));
         return ResponseEntity.ok(LocationResponse.from(location));
     }
 

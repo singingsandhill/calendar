@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import me.singingsandhill.calendar.datedate.application.exception.OwnerNotFoundException;
 import me.singingsandhill.calendar.datedate.application.exception.ReservedOwnerIdException;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
@@ -46,5 +47,27 @@ public class OwnerService {
 
     public List<Schedule> getOwnerSchedules(String ownerId) {
         return scheduleRepository.findAllByOwnerId(ownerId);
+    }
+
+    @Transactional
+    public Owner getOrCreateOwner(String ownerId, Long userId) {
+        Owner owner = getOrCreateOwner(ownerId);
+        if (userId != null && owner.getUserId() == null) {
+            owner.linkUser(userId);
+            owner = ownerRepository.save(owner);
+        }
+        return owner;
+    }
+
+    @Transactional
+    public Owner linkOwnerToUser(String ownerId, Long userId) {
+        Owner owner = ownerRepository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId));
+        owner.linkUser(userId);
+        return ownerRepository.save(owner);
+    }
+
+    public List<Owner> getOwnersOf(Long userId) {
+        return ownerRepository.findAllByUserId(userId);
     }
 }

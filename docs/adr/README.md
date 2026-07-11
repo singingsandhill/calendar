@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | — | — | 7 | 3 | — | — | — | 2 | 12 |
-| **datedate** | 4 | — | 6 | — | — | — | — | — | — | 10 |
+| **common**   | — | — | — | 7 | 3 | — | — | — | 5 | 15 |
+| **datedate** | 5 | — | 6 | — | — | — | — | — | — | 11 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 1 | — | — | — | — | 14 | 1 | — | 16 |
 | **stock**    | — | 4 (동시성 포함) | — | — | — | 1 | 4 | 1 | — | 10 |
-| **합계** | 6 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 2 | **50** |
+| **합계** | 7 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 5 | **54** |
 
-총 **50개 ADR**.
+총 **54개 ADR**.
 
 ---
 
@@ -83,6 +83,10 @@
 | 2026-05-30 | trading/strategy | [0010 모멘텀 가중 하향](trading/strategy/0010-momentum-weight-reduction.md) | 수익성 감사 P2-7 — ADR-0001 ±135 정련 |
 | 2026-06-11 | datedate/domain | [0004 GET owner 자동 생성 제거 → 404 + 빈 대시보드](datedate/domain/0004-no-owner-auto-create-on-get-dashboard.md) | AdSense 재심사 감사 — 소프트 404 / GET mutation |
 | 2026-07-06 | common/security | [0003 트레이딩 제어·실주문 API 관리자 전용](common/security/0003-admin-only-trading-control-api.md) | 운영 리뷰 P0-1 — 무인증 실주문 API 노출 |
+| 2026-07-08 | trading/infrastructure | [0002 주문 선영속화 + 틱 스윕 + Position 생성](trading/infrastructure/0002-order-pre-persistence-and-tick-sweep.md) | 운영 리뷰 §8-B — 응답 유실 시 무보호 포지션 |
+| 2026-07-08 | trading/infrastructure | [0003 Bithumb v2 주문 API 마이그레이션](trading/infrastructure/0003-bithumb-v2-order-api-migration.md) | v2 릴리스(2026-06-30) — 어댑터 정규화 + 기본 V1 라우팅 |
+| 2026-07-11 | common/security | [0004 카카오 OAuth2 로그인](common/security/0004-kakao-oauth2-login.md) | datedate "내 기록" 기능 — 선택적 로그인 도입 |
+| 2026-07-11 | datedate/domain | [0005 활동 이벤트 테이블 기반 연간 recap](datedate/domain/0005-user-activity-event-recap.md) | 연간 Wrapped 스타일 recap — voters 구조 무변경 |
 
 ---
 
@@ -91,15 +95,15 @@
 - [common/seo/](common/seo/) — 7 ADRs
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
-- [common/security/](common/security/) — 1 ADR
-- [datedate/domain/](datedate/domain/) — 4 ADRs
+- [common/security/](common/security/) — 4 ADRs
+- [datedate/domain/](datedate/domain/) — 5 ADRs
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
 - [trading/modes/](trading/modes/) — 1 ADR
 - [trading/risk/](trading/risk/) — 4 ADRs
-- [trading/infrastructure/](trading/infrastructure/) — 1 ADR
+- [trading/infrastructure/](trading/infrastructure/) — 3 ADRs
 - [stock/algorithm/](stock/algorithm/) — 4 ADRs
 - [stock/infrastructure/](stock/infrastructure/) — 4 ADRs
 - [stock/modes/](stock/modes/) — 1 ADR

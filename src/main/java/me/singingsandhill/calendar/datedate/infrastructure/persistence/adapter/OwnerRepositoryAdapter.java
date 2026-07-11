@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.infrastructure.persistence.adapter;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,7 +33,13 @@ public class OwnerRepositoryAdapter implements OwnerRepository {
 
     @Override
     public Owner save(Owner owner) {
-        OwnerJpaEntity entity = toEntity(owner);
+        OwnerJpaEntity entity = jpaRepository.findById(owner.getOwnerId())
+                .map(existing -> {
+                    existing.setUserId(owner.getUserId());
+                    return existing;
+                })
+                .orElseGet(() -> new OwnerJpaEntity(
+                        owner.getOwnerId(), owner.getCreatedAt(), owner.getUserId()));
         OwnerJpaEntity saved = jpaRepository.save(entity);
         return toDomain(saved);
     }
@@ -42,13 +49,21 @@ public class OwnerRepositoryAdapter implements OwnerRepository {
         return jpaRepository.existsById(ownerId);
     }
 
+    @Override
+    public List<Owner> findAllByUserId(Long userId) {
+        return jpaRepository.findAllByUserId(userId).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private Owner toDomain(OwnerJpaEntity entity) {
         return new Owner(
                 entity.getOwnerId(),
                 entity.getCreatedAt(),
                 entity.getSchedules().stream()
                         .map(this::scheduleToDomain)
-                        .collect(Collectors.toList())
+                        .collect(Collectors.toList()),
+                entity.getUserId()
         );
     }
 
@@ -75,9 +90,5 @@ public class OwnerRepositoryAdapter implements OwnerRepository {
                 entity.getSelections(),
                 entity.getUpdatedAt()
         );
-    }
-
-    private OwnerJpaEntity toEntity(Owner owner) {
-        return new OwnerJpaEntity(owner.getOwnerId(), owner.getCreatedAt());
     }
 }

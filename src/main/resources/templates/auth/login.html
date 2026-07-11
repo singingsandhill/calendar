@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
+
+<main class="login-page">
+    <section class="login-card">
+        <h1 th:text="#{login.title}">로그인</h1>
+        <p class="login-subtitle" th:text="#{login.subtitle}">카카오 계정으로 3초 만에 시작하세요</p>
+
+        <p class="login-error" th:if="${param.error != null}" th:text="#{login.error}">로그인에 실패했어요.</p>
+
+        <!-- 카카오 공식 디자인 가이드: 컨테이너 #FEE500, 심볼+레이블, 레이블 #000000 85% -->
+        <a th:href="@{/oauth2/authorization/kakao}" class="kakao-login-btn">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path fill="#000000" fill-opacity="0.9"
+                      d="M12 3C6.48 3 2 6.52 2 10.86c0 2.77 1.82 5.2 4.56 6.6l-.93 3.45c-.08.3.26.55.52.38l4.1-2.72c.57.08 1.15.12 1.75.12 5.52 0 10-3.52 10-7.83C22 6.52 17.52 3 12 3z"/>
+            </svg>
+            <span th:text="#{login.kakao.button}">카카오 로그인</span>
+        </a>
+    </section>
+</main>
+
+<style>
+    .login-page { display: flex; justify-content: center; padding: 4rem 1rem; }
+    .login-card { max-width: 360px; width: 100%; text-align: center; }
+    .login-subtitle { color: #666; margin: 0.75rem 0 2rem; }
+    .login-error { color: #d32f2f; margin-bottom: 1rem; }
+    .kakao-login-btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 14px 16px; border-radius: 12px;
+        background: #FEE500; color: rgba(0, 0, 0, 0.85);
+        font-weight: 600; text-decoration: none;
+    }
+</style>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+<th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+</html>

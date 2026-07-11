@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.domain.owner;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface OwnerRepository {
@@ -9,4 +10,6 @@ public interface OwnerRepository {
     Owner save(Owner owner);
 
     boolean existsById(String ownerId);
+
+    List<Owner> findAllByUserId(Long userId);
 }

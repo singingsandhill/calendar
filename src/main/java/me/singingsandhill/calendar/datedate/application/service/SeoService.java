@@ -235,6 +235,76 @@ public class SeoService {
             .build();
     }
 
+    /** 카카오 로그인 페이지 (noindex). */
+    public SeoMetadata getLoginSeo() {
+        String path = "/login";
+        return SeoMetadata.builder()
+            .title(m("seo.login.title"))
+            .description(m("seo.login.description"))
+            .robots("noindex, nofollow")
+            .canonical(canonicalKo(path))
+            .canonicalKo(canonicalKo(path))
+            .canonicalEn(canonicalEn(path))
+            .ogType("website")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .ogLocale(ogLocale())
+            .hreflangEnabled(false)
+            .build();
+    }
+
+    /** 마이페이지 (noindex). */
+    public SeoMetadata getMyPageSeo() {
+        String path = "/me";
+        return SeoMetadata.builder()
+            .title(m("seo.mypage.title"))
+            .description(m("seo.mypage.description"))
+            .robots("noindex, nofollow")
+            .canonical(canonicalKo(path))
+            .canonicalKo(canonicalKo(path))
+            .canonicalEn(canonicalEn(path))
+            .ogType("website")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .ogLocale(ogLocale())
+            .hreflangEnabled(false)
+            .build();
+    }
+
+    /** 연간 recap 본인 페이지 (noindex). */
+    public SeoMetadata getRecapSeo(int year) {
+        String path = "/recap/" + year;
+        return SeoMetadata.builder()
+            .title(m("seo.recap.title", year))
+            .description(m("seo.recap.description", year))
+            .robots("noindex, nofollow")
+            .canonical(canonicalKo(path))
+            .canonicalKo(canonicalKo(path))
+            .canonicalEn(canonicalEn(path))
+            .ogType("website")
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .ogLocale(ogLocale())
+            .hreflangEnabled(false)
+            .build();
+    }
+
+    /** recap 공유 페이지 (공개 URL 이지만 개인 데이터 — noindex, OG 는 카카오톡 미리보기용). */
+    public SeoMetadata getRecapShareSeo(String nickname, int year) {
+        String path = "/recap/share";
+        return SeoMetadata.builder()
+            .title(m("seo.recapShare.title", nickname, year))
+            .description(m("seo.recapShare.description", nickname, year))
+            .robots("noindex, nofollow")
+            .canonical(canonicalKo(path))
+            .canonicalKo(canonicalKo(path))
+            .canonicalEn(canonicalEn(path))
+            .ogType("article")
+            .ogTitle(m("seo.recapShare.title", nickname, year))
+            .ogDescription(m("seo.recapShare.description", nickname, year))
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .ogLocale(ogLocale())
+            .hreflangEnabled(false)
+            .build();
+    }
+
     /** 일정 뷰 (UGC, noindex). */
     public SeoMetadata getScheduleSeo(String ownerId, int year, int month) {
         String path = "/" + ownerId + "/" + year + "/" + month;

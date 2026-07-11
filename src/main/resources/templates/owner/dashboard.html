@@ -22,6 +22,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
     </div>
 
+    <!-- 카카오 계정 연결 (first-claim: 본인이 만든 페이지만 연결하도록 안내) -->
+    <div class="owner-link-banner" th:if="${canLink}">
+        <span th:text="#{owner.link.prompt}">이 페이지를 내 카카오 계정에 연결할 수 있어요. 본인이 만든 페이지만 연결하세요.</span>
+        <button type="button" id="linkOwnerBtn" class="btn-link-owner"
+                th:attr="data-owner-id=${ownerId}" th:text="#{owner.link.button}">내 계정에 연결</button>
+    </div>
+    <div class="owner-link-banner owner-link-done" th:if="${linkedToMe}">
+        <span th:text="#{owner.link.done}">내 카카오 계정에 연결된 페이지예요.</span>
+    </div>
+
     <section class="schedules-grid" th:if="${!schedules.isEmpty()}" th:attr="aria-label=#{dashboard.new.schedule}">
         <article class="schedule-card" th:each="schedule : ${schedules}">
             <header class="schedule-card-header">
@@ -98,6 +108,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         } else {
             fire();
         }
+    })();
+</script>
+<script>
+    (function () {
+        var btn = document.getElementById('linkOwnerBtn');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            fetch('/api/me/owners/' + btn.dataset.ownerId, { method: 'POST' })
+                .then(function (res) {
+                    if (res.redirected) { location.href = res.url; return; }
+                    if (res.ok) { location.reload(); return; }
+                    return res.json().then(function (body) { alert(body.message); });
+                })
+                .catch(function () {
+                    alert('연결에 실패했어요. 잠시 후 다시 시도해 주세요.');
+                });
+        });
     })();
 </script>
 </body>

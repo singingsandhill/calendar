@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.trading.application.service;
 
+import me.singingsandhill.calendar.trading.domain.account.AccountSnapshotRepository;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
@@ -14,6 +15,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,8 +42,12 @@ class TradingBotServiceManualTest {
                                       TradingCircuitBreaker breaker) {
         TradingProperties props = new TradingProperties();
         props.getBot().setMarket(MARKET);
+        props.getBot().setEnabled(true); // P0-3: 킬스위치 통과(수동 실주문 허용)
+        // P1-4: entryRiskGuardsBlock 의 dayStartEquity 가 스냅샷 리포지토리를 조회 — 빈 결과로 스텁
+        AccountSnapshotRepository snapRepo = mock(AccountSnapshotRepository.class);
+        when(snapRepo.findFirstByMarketAndDateRange(any(), any(), any())).thenReturn(Optional.empty());
         return new TradingBotService(null, null, null, risk, null, api, tradeRepo, posRepo,
-                props, mock(TradingEventService.class), breaker, null, mock(PlatformTransactionManager.class));
+                props, mock(TradingEventService.class), breaker, snapRepo, mock(PlatformTransactionManager.class));
     }
 
     private Position posOpenedAt(LocalDateTime openedAt, String entryPrice, String volume) {

@@ -34,6 +34,7 @@ class ReservedOwnerIdsTest {
                 "privacy", "terms", "feedback", "api", "admin", "login",
                 "logout", "signup", "settings", "dashboard", "random",
                 "trading", "stock", "runners",
+                "me", "recap", "oauth2",
                 "faq", "start", "tools", "use-cases",
                 "about", "privacy-policy", "h2-console", "index",
                 "error",
@@ -62,5 +63,13 @@ class ReservedOwnerIdsTest {
     void nullAndBlankAreSafe() {
         assertThat(ReservedOwnerIds.isReserved(null)).isFalse();
         assertThat(ReservedOwnerIds.isReserved("")).isFalse();
+    }
+
+    @Test
+    @DisplayName("카카오 로그인 라우트 토큰(me, recap, oauth2)은 예약어다")
+    void kakaoAuthRouteTokensAreReserved() {
+        assertThat(ReservedOwnerIds.isReserved("me")).isTrue();
+        assertThat(ReservedOwnerIds.isReserved("recap")).isTrue();
+        assertThat(ReservedOwnerIds.isReserved("oauth2")).isTrue();
     }
 }

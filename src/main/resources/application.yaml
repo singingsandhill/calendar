@@ -1,6 +1,16 @@
 app:
   base-url: https://datedate.site
 
+# 카카오 OAuth2 로그인 자격증명 (ADR common/security/0004).
+# spring.security.oauth2.client.* 프로퍼티 방식은 @WebMvcTest 슬라이스에서
+# OAuth2ClientWebSecurityAutoConfiguration 이 HttpSecurity 부재로 컨텍스트 로드를 깨뜨려,
+# ClientRegistration 은 KakaoOAuth2ClientConfig 빈으로 직접 등록한다.
+kakao:
+  oauth2:
+    # REST API 키. 미설정 시 더미로 부팅만 가능(로그인 버튼은 동작 안 함).
+    client-id: ${KAKAO_CLIENT_ID:kakao-client-id-unset}
+    client-secret: ${KAKAO_CLIENT_SECRET:kakao-client-secret-unset}
+
 # SEO 외부 인증 토큰
 # - Google: Search Console 발급 토큰. 기본값은 datedate.site 운영 토큰; 다른 도메인 배포 시 GOOGLE_SITE_VERIFICATION 으로 오버라이드.
 # - Naver: searchadvisor.naver.com 발급 후 NAVER_SITE_VERIFICATION 으로 주입.
@@ -107,6 +117,12 @@ server:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
     min-response-size: 1024
+  servlet:
+    session:
+      cookie:
+        # 교차 사이트 form POST 에 세션 쿠키 미전송 (ADR 0004: /api/** CSRF 유예의 전제).
+        # 카카오 로그인 복귀는 top-level GET 이라 Lax 에서 정상.
+        same-site: lax
 
 runner:
   admin:

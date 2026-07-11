@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
+
+<main class="mypage">
+    <section class="mypage-profile">
+        <img th:if="${profileImage != null}" th:src="${profileImage}" alt="" width="64" height="64"/>
+        <h1 th:text="${nickname}">닉네임</h1>
+        <a th:href="@{'/recap/' + ${currentYear}}" class="mypage-recap-link"
+           th:text="#{mypage.recap.link(${currentYear})}">2026 리캡 보러 가기</a>
+    </section>
+
+    <section class="mypage-owners">
+        <h2 th:text="#{mypage.owners.title}">내 일정 페이지</h2>
+        <p th:if="${owners.isEmpty()}" th:text="#{mypage.owners.empty}">아직 연결된 페이지가 없어요.</p>
+        <ul>
+            <li th:each="owner : ${owners}">
+                <a th:href="${@localeLinks.href('/' + owner.ownerId)}" th:text="${owner.ownerId}">my-crew</a>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<style>
+    .mypage { max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
+    .mypage-profile { text-align: center; margin-bottom: 2rem; }
+    .mypage-profile img { border-radius: 50%; }
+    .mypage-recap-link { display: inline-block; margin-top: 0.75rem; padding: 10px 16px;
+                         border-radius: 10px; background: #6c5ce7; color: #fff; text-decoration: none; }
+</style>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+<th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+</html>
