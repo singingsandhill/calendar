@@ -10,24 +10,33 @@
 > 자동 테스트는 전부 통과한 상태(413 tests, 0 failures — 더미 키). 아래는 **실제
 > 카카오 키가 필요해 사람이 직접 해야 하는 작업**만 모았다.
 
+> **자동 검증 결과 (2026-07-14, 실키 주입 후 curl 기반):** `[x]` 표시 항목은 실키로
+> 기동한 로컬 앱에 대해 검증 완료. 증거 — ① `/oauth2/authorization/kakao` → kauth
+> 인가 URL 302 (scope·redirect_uri·state·PKCE 정상), ② 인가 URL 추적 시 KOE 에러 없이
+> 카카오 계정 로그인 페이지 도달 (앱 키·Redirect URI 등록 유효), ③ 토큰 엔드포인트
+> 더미 코드 프로브가 **KOE320**(코드 무효) 반환 — KOE010 이 아니므로 **Client Secret
+> 활성화 확인**, ④ 익명 플로우 API 스모크 (오너 생성 → 일정 → 참여자 → 날짜 선택 →
+> 장소 투표 → 뷰 렌더) 전부 정상, 어드민 진입점(`/runners/admin`·`/trading` →
+> `/runners/admin/login`) 무회귀. 실제 카카오 계정 로그인·동의가 필요한 항목만 남음.
+
 ---
 
 ## 1. 로컬 테스트 TODO
 
 ### 1-1. 카카오 디벨로퍼스 콘솔 (1회 준비)
 
-- [ ] [developers.kakao.com](https://developers.kakao.com) 앱 생성 → **REST API 키** 확보
-- [ ] 앱 설정 > 플랫폼 > Web: `http://localhost:8081` 등록
-- [ ] 제품 설정 > 카카오 로그인 **활성화** + Redirect URI 등록:
-      `http://localhost:8081/login/oauth2/code/kakao`
-- [ ] 카카오 로그인 > 보안: **Client Secret 생성 + "활성화" 상태로 변경**
-      (미활성 시 토큰 교환이 KOE010 으로 실패 → `/login?error`)
-- [ ] 동의항목: 닉네임(`profile_nickname`)·프로필 사진(`profile_image`) 활성화
-      (이메일은 사용하지 않음 — 비즈 앱 전환 불필요)
+- [x] [developers.kakao.com](https://developers.kakao.com) 앱 생성 → **REST API 키** 확보
+- [x] 앱 설정 > 플랫폼 > Web: `http://localhost:8081` 등록
+- [x] 제품 설정 > 카카오 로그인 **활성화** + Redirect URI 등록:
+      `http://localhost:8081/login/oauth2/code/kakao` (인가 요청 KOE006 없음 — 검증됨)
+- [x] 카카오 로그인 > 보안: **Client Secret 생성 + "활성화" 상태로 변경**
+      (미활성 시 토큰 교환이 KOE010 으로 실패 → `/login?error`) — KOE320 프로브로 활성화 검증됨
+- [x] 동의항목: 닉네임(`profile_nickname`)·프로필 사진(`profile_image`) 활성화
+      (이메일은 사용하지 않음 — 비즈 앱 전환 불필요) — scope 요청 수락됨(간접), 동의창에서 최종 확인
 
 ### 1-2. 로컬 환경 설정
 
-- [ ] `.env` 에 키 기입:
+- [x] `.env` 에 키 기입:
   ```properties
   KAKAO_CLIENT_ID=<REST API 키>
   KAKAO_CLIENT_SECRET=<Client Secret>
@@ -36,15 +45,17 @@
       `app.base-url=http://localhost:8081` 오버라이드.
       **미설정 시 공유 링크가 `https://datedate.site/...` 로 복사됨** — 기본값에 의한
       착시일 뿐 버그 아님.
-- [ ] 앱 기동: `cmd.exe /c "set JAVA_HOME=C:\jdk-21&& .\gradlew.bat bootRun"`
+- [x] 앱 기동: `cmd.exe /c "set JAVA_HOME=C:\jdk-21&& .\gradlew.bat bootRun"`
       (WSL 에서 확인은 `cmd.exe /c curl` — 앱이 Windows 프로세스로 뜸)
 
 ### 1-3. 수동 QA 시나리오
 
 **기본 왕복**
 
-- [ ] `http://localhost:8081/` 헤더에 "카카오 로그인" 버튼 노출
-- [ ] 버튼 클릭 → kauth.kakao.com 동의 화면 → 동의 → `/me` 복귀, 닉네임·프로필 표시
+- [x] `http://localhost:8081/` 헤더에 "카카오 로그인" 버튼 노출 (렌더 HTML 검증)
+- [x] 버튼 클릭 → kauth.kakao.com 동의 화면 → 동의 → `/me` 복귀, 닉네임·프로필 표시
+      — 2026-07-14 사용자 브라우저 QA: `/me` 닉네임·프로필 이미지 표시, `/recap/2026`
+      빈 상태 렌더("아직 2026의 기록이 없어요"), 헤더 로그인/비로그인 상태 전환 확인
 - [ ] 카카오 동의창에서 **"취소"** → `/login?error` 로 복귀, 에러 메시지 렌더
 - [ ] 미인증으로 보호 딥링크(`/recap/2026`) 접근 → `/login` → 로그인 → **원래 목적지 복귀**
 
@@ -60,9 +71,11 @@
 
 **무회귀·보안**
 
-- [ ] 시크릿 창(익명)에서 일정 생성·참여·투표가 **기존과 동일하게** 동작 (로그인 강제 없음)
-- [ ] 시크릿 창에서 `/me` → `/login` 리다이렉트
+- [x] 시크릿 창(익명)에서 일정 생성·참여·투표가 **기존과 동일하게** 동작 (로그인 강제 없음)
+      — API 스모크로 검증: POST /start(CSRF 폼) → 일정 → 참여자 → 선택 → 장소 투표 → 뷰 200
+- [x] 시크릿 창에서 `/me` → `/login` 리다이렉트 (무세션 curl 302 확인)
 - [ ] 러너 어드민 로그인/로그아웃 기존 동작 확인 (`/runners/admin/login` → 로그아웃 → `/runners`)
+      — 미인증 진입점 302 는 검증됨, 실제 로그인 왕복만 남음
 - [ ] 어드민 세션 상태에서 카카오 로그인 → 어드민 인증이 **대체**됨 (역할 상호 배타 — 의도 동작)
 - [ ] 카카오 로그아웃(`POST /logout`) → `/` 복귀, 헤더가 비로그인 상태로 전환
 
