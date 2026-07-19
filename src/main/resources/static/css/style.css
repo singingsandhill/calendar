@@ -84,6 +84,8 @@ body {
     color: var(--text-color);
     background-color: var(--bg-light);
     overflow-x: hidden;
+    word-break: keep-all;       /* 한글 단어 중간 줄바꿈 방지 (CJK 전용, 라틴 무영향) */
+    overflow-wrap: break-word;  /* 긴 URL/ID 오버플로 방어 */
 }
 
 /* Typography - Serif for headings */
@@ -407,38 +409,25 @@ a:focus-visible {
     background: var(--bg-light);
 }
 
+.hero-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    margin-bottom: 1.25rem;
+}
+
 .hero-fullscreen h1 {
     font-family: var(--font-serif);
-    font-weight: 300;
-    font-size: clamp(2.5rem, 8vw, 4.5rem);
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-    margin-bottom: 1.5rem;
+    font-weight: 400;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    letter-spacing: 0; /* 한글 헤드라인 — 음수 자간 금지 */
+    line-height: 1.25;
+    margin-bottom: 1.25rem;
     color: var(--text-color);
-}
-
-.hero-fullscreen h1 .hero-brand {
-    display: block;
-}
-
-.hero-fullscreen h1 .hero-keyword {
-    display: block;
-    font-size: 0.38em;
-    font-weight: 400;
-    letter-spacing: 0.06em;
-    color: var(--text-light);
-    margin-top: 0.4em;
-    font-family: var(--font-sans);
-}
-
-.hero-fullscreen .subtitle {
-    font-family: var(--font-sans);
-    font-size: clamp(1rem, 2.5vw, 1.35rem);
-    font-weight: 400;
-    color: var(--text-light);
-    max-width: 500px;
-    line-height: 1.6;
-    margin-bottom: 2rem;
+    word-break: keep-all;
 }
 
 /* Scroll Indicator */
@@ -658,6 +647,42 @@ a:focus-visible {
     color: var(--primary-color);
 }
 
+/* Outline (Secondary) Button — 시작 폼 랜덤 생성 등 보조 액션 */
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    padding: 0.625rem 1.25rem;
+    min-height: 44px;
+    transition: color var(--duration-fast), border-color var(--duration-fast);
+}
+
+.btn-outline:hover {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline svg {
+    flex-shrink: 0;
+}
+
+/* 랜덤 생성 직후 입력 그룹 하이라이트 피드백 */
+@keyframes inputFlash {
+    from { background-color: var(--primary-light); }
+}
+
+.input-group-minimal--flash {
+    animation: inputFlash 0.6s ease-out;
+}
+
 /* Primary Button with Spring */
 .btn-spring {
     display: inline-block;
@@ -683,6 +708,16 @@ a:focus-visible {
 
 .btn-spring:active {
     transform: scale(0.98);
+}
+
+/* 시작 폼 내 주 CTA 강조 — 보조(랜덤 생성)와 위계 분리 */
+.form-actions-minimal .btn-spring {
+    font-weight: 600;
+    padding: 1rem 2.5rem;
+}
+
+.form-actions-minimal .btn-spring:not(:disabled):not([aria-disabled="true"]) {
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.35);
 }
 
 /* ======================================
@@ -1448,6 +1483,35 @@ footer {
         display: none;
     }
 
+    /* 인증 그룹 — 메뉴 하단 구분선 + 풀폭 배치 (기본·미니멀 네비 공통: 둘 다 .nav-menu) */
+    .nav-menu a:has(+ .nav-auth) {
+        border-bottom: none; /* 마지막 링크 border-bottom 과 nav-auth border-top 이중선 방지 */
+    }
+
+    .nav-menu .nav-auth {
+        display: block;
+        width: 100%;
+        margin-top: 1rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .nav-menu .nav-auth .btn-kakao {
+        width: 100%;
+        height: 44px;
+        font-size: 1rem;
+    }
+
+    .nav-menu .nav-auth .nav-logout-form {
+        display: block;
+        width: 100%;
+    }
+
+    .nav-menu .nav-auth .nav-logout-btn {
+        text-align: left;
+        width: 100%;
+    }
+
     .hero h1 {
         font-size: 2rem;
     }
@@ -1989,10 +2053,166 @@ footer {
    HERO DESCRIPTION
    ====================================== */
 .hero-description {
-    max-width: 600px;
-    margin: 1rem auto 0;
+    max-width: 32em;
+    margin: 0 auto;
+    font-size: 1.125rem;
+    color: var(--text-light);
+    line-height: 1.8;
+    word-break: keep-all;
+}
+
+.hero-trust {
+    margin-top: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    text-align: center;
+}
+
+/* ======================================
+   WHY SECTION — 에디토리얼 (좌측 정렬 구조화)
+   ====================================== */
+.why-section .section-subtitle {
+    max-width: 36em;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.why-content {
+    max-width: 640px;
+    margin: 0 auto;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.why-item h3 {
+    font-family: var(--font-sans);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+    word-break: keep-all;
+}
+
+.why-summary,
+.why-note {
+    margin: 0;
+    color: var(--text-light);
+    line-height: 1.8;
+    word-break: keep-all;
+}
+
+/* 문제 — 채팅 말풍선 */
+.why-bubbles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.why-bubble {
+    align-self: flex-start;
+    max-width: 80%;
+    margin: 0;
+    padding: 0.6rem 1rem;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 16px 16px 16px 4px;
+    font-size: 0.95rem;
+    color: var(--text-color);
+    word-break: keep-all;
+}
+
+.why-bubble--alt {
+    align-self: flex-end;
+    background: var(--bg-white);
+    border-radius: 16px 16px 4px 16px;
+}
+
+/* 동작 방식 — 3스텝 */
+.why-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.why-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+}
+
+.why-step-num {
+    flex-shrink: 0;
+    width: 1.8rem;
+    height: 1.8rem;
+    margin-top: 0.1rem;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.why-steps strong {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--text-color);
+}
+
+.why-steps p {
+    margin: 0;
     color: var(--text-light);
     line-height: 1.7;
+    word-break: keep-all;
+}
+
+/* 한계 — 대시 불릿 */
+.why-limits {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.why-limits li {
+    position: relative;
+    padding-left: 1.4rem;
+    color: var(--text-light);
+    line-height: 1.7;
+    word-break: keep-all;
+}
+
+.why-limits li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--primary-color);
+}
+
+.why-note {
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+@media (max-width: 480px) {
+    .why-content {
+        gap: 2.25rem;
+    }
+
+    .why-bubble {
+        max-width: 90%;
+    }
 }
 
 /* ======================================
@@ -2076,10 +2296,23 @@ footer {
     color: var(--text-color);
 }
 
+/* 5개 카드 기준 명시적 브레이크포인트 — auto-fit 은 5개일 때 마지막 행이 어정쩡해짐 */
 .scenarios-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
+}
+
+@media (max-width: 992px) {
+    .scenarios-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .scenarios-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .scenario-card {
@@ -2087,6 +2320,13 @@ footer {
     padding: 1.5rem;
     border-radius: 12px;
     border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s; /* .feature-card 와 동일 리프트 */
+}
+
+.scenario-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 }
 
 .scenario-emoji {
@@ -2522,13 +2762,15 @@ footer {
    ====================================== */
 @media (max-width: 768px) {
     .hero-description {
-        font-size: 0.95rem;
+        font-size: 1rem;
         padding: 0 1rem;
     }
 
     .features-section,
     .scenarios-section,
-    .faq-section {
+    .faq-section,
+    .popular-section,
+    .stats-strip {
         padding: 3rem 0;
     }
 
@@ -2539,10 +2781,10 @@ footer {
         margin-bottom: 2rem;
     }
 
-    .features-grid,
-    .scenarios-grid {
+    .features-grid {
         grid-template-columns: 1fr;
     }
+    /* .scenarios-grid 는 자체 브레이크포인트(992px 2열 / 640px 1열)로 제어 */
 
     .scenarios-section {
         margin: 0 -1rem;
@@ -2553,12 +2795,13 @@ footer {
 
 @media (max-width: 480px) {
     .hero-description {
-        font-size: 0.875rem;
+        font-size: 0.95rem;
     }
 
     .features-section,
     .scenarios-section,
-    .faq-section {
+    .faq-section,
+    .stats-strip {
         padding: 2rem 0;
     }
 
@@ -2619,7 +2862,7 @@ footer {
    POPULAR SECTION
    ====================================== */
 .popular-section {
-    padding: 3rem 0;
+    padding: 4rem 0; /* 홈 섹션 공통 리듬 4/3/2 (데스크톱/768/480) */
     text-align: center;
 }
 
@@ -2738,7 +2981,7 @@ footer {
    STATS STRIP (index.html)
    ====================================== */
 .stats-strip {
-    padding: 2rem 0;
+    padding: 4rem 0; /* 홈 섹션 공통 리듬 4/3/2 (데스크톱/768/480) */
     text-align: center;
 }
 
@@ -2834,11 +3077,11 @@ footer {
     }
 
     .hero-fullscreen h1 {
-        font-size: 2.5rem;
+        font-size: 2.25rem;
     }
 
-    .hero-fullscreen .subtitle {
-        font-size: 1.1rem;
+    .hero-eyebrow {
+        font-size: 0.8rem;
     }
 
     .scroll-indicator {
@@ -2924,11 +3167,11 @@ footer {
     }
 
     .hero-fullscreen h1 {
-        font-size: 2rem;
+        font-size: 1.9rem;
     }
 
-    .hero-fullscreen .subtitle {
-        font-size: 1rem;
+    .hero-eyebrow {
+        font-size: 0.75rem;
     }
 
     /* Start Form Minimal */
@@ -2958,6 +3201,11 @@ footer {
 
     .form-actions-minimal .btn-spring {
         width: 100%;
+    }
+
+    .form-actions-minimal .btn-outline {
+        width: 100%;
+        justify-content: center;
     }
 
     /* Footer Minimal */
@@ -4776,7 +5024,131 @@ footer {
 }
 
 /* Header auth (카카오 로그인 / 프로필) */
+.nav-auth { display: contents; } /* 데스크톱: 기존 flex row 레이아웃 유지, 모바일 메뉴에서만 블록 그룹 */
 .nav-logout-form { display: inline; margin: 0; }
 .nav-logout-btn { background: none; border: none; cursor: pointer; font: inherit; }
 .nav-profile-img { border-radius: 50%; vertical-align: middle; margin-right: 4px; }
-.nav-kakao-login { background: #FEE500; border-radius: 8px; padding: 6px 12px; color: rgba(0, 0, 0, 0.85); }
+
+/* 카카오 로그인 버튼 — 공식 디자인 가이드 커스텀 구현
+   (컨테이너 #FEE500, 심볼 + 레이블 #000000 85%, 시안 고정 색상이라 토큰 미사용) */
+.btn-kakao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #FEE500;
+    color: rgba(0, 0, 0, 0.85);
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    font-family: var(--font-sans);
+}
+
+.btn-kakao:hover { filter: brightness(0.96); }
+.btn-kakao:active { filter: brightness(0.92); }
+.btn-kakao svg { flex-shrink: 0; }
+
+/* 데스크톱 네비 내 사이즈 */
+.nav-menu .btn-kakao {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 0.875rem;
+}
+
+/* 로그인 페이지 대형 CTA */
+.btn-kakao--lg {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 1rem;
+}
+
+/* 모바일 빠른 접근 버튼 — 햄버거 밖 상시 노출 (데스크톱 숨김) */
+.nav-kakao-quick { display: none; }
+
+@media (max-width: 768px) {
+    .nav-kakao-quick {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        margin-left: auto;
+        margin-right: 0.6rem;
+        border-radius: 50%;
+        background: #FEE500;
+    }
+
+    .nav-kakao-quick:active { filter: brightness(0.92); }
+
+    .nav-kakao-quick--profile {
+        background: var(--bg-light);
+        color: var(--text-light);
+        overflow: hidden;
+    }
+
+    .nav-kakao-quick--profile img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+}
+
+/* 홈 카카오 로그인 가치 제안 배너 */
+.login-banner {
+    max-width: 720px;
+    margin: 2rem auto 0;
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    text-align: left;
+}
+
+.login-banner-text strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--text-color);
+    word-break: keep-all;
+}
+
+.login-banner-text p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    line-height: 1.6;
+    word-break: keep-all;
+}
+
+/* 로그인 후 사용법 3단계 — 실제 순서이므로 번호 목록 */
+.login-banner-steps {
+    margin: 0.6rem 0 0;
+    padding-left: 1.2rem;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    line-height: 1.7;
+    word-break: keep-all;
+}
+
+.login-banner .btn-kakao {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .login-banner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .login-banner .btn-kakao {
+        justify-content: center;
+    }
+}
