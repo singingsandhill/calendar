@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:lang="${#locale.language}">
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
-<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
+<div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
 
 <!-- Skip Navigation (Accessibility) -->
 <a href="#main-content" class="skip-nav" th:text="#{a11y.skip.nav}">본문 바로가기</a>
@@ -14,14 +13,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <!-- Hero Section - Fullscreen (Garriock Style) -->
 <section class="hero-fullscreen">
-    <h1 class="fade-in-up">
-        <span class="hero-brand">DateDate</span>
-        <span class="hero-keyword" th:text="#{index.hero.keyword}">그룹 약속 조율 서비스</span>
-    </h1>
-    <p class="subtitle fade-in-up" style="--delay: 0.15s" th:text="#{index.hero.subtitle}">여러명이서 쉽게 날짜 조율하기</p>
-    <p class="hero-description fade-in-up" style="--delay: 0.25s" th:utext="#{index.hero.description}">
-        카톡방에서 "언제 돼?" 그만 보내세요.<br>
-        링크 하나로 날짜, 장소, 메뉴까지 한번에.
+    <p class="hero-eyebrow fade-in-up">DateDate</p>
+    <h1 class="fade-in-up" style="--delay: 0.1s" th:text="#{index.hero.headline}">모두의 되는 날, 한눈에</h1>
+    <p class="hero-description fade-in-up" style="--delay: 0.2s" th:utext="#{index.hero.description}">
+        단톡방 "언제 돼?"는 이제 그만.<br>
+        링크 하나로 날짜·장소·메뉴까지 한 번에 정하세요.
     </p>
 
     <!-- Inline Start Form -->
@@ -52,14 +48,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <span class="input-helper-counter" id="ownerIdCounter" aria-hidden="true">0 / 20</span>
             </div>
             <div class="form-actions-minimal">
-                <button type="button" class="btn-text" onclick="generateRandomId()" th:text="#{index.random}">
-                    랜덤 생성
+                <button type="button" class="btn-outline" onclick="generateRandomId()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+                        <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none"></circle>
+                        <circle cx="16" cy="8" r="1.1" fill="currentColor" stroke="none"></circle>
+                        <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"></circle>
+                        <circle cx="8" cy="16" r="1.1" fill="currentColor" stroke="none"></circle>
+                        <circle cx="16" cy="16" r="1.1" fill="currentColor" stroke="none"></circle>
+                    </svg>
+                    <span th:text="#{index.random}">랜덤 생성</span>
                 </button>
-                <button type="submit" id="startBtn" class="btn-spring" disabled aria-disabled="true" th:text="#{index.start}">
+                <button type="submit" id="startBtn" class="btn-spring" disabled aria-disabled="true"
+                        aria-describedby="ownerIdHelper" th:text="#{index.start}">
                     시작하기
                 </button>
             </div>
         </form>
+        <p class="hero-trust" th:text="#{index.hero.trust}">가입 없이 무료 · 링크만 공유하면 끝</p>
     </div>
 
     <!-- Scroll Indicator -->
@@ -75,19 +82,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <section class="stats-strip animate-on-scroll">
         <div class="stats-strip-grid">
             <div class="stats-strip-card">
-                <span class="stats-strip-number" th:text="${overview.totalSchedules()}">0</span>
+                <span class="stats-strip-number" th:text="${#numbers.formatInteger(overview.totalSchedules(), 1, 'COMMA')}">0</span>
                 <span class="stats-strip-label" th:text="#{index.stats.schedules}">생성된 일정</span>
             </div>
             <div class="stats-strip-card">
-                <span class="stats-strip-number" th:text="${overview.totalParticipants()}">0</span>
+                <span class="stats-strip-number" th:text="${#numbers.formatInteger(overview.totalParticipants(), 1, 'COMMA')}">0</span>
                 <span class="stats-strip-label" th:text="#{index.stats.participants}">참여자</span>
             </div>
             <div class="stats-strip-card">
-                <span class="stats-strip-number" th:text="${overview.totalVotes()}">0</span>
+                <span class="stats-strip-number" th:text="${#numbers.formatInteger(overview.totalVotes(), 1, 'COMMA')}">0</span>
                 <span class="stats-strip-label" th:text="#{index.stats.votes}">투표</span>
             </div>
         </div>
     </section>
+
+    <!-- 카카오 로그인 가치 제안 배너 (비로그인만, 공유 fragment) -->
+    <div th:replace="~{fragments/login-banner :: [th:fragment='login-banner']}"></div>
 
     <!-- 인기 장소/메뉴 섹션 -->
     <section class="popular-section" th:if="${!popularLocations.isEmpty() or !popularMenus.isEmpty()}">
@@ -225,6 +235,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <a th:href="${@localeLinks.href('/use-cases/study-group')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
             </div>
+            <div class="scenario-card animate-on-scroll">
+                <div class="scenario-emoji">🎾</div>
+                <h3 th:text="#{index.scenario.club.title}">동호회 모임</h3>
+                <p th:text="#{index.scenario.club.desc}">테니스, 등산, 풋살 같은 정기 모임. 회차별로 몇 명이 나오는지 미리 확인하세요.</p>
+                <div class="scenario-example">
+                    <span class="scenario-label" th:text="#{index.scenario.club.example}">예시</span>
+                    datedate.site/tennis-club
+                </div>
+                <a th:href="${@localeLinks.href('/use-cases/club-activity')}" class="scenario-more" th:text="#{index.scenario.more}">자세히 보기 →</a>
+            </div>
         </div>
     </section>
 
@@ -235,15 +255,47 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="why-content">
             <article class="why-item animate-on-scroll">
                 <h3 th:text="#{index.why.problem.title}">"언제 돼?"의 무한 반복</h3>
-                <p th:text="#{index.why.problem.desc}">단톡방에 던진 질문은 제각각 흩어집니다.</p>
+                <div class="why-bubbles">
+                    <p class="why-bubble" th:text="#{index.why.problem.bubble1}">토요일 오후만 돼요</p>
+                    <p class="why-bubble why-bubble--alt" th:text="#{index.why.problem.bubble2}">난 일요일만!</p>
+                    <p class="why-bubble" th:text="#{index.why.problem.bubble3}">다음 주에 알려줘도 돼?</p>
+                </div>
+                <p class="why-summary" th:text="#{index.why.problem.summary}">답은 흩어지고, 교집합은 주최자가 손으로 셉니다.</p>
             </article>
             <article class="why-item animate-on-scroll">
                 <h3 th:text="#{index.why.how.title}">DateDate가 동작하는 방식</h3>
-                <p th:text="#{index.why.how.desc}">한 화면에서 가능한 날이 자동으로 드러납니다.</p>
+                <ol class="why-steps">
+                    <li>
+                        <span class="why-step-num" aria-hidden="true">1</span>
+                        <div>
+                            <strong th:text="#{index.why.how.step1.title}">페이지 만들기</strong>
+                            <p th:text="#{index.why.how.step1.desc}">ID 하나만 정하면 끝.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="why-step-num" aria-hidden="true">2</span>
+                        <div>
+                            <strong th:text="#{index.why.how.step2.title}">링크 공유</strong>
+                            <p th:text="#{index.why.how.step2.desc}">참여자는 되는 날을 클릭합니다.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="why-step-num" aria-hidden="true">3</span>
+                        <div>
+                            <strong th:text="#{index.why.how.step3.title}">겹치는 날 확인</strong>
+                            <p th:text="#{index.why.how.step3.desc}">색이 진할수록 많이 되는 날.</p>
+                        </div>
+                    </li>
+                </ol>
             </article>
             <article class="why-item animate-on-scroll">
                 <h3 th:text="#{index.why.limits.title}">솔직한 한계</h3>
-                <p th:text="#{index.why.limits.desc}">날짜 단위, 8명 권장, 링크 기반 접근.</p>
+                <ul class="why-limits">
+                    <li th:text="#{index.why.limits.item1}">날짜 단위로 조율합니다.</li>
+                    <li th:text="#{index.why.limits.item2}">한 페이지 8명까지 권장.</li>
+                    <li th:text="#{index.why.limits.item3}">링크를 아는 사람은 누구나 참여.</li>
+                </ul>
+                <p class="why-note" th:text="#{index.why.limits.note}">날짜는 DateDate로, 결과는 캘린더로.</p>
             </article>
         </div>
     </section>
@@ -412,6 +464,15 @@ function generateRandomId() {
     const input = document.getElementById('ownerId');
     input.value = `${adj}-${noun}-${num}`;
     input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // 생성된 ID 가 바뀌었음을 알리는 하이라이트 (reduced-motion 은 전역 CSS 가 무력화)
+    const group = document.getElementById('ownerIdGroup');
+    group.classList.remove('input-group-minimal--flash');
+    void group.offsetWidth; /* 연속 클릭 시 애니메이션 재트리거용 리플로우 */
+    group.classList.add('input-group-minimal--flash');
+    group.addEventListener('animationend',
+        () => group.classList.remove('input-group-minimal--flash'), { once: true });
+    input.focus();
 }
 </script>
 
