@@ -18,6 +18,25 @@
             <div class="navbar-content">
                 <a th:href="${@localeLinks.href('/')}" class="logo">DateDate</a>
 
+                <!-- 모바일 빠른 접근: 카카오 로그인/프로필 (햄버거 밖 상시 노출) -->
+                <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
+                   class="nav-kakao-quick" th:attr="aria-label=#{nav.login.kakao}">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <path fill="#000000" fill-opacity="0.9"
+                              d="M12 3C6.48 3 2 6.52 2 10.86c0 2.77 1.82 5.2 4.56 6.6l-.93 3.45c-.08.3.26.55.52.38l4.1-2.72c.57.08 1.15.12 1.75.12 5.52 0 10-3.52 10-7.83C22 6.52 17.52 3 12 3z"/>
+                    </svg>
+                </a>
+                <a sec:authorize="hasRole('USER')" th:href="@{/me}"
+                   class="nav-kakao-quick nav-kakao-quick--profile"
+                   th:attr="aria-label=${#authentication.principal.attributes['appNickname']}">
+                    <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
+                         th:src="${#authentication.principal.attributes['appProfileImage']}" alt="" width="28" height="28"/>
+                    <svg th:if="${#authentication.principal.attributes['appProfileImage'] == null}"
+                         viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path fill="currentColor" d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                    </svg>
+                </a>
+
                 <!-- Hamburger Button (Mobile) -->
                 <button class="navbar-toggle" id="navbarToggle"
                         th:attr="aria-label=#{nav.aria.open}"
@@ -34,21 +53,29 @@
                     <a th:href="${@localeLinks.href('/guide')}" class="nav-link" th:text="#{nav.guide}">가이드</a>
                     <a th:href="${@localeLinks.href('/insights/trends')}" class="nav-link" th:text="#{nav.insights}">인사이트</a>
                     <a th:href="${@localeLinks.href('/tools/date-diff')}" class="nav-link" th:text="#{nav.dateDiff}">날짜 계산기</a>
-                    <!-- Auth (카카오 로그인 / 프로필) -->
-                    <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
-                       class="nav-link nav-kakao-login" th:text="#{nav.login.kakao}">카카오 로그인</a>
-                    <th:block sec:authorize="hasRole('USER')">
-                        <a th:href="@{/me}" class="nav-link nav-profile">
-                            <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
-                                 th:src="${#authentication.principal.attributes['appProfileImage']}"
-                                 class="nav-profile-img" alt="" width="24" height="24"/>
-                            <span th:text="${#authentication.principal.attributes['appNickname']}">닉네임</span>
+                    <!-- Auth (카카오 로그인 / 프로필) — 카카오 디자인 가이드 커스텀 버튼 (#FEE500 컨테이너 + 심볼) -->
+                    <div class="nav-auth">
+                        <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
+                           class="btn-kakao nav-kakao-login">
+                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                                <path fill="#000000" fill-opacity="0.9"
+                                      d="M12 3C6.48 3 2 6.52 2 10.86c0 2.77 1.82 5.2 4.56 6.6l-.93 3.45c-.08.3.26.55.52.38l4.1-2.72c.57.08 1.15.12 1.75.12 5.52 0 10-3.52 10-7.83C22 6.52 17.52 3 12 3z"/>
+                            </svg>
+                            <span th:text="#{nav.login.kakao}">카카오 로그인</span>
                         </a>
-                        <a th:href="@{/recap}" class="nav-link" th:text="#{nav.recap}">나의 리캡</a>
-                        <form th:action="@{/logout}" method="post" class="nav-logout-form">
-                            <button type="submit" class="nav-link nav-logout-btn" th:text="#{nav.logout}">로그아웃</button>
-                        </form>
-                    </th:block>
+                        <th:block sec:authorize="hasRole('USER')">
+                            <a th:href="@{/me}" class="nav-link nav-profile">
+                                <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
+                                     th:src="${#authentication.principal.attributes['appProfileImage']}"
+                                     class="nav-profile-img" alt="" width="24" height="24"/>
+                                <span th:text="${#authentication.principal.attributes['appNickname']}">닉네임</span>
+                            </a>
+                            <a th:href="@{/recap}" class="nav-link" th:text="#{nav.recap}">나의 리캡</a>
+                            <form th:action="@{/logout}" method="post" class="nav-logout-form">
+                                <button type="submit" class="nav-link nav-logout-btn" th:text="#{nav.logout}">로그아웃</button>
+                            </form>
+                        </th:block>
+                    </div>
                     <!-- Language Toggle -->
                     <div class="lang-toggle" role="group" aria-label="Language">
                         <a th:href="@{''(lang='ko')}" class="lang-btn"
@@ -75,6 +102,25 @@
             <div class="navbar-content">
                 <a th:href="${@localeLinks.href('/')}" class="logo logo-serif">DateDate</a>
 
+                <!-- 모바일 빠른 접근: 카카오 로그인/프로필 (햄버거 밖 상시 노출) -->
+                <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
+                   class="nav-kakao-quick" th:attr="aria-label=#{nav.login.kakao}">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <path fill="#000000" fill-opacity="0.9"
+                              d="M12 3C6.48 3 2 6.52 2 10.86c0 2.77 1.82 5.2 4.56 6.6l-.93 3.45c-.08.3.26.55.52.38l4.1-2.72c.57.08 1.15.12 1.75.12 5.52 0 10-3.52 10-7.83C22 6.52 17.52 3 12 3z"/>
+                    </svg>
+                </a>
+                <a sec:authorize="hasRole('USER')" th:href="@{/me}"
+                   class="nav-kakao-quick nav-kakao-quick--profile"
+                   th:attr="aria-label=${#authentication.principal.attributes['appNickname']}">
+                    <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
+                         th:src="${#authentication.principal.attributes['appProfileImage']}" alt="" width="28" height="28"/>
+                    <svg th:if="${#authentication.principal.attributes['appProfileImage'] == null}"
+                         viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path fill="currentColor" d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                    </svg>
+                </a>
+
                 <!-- Hamburger Button (Mobile) -->
                 <button class="navbar-toggle" id="navbarToggle"
                         th:attr="aria-label=#{nav.aria.open}"
@@ -91,21 +137,29 @@
                     <a th:href="${@localeLinks.href('/guide')}" class="nav-link-animated" th:text="#{nav.guide}">가이드</a>
                     <a th:href="${@localeLinks.href('/insights/trends')}" class="nav-link-animated" th:text="#{nav.insights}">인사이트</a>
                     <a th:href="${@localeLinks.href('/tools/date-diff')}" class="nav-link-animated" th:text="#{nav.dateDiff}">날짜 계산기</a>
-                    <!-- Auth (카카오 로그인 / 프로필) -->
-                    <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
-                       class="nav-link-animated nav-kakao-login" th:text="#{nav.login.kakao}">카카오 로그인</a>
-                    <th:block sec:authorize="hasRole('USER')">
-                        <a th:href="@{/me}" class="nav-link-animated nav-profile">
-                            <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
-                                 th:src="${#authentication.principal.attributes['appProfileImage']}"
-                                 class="nav-profile-img" alt="" width="24" height="24"/>
-                            <span th:text="${#authentication.principal.attributes['appNickname']}">닉네임</span>
+                    <!-- Auth (카카오 로그인 / 프로필) — 카카오 디자인 가이드 커스텀 버튼 (#FEE500 컨테이너 + 심볼) -->
+                    <div class="nav-auth">
+                        <a sec:authorize="!hasRole('USER')" th:href="@{/oauth2/authorization/kakao}"
+                           class="btn-kakao nav-kakao-login">
+                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                                <path fill="#000000" fill-opacity="0.9"
+                                      d="M12 3C6.48 3 2 6.52 2 10.86c0 2.77 1.82 5.2 4.56 6.6l-.93 3.45c-.08.3.26.55.52.38l4.1-2.72c.57.08 1.15.12 1.75.12 5.52 0 10-3.52 10-7.83C22 6.52 17.52 3 12 3z"/>
+                            </svg>
+                            <span th:text="#{nav.login.kakao}">카카오 로그인</span>
                         </a>
-                        <a th:href="@{/recap}" class="nav-link-animated" th:text="#{nav.recap}">나의 리캡</a>
-                        <form th:action="@{/logout}" method="post" class="nav-logout-form">
-                            <button type="submit" class="nav-link-animated nav-logout-btn" th:text="#{nav.logout}">로그아웃</button>
-                        </form>
-                    </th:block>
+                        <th:block sec:authorize="hasRole('USER')">
+                            <a th:href="@{/me}" class="nav-link-animated nav-profile">
+                                <img th:if="${#authentication.principal.attributes['appProfileImage'] != null}"
+                                     th:src="${#authentication.principal.attributes['appProfileImage']}"
+                                     class="nav-profile-img" alt="" width="24" height="24"/>
+                                <span th:text="${#authentication.principal.attributes['appNickname']}">닉네임</span>
+                            </a>
+                            <a th:href="@{/recap}" class="nav-link-animated" th:text="#{nav.recap}">나의 리캡</a>
+                            <form th:action="@{/logout}" method="post" class="nav-logout-form">
+                                <button type="submit" class="nav-link-animated nav-logout-btn" th:text="#{nav.logout}">로그아웃</button>
+                            </form>
+                        </th:block>
+                    </div>
                     <!-- Language Toggle -->
                     <div class="lang-toggle" role="group" aria-label="Language">
                         <a th:href="@{''(lang='ko')}" class="lang-btn"

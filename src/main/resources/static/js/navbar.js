@@ -34,8 +34,10 @@
         navbarToggle.addEventListener('click', toggleMenu);
         overlay.addEventListener('click', closeMenu);
 
-        // Close menu when clicking nav links
-        var navLinks = navMenu.querySelectorAll('.nav-link');
+        // Close menu when clicking any menu item (links, kakao login, logout submit)
+        // — .nav-link 한정이었을 때 minimal 헤더(.nav-link-animated)·카카오 앵커가
+        //   같은 페이지 앵커(/#start-form) 이동 시 메뉴+스크롤락을 남기던 문제 해소
+        var navLinks = navMenu.querySelectorAll('a, button[type="submit"]');
         for (var i = 0; i < navLinks.length; i++) {
             navLinks[i].addEventListener('click', closeMenu);
         }
