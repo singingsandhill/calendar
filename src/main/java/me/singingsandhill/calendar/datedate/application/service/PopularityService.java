@@ -25,6 +25,16 @@ public class PopularityService {
     private static final double TIME_WEIGHT_MAX = 5.0;
     private static final int DEFAULT_LIMIT = 5;
 
+    /**
+     * 노출 기준 — ADR datedate/domain/0006.
+     * 최소 2표: 여러 명이 동의한 항목만 노출 (0표 항목이 recency 보너스만으로 랭킹 진입 차단).
+     * 블록리스트: 명백한 비속어 토큰만 — 자모 변형 우회는 막지 못하는 best-effort.
+     */
+    private static final int MIN_EXPOSURE_VOTES = 2;
+    private static final List<String> BLOCKED_TOKENS = List.of(
+            "시발", "씨발", "ㅅㅂ", "ㅆㅂ", "병신", "지랄", "좆", "존나", "ㅈㄴ", "썅", "개새끼"
+    );
+
     private final LocationRepository locationRepository;
     private final MenuRepository menuRepository;
 
@@ -80,6 +90,7 @@ public class PopularityService {
 
         LocalDateTime now = LocalDateTime.now();
         return aggregated.values().stream()
+                .filter(this::isExposable)
                 .sorted(Comparator.comparingDouble((AggregatedItem item) ->
                         calculatePopularityScore(item.totalVotes, item.latestCreatedAt, now))
                         .reversed())
@@ -116,12 +127,22 @@ public class PopularityService {
 
         LocalDateTime now = LocalDateTime.now();
         return aggregated.values().stream()
+                .filter(this::isExposable)
                 .sorted(Comparator.comparingDouble((AggregatedItem item) ->
                         calculatePopularityScore(item.totalVotes, item.latestCreatedAt, now))
                         .reversed())
                 .limit(limit)
                 .map(item -> new PopularItemDto(item.name, item.url, item.totalVotes, item.latestCreatedAt))
                 .collect(Collectors.toList());
+    }
+
+    /** 집계 합산 후 판정 — 동명 1표+1표는 2표로 통과, 블록리스트는 표수와 무관하게 제외 */
+    private boolean isExposable(AggregatedItem item) {
+        if (item.totalVotes < MIN_EXPOSURE_VOTES) {
+            return false;
+        }
+        String normalized = item.name.toLowerCase().replaceAll("\\s+", "");
+        return BLOCKED_TOKENS.stream().noneMatch(normalized::contains);
     }
 
     private double calculatePopularityScore(int voteCount, LocalDateTime createdAt, LocalDateTime now) {

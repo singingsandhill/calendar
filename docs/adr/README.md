@@ -16,13 +16,13 @@
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | **common**   | — | — | — | 7 | 3 | — | — | — | 5 | 15 |
-| **datedate** | 5 | — | 6 | — | — | — | — | — | — | 11 |
+| **datedate** | 6 | — | 6 | — | — | — | — | — | — | 12 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 1 | — | — | — | — | 14 | 1 | — | 16 |
 | **stock**    | — | 4 (동시성 포함) | — | — | — | 1 | 4 | 1 | — | 10 |
-| **합계** | 7 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 5 | **54** |
+| **합계** | 8 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 5 | **55** |
 
-총 **54개 ADR**.
+총 **55개 ADR**.
 
 ---
 
@@ -87,6 +87,7 @@
 | 2026-07-08 | trading/infrastructure | [0003 Bithumb v2 주문 API 마이그레이션](trading/infrastructure/0003-bithumb-v2-order-api-migration.md) | v2 릴리스(2026-06-30) — 어댑터 정규화 + 기본 V1 라우팅 |
 | 2026-07-11 | common/security | [0004 카카오 OAuth2 로그인](common/security/0004-kakao-oauth2-login.md) | datedate "내 기록" 기능 — 선택적 로그인 도입 |
 | 2026-07-11 | datedate/domain | [0005 활동 이벤트 테이블 기반 연간 recap](datedate/domain/0005-user-activity-event-recap.md) | 연간 Wrapped 스타일 recap — voters 구조 무변경 |
+| 2026-07-17 | datedate/domain | [0006 인기 순위 노출 기준 (2표+블록리스트)](datedate/domain/0006-popularity-exposure-criteria.md) | 홈 첫 화면에 0표·비속어 입력 원문 노출 |
 
 ---
 
@@ -96,7 +97,7 @@
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 4 ADRs
-- [datedate/domain/](datedate/domain/) — 5 ADRs
+- [datedate/domain/](datedate/domain/) — 6 ADRs
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs

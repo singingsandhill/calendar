@@ -36,6 +36,15 @@ ADR 누락 사고 방지: PR 에서 `CLAUDE.md` 가 수정됐는데 `docs/adr/` 
 ./gradlew test --tests "*ServiceTest"       # Run pattern-matched tests
 ```
 
+트레이딩·주식 봇 페이지 CSS: `static/css/trading-tw.css` 는 커밋된 Tailwind 빌드 산출물.
+`templates/trading/`, `templates/stock/` 또는 `static/js/trading-*.js` 의 유틸리티 클래스 변경 시 재생성:
+
+```bash
+npx tailwindcss@3.4 -c tailwind.trading.config.js -i tailwind.trading.input.css -o src/main/resources/static/css/trading-tw.css --minify
+```
+
+(CDN `tailwindcss@3.4/dist/tailwind.min.css` 는 존재하지 않는 경로(404)라 로컬 빌드로 대체 — `trading/fragments/header.html` 주석 참고. 다크 터미널 테마는 `static/css/trading.css` 의 `body.tr-dark` 스코프 — trading·stock 페이지 공유, stock 은 CSS 변수 오버라이드 방식.)
+
 ### WSL Environment
 
 ```bash
@@ -144,7 +153,7 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 - `InsightsService` + `InsightsController` → `/insights/trends.html` (집계 인기 통계)
 - `UseCaseController` → `/use-cases/detail.html` (콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹, 동호회). 슬러그 단일 진실원 `UseCaseSlugs.ALL` (라우팅·사이트맵·푸터 자동 반영). 슬러그별 워크드 예시(`sample.*`)로 템플릿 차별화.
 - `SeoService` — 페이지별 JSON-LD 스키마 포함 SEO 메타데이터 생성
-- `PopularityService` — 시간 가중 점수 기반 장소/메뉴 인기 순위
+- `PopularityService` — 시간 가중 점수 기반 장소/메뉴 인기 순위 (노출 기준: 최소 2표 + 비속어 블록리스트 — [ADR 0006](docs/adr/datedate/domain/0006-popularity-exposure-criteria.md))
 - 카카오 로그인 (선택적): `KakaoOAuth2UserService` → `AppUser` upsert, 오너 연결(first-claim), `UserActivity` 이벤트 기록
 - `RecapService` + `RecapController` → `/recap/{year}` 연간 리캡, `/recap/share/{token}` 공개 공유 (ADR datedate/domain/0005)
 
@@ -200,7 +209,7 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 
 | 디렉토리 | 내용 |
 |---------|------|
-| `fragments/` | `head.html` (SEO/meta), `header.html` (nav), `footer.html` (footer), `scripts.html` (JS), `ad-slot.html` (AdSense 슬롯) |
+| `fragments/` | `head.html` (SEO/meta), `header.html` (nav), `footer.html` (footer), `scripts.html` (JS), `ad-slot.html` (AdSense 슬롯), `gtm-noscript.html` (GTM noscript 폴백) |
 | `schedule/` | `view.html` — 참가자 일정 뷰 |
 | `owner/` | `dashboard.html` — 오너 대시보드 |
 | `runners/` | 홈, 런 목록/상세/폼, 멤버 목록/상세 |
