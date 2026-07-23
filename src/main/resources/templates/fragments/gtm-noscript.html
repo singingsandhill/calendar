@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+
+<!--
+  Google Tag Manager noscript 폴백 (JS 비활성 사용자 트래킹).
+
+  사용법: <body> 여는 태그 직후에 배치.
+    <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
+
+  GTM 컨테이너 ID 는 fragments/head.html 의 GTM JS 로더와 반드시 일치해야 한다.
+-->
+
+<noscript th:fragment="gtm-noscript"><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+</body>
+</html>

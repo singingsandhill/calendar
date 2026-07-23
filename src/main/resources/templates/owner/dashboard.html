@@ -2,10 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
-<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
+<div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
 <div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <main class="container" id="main-content">
