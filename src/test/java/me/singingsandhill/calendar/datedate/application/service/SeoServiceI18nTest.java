@@ -2,6 +2,8 @@ package me.singingsandhill.calendar.datedate.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
+import me.singingsandhill.calendar.datedate.domain.usecase.UseCaseSlugs;
 
 /**
  * {@link SeoService} 가 한국어/영어 로케일에서 올바른 메타데이터와 JSON-LD 를 빌드하는지 검증.
@@ -228,6 +231,36 @@ class SeoServiceI18nTest {
             assertThat(seo.canonicalKo()).isNotNull().doesNotContain("lang=en");
             assertThat(seo.canonicalEn()).isNotNull().endsWith("?lang=en");
             assertThat(seo.robots()).isEqualTo("index, follow");
+        }
+    }
+
+    // ===== 메타 디스크립션 길이 =====
+
+    @Test
+    @DisplayName("색인 대상 페이지의 메타 디스크립션은 한/영 모두 120~160자다 (검색엔진 '너무 짧음' 권고 방지)")
+    void indexablePages_descriptionLengthInRange() {
+        Locale[] locales = { Locale.KOREAN, Locale.ENGLISH };
+        for (Locale locale : locales) {
+            LocaleContextHolder.setLocale(locale);
+
+            List<SeoMetadata> pages = new ArrayList<>(List.of(
+                service.getHomeSeo(),
+                service.getGuideSeo(),
+                service.getInsightsTrendsSeo(),
+                service.getAboutSeo(),
+                service.getPrivacySeo(),
+                service.getTermsSeo(),
+                service.getFaqSeo(),
+                service.getDateDiffSeo()));
+            for (String slug : UseCaseSlugs.ALL) {
+                pages.add(service.getUseCaseSeo(slug));
+            }
+
+            for (SeoMetadata seo : pages) {
+                assertThat(seo.description())
+                    .as("[%s] %s description: %s", locale, seo.canonical(), seo.description())
+                    .hasSizeBetween(120, 160);
+            }
         }
     }
 
