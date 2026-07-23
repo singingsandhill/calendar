@@ -2,9 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
-<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PFPKQT7W"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
 <div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
 
 <main class="container guide-page">
@@ -80,6 +78,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
         </div>
     </section>
+
+    <!-- 카카오 로그인 가치 제안 배너 (비로그인만, 공유 fragment) — 5단계 가이드 직후 '선택: 계정 연결' 안내 -->
+    <div th:replace="~{fragments/login-banner :: [th:fragment='login-banner']}"></div>
 
     <!-- 광고 슬롯: 가이드 소비 후, CTA 직전 -->
     <div th:replace="~{fragments/ad-slot :: leaderboard(${seo.adsEnabled()})}"></div>

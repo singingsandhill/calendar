@@ -8,15 +8,20 @@ Use explicit attribute selector `[th:fragment='name']` to avoid conflicts with H
 |------|-----------|-------------|
 | `head.html` | `head(seo)` | `<head>` contents: meta tags, CSS preload, fonts, JSON-LD, AdSense (conditional) |
 | `header.html` | `header`, `header-minimal` | Navigation bars only (no head content) |
+| `login-banner.html` | `login-banner` | 카카오 로그인 가치 제안 배너 + 로그인 후 사용법 3단계 (비로그인만, `sec:authorize`) — 홈·가이드에서 사용 |
 | `footer.html` | `footer`, `footer-minimal` | Footer markup only (no scripts) |
 | `scripts.html` | `scripts` | JS file loading: toast.js, api.js, calendar.js |
 | `ad-slot.html` | `leaderboard(adsEnabled)`, `infeed(adsEnabled)`, `rectangle(adsEnabled)` | AdSense slot placeholders, rendered only when `adsEnabled=true` |
+| `gtm-noscript.html` | `gtm-noscript` | GTM noscript iframe 폴백 — GTM ID 는 `head.html` 의 JS 로더와 일치 유지. datedate 페이지 `<body>` 직후 배치 |
 
 ## Usage Pattern
 
 ```html
 <!-- In every page <head> -->
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
+
+<!-- GTM noscript fallback (right after <body>) -->
+<div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
 
 <!-- Navbar -->
 <div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
