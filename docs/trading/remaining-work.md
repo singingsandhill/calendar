@@ -15,7 +15,9 @@
 | **P0-1** 무인증 실주문·봇제어 API | ROLE_ADMIN 분리 (commit 20a9aac, ADR common/security/0003) |
 | **P0-2** 타임아웃→중복주문 | v1 멱등 재조회 + v2 어댑터 + §8-B 선영속화·틱스윕·Position 생성 (코드 완료, **활성화만 대기** — 아래 A 참고) |
 | **P1-1** 체결기록 실패 상태 불일치 | §8-B 선영속화+스윕이 미추적 체결 수습(매수·매도) |
-| **P1-9(일부)** 체결수량 유도값 | §8-C executed_volume 실측화 (defaults 정합은 아래 B 잔존) |
+| **P1-5** 손절/익절/트레일링 트리거 테스트 0건 | `RiskManagementServiceTriggerTest` — SL/TP/트레일링 활성·갱신·손익분기 floor 경계 테스트 (2026-07-25) |
+| **P1-8** 운영 모드 기본값 LIVE | 기본 PAPER 전환 — LIVE 는 `TRADING_BOT_MODE=LIVE` opt-in (2026-07-25, ADR modes/0002). **주의: env 미설정 LIVE 운영 배포는 자동 PAPER 화** |
+| **P1-9** 자바 기본값 ↔ yaml 불일치 | §8-C executed_volume 실측화 + Risk/Bot/Rebalancing 기본값 yaml 정합 (2026-07-25) |
 | **P2-1** 지정가 모드게이트 우회 | §8-A 모드게이트를 지정가·취소·미결조회까지 확장 |
 
 ---
@@ -46,11 +48,11 @@ P0-2 코드는 완료됐으나 **기본 구성(order-api-version=v1 + clientOrde
 | **P1-2** | 캔들 동결 — 미완성 봉이 확정봉으로 영구 고정 가능 | [dev] | 중 | 미해결 | 최신 1~2봉 upsert 갱신 또는 직전 확정봉까지만 저장. 형성봉 여부 로그 검증 선행 |
 | **P1-3** | 재시작 시 봇 정지 복귀 → OPEN 포지션 손절 보호 공백 | [dev] | 중 | **부분** (§8-G 기동 스윕은 in-flight SUBMITTED만 수습) | `running` 상태 영속화+부팅 복원, 또는 OPEN 포지션 있으면 리스크 루프 항상 실행 |
 | **P1-4** | 수동/검증(test-order) 주문이 서킷브레이커·노출상한·물타기 가드 우회 | [dev] | 중 | **부분 구현됨·미검증** (2026-07-09) — `manualBuy` 에 `entryRiskGuardsBlock`(서킷·물타기·노출) 적용. **`test-order`(TradingVerificationApiController)는 별개 컨트롤러라 아직 미적용** | test-order 는 운영 프로파일 비활성 or 동일 가드 추가 (후속) |
-| **P1-5** | 손절/익절/트레일링 트리거(`checkPositionRisk`) 테스트 0건 + Clock 미주입 | [dev] | 중 | 미해결 (TimeExit만 테스트) | `Clock` 빈 주입(stock 모듈 선례) → 경계값 결정성 테스트 |
+| **P1-5** | 손절/익절/트레일링 트리거(`checkPositionRisk`) 테스트 0건 + Clock 미주입 | [dev] | 중 | **트리거 테스트 완료** (2026-07-25, `RiskManagementServiceTriggerTest`) — Clock 주입은 잔여 | 잔여: `Clock` 빈 주입(stock 모듈 선례)으로 시간 의존 경계 결정성 확보 |
 | **P1-6** | 리밸런스 쿨다운 check-then-act 비원자 → 이중 리밸런스 | [dev] | 하 | 미해결 | 종목별 `ReentrantLock`/CAS 로 진입 직렬화 |
 | **P1-7** | 서킷브레이커 연속손실 스트릭 인메모리 유실(일일손실 가드는 DB 유지) | [dev] | 중 | 미해결 | 부팅 시 당일 CLOSED 포지션으로 스트릭 재계산 |
-| **P1-8** | 운영 모드 기본값 LIVE + 설정 누락/오타 시 실주문 폴백 | [dev] | 하 | 미해결 (ADR 수용 트레이드오프) | 안전측 기본(PAPER) 또는 이중 플래그(mode=LIVE AND armed). ADR 재검토 수반 |
-| **P1-9** | `TradingProperties` 자바 기본값 ↔ yaml 대폭 불일치(키 누락 시 구식 고위험값 폴백) | [dev] | 하 | **부분** (executed_volume은 §8-C 완료) | 자바 기본값을 유효값과 일치 또는 필수키 미설정 시 부팅 실패 |
+| **P1-8** | 운영 모드 기본값 LIVE + 설정 누락/오타 시 실주문 폴백 | [dev] | 하 | **해결** (2026-07-25) — 기본 PAPER + `setMode(null)`→PAPER (ADR modes/0002) | — |
+| **P1-9** | `TradingProperties` 자바 기본값 ↔ yaml 대폭 불일치(키 누락 시 구식 고위험값 폴백) | [dev] | 하 | **해결** (2026-07-25) — Risk/Bot(cooldown·minHolding)/Rebalancing(minSellPnlPct) 기본값을 yaml 운영값과 정합 | — |
 
 ---
 
