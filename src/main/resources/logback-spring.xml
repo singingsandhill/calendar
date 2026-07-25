@@ -60,9 +60,28 @@
         </encoder>
     </appender>
 
+    <!-- 크립토(trading) 모듈 분리: root 의 STOCK_FILE 로 새던 것(하루 ~6천 줄)을 전용 파일로 -->
+    <appender name="CRYPTO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/crypto-trading.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/crypto-trading-%d{yyyy-MM-dd, Asia/Seoul}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
     <!-- 거래 이벤트 로거: 별도 appender 로만 흘려보내고 루트에 전파 안 함 -->
     <logger name="me.singingsandhill.calendar.stock.trade" level="INFO" additivity="false">
         <appender-ref ref="TRADE_EVENTS"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- 크립토 트레이딩 봇 로거: stock-trading.log 오염 방지 -->
+    <logger name="me.singingsandhill.calendar.trading" level="DEBUG" additivity="false">
+        <appender-ref ref="CRYPTO_FILE"/>
         <appender-ref ref="CONSOLE"/>
     </logger>
 

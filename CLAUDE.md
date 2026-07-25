@@ -77,20 +77,33 @@ Hexagonal Architecture (Ports & Adapters). Each module has `domain/` (entities, 
 
 **infrastructure/config/**
 - `SecurityConfig` — Spring Security 경로별 접근 규칙
-- `WebConfig` — `LocaleChangeInterceptor` (`?lang=ko`/`?lang=en`) 등록, ETag 필터
+- `WebConfig` — 인터셉터 3개(`LocaleChangeInterceptor` `?lang=ko`/`?lang=en`,
+  `cacheControlInterceptor`, `ownerPathInterceptor`) + `ShallowEtagHeaderFilter` +
+  `contentLanguageFilter`(`Content-Language` 헤더) + `messageSource()` 빈.
+  캐시 정책: `/runners/admin` 은 no-cache, SEO 페이지는 `public, max-age`
 - `CookieThenAcceptLanguageLocaleResolver` — 로케일 해석: cookie `lang` → Accept-Language 헤더 → Korean(ko) 기본값; 쿠키 1년 유지, SameSite=Lax
+- `CorsConfig` — `/api/**` 한정 `CorsConfigurationSource` (무자격증명)
+- `AdsenseConfig` / `AdsenseProperties` — AdSense 슬롯 활성화 설정
+- `IndexNowConfig` / `IndexNowProperties` — IndexNow 색인 제출 설정
+- `KakaoOAuth2ClientConfig` — 카카오 OAuth2 클라이언트 등록
 - `JpaConfig` — JPA 기본 설정
+
+**infrastructure/scheduler/**
+- `IndexNowScheduler` — `indexnow.enabled=true` 일 때만 빈 등록, 매일 03:30 KST 제출
 
 **application/**
 - `BusinessException` — abstract base; 서브클래스가 `getStatus()` (HttpStatus), `getCode()` (String) 구현
 - `SitemapService` — `/sitemap.xml` 동적 생성
+- `IndexNowService` — `SitemapService` URL 들을 `api.indexnow.org` 에 POST (전 구간 fail-soft)
 - `SitemapEntry` — 사이트맵 항목 DTO
 
 **presentation/**
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) — REST/JSON 오류 응답 → `ErrorResponse { code, message }`
 - `MvcExceptionHandler` (`@ControllerAdvice`) — Thymeleaf 에러 페이지 라우팅
 - `StaticResourceController` — sitemap.xml 등 SEO 정적 파일 서빙
+- `AdsenseModelAdvice` (`@ControllerAdvice`) — 뷰 모델에 AdSense 활성 플래그 주입
 - `SeoMetadata` — title, description, OG tags, JSON-LD, robots, canonical DTO
+- `LocaleLinks` — hreflang/로케일 토글 링크 계산
 - `ErrorResponse` — `{ code, message }` JSON 구조
 
 ## i18n
@@ -102,7 +115,9 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 - 메시지 파일: `src/main/resources/messages.properties` (한국어, 기본), `messages_en.properties` (영어)
 - `MessageSource`: `ReloadableResourceBundleMessageSource`, UTF-8, 시스템 로케일 폴백 없음
 - `MessageFormat` 의 number 인자는 `{n,number,#}` 패턴으로 천단위 그룹화 차단 (예: year=2026 이 "2,026" 출력 방지). 회귀 테스트 `SeoServiceI18nTest.scheduleSeo_yearNotGrouped` 가드.
-- **작은따옴표 이스케이프:** `alwaysUseMessageFormat=false` (WebConfig) → 인자 없는 메시지는 MessageFormat 미적용. 따옴표 `''` 이스케이프는 인자 있는 메시지(`{0}` 포함, 예: `dashboard.title`)에서만 사용. 인자 없는 일반 콘텐츠(use-case·SEO·홈 본문 등)는 `'` 1개를 그대로 쓴다 — 인자 없는 메시지에 `''` 를 쓰면 화면에 `''` 가 노출됨.
+- **작은따옴표 이스케이프:** `alwaysUseMessageFormat` 은 어디에서도 설정하지 않으므로 Spring 기본값
+  `false` 가 적용된다(`WebConfig.messageSource()` 는 `setBasename`/`setDefaultEncoding`/
+  `setFallbackToSystemLocale(false)` 만 호출) → 인자 없는 메시지는 MessageFormat 미적용. 따옴표 `''` 이스케이프는 인자 있는 메시지(`{0}` 포함, 예: `dashboard.title`)에서만 사용. 인자 없는 일반 콘텐츠(use-case·SEO·홈 본문 등)는 `'` 1개를 그대로 쓴다 — 인자 없는 메시지에 `''` 를 쓰면 화면에 `''` 가 노출됨.
 
 ## Exception Handling (Two-Layer)
 
@@ -131,20 +146,33 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 
 `SecurityConfig` — Runner 어드민 전용 폼 로그인.
 
-| Path Pattern | Access |
-|--------------|--------|
-| `/runners/admin/**` | `ROLE_ADMIN` |
-| `/runners/admin/login` | permitAll |
-| `/api/trading/**`, `/trading`, `/trading/**` | `ROLE_ADMIN` (봇 제어·실주문·제어 대시보드, P0-1) |
-| `POST /api/stock/bot/**` | `ROLE_ADMIN` (주식 봇 제어, [ADR 0005](docs/adr/common/security/0005-admin-only-stock-bot-control-api.md)) — `GET .../status` 는 공개 대시보드용 permitAll |
-| `/me`, `/recap/**` (share 제외), `/api/me/**` | `ROLE_USER` (카카오 로그인, [ADR 0004](docs/adr/common/security/0004-kakao-oauth2-login.md)) |
-| `/login`, `/oauth2/**`, `/login/oauth2/**`, `/recap/share/**` | permitAll |
-| `/runners/**`, `/insights/**`, `/tools/**`, `/stock/**`, `/api/**`, `/h2-console/**`, static assets, `/**` | permitAll |
+아래는 `SecurityConfig` 의 **선언 순서**대로다 (첫 매칭 우선이라 순서가 곧 의미다).
 
-> 트레이딩 규칙은 포괄 `permitAll`(`/api/**`, `/*`)보다 **먼저** 선언해야 매칭 우선순위가 보장됨. 근거: [ADR 0003](docs/adr/common/security/0003-admin-only-trading-control-api.md).
+| # | Path Pattern | Access |
+|---|--------------|--------|
+| 1 | `/api/trading/**`, `/trading`, `/trading/**` | `ROLE_ADMIN` (봇 제어·실주문·제어 대시보드, [ADR 0003](docs/adr/common/security/0003-admin-only-trading-control-api.md)) |
+| 2 | `POST /api/stock/bot/**` | `ROLE_ADMIN` (주식 봇 제어, [ADR 0005](docs/adr/common/security/0005-admin-only-stock-bot-control-api.md)) — `GET .../status` 는 아래 `/api/**` 로 떨어져 공개 |
+| 3 | `/recap/share/**` | permitAll (공유 링크 무인증 — 반드시 `/recap/**` 보다 먼저) |
+| 4 | `/login`, `/oauth2/**`, `/login/oauth2/**` | permitAll |
+| 5 | `/me`, `/recap`, `/recap/**`, `/api/me/**` | `ROLE_USER` (카카오 로그인, [ADR 0004](docs/adr/common/security/0004-kakao-oauth2-login.md)) |
+| 6 | `/`, `/start`, `/index.html`, `/privacy-policy`, `/about`, `/api/**`, static assets, `/h2-console/**` | permitAll |
+| 7 | `/runners`, `/runners/announce`, `/runners/runs(/**)`, `/runners/members(/**)`, `/runners/{css,js,images}/**`, **`/runners/admin/login`** | permitAll |
+| 8 | `/insights(/**)`, `/use-cases(/**)`, `/tools(/**)` | permitAll |
+| 9 | `/runners/admin`, `/runners/admin/**` | `ROLE_ADMIN` |
+| 10 | `/stock`, `/stock/**`, `/api/stock/**` | permitAll |
+| 11 | `/*`, `/*/*/*` | permitAll (owner 페이지 등 동적 경로 — `/**` 전역 와일드카드는 **없다**) |
+| 12 | 그 외 | `authenticated()` |
+
+> 순서상 두 가지가 핵심이다. ① 트레이딩·주식 ADMIN 규칙(1·2)은 포괄 `permitAll`(`/api/**`, `/*`)보다
+> **먼저** 와야 보호가 유지된다. ② `/runners/admin/login`(7)은 `/runners/admin/**` ADMIN(9)보다
+> **먼저** 선언돼야 한다 — 순서가 뒤집히면 로그인 페이지 자체가 ADMIN 을 요구해 로그인이 불가능해진다.
+> 러너 공개 경로도 `/runners/**` 와일드카드가 아니라 개별 매처로 나열된 이유가 이것이다.
 
 CSRF: `/h2-console/**`, `/api/**`, runner admin 변경 엔드포인트는 비활성화.  
-로그인 URL: `/runners/admin/login` → 로그아웃 후 `/runners` 리다이렉트.
+로그인/로그아웃 2계열: 폼 로그인 `/runners/admin/login`, `POST /runners/admin/logout` → `/runners` /
+카카오 `POST /logout` → `/` (`OrRequestMatcher` 로 두 경로를 받고 URI 접두사로 리다이렉트 분기).
+미인증 진입점도 분리 — 어드민 5경로(`/runners/admin/**`, `/trading`, `/trading/**`,
+`/api/trading/**`, `/api/stock/bot/**`)는 어드민 로그인, 나머지는 `AnyRequestMatcher` 로 카카오 `/login`.
 
 CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하도록 허용 (`CorsConfig`, 무자격증명).
 결정 근거: [ADR 0002](docs/adr/common/security/0002-cors-for-apps-in-toss-miniapp.md). 트레이딩 API 는 `ROLE_ADMIN`(세션 인증) + 무자격증명 CORS 조합으로 교차출처 호출이 차단됨.
@@ -156,7 +184,10 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 - `SeoService` — 페이지별 JSON-LD 스키마 포함 SEO 메타데이터 생성
 - `PopularityService` — 시간 가중 점수 기반 장소/메뉴 인기 순위 (노출 기준: 최소 2표 + 비속어 블록리스트 — [ADR 0006](docs/adr/datedate/domain/0006-popularity-exposure-criteria.md))
 - 카카오 로그인 (선택적): `KakaoOAuth2UserService` → `AppUser` upsert, 오너 연결(first-claim), `UserActivity` 이벤트 기록
-- `RecapService` + `RecapController` → `/recap/{year}` 연간 리캡, `/recap/share/{token}` 공개 공유 (ADR datedate/domain/0005)
+- `RecapService` + `RecapController` → `GET /recap` (당해년 리다이렉트), `/recap/{year}` 연간 리캡,
+  `POST /recap/{year}/share` 공유 토큰 발급, `/recap/share/{token}` 공개 공유 (ADR datedate/domain/0005)
+- `AuthController` → `GET /login` → `auth/login` (카카오 로그인 랜딩)
+- `MyPageController` → `GET /me` → `me/mypage` (로그인 사용자 내 기록)
 
 ## Background Schedulers
 
@@ -167,15 +198,23 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 | `CandleScheduler` | 매분 :05초 트레이딩 루프; 5분마다 캔들 동기화; 자정 캔들 정리 |
 | `DailySummaryScheduler` | 5분마다 계좌 스냅샷; 00:01 일일 P&L 요약 |
 
-`trading.bot.enabled=false`이면 모든 잡 스킵.
+`trading.bot.enabled=false`이면 트레이딩 루프·캔들 동기화·계좌 스냅샷·일일 요약이 스킵된다.
+단 **`CandleScheduler.cleanupOldCandles()`(자정 캔들 정리)는 가드가 없어 항상 실행**된다.
 
 **Stock** (`StockSchedulerConfig` → `@EnableScheduling`):
 
 | Scheduler | 시간 (KST, 평일만) |
 |-----------|-------------------|
-| `StockTradingScheduler` | 08:30 프리마켓; 09:20 갭 스크리닝; 09:20~11:20 5초마다 트레이딩 루프; 11:20 최종 청산 |
+| `StockTradingScheduler` | 08:30 프리마켓; 09:20 갭 스크리닝; 09:20~11:20 5초마다 트레이딩 루프; 11:20 최종 청산; 11:40 일일 실적 리포트 |
 
-`stock.bot.enabled=false`이면 모든 잡 스킵. 공휴일은 `stock.trading.holidays` (yyyy-MM-dd 리스트) 에서 관리. 자동화 미구현 — 매년 갱신.
+`stock.bot.enabled=false`이면 모든 잡 스킵 (5개 메서드 전부 `isEnabled()` 가드 — 트레이딩 모듈과 다름).
+공휴일은 `stock.trading.holidays` (yyyy-MM-dd 리스트) 에서 관리. 자동화 미구현 — 매년 갱신.
+
+**Common**:
+
+| Scheduler | 주기 |
+|-----------|------|
+| `IndexNowScheduler` | 매일 03:30 KST IndexNow 제출 — `indexnow.enabled=true` 일 때만 빈 등록 |
 
 ## External Integrations
 
@@ -221,17 +260,24 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 
 | 디렉토리 | 내용 |
 |---------|------|
-| `fragments/` | `head.html` (SEO/meta), `header.html` (nav), `footer.html` (footer), `scripts.html` (JS), `ad-slot.html` (AdSense 슬롯), `gtm-noscript.html` (GTM noscript 폴백) |
-| `schedule/` | `view.html` — 참가자 일정 뷰 |
+| `fragments/` | `head.html` (SEO/meta), `header.html` (nav), `footer.html`, `scripts.html` (JS), `ad-slot.html` (AdSense 슬롯), `gtm-noscript.html` (GTM noscript 폴백), `login-banner.html` (카카오 로그인 배너), `create-schedule-modal.html` (공유 일정 생성 모달) |
+| `schedule/` | `view.html` (참가자 일정 뷰), `create.html` |
 | `owner/` | `dashboard.html` — 오너 대시보드 |
-| `runners/` | 홈, 런 목록/상세/폼, 멤버 목록/상세 |
-| `runners/admin/` | 어드민 대시보드, 로그인, 런 폼 |
-| `trading/` | `dashboard.html`, `trades.html`, `settings.html` |
+| `auth/` | `login.html` — 카카오 로그인 랜딩 |
+| `me/` | `mypage.html` — 로그인 사용자 내 기록 |
+| `recap/` | `recap.html` (연간 리캡), `share.html` (공개 공유) |
+| `runners/` | 홈, 런 목록/상세/폼, 멤버 목록/상세, `announce.html` |
+| `runners/admin/` | 어드민 대시보드, 로그인, 런 폼, `attendance-form.html` |
+| `runners/fragments/` | `header.html`, `footer.html` (러너 전용 — 루트 `fragments/` 와 별개) |
+| `trading/` | `dashboard.html`, `trades.html`, `settings.html`, `portfolio.html`, `verify.html` |
+| `trading/fragments/` | `header.html` |
 | `stock/` | `dashboard.html`, `history.html`, `settings.html` |
+| `stock/fragments/` | `header.html`, `formats.html` |
+| `tools/` | `date-diff.html` — 날짜 계산기 |
 | `error/` | `4xx.html`, `5xx.html` |
 | `insights/` | `trends.html` |
 | `use-cases/` | `detail.html` (슬러그 기반 콘텐츠 페이지) |
-| (루트) | `index.html`, `guide.html`, `privacy.html`, `terms.html` |
+| (루트) | `index.html`, `guide.html`, `privacy.html`, `terms.html`, `about.html`, `faq.html` |
 
 ## Database
 
