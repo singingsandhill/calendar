@@ -55,7 +55,9 @@ Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (0
 
 ## 운영 모드 / 동시성 / 관측성
 
-- **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — 모든 주문 진입부 모드 가드. **기본값 PAPER**,
+- **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — 모든 주문 진입부 모드 가드 (분기점은 주문 4개 메서드뿐 —
+  시세·호가·잔고는 모드 무관 실 API, 따라서 PAPER 도 스크리닝·상태머신·리스크·손익 기록이 전부 동작).
+  `BACKTEST` 는 현재 PAPER 와 동일(히스토리 fixture 미구현). **기본값 PAPER**,
   LIVE 는 `STOCK_BOT_MODE=LIVE` 로만 opt-in (ADR stock/modes/0002). 주문 POST 는 비멱등이라
   무재시도(`executePostNoRetry`, ADR stock/infrastructure/0005), 봇 제어 API 는
   `POST /api/stock/bot/**` ADMIN 전용 (ADR common/security/0005).

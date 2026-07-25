@@ -191,6 +191,9 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 
 - **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — `KoreaInvestmentApiClient` 의 모든 주문
   진입부에 모드 가드. PAPER/BACKTEST 는 `simulateOrder()` 인메모리 체결.
+  **시세·호가·잔고 조회는 모드 무관 항상 실 API** — 스크리닝·상태머신·리스크 루프·손익 기록은
+  PAPER 에서도 전부 동작한다(주문만 가상). `BACKTEST` 는 현재 PAPER 와 동일 — 히스토리
+  fixture 시세 소스 미구현.
   **기본값 PAPER** — LIVE 는 `STOCK_BOT_MODE=LIVE` 환경변수로만 활성화
   ([ADR stock/modes/0002](docs/adr/stock/modes/0002-paper-default-mode.md)).
 - **주문 무재시도** — 주문 POST(`/order-cash`)는 비멱등이라 재시도 없이 1회만 전송

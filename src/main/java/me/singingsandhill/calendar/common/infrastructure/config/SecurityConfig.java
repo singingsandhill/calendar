@@ -37,6 +37,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/trading/**").hasRole("ADMIN")
                 .requestMatchers("/trading", "/trading/**").hasRole("ADMIN")
 
+                // 주식 봇 제어(뮤테이션) API 도 관리자 전용 (ADR common/security/0005).
+                // GET /api/stock/bot/status 는 공개 대시보드(/stock) 위젯용이라 아래 /api/** permitAll 로 유지.
+                .requestMatchers(HttpMethod.POST, "/api/stock/bot/**").hasRole("ADMIN")
+
                 // 카카오 로그인 사용자 영역 (ADR common/security/0004).
                 // /recap/share/** permitAll 은 /recap/** hasRole 보다 먼저 — 공유 링크는 무인증 공개.
                 .requestMatchers("/recap/share/**").permitAll()
@@ -103,6 +107,8 @@ public class SecurityConfig {
                         PathPatternRequestMatcher.withDefaults().matcher("/trading/**"))
                 .defaultAuthenticationEntryPointFor(adminEntryPoint,
                         PathPatternRequestMatcher.withDefaults().matcher("/api/trading/**"))
+                .defaultAuthenticationEntryPointFor(adminEntryPoint,
+                        PathPatternRequestMatcher.withDefaults().matcher("/api/stock/bot/**"))
                 // 위 admin 매처에 걸리지 않는 나머지 모든 요청의 기본 진입점 (카카오 사용자 영역).
                 // 주의: ExceptionHandlingConfigurer#authenticationEntryPoint(...) 를 별도로 호출하면
                 // 위에서 등록한 defaultAuthenticationEntryPointFor 매핑 전체가 무시되고 그 값으로
