@@ -293,9 +293,18 @@ public class StockPositionService {
     /**
      * 당일주문체결조회(TTTC8001R)로 실체결가·수량을 확인한다.
      * 조회 실패/미발견이면 요청가로 폴백하되 WARN — 장부가 픽션임을 로그로 드러낸다.
+     *
+     * PAPER/BACKTEST 는 주문이 인메모리 시뮬레이션이라 브로커 원장에 존재하지 않는다.
+     * 조회를 시도하면 진입마다 "체결 확인 불가" WARN 만 쌓이므로 건너뛴다 —
+     * 시뮬레이션에서는 요청가가 곧 체결가다.
      */
     private Fill resolveBuyFill(String stockCode, String orderId,
                                  BigDecimal requestedPrice, int requestedQuantity) {
+        if (stockProperties.getBot().getMode() != StockProperties.Bot.Mode.LIVE) {
+            log.debug("[{}] {} 모드 — 시뮬레이션 체결가 {} 로 기록",
+                stockCode, stockProperties.getBot().getMode(), requestedPrice);
+            return new Fill(requestedPrice, requestedQuantity, true);
+        }
         try {
             KisOrderDetailResponse history = kisApiClient.getTodayOrders();
             if (history != null && history.orders() != null) {
@@ -392,12 +401,16 @@ public class StockPositionService {
             reason
         );
         trade.setPositionId(position.getId());
-        trade.markFilled(price, quantity, BigDecimal.ZERO);
+        // 매도 비용(수수료+거래세)을 원장에도 기록 — 포지션 손익과 동일 비용 모델.
+        // 0 으로 남기면 원장 기반 수수료 집계가 매도측을 통째로 누락한다.
+        BigDecimal commissionRate = stockProperties.getRisk().getCommissionRate();
+        BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
+        BigDecimal sellFee = price.multiply(BigDecimal.valueOf(quantity))
+            .multiply(commissionRate.add(sellTaxRate));
+        trade.markFilled(price, quantity, sellFee);
         tradeRepository.save(trade);
 
         // 포지션 업데이트 (수수료 포함)
-        BigDecimal commissionRate = stockProperties.getRisk().getCommissionRate();
-        BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
         position.executePartialExit(quantity, price, reason, commissionRate, sellTaxRate);
         positionRepository.save(position);
 

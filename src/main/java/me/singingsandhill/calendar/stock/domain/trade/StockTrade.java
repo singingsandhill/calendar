@@ -10,8 +10,11 @@ import java.time.LocalDateTime;
  */
 public class StockTrade {
 
+    /** 주문 전송 전 선영속화 시 부여하는 임시 주문번호 접두사 (브로커 번호 확보 시 교체). */
+    public static final String PENDING_ORDER_ID_PREFIX = "PENDING-";
+
     private Long id;
-    private final String orderId;
+    private String orderId;
     private Long positionId;
     private final String stockCode;
     private final StockTradeType tradeType;
@@ -74,6 +77,24 @@ public class StockTrade {
         );
         trade.exitReason = reason;
         return trade;
+    }
+
+    /**
+     * 브로커 주문번호(ODNO) 부착 — 선영속화된 PENDING 거래에 응답 도착 후 부여.
+     */
+    public void assignBrokerOrderId(String brokerOrderId) {
+        if (brokerOrderId != null && !brokerOrderId.isBlank()) {
+            this.orderId = brokerOrderId;
+        }
+    }
+
+    /** 주문번호가 아직 브로커 값으로 교체되지 않은(=접수 여부 미확인) 거래인지. */
+    public boolean isUnconfirmedOrder() {
+        return orderId != null && orderId.startsWith(PENDING_ORDER_ID_PREFIX);
+    }
+
+    public boolean isPending() {
+        return status == StockTradeStatus.PENDING;
     }
 
     /**

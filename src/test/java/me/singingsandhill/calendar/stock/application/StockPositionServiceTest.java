@@ -51,9 +51,15 @@ class StockPositionServiceTest {
     private final StockSignalRepository signalRepository = mock(StockSignalRepository.class);
     private final KoreaInvestmentApiClient kisApiClient = mock(KoreaInvestmentApiClient.class);
 
-    private final StockPositionService service = new StockPositionService(
-        positionRepository, tradeRepository, stockRepository, signalRepository,
-        kisApiClient, new StockProperties(), new StockCodeLocks());
+    /** 기본 서비스 — 기본 모드 PAPER (주문 시뮬레이션). */
+    private final StockPositionService service = serviceInMode(StockProperties.Bot.Mode.PAPER);
+
+    private StockPositionService serviceInMode(StockProperties.Bot.Mode mode) {
+        StockProperties props = new StockProperties();
+        props.getBot().setMode(mode);
+        return new StockPositionService(positionRepository, tradeRepository, stockRepository,
+            signalRepository, kisApiClient, props, new StockCodeLocks());
+    }
 
     private StockPosition positionWithRemaining40() {
         StockPosition p = StockPosition.open(
@@ -110,12 +116,28 @@ class StockPositionServiceTest {
             .thenReturn(KisOrderResponse.simulated("ODNO-1"));
         when(kisApiClient.getTodayOrders()).thenReturn(orderHistoryWith("ODNO-1", 10, "100500"));
 
-        StockPosition position = service.openPosition(entryReadyStock());
+        StockPosition position = serviceInMode(StockProperties.Bot.Mode.LIVE)
+            .openPosition(entryReadyStock());
 
         // 주문 전 시세(100000)가 아니라 실체결 평균가(100500)가 진입가여야 한다
         assertThat(position).isNotNull();
         assertThat(position.getEntryPrice()).isEqualByComparingTo("100500");
         assertThat(position.getEntryQuantity()).isEqualTo(10);
+    }
+
+    @Test
+    void openPosition_inSimulatedModeSkipsBrokerFillLookup() {
+        // PAPER/BACKTEST 는 주문이 시뮬레이션(SIM-...)이라 브로커 원장에 존재하지 않는다.
+        // 조회를 시도하면 매 진입마다 "체결 확인 불가" WARN 만 남는다 — 요청가가 곧 체결가.
+        stubFundingFor(new BigDecimal("100000"));
+        when(kisApiClient.buyMarket(eq("005930"), anyInt()))
+            .thenReturn(KisOrderResponse.simulated("SIM-1"));
+
+        StockPosition position = service.openPosition(entryReadyStock());
+
+        verify(kisApiClient, never()).getTodayOrders();
+        assertThat(position).isNotNull();
+        assertThat(position.getEntryPrice()).isEqualByComparingTo("100000");
     }
 
     @Test
@@ -125,7 +147,7 @@ class StockPositionServiceTest {
             .thenReturn(KisOrderResponse.simulated("ODNO-1"));
         when(kisApiClient.getTodayOrders()).thenReturn(orderHistoryWith("ODNO-1", 10, "100000"));
 
-        service.openPosition(entryReadyStock());
+        serviceInMode(StockProperties.Bot.Mode.LIVE).openPosition(entryReadyStock());
 
         ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
         verify(tradeRepository, atLeastOnce()).save(captor.capture());
@@ -264,5 +286,22 @@ class StockPositionServiceTest {
         service.executePartialExit(p, 0, new BigDecimal("105000"), StockCloseReason.TP1);
 
         verify(kisApiClient, never()).sellMarket(anyString(), anyInt());
+    }
+
+    @Test
+    void partialExit_recordsSellCostInTradeLedger() {
+        // 매도 원장 fee=0 회귀 방지 — 포지션 손익과 동일 비용 모델(수수료+거래세)로 기록돼야 한다
+        StockPosition p = positionWithRemaining40();
+        when(kisApiClient.sellMarket(eq("005930"), eq(40)))
+            .thenReturn(KisOrderResponse.simulated("SIM-S"));
+        when(tradeRepository.save(any(StockTrade.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(positionRepository.save(any(StockPosition.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.executePartialExit(p, 40, new BigDecimal("105000"), StockCloseReason.TP1);
+
+        ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
+        verify(tradeRepository, atLeastOnce()).save(captor.capture());
+        // 105,000 × 40 × (0.00015 + 0.0020) = 9,030
+        assertThat(captor.getValue().getFee()).isEqualByComparingTo("9030");
     }
 }
