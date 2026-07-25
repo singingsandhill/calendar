@@ -62,10 +62,13 @@ public class StockProperties {
         private int maxPositions = 5;
         private BigDecimal maxPositionSize = new BigDecimal("5000000");
         /**
-         * 동작 모드:
-         *   PAPER    : KIS 시세 사용 + 주문은 인메모리 시뮬레이션 (기본값 — LIVE 는 명시적 opt-in)
+         * 동작 모드 — 분기점은 {@code KoreaInvestmentApiClient} 의 주문 4개 메서드뿐이다.
+         * 시세·호가·잔고 조회는 모드와 무관하게 항상 실제 KIS API 를 호출한다.
+         *
+         *   PAPER    : 실 시세 + 주문만 인메모리 시뮬레이션 (기본값 — LIVE 는 명시적 opt-in)
          *   LIVE     : 실주문 (STOCK_BOT_MODE=LIVE 로만 활성화, ADR stock/modes/0002)
-         *   BACKTEST : 모든 시세/주문을 시뮬레이션 (히스토리 fixture)
+         *   BACKTEST : <b>현재 PAPER 와 동일</b> — 히스토리 fixture 시세 소스는 미구현이며
+         *              예약된 값이다. 실측에는 PAPER 를 사용할 것.
          */
         private Mode mode = Mode.PAPER;
 
@@ -197,10 +200,12 @@ public class StockProperties {
     }
 
     public static class Entry {
+        // 기본값은 application.yaml 운영값과 동일하게 유지한다 — yaml 키 누락 시 구식 값으로
+        // 조용히 회귀하는 사고 방지 (코인 P1-9 와 동일 원칙).
         private BigDecimal highThresholdPercent = new BigDecimal("1.5");
         private BigDecimal pullbackMinPercent = new BigDecimal("1.5");
-        private BigDecimal pullbackMaxPercent = new BigDecimal("3.0");
-        private BigDecimal bounceThresholdPercent = new BigDecimal("0.3");
+        private BigDecimal pullbackMaxPercent = new BigDecimal("5.0");
+        private BigDecimal bounceThresholdPercent = new BigDecimal("0.2");
         private int minPullbackMinutes = 3;
         private int maxPullbackMinutes = 15;
         private BigDecimal entryMinStrength = new BigDecimal("100");
@@ -228,10 +233,11 @@ public class StockProperties {
     }
 
     public static class Exit {
-        private BigDecimal tp1Percent = new BigDecimal("1.5");
+        // 기본값은 application.yaml 운영값과 동일하게 유지 (키 누락 시 구식 값 회귀 방지).
+        private BigDecimal tp1Percent = new BigDecimal("5.0");
         private BigDecimal tp1Ratio = new BigDecimal("0.5");
         private BigDecimal tp2Ratio = new BigDecimal("0.6");
-        private BigDecimal tp3Percent = new BigDecimal("1.0");
+        private BigDecimal tp3Percent = new BigDecimal("10.0");
         private String finalExitTime = "11:20";
 
         public BigDecimal getTp1Percent() { return tp1Percent; }
@@ -247,12 +253,17 @@ public class StockProperties {
     }
 
     public static class Risk {
-        private BigDecimal stopLossPercent = new BigDecimal("1.5");
+        /** 레거시 키 — 손절 계산 미사용(아래 앵커+캡 사용). yaml 운영값과 동일하게 유지. */
+        private BigDecimal stopLossPercent = new BigDecimal("5.0");
         /** 풀백저가 아래 버퍼(%) — 손절 앵커 = 풀백저가 × (1 - 이 값) */
         private BigDecimal pullbackStopBufferPercent = new BigDecimal("1.0");
         /** 진입가 대비 최대 손실률(%) — 풀백 앵커가 이보다 벌어지면 캡으로 제한 */
         private BigDecimal maxStopLossPercent = new BigDecimal("2.0");
-        private BigDecimal trailingStopPercent = new BigDecimal("0.8");
+        /**
+         * 부분익절 후 러너의 고점 대비 추적폭(%). 손익분기 하한과의 간격이 커지면
+         * 트레일이 본전 스탑으로 퇴화한다 — 3.8% 시절 러너 기여 ≈ 0 (ADR algorithm/0009).
+         */
+        private BigDecimal trailingStopPercent = new BigDecimal("2.0");
         private BigDecimal positionSizeRatio = new BigDecimal("0.1");
         private BigDecimal commissionRate = new BigDecimal("0.00015");    // 증권사 수수료 0.015%
         /**

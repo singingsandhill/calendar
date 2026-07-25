@@ -122,6 +122,14 @@ class StockPositionTakeProfitTest {
     }
 
     @Test
+    void tp2Quantity_usesConfiguredRatio() {
+        // exit.tp2-ratio 가 하드코딩 0.6 이던 팬텀 설정을 실제 배선 — 설정값이 수량을 결정해야 한다
+        StockPosition p = newPosition(new BigDecimal("100000"), new BigDecimal("103000"));
+        assertThat(p.calculateTp2Quantity(new BigDecimal("0.6"))).isEqualTo(60);
+        assertThat(p.calculateTp2Quantity(new BigDecimal("0.4"))).isEqualTo(40);
+    }
+
+    @Test
     void tp1Quantity_isCappedByRemainingAfterTp2() {
         // TP2(전고점 회복)가 TP1(+N%)보다 먼저 발동하는 것이 통상 경로 — 잔여 40 에서
         // entry×0.5=50 을 시도하면 초과 매도가 된다. 잔여수량으로 캡되어야 한다.

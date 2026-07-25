@@ -288,10 +288,11 @@ public class StockPosition {
     }
 
     /**
-     * 2차 익절 수량 (잔여수량의 60%)
+     * 2차 익절 수량 (잔여수량 × tp2Ratio)
      */
-    public int calculateTp2Quantity() {
-        return (int) Math.floor(remainingQuantity * 0.6);
+    public int calculateTp2Quantity(BigDecimal tp2Ratio) {
+        return BigDecimal.valueOf(remainingQuantity).multiply(tp2Ratio)
+            .setScale(0, RoundingMode.FLOOR).intValue();
     }
 
     /**
