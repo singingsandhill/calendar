@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.stock.application.service;
 
+import me.singingsandhill.calendar.stock.application.observability.TradeEvents;
 import me.singingsandhill.calendar.stock.domain.position.StockCloseReason;
 import me.singingsandhill.calendar.stock.domain.position.StockPosition;
 import me.singingsandhill.calendar.stock.domain.position.StockPositionRepository;
@@ -36,17 +37,23 @@ public class StockRiskService {
     private final KoreaInvestmentApiClient kisApiClient;
     private final StockProperties stockProperties;
     private final Clock clock;
+    private final StockMailService mailService;
+
+    /** 최종청산 종목당 최대 시도 횟수 (시세 조회/매도 일시 실패 대비). */
+    private static final int TIME_EXIT_MAX_ATTEMPTS = 3;
 
     public StockRiskService(StockPositionRepository positionRepository,
                             StockPositionService positionService,
                             KoreaInvestmentApiClient kisApiClient,
                             StockProperties stockProperties,
-                            Clock clock) {
+                            Clock clock,
+                            StockMailService mailService) {
         this.positionRepository = positionRepository;
         this.positionService = positionService;
         this.kisApiClient = kisApiClient;
         this.stockProperties = stockProperties;
         this.clock = clock;
+        this.mailService = mailService;
     }
 
     /**
@@ -119,8 +126,13 @@ public class StockRiskService {
         BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
         BigDecimal minProfitThreshold = calculateTimeDecayThreshold();
         BigDecimal minProfitPct = minProfitThreshold.multiply(new BigDecimal("100"));
+
+        // 시장가 슬리피지를 순익에서 차감한다 — 게이트가 수수료·세금만 보면 명목상 익절이
+        // 실제로는 순손실이 될 수 있다 (2026-07-24 리뷰 §4 / P2-1).
+        BigDecimal slippagePct = stockProperties.getRisk().getSlippageBuffer()
+            .multiply(new BigDecimal("100"));
         BigDecimal pnlPctWithFee = position.calculateUnrealizedPnlPctWithFee(
-            currentPrice, commissionRate, sellTaxRate);
+            currentPrice, commissionRate, sellTaxRate).subtract(slippagePct);
 
         // PR-4: 강한 트리거(TP3 > TP2 > TP1)부터 독립적으로 체크.
         // 이전 단계 미발동이어도 상위 트리거가 매칭되면 즉시 발동 (잔여 수량 기준).
@@ -136,7 +148,8 @@ public class StockRiskService {
         }
         if (position.shouldTp1(currentPrice, tp1Percent)) {
             tryFireTp(position, currentPrice, pnlPctWithFee, minProfitPct,
-                position.calculateTp1Quantity(), StockCloseReason.TP1, "TP1");
+                position.calculateTp1Quantity(stockProperties.getExit().getTp1Ratio()),
+                StockCloseReason.TP1, "TP1");
         }
     }
 
@@ -205,9 +218,10 @@ public class StockRiskService {
     @Transactional
     public void updateTrailingStop(StockPosition position, BigDecimal currentPrice) {
         BigDecimal trailingPercent = stockProperties.getRisk().getTrailingStopPercent();
-        BigDecimal roundTripFeeRate = stockProperties.getRisk().getRoundTripFeeRate();
+        // 손익분기 하한도 슬리피지를 포함해야 실제로 본전이 지켜진다.
+        BigDecimal roundTripFeeRate = stockProperties.getRisk().getEffectiveExitCostRate();
 
-        // 손익분기점 = 진입가 × (1 + 왕복수수료)
+        // 손익분기점 = 진입가 × (1 + 왕복비용)
         BigDecimal breakEvenPrice = position.getEntryPrice()
             .multiply(BigDecimal.ONE.add(roundTripFeeRate))
             .setScale(0, java.math.RoundingMode.UP);
@@ -224,18 +238,56 @@ public class StockRiskService {
         log.warn("Executing time-based exit for all open positions");
 
         List<StockPosition> openPositions = positionRepository.findOpenPositions(tradingDate);
+        List<String> failed = new java.util.ArrayList<>();
 
         for (StockPosition position : openPositions) {
-            try {
-                KisQuoteResponse quote = kisApiClient.getQuote(position.getStockCode());
-                if (quote != null) {
-                    positionService.closePosition(position, quote.currentPrice(), StockCloseReason.TIME_EXIT);
-                }
-            } catch (Exception e) {
-                log.error("Error closing position {} for time exit: {}",
-                    position.getStockCode(), e.getMessage());
+            if (!closeWithRetry(position)) {
+                failed.add(position.getStockCode());
             }
         }
+
+        if (failed.isEmpty()) {
+            return;
+        }
+
+        // 청산 실패 = 의도치 않은 오버나이트 홀드. 사람이 수동 청산할 수 있도록 알린다.
+        log.error("최종청산 실패 {}종목 {} — 수동 청산 필요", failed.size(), failed);
+        TradeEvents.event("TIME_EXIT_FAILED")
+            .with("tradingDate", tradingDate)
+            .with("stockCodes", String.join(",", failed))
+            .log();
+        try {
+            mailService.sendTimeExitFailureAlert(tradingDate, failed);
+        } catch (Exception e) {
+            log.error("최종청산 실패 알림 발송 실패: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 시세 조회·매도를 최대 {@link #TIME_EXIT_MAX_ATTEMPTS} 회 시도한다.
+     * 매도 주문 자체는 비멱등이지만, 여기서 재시도되는 것은 *청산되지 않은* 포지션에 한한다
+     * (성공 시 remainingQuantity 가 0 이 되어 다음 시도가 없다).
+     */
+    private boolean closeWithRetry(StockPosition position) {
+        for (int attempt = 1; attempt <= TIME_EXIT_MAX_ATTEMPTS; attempt++) {
+            try {
+                KisQuoteResponse quote = kisApiClient.getQuote(position.getStockCode());
+                if (quote == null || quote.currentPrice() == null) {
+                    log.warn("최종청산 시세 조회 실패 {} (시도 {}/{})",
+                        position.getStockCode(), attempt, TIME_EXIT_MAX_ATTEMPTS);
+                    continue;
+                }
+                if (positionService.closePosition(position, quote.currentPrice(), StockCloseReason.TIME_EXIT)) {
+                    return true;
+                }
+                log.warn("최종청산 매도 미완료 {} (시도 {}/{})",
+                    position.getStockCode(), attempt, TIME_EXIT_MAX_ATTEMPTS);
+            } catch (Exception e) {
+                log.error("최종청산 오류 {} (시도 {}/{}): {}",
+                    position.getStockCode(), attempt, TIME_EXIT_MAX_ATTEMPTS, e.getMessage());
+            }
+        }
+        return false;
     }
 
     /**

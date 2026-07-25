@@ -163,6 +163,8 @@ public class StockRepositoryAdapter implements StockRepository {
         stock.setSpreadPercent(entity.getSpreadPercent());
         stock.setCompositeScore(entity.getCompositeScore());
         stock.updateState(StockState.valueOf(entity.getState()));
+        stock.restorePersistedState(entity.getHighAfterOpen(), entity.getHighFormedAt(),
+            entity.getPullbackLow(), entity.getPullbackStartAt(), entity.getEntryPrice());
         return stock;
     }
 }

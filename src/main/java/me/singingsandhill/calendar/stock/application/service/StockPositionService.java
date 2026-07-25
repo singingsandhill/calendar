@@ -15,6 +15,7 @@ import me.singingsandhill.calendar.stock.domain.stock.StockRepository;
 import me.singingsandhill.calendar.stock.domain.trade.StockTrade;
 import me.singingsandhill.calendar.stock.domain.trade.StockTradeRepository;
 import me.singingsandhill.calendar.stock.infrastructure.api.KoreaInvestmentApiClient;
+import me.singingsandhill.calendar.stock.infrastructure.api.dto.KisOrderDetailResponse;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.KisOrderResponse;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.KisQuoteResponse;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
@@ -27,6 +28,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 주식 포지션 관리 서비스
@@ -36,6 +43,12 @@ import java.util.List;
 public class StockPositionService {
 
     private static final Logger log = LoggerFactory.getLogger(StockPositionService.class);
+
+    /** 미확인 주문을 브로커 원장에서 찾는 최대 시도 횟수 (트레이딩 루프 틱 기준). */
+    public static final int MAX_RECONCILE_ATTEMPTS = 12;
+
+    /** 미확인 주문별 스윕 시도 횟수 (거래일 내 인메모리 — 재시작 시 초기화되어도 안전). */
+    private final Map<Long, Integer> reconcileAttempts = new ConcurrentHashMap<>();
 
     private final StockPositionRepository positionRepository;
     private final StockTradeRepository tradeRepository;
@@ -82,6 +95,17 @@ public class StockPositionService {
             return null;
         }
 
+        // 진입 직전 거래 가능 상태 재확인 — 스크리닝(09:20) 이후 VI·거래정지가 걸릴 수 있다
+        // (2026-07-24 리뷰 §6 / P2-3).
+        if (!quote.isTradable()) {
+            log.warn("진입 취소 {} — 거래 불가 상태: {}", stockCode, quote.tradabilityReason());
+            TradeEvents.event("ENTRY_BLOCKED_NOT_TRADABLE")
+                .with("stockCode", stockCode)
+                .with("reason", quote.tradabilityReason())
+                .log();
+            return null;
+        }
+
         BigDecimal currentPrice = quote.currentPrice();
 
         // 포지션 사이즈 계산
@@ -91,36 +115,44 @@ public class StockPositionService {
             return null;
         }
 
+        // 주문 선영속화: 응답이 유실돼도 "이 시각에 이 종목을 이만큼 주문했다"는 흔적을 남겨
+        // 다음 틱 스윕이 고아 체결을 수습할 수 있게 한다 (2026-07-24 리뷰 §3-④ / P1-1).
+        StockTrade trade = tradeRepository.save(StockTrade.createBuyOrder(
+            StockTrade.PENDING_ORDER_ID_PREFIX + System.nanoTime(),
+            stockCode, quantity, currentPrice, true));
+
         // 시장가 매수 주문
         KisOrderResponse orderResponse = kisApiClient.buyMarket(stockCode, quantity);
         if (orderResponse == null || !orderResponse.isSuccess()) {
-            log.error("Failed to place buy order for {}", stockCode);
+            // 접수 여부 불명 — PENDING 을 실패로 덮지 않는다(스윕이 재조회로 판정).
+            log.error("Buy order unconfirmed for {} ({} shares) — 스윕 대기", stockCode, quantity);
+            TradeEvents.event("ORDER_UNCONFIRMED")
+                .with("stockCode", stockCode)
+                .with("quantity", quantity)
+                .with("tradeId", trade.getId())
+                .log();
             return null;
         }
 
-        // 거래 기록 저장
-        StockTrade trade = StockTrade.createBuyOrder(
-            orderResponse.getOrderId(),
-            stockCode,
-            quantity,
-            currentPrice,
-            true
-        );
-        trade.markFilled(currentPrice, quantity, BigDecimal.ZERO);
+        trade.assignBrokerOrderId(orderResponse.getOrderId());
+
+        // 실체결가·수량 backfill (조회 실패 시 요청가 폴백 + WARN)
+        Fill fill = resolveBuyFill(stockCode, orderResponse.getOrderId(), currentPrice, quantity);
+        trade.markFilled(fill.price(), fill.quantity(), buyFee(fill));
         trade = tradeRepository.save(trade);
 
-        // 손절가 계산 (-1.5%)
-        BigDecimal stopLossPercent = stockProperties.getRisk().getStopLossPercent();
-        BigDecimal stopLossPrice = currentPrice.multiply(
-            BigDecimal.ONE.subtract(stopLossPercent.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP))
-        );
+        // 손절가: 풀백저가 앵커 + 진입가 대비 최대 손실 캡 (ADR stock/algorithm/0007)
+        StockProperties.Risk risk = stockProperties.getRisk();
+        BigDecimal stopLossPrice = StockPosition.resolveStopLossPrice(
+            fill.price(), stock.getPullbackLow(),
+            risk.getPullbackStopBufferPercent(), risk.getMaxStopLossPercent());
 
-        // 포지션 생성
+        // 포지션 생성 (실체결가 기준)
         StockPosition position = StockPosition.open(
             stockCode,
             tradingDate,
-            currentPrice,
-            quantity,
+            fill.price(),
+            fill.quantity(),
             stopLossPrice,
             stock.getHighAfterOpen()
         );
@@ -132,13 +164,160 @@ public class StockPositionService {
         tradeRepository.save(trade);
 
         // Stock 상태 업데이트
-        stock.markEntered(currentPrice);
+        stock.markEntered(fill.price());
         stockRepository.save(stock);
 
-        log.info("Position opened for {}: {} shares @ {}, SL={}",
-            stockCode, quantity, currentPrice, stopLossPrice);
+        log.info("Position opened for {}: {} shares @ {} (요청가 {}), SL={}",
+            stockCode, fill.quantity(), fill.price(), currentPrice, stopLossPrice);
 
         return position;
+    }
+
+    /**
+     * 미확인 주문 스윕 — 주문 응답이 유실된 매수의 실제 접수/체결 여부를 브로커 원장으로 판정한다.
+     *
+     * 체결이 확인되면 거래 기록을 정합화하고, 포지션이 없으면 생성해 **무보호 포지션**
+     * (손절·익절 루프가 모르는 실보유)을 제거한다. {@link #MAX_RECONCILE_ATTEMPTS} 틱 동안
+     * 원장에서 발견되지 않으면 미접수로 간주해 CANCELLED 처리한다.
+     * 트레이딩 루프 시작부에서 호출된다 (2026-07-24 리뷰 §3-④ / P1-1).
+     */
+    @Transactional
+    public void reconcileUnconfirmedOrders(LocalDate tradingDate) {
+        List<StockTrade> todayTrades = tradeRepository.findTodayTrades();
+        List<StockTrade> unconfirmed = todayTrades.stream()
+            .filter(t -> t.isBuy() && t.isPending() && t.isUnconfirmedOrder())
+            .toList();
+        if (unconfirmed.isEmpty()) {
+            reconcileAttempts.clear();
+            return;
+        }
+
+        Set<String> knownOrderIds = todayTrades.stream()
+            .filter(t -> !t.isUnconfirmedOrder())
+            .map(StockTrade::getOrderId)
+            .collect(Collectors.toSet());
+
+        KisOrderDetailResponse history;
+        try {
+            history = kisApiClient.getTodayOrders();
+        } catch (Exception e) {
+            log.warn("미확인 주문 스윕: 당일주문조회 실패 — 다음 틱 재시도 ({})", e.getMessage());
+            return;
+        }
+        List<KisOrderDetailResponse.OrderDetail> orders =
+            (history != null && history.orders() != null) ? history.orders() : List.of();
+
+        for (StockTrade pending : unconfirmed) {
+            orders.stream()
+                .filter(o -> o.isFilled())
+                .filter(o -> pending.getStockCode().equals(o.stockCode()))
+                .filter(o -> !knownOrderIds.contains(o.orderId()))
+                .filter(o -> Objects.equals(pending.getQuantity(), o.orderQuantity()))
+                .findFirst()
+                .ifPresentOrElse(
+                    o -> recoverOrphanFill(pending, o, tradingDate, knownOrderIds),
+                    () -> giveUpIfExhausted(pending));
+        }
+    }
+
+    private void recoverOrphanFill(StockTrade pending, KisOrderDetailResponse.OrderDetail order,
+                                    LocalDate tradingDate, Set<String> knownOrderIds) {
+        String stockCode = pending.getStockCode();
+        BigDecimal fillPrice = (order.filledPrice() != null && order.filledPrice().signum() > 0)
+            ? order.filledPrice() : pending.getOrderPrice();
+        int fillQuantity = order.filledQuantity() != null ? order.filledQuantity() : pending.getQuantity();
+
+        log.warn("고아 체결 발견 {} — 주문번호 {} ({}주 @ {}), 거래 기록 정합화",
+            stockCode, order.orderId(), fillQuantity, fillPrice);
+
+        pending.assignBrokerOrderId(order.orderId());
+        pending.markFilled(fillPrice, fillQuantity, buyFee(new Fill(fillPrice, fillQuantity, true)));
+        knownOrderIds.add(order.orderId());
+        reconcileAttempts.remove(pending.getId());
+
+        Optional<StockPosition> existing = positionRepository
+            .findByStockCodeAndTradingDateAndStatusNot(stockCode, tradingDate, StockPositionStatus.CLOSED);
+        if (existing.isPresent()) {
+            pending.setPositionId(existing.get().getId());
+            tradeRepository.save(pending);
+            return;
+        }
+
+        Stock stock = stockRepository.findByStockCodeAndTradingDate(stockCode, tradingDate).orElse(null);
+        StockProperties.Risk risk = stockProperties.getRisk();
+        BigDecimal stopLossPrice = StockPosition.resolveStopLossPrice(
+            fillPrice, stock != null ? stock.getPullbackLow() : null,
+            risk.getPullbackStopBufferPercent(), risk.getMaxStopLossPercent());
+
+        StockPosition recovered = StockPosition.open(stockCode, tradingDate, fillPrice, fillQuantity,
+            stopLossPrice, stock != null ? stock.getHighAfterOpen() : null);
+        if (stock != null) {
+            recovered.setStockId(stock.getId());
+        }
+        recovered = positionRepository.save(recovered);
+        pending.setPositionId(recovered.getId());
+        tradeRepository.save(pending);
+
+        if (stock != null) {
+            stock.markEntered(fillPrice);
+            stockRepository.save(stock);
+        }
+
+        TradeEvents.event("ORPHAN_FILL_RECOVERED")
+            .with("stockCode", stockCode)
+            .with("orderId", order.orderId())
+            .with("price", fillPrice)
+            .with("quantity", fillQuantity)
+            .log();
+    }
+
+    private void giveUpIfExhausted(StockTrade pending) {
+        int attempts = reconcileAttempts.merge(pending.getId(), 1, Integer::sum);
+        if (attempts < MAX_RECONCILE_ATTEMPTS) {
+            return;
+        }
+        log.warn("미확인 주문 {} ({}주): {}회 조회에도 원장에 없음 — 미접수로 간주하고 취소 처리",
+            pending.getStockCode(), pending.getQuantity(), attempts);
+        pending.markCancelled();
+        tradeRepository.save(pending);
+        reconcileAttempts.remove(pending.getId());
+        TradeEvents.event("ORDER_NOT_ACCEPTED")
+            .with("stockCode", pending.getStockCode())
+            .with("quantity", pending.getQuantity())
+            .log();
+    }
+
+    /** 체결 결과 (실체결가·수량). */
+    private record Fill(BigDecimal price, int quantity, boolean confirmed) {}
+
+    /**
+     * 당일주문체결조회(TTTC8001R)로 실체결가·수량을 확인한다.
+     * 조회 실패/미발견이면 요청가로 폴백하되 WARN — 장부가 픽션임을 로그로 드러낸다.
+     */
+    private Fill resolveBuyFill(String stockCode, String orderId,
+                                 BigDecimal requestedPrice, int requestedQuantity) {
+        try {
+            KisOrderDetailResponse history = kisApiClient.getTodayOrders();
+            if (history != null && history.orders() != null) {
+                for (KisOrderDetailResponse.OrderDetail o : history.orders()) {
+                    if (orderId != null && orderId.equals(o.orderId()) && o.isFilled()
+                            && o.filledPrice() != null && o.filledPrice().signum() > 0) {
+                        return new Fill(o.filledPrice(), o.filledQuantity(), true);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("체결 조회 실패 {} ({}): {}", stockCode, orderId, e.getMessage());
+        }
+        log.warn("체결 확인 불가 {} ({}) — 요청가 {} 로 기록 (실체결가와 다를 수 있음)",
+            stockCode, orderId, requestedPrice);
+        return new Fill(requestedPrice, requestedQuantity, false);
+    }
+
+    private BigDecimal buyFee(Fill fill) {
+        return fill.price().multiply(BigDecimal.valueOf(fill.quantity()))
+            .multiply(stockProperties.getRisk().getCommissionRate())
+            .setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -184,6 +363,15 @@ public class StockPositionService {
     private void doExecutePartialExit(StockPosition position, int quantity,
                                         BigDecimal price, StockCloseReason reason) {
         String stockCode = position.getStockCode();
+
+        // 주문은 롤백 불가능하므로 도메인 수량 검증을 주문 발행 *전*에 수행한다.
+        Integer remaining = position.getRemainingQuantity();
+        if (quantity <= 0 || remaining == null || quantity > remaining) {
+            log.error("Invalid exit quantity for {}: requested={}, remaining={} ({}) — order not placed",
+                stockCode, quantity, remaining, reason);
+            return;
+        }
+
         log.info("Executing partial exit for {}: {} shares @ {} ({})",
             stockCode, quantity, price, reason);
 
@@ -244,14 +432,22 @@ public class StockPositionService {
     }
 
     /**
-     * 잔여 전량 청산
+     * 잔여 전량 청산.
+     *
+     * @return 실제로 전량 청산됐으면 true. 매도 주문 거부 등으로 잔여가 남으면 false —
+     *         호출측(최종청산 등)이 재시도·알림을 판단할 수 있어야 하므로 void 가 아니다
+     *         (2026-07-24 리뷰 §6 / P1-6).
      */
     @Transactional
-    public void closePosition(StockPosition position, BigDecimal price, StockCloseReason reason) {
+    public boolean closePosition(StockPosition position, BigDecimal price, StockCloseReason reason) {
         if (!position.hasRemainingQuantity()) {
-            return;
+            return true;
         }
         executePartialExit(position, position.getRemainingQuantity(), price, reason);
+
+        if (position.hasRemainingQuantity()) {
+            return false;
+        }
 
         // Stock 상태 업데이트
         if (position.getStockId() != null) {
@@ -261,6 +457,7 @@ public class StockPositionService {
                     stockRepository.save(stock);
                 });
         }
+        return true;
     }
 
     /**

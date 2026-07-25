@@ -84,6 +84,36 @@ public class StockPosition {
     }
 
     /**
+     * 손절가 산정 — 진입 근거(풀백저가 반등)가 깨지는 지점, 단 진입가 대비 최대 손실률로 캡.
+     *
+     * {@code SL = max(풀백저가 × (1 - buffer%), 진입가 × (1 - maxLoss%))}
+     *
+     * 고정 -5% 는 현실적 익절 폭(전고점 회복 시 +0.8~5% 의 부분청산) 대비 R:R 이 역전돼
+     * 손익분기 승률 ~83% 를 요구했다 (2026-07-24 리뷰 §4). 풀백저가는 진입 논리의 무효화
+     * 지점이므로 손절 기준으로 타당하고, 체결가가 풀백저가에서 크게 밀린 경우에는 캡이
+     * 손실을 제한한다. 풀백저가가 없거나 비정상(진입가 이상)이면 캡만 적용.
+     */
+    public static BigDecimal resolveStopLossPrice(BigDecimal entryPrice, BigDecimal pullbackLow,
+                                                   BigDecimal pullbackBufferPercent,
+                                                   BigDecimal maxLossPercent) {
+        BigDecimal cap = entryPrice.multiply(BigDecimal.ONE.subtract(
+            maxLossPercent.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)));
+
+        if (pullbackLow == null || pullbackLow.compareTo(BigDecimal.ZERO) <= 0) {
+            return cap;
+        }
+
+        BigDecimal anchored = pullbackLow.multiply(BigDecimal.ONE.subtract(
+            pullbackBufferPercent.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)));
+
+        // 손절가는 진입가 아래여야 한다 — 풀백저가가 진입가 이상인 이상 데이터는 캡으로 폴백.
+        if (anchored.compareTo(entryPrice) >= 0) {
+            return cap;
+        }
+        return anchored.max(cap);
+    }
+
+    /**
      * 저장소에서 불러온 엔티티를 도메인 객체로 복원. 인프라 레이어 전용.
      */
     public static StockPosition reconstitute(
@@ -218,13 +248,16 @@ public class StockPosition {
     }
 
     /**
-     * 3차 익절 조건 체크 (고점 +1%). PR-4: TP2 선행 의존을 제거 — 독립 트리거.
+     * 3차 익절 조건 체크 (진입가 +tp3Percent). PR-4: TP2 선행 의존을 제거 — 독립 트리거.
+     *
+     * 앵커는 *진입가 고정* — 매 틱 갱신되는 당일고가를 앵커로 쓰면 5초 폴링 간격에 +N% 점프를
+     * 요구해 수학적으로 도달 불가능했다 (2026-07-24 리뷰 §4 / P1-3).
      */
     public boolean shouldTp3(BigDecimal currentPrice, BigDecimal tp3Percent) {
-        if (tp3Executed || dayHighPrice == null) {
+        if (tp3Executed || entryPrice == null) {
             return false;
         }
-        BigDecimal targetPrice = dayHighPrice.multiply(
+        BigDecimal targetPrice = entryPrice.multiply(
             BigDecimal.ONE.add(tp3Percent.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP))
         );
         return currentPrice.compareTo(targetPrice) >= 0;
@@ -243,10 +276,15 @@ public class StockPosition {
     // ========== 익절 수량 계산 ==========
 
     /**
-     * 1차 익절 수량 (진입수량의 50%)
+     * 1차 익절 수량 (진입수량 × tp1Ratio, 잔여수량 캡).
+     *
+     * TP2(전고점 회복)가 TP1 보다 먼저 발동하는 것이 통상 경로라 잔여가 이미 줄어 있을 수
+     * 있다 — 캡 없이는 초과 매도 주문이 나간다 (2026-07-24 리뷰 §3-⑤).
      */
-    public int calculateTp1Quantity() {
-        return (int) Math.floor(entryQuantity * 0.5);
+    public int calculateTp1Quantity(BigDecimal tp1Ratio) {
+        int target = BigDecimal.valueOf(entryQuantity).multiply(tp1Ratio)
+            .setScale(0, RoundingMode.FLOOR).intValue();
+        return Math.min(target, remainingQuantity);
     }
 
     /**
@@ -343,10 +381,15 @@ public class StockPosition {
      */
     public void updateTrailingStop(BigDecimal currentPrice, BigDecimal trailingPercent,
                                     BigDecimal breakEvenPrice) {
-        // 1차 익절 후 트레일링 활성화
-        if (!trailingActive && tp1Executed) {
+        // 부분익절이 한 번이라도 발생하면 트레일링 활성화.
+        // tp1Executed 만 조건으로 두면, TP2(전고점 회복)가 먼저 발동하는 통상 경로에서
+        // 트레일링이 영원히 켜지지 않는다 (2026-07-24 리뷰 §4 / P1-2).
+        if (!trailingActive && (tp1Executed || tp2Executed || tp3Executed)) {
             this.trailingActive = true;
             this.trailingHigh = currentPrice;
+            // 활성화 시점에 스탑가를 즉시 세팅한다. 신고가 갱신 블록에서만 세팅하면
+            // 활성화 직후 하락만 하는 경우 스탑가가 null 인 채 영원히 미발동한다.
+            this.trailingStopPrice = calculateTrailingStop(currentPrice, trailingPercent, breakEvenPrice);
         }
 
         if (!trailingActive) {
@@ -356,20 +399,22 @@ public class StockPosition {
         // 고점 갱신
         if (currentPrice.compareTo(trailingHigh) > 0) {
             this.trailingHigh = currentPrice;
-            // 트레일링 스탑 가격 업데이트 (고점 대비 -0.8%)
-            BigDecimal newTrailingStop = trailingHigh.multiply(
-                BigDecimal.ONE.subtract(trailingPercent.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP))
-            );
-
-            // 트레일링 스탑이 손익분기점 아래로 내려가지 않도록 보장
-            if (breakEvenPrice != null && newTrailingStop.compareTo(breakEvenPrice) < 0) {
-                newTrailingStop = breakEvenPrice;
-            }
-
-            this.trailingStopPrice = newTrailingStop;
+            this.trailingStopPrice = calculateTrailingStop(trailingHigh, trailingPercent, breakEvenPrice);
         }
 
         this.updatedAt = LocalDateTime.now();
+    }
+
+    /** 고점 대비 -trailingPercent, 단 손익분기점 아래로는 내려가지 않는다. */
+    private BigDecimal calculateTrailingStop(BigDecimal high, BigDecimal trailingPercent,
+                                              BigDecimal breakEvenPrice) {
+        BigDecimal stop = high.multiply(
+            BigDecimal.ONE.subtract(trailingPercent.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP))
+        );
+        if (breakEvenPrice != null && stop.compareTo(breakEvenPrice) < 0) {
+            return breakEvenPrice;
+        }
+        return stop;
     }
 
     /**

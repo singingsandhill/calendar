@@ -142,10 +142,14 @@ public class KisRestClient {
     }
 
     /**
-     * POST 요청 실행 (재시도 포함)
+     * POST 요청 실행 (무재시도).
+     *
+     * 주문 POST 는 비멱등 — KIS 가 주문을 접수했는데 응답만 유실(타임아웃/5xx)된 경우
+     * 재시도하면 동일 시장가 주문이 중복 전송된다. 실패는 즉시 null 반환하고 처리 여부는
+     * 당일주문조회(TTTC8001R)로 확인하는 것이 안전하다.
      */
-    private <T> T executePostWithRetry(String operation,
-                                        java.util.function.Function<WebClient, Mono<T>> requestBuilder) {
+    private <T> T executePostNoRetry(String operation,
+                                      java.util.function.Function<WebClient, Mono<T>> requestBuilder) {
         boolean acquired = false;
         try {
             acquired = concurrencyGate.tryAcquire(ACQUIRE_TIMEOUT.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -155,7 +159,6 @@ public class KisRestClient {
             }
             recordCall();
             return requestBuilder.apply(webClient)
-                .retryWhen(buildRetrySpec(operation))
                 .timeout(TIMEOUT)
                 .block();
         } catch (InterruptedException e) {
@@ -163,11 +166,8 @@ public class KisRestClient {
             log.warn("Interrupted while waiting for KIS concurrency gate ({})", operation);
             return null;
         } catch (Exception e) {
-            if (e.getCause() != null && isRetryableException(e.getCause())) {
-                log.error("All {} retry attempts failed for {}: {}", MAX_RETRY_ATTEMPTS, operation, e.getMessage());
-            } else {
-                log.error("Error during {}: {}", operation, e.getMessage());
-            }
+            log.error("Error during {} (no retry — 주문 접수 여부는 당일주문조회로 확인 필요): {}",
+                operation, e.getMessage());
             return null;
         } finally {
             if (acquired) {
@@ -211,6 +211,13 @@ public class KisRestClient {
     }
 
     private KisQuoteResponse mapToQuoteResponse(Map<String, Object> output, String stockCode) {
+        BigDecimal contractStrength = parseBigDecimal(output.get("cttr"));
+        if (contractStrength.signum() == 0) {
+            // cttr=0 은 스크리닝 dataInsufficient 탈락의 주요 원인(2026-07-22 갭 통과 63종목 전탈락).
+            // KIS 가 필드를 비워 보내는지 / 파싱 실패인지 원시값으로 판별하기 위한 계측.
+            log.warn("[{}] 체결강도(cttr) 미집계 응답 — raw cttr={}, acml_vol={}, stck_prpr={}",
+                stockCode, output.get("cttr"), output.get("acml_vol"), output.get("stck_prpr"));
+        }
         return new KisQuoteResponse(
             stockCode,
             parseBigDecimal(output.get("stck_prpr")),
@@ -226,8 +233,16 @@ public class KisRestClient {
             parseBigDecimal(output.get("vol_tnrt")),
             parseBigDecimal(output.get("seln_cntg_smtn")),
             parseBigDecimal(output.get("shnu_cntg_smtn")),
-            parseBigDecimal(output.get("cttr"))
+            contractStrength,
+            asString(output.get("iscd_stat_cls_code")),
+            asString(output.get("temp_stop_yn")),
+            asString(output.get("mrkt_warn_cls_code")),
+            asString(output.get("sltr_yn"))
         );
+    }
+
+    private String asString(Object value) {
+        return value != null ? value.toString().trim() : null;
     }
 
     /**
@@ -398,6 +413,12 @@ public class KisRestClient {
                     }
                 }
             }
+        }
+        if (codes.isEmpty()) {
+            // rt_cd=0 인데 0건: 응답 rows 자체가 비는지(장 시작 전 정상) / 코드 필드명 불일치인지 판별용 계측.
+            Object first = rows.isEmpty() ? null : rows.get(0);
+            log.warn("Volume-rank success but 0 codes — rows={}, firstRowKeys={}",
+                rows.size(), first instanceof Map<?, ?> m ? m.keySet() : "n/a");
         }
         log.debug("Volume-rank returned {} codes", codes.size());
         return codes;
@@ -576,7 +597,7 @@ public class KisRestClient {
         String hashkey = authService.generateHashkey(requestBody);
         Map<String, String> headers = authService.buildAuthHeaders(trId);
 
-        Map<String, Object> response = executePostWithRetry("executeOrder(" + stockCode + ")",
+        Map<String, Object> response = executePostNoRetry("executeOrder(" + stockCode + ")",
             client -> client.post()
                 .uri("/uapi/domestic-stock/v1/trading/order-cash")
                 .headers(h -> {

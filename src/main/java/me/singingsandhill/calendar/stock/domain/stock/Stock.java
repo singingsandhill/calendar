@@ -210,6 +210,24 @@ public class Stock {
     }
 
     /**
+     * 영속화된 상태머신 작업 필드 복원 (인프라 어댑터 전용).
+     *
+     * 상태 전이 계산(calculateDropFromHigh/calculateBounceFromLow)은 이 필드들에 의존하는데
+     * null 이면 예외 없이 0% 를 반환하므로, 재로딩 시 복원이 누락되면 HIGH_FORMED 에서
+     * 조용히 영구 정체한다 (2026-07-24 리뷰 §3-①). record* 전이 메서드와 달리 상태·시각을
+     * 새로 쓰지 않고 저장된 값을 그대로 되돌린다.
+     */
+    public void restorePersistedState(BigDecimal highAfterOpen, LocalDateTime highFormedAt,
+                                       BigDecimal pullbackLow, LocalDateTime pullbackStartAt,
+                                       BigDecimal entryPrice) {
+        this.highAfterOpen = highAfterOpen;
+        this.highFormedAt = highFormedAt;
+        this.pullbackLow = pullbackLow;
+        this.pullbackStartAt = pullbackStartAt;
+        this.entryPrice = entryPrice;
+    }
+
+    /**
      * 눌림목 시작 기록
      */
     public void recordPullbackStart(BigDecimal lowPrice) {
