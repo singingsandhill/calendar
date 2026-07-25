@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.stock.infrastructure.scheduler;
 
 import me.singingsandhill.calendar.stock.application.observability.TradeEvents;
+import me.singingsandhill.calendar.stock.application.service.DailyPerformanceReportService;
 import me.singingsandhill.calendar.stock.application.service.GapPullbackBotService;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.slf4j.Logger;
@@ -31,11 +32,14 @@ public class StockTradingScheduler {
 
     private final GapPullbackBotService botService;
     private final StockProperties stockProperties;
+    private final DailyPerformanceReportService reportService;
 
     public StockTradingScheduler(GapPullbackBotService botService,
-                                  StockProperties stockProperties) {
+                                  StockProperties stockProperties,
+                                  DailyPerformanceReportService reportService) {
         this.botService = botService;
         this.stockProperties = stockProperties;
+        this.reportService = reportService;
     }
 
     @Scheduled(cron = "0 30 8 * * MON-FRI", zone = "Asia/Seoul")
@@ -96,6 +100,22 @@ public class StockTradingScheduler {
             botService.executeFinalExitCheck();
         } catch (Exception e) {
             log.error("Error in final exit execution: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 일일 실적 요약 (11:40) — 최종청산(11:20) 이후 실현손익이 확정된 뒤 집계한다.
+     * PAPER 실측(리뷰 P2-5)의 누적 데이터원.
+     */
+    @Scheduled(cron = "0 40 11 * * MON-FRI", zone = "Asia/Seoul")
+    public void executeDailyReport() {
+        if (!isEnabled() || !isTradingDay()) {
+            return;
+        }
+        try (Closeable ignored = TradeEvents.phase("DAILY_REPORT")) {
+            reportService.sendDailyReport(LocalDate.now(KST));
+        } catch (Exception e) {
+            log.error("Error in daily report: {}", e.getMessage(), e);
         }
     }
 

@@ -106,7 +106,7 @@ public class PullbackDetectionService {
 
     /**
      * 고점 형성 체크 (WATCHING → HIGH_FORMED)
-     * 조건: 현재가 >= 시가 × 1.015 (시가 대비 +1.5% 이상)
+     * 조건: 현재가 >= 시가 × (1 + entry.high-threshold-percent)
      */
     private void checkHighFormation(Stock stock, BigDecimal currentPrice) {
         BigDecimal threshold = stockProperties.getEntry().getHighThresholdPercent();
@@ -125,13 +125,13 @@ public class PullbackDetectionService {
 
     /**
      * 눌림목 진입 체크 (HIGH_FORMED → PULLBACK)
-     * 조건: 고점 대비 -1.5% ~ -3.0% 하락
+     * 조건: 고점 대비 -entry.pullback-min-percent ~ -entry.pullback-max-percent 하락
      */
     private void checkPullbackEntry(Stock stock, BigDecimal currentPrice) {
         BigDecimal minPullback = stockProperties.getEntry().getPullbackMinPercent();
         BigDecimal maxPullback = stockProperties.getEntry().getPullbackMaxPercent();
 
-        // 과도한 하락 체크 (-3.0% 초과)
+        // 과도한 하락 체크 (pullback-max-percent 초과)
         if (stock.isPullbackTooDeep(maxPullback)) {
             stock.markFilteredOut();
             log.info("FILTERED_OUT: {} dropped too deep ({}% from high)",
@@ -149,7 +149,7 @@ public class PullbackDetectionService {
 
     /**
      * 반등 확인 체크 (PULLBACK → ENTRY_READY)
-     * 조건: 눌림목 저점 대비 +0.3% 반등
+     * 조건: 눌림목 저점 대비 +entry.bounce-threshold-percent 반등
      */
     private void checkBounceConfirmation(Stock stock, BigDecimal currentPrice) {
         BigDecimal maxPullback = stockProperties.getEntry().getPullbackMaxPercent();
@@ -231,9 +231,13 @@ public class PullbackDetectionService {
         }
 
         // 조건 3: 눌림목 시간 체크
-        boolean timePassed = true;
+        // pullbackStartAt null 은 데이터 없음 = FAIL — 조건 1·2와 동일 원칙 (데이터 부족 ≠ 통과).
+        // null 을 통과 처리하면 soft 2/3 에서 실질 문턱이 1개로 내려간다.
+        boolean timePassed = false;
         LocalDateTime pullbackStart = stock.getPullbackStartAt();
-        if (pullbackStart != null) {
+        if (pullbackStart == null) {
+            log.debug("Entry condition failed for {}: pullbackStartAt unavailable", stock.getStockCode());
+        } else {
             long pullbackMinutes = java.time.Duration.between(pullbackStart, LocalDateTime.now()).toMinutes();
             int minMinutes = entryConfig.getMinPullbackMinutes();
             int maxMinutes = entryConfig.getMaxPullbackMinutes();
