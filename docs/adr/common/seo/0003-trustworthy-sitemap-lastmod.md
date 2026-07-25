@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | common |
 | 관심사 | SEO |
-| 관련 커밋 | `docs/git_commit.md` Commit 8 |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 8 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -70,5 +70,5 @@ ISO 8601 풀 정밀도 + KST offset 은 sitemap 표준 권장 형식. XML escape
   - `src/main/java/me/singingsandhill/calendar/datedate/domain/menu/MenuRepository.java`
   - `build.gradle`
   - `src/test/java/me/singingsandhill/calendar/common/application/service/SitemapServiceHreflangTest.java`
-- 관련 docs: `docs/seo-evolution-playbook.md` (sitemap 성숙도 모델 L0~L5)
-- 관련 커밋: `docs/git_commit.md` Commit 8
+- 관련 docs: `docs/seo/evolution-playbook.md` (sitemap 성숙도 모델 L0~L5)
+- 관련 커밋: `docs/guides/git-commit.md` Commit 8

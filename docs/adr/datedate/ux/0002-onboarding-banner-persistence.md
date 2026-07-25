@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | datedate |
 | 관심사 | UX |
-| 관련 커밋 | `docs/git_commit.md` Commit 14 |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 14 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -59,4 +59,4 @@ try/catch 흡수.
   - `src/main/resources/templates/schedule/view.html`
   - `src/main/resources/static/js/schedule/main.js`
   - `src/main/resources/messages.properties`, `messages_en.properties` (`schedule.help.show`)
-- 관련 커밋: `docs/git_commit.md` Commit 14
+- 관련 커밋: `docs/guides/git-commit.md` Commit 14

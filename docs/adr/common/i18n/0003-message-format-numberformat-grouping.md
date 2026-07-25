@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | common |
 | 관심사 | i18n |
-| 관련 커밋 | `docs/git_commit.md` Commit 7 |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 7 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -69,4 +69,4 @@ MessageFormat 에서 *그룹화 안 된 정수 포맷* 명시 + 하드코딩 KO 
   - `src/main/resources/templates/schedule/view.html`
   - `src/main/resources/static/js/schedule/{state,calendar,voting,utils}.js`
   - `src/test/java/me/singingsandhill/calendar/datedate/application/service/SeoServiceI18nTest.java`
-- 관련 커밋: `docs/git_commit.md` Commit 7
+- 관련 커밋: `docs/guides/git-commit.md` Commit 7

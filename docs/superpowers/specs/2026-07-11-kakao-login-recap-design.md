@@ -292,7 +292,7 @@ OAuth 실패(취소·토큰 교환 실패)는 시큐리티 레이어에서 `/log
     + 활동 이벤트 테이블 결정, first-claim 오너 연결 정책
 - CLAUDE.md: Security 표 (신규 경로 규칙), DateDate 모듈 섹션 (recap), i18n 키 언급 불필요
 - `docs/adr/README.md` 색인 갱신
-- 커밋: 저장소 규칙에 따라 직접 커밋하지 않고 `docs/git_commit.md` 에 커밋 섹션 추가
+- 커밋: 저장소 규칙에 따라 직접 커밋하지 않고 `docs/guides/git-commit.md` 에 커밋 섹션 추가
 
 ## 8. 오픈 리스크
 

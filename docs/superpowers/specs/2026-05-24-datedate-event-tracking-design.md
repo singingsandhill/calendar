@@ -3,7 +3,7 @@
 - 일자: 2026-05-24
 - 상태: Draft
 - 범위: datedate 모듈의 약속잡기 funnel을 GA4 / BigQuery에서 측정 가능하게 만들기 위한 클라이언트 이벤트 5종 추가
-- 관련 문서: [`docs/DA/01-current-state.md`](../../DA/01-current-state.md), [`docs/DA/04-todo.md`](../../DA/04-todo.md)
+- 관련 문서: [`docs/data-analysis/01-current-state.md`](../../data-analysis/01-current-state.md), [`docs/data-analysis/04-todo.md`](../../data-analysis/04-todo.md)
 
 ---
 
@@ -42,7 +42,7 @@ PR 범위 밖이며, 본 PR 머지 시점에 함께 매핑되도록 04-todo.md �
 - 기존 6개 이벤트와 동일한 컨벤션 (snake_case, client-side push) 으로 일관성 유지
 - PII 정책: 신규 이벤트의 `owner_id` 는 처음부터 SHA-256 해시 (`owner_id_hash`) 로만
   송신 → P2-1 마이그레이션과 충돌 없음
-- 문서: `docs/DA/01-current-state.md` §9 와 `docs/DA/04-todo.md` P0-1·P0-2 에 신규
+- 문서: `docs/data-analysis/01-current-state.md` §9 와 `docs/data-analysis/04-todo.md` P0-1·P0-2 에 신규
   이벤트·파라미터 반영
 
 ### 비목표
@@ -154,7 +154,7 @@ GA4 Exploration > Funnel 에서 위 단계로 정의 가능. BigQuery 에서는
 
 ## 5. 문서 변경
 
-### 5.1 `docs/DA/01-current-state.md` §9 dataLayer 표
+### 5.1 `docs/data-analysis/01-current-state.md` §9 dataLayer 표
 
 다음 5행 추가:
 
@@ -166,7 +166,7 @@ GA4 Exploration > Funnel 에서 위 단계로 정의 가능. BigQuery 에서는
 | `schedule_viewed` | `templates/schedule/view.html` | DOMContentLoaded | `schedule_id, is_owner, participant_count` |
 | `owner_dashboard_viewed` | `templates/owner/dashboard.html` | DOMContentLoaded | `owner_id_hash, schedule_count` |
 
-### 5.2 `docs/DA/04-todo.md` P0-1 (GTM 매핑)
+### 5.2 `docs/data-analysis/04-todo.md` P0-1 (GTM 매핑)
 
 - 정규식 트리거 패턴 갱신:
   `^(schedule_created|participant_added|selections_saved|vote_cast|run_created|attendance_marked|link_shared|location_added|menu_added|schedule_viewed|owner_dashboard_viewed)$`
@@ -175,7 +175,7 @@ GA4 Exploration > Funnel 에서 위 단계로 정의 가능. BigQuery 에서는
   `DLV - is_owner`, `DLV - participant_count`, `DLV - owner_id_hash`,
   `DLV - schedule_count`
 
-### 5.3 `docs/DA/04-todo.md` P0-2 (GA4 맞춤 측정기준)
+### 5.3 `docs/data-analysis/04-todo.md` P0-2 (GA4 맞춤 측정기준)
 
 다음 7행 추가 (모두 event scope):
 
@@ -259,6 +259,6 @@ GROUP BY event_name;
 5. `templates/owner/dashboard.html` — 인라인 스크립트 추가 (`owner_dashboard_viewed`)
 6. `ScheduleController` / `OwnerApiController` — 인라인 주입 필드 (`is_owner`,
    `participant_count`, `schedule_count`) 확인·노출
-7. `docs/DA/01-current-state.md` — §9 표 5행 추가
-8. `docs/DA/04-todo.md` — P0-1 정규식·DLV, P0-2 측정기준 표 갱신
+7. `docs/data-analysis/01-current-state.md` — §9 표 5행 추가
+8. `docs/data-analysis/04-todo.md` — P0-1 정규식·DLV, P0-2 측정기준 표 갱신
 9. 수동 검증 (§7.1)

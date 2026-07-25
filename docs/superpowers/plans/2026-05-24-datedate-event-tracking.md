@@ -23,8 +23,8 @@
 | `src/main/resources/templates/schedule/create.html` | 수정 | 동상 (인라인 스크립트 내) |
 | `src/main/resources/templates/schedule/view.html` | 수정 | 인라인 `schedule_viewed` push |
 | `src/main/resources/templates/owner/dashboard.html` | 수정 | 인라인 `owner_dashboard_viewed` push (해시) |
-| `docs/DA/01-current-state.md` | 수정 | §9 dataLayer 표에 5행 추가 |
-| `docs/DA/04-todo.md` | 수정 | P0-1 정규식·DLV, P0-2 측정기준 표 갱신 |
+| `docs/data-analysis/01-current-state.md` | 수정 | §9 dataLayer 표에 5행 추가 |
+| `docs/data-analysis/04-todo.md` | 수정 | P0-1 정규식·DLV, P0-2 측정기준 표 갱신 |
 
 **테스트**: 신규 JS 단위 테스트는 작성 안 함 (프로젝트에 JS 테스트 프레임워크 없음). 대신 DevTools Console 수동 검증을 마지막 태스크에. 백엔드 변경 없으므로 기존 Java 테스트 영향 없음 — `./gradlew test` 회귀 확인만.
 
@@ -591,11 +591,11 @@ git commit -m "feat(analytics): track owner_dashboard_viewed with hashed owner_i
 
 ---
 
-## Task 7: 문서 갱신 — `docs/DA/01-current-state.md` & `04-todo.md`
+## Task 7: 문서 갱신 — `docs/data-analysis/01-current-state.md` & `04-todo.md`
 
 **Files:**
-- Modify: `docs/DA/01-current-state.md`
-- Modify: `docs/DA/04-todo.md`
+- Modify: `docs/data-analysis/01-current-state.md`
+- Modify: `docs/data-analysis/04-todo.md`
 
 - [ ] **Step 1: `01-current-state.md` §9 표 5행 추가**
 
@@ -659,7 +659,7 @@ line 56 의 "본 프로젝트엔 충분" 위 행에 총 측정기준 수 명시:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/DA/01-current-state.md docs/DA/04-todo.md
+git add docs/data-analysis/01-current-state.md docs/data-analysis/04-todo.md
 git commit -m "docs(da): record 5 new datedate dataLayer events + GTM/dimensions backlog"
 ```
 
@@ -732,7 +732,7 @@ PR 본문 시드:
 ## Summary
 - 약속잡기 funnel 5개 이벤트 (link_shared, location_added, menu_added, schedule_viewed, owner_dashboard_viewed) dataLayer 추가
 - analytics.js 헬퍼 (sha256Hex, owned schedule 마커)
-- docs/DA/01-current-state.md, 04-todo.md GTM/측정기준 백로그 갱신
+- docs/data-analysis/01-current-state.md, 04-todo.md GTM/측정기준 백로그 갱신
 
 ## P0 후속 (콘솔 작업, 본 PR 외)
 - GTM trigger 정규식 + 7개 신규 DLV 등록 (04-todo.md P0-1)

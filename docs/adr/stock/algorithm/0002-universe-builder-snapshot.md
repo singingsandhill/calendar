@@ -68,5 +68,5 @@ floor 통과해 의미 없는 진입 시도가 발생. 안전한 default 가 더
   - `src/main/java/me/singingsandhill/calendar/stock/application/service/GapPullbackBotService.java`
   - `src/main/java/me/singingsandhill/calendar/stock/application/service/ScreeningService.java`
   - `src/test/java/me/singingsandhill/calendar/stock/application/UniverseBuilderTest.java`
-- 관련 docs: `docs/stock-bot.md` (스크리닝 정책)
-- 관련 커밋: `git log -1 d135907`, `docs/git_commit.md` Commit 3
+- 관련 docs: `docs/stock/bot.md` (스크리닝 정책)
+- 관련 커밋: `git log -1 d135907`, `docs/guides/git-commit.md` Commit 3

@@ -6,7 +6,7 @@
 | 거절 사유 | "가치가 별로 없는 콘텐츠 (Low value content)" — 2026-05-02 |
 | 사이트 | datedate.site (Spring Boot 4 / Thymeleaf, `datedate` 모듈) |
 | 감사 방법 | 4-에이전트 병렬 감사: repo 라우트/SEO 인프라, 전체 템플릿, i18n 카탈로그, 라이브 도메인 (curl) |
-| 선행 문서 | [`docs/audit/adsense-low-value-content-policy-mapping.md`](audit/adsense-low-value-content-policy-mapping.md) (정책 4문서 1:1 매핑), [`docs/adr/common/seo/0007`](adr/common/seo/0007-content-pages-for-adsense.md) |
+| 선행 문서 | [`docs/audit/adsense-low-value-content-policy-mapping.md`](../audit/adsense-low-value-content-policy-mapping.md) (정책 4문서 1:1 매핑), [`docs/adr/common/seo/0007`](../adr/common/seo/0007-content-pages-for-adsense.md) |
 | 본 문서 목적 | 1차 대응(Section J/K/M) 이후 잔여 리스크의 페이지별 등급 + 본 세션(Section P)의 구현 내역 + 재심사 전 체크리스트 |
 
 > **승인을 보장하지 않습니다.** 본 문서는 정책 신호를 체계적으로 제거한 기록이며,
@@ -144,7 +144,7 @@ curl.exe -s https://datedate.site/ | findstr /C:"adsbygoogle.js"                
 
 ## 8. 재심사 전 수동 체크리스트
 
-1. **배포** — Section P 커밋 실행 (`docs/git_commit.md` Section P) 후 운영 반영. §7 스폿 체크 통과 확인.
+1. **배포** — Section P 커밋 실행 (`docs/guides/git-commit.md` Section P) 후 운영 반영. §7 스폿 체크 통과 확인.
 2. **GSC** — sitemap.xml 재제출. `/privacy?lang=en`, `/terms?lang=en` URL 검사로 영문 렌더 확인.
    "발견됨 - 현재 색인되지 않음" 상태의 임의 ownerId URL 들이 404 로 전환되는지 수 주 관찰.
 3. **AdSense** — 사이트 대시보드에서 재심사 요청. 광고 단위는 승인 후 슬롯 ID 환경변수

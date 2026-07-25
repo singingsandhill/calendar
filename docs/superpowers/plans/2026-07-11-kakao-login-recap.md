@@ -18,9 +18,9 @@
 > `authenticationEntryPoint(...)` 가 아니라 마지막 `defaultAuthenticationEntryPointFor(
 > userEntryPoint, AnyRequestMatcher.INSTANCE)` catch-all 로 등록 (Task 3 SecurityConfig).
 > 그 밖의 테스트 슬라이스 미세 조정(`@MockitoBean(name = "localeLinks")`, 슬라이스 전용
-> FixedClockConfig, `redirectedUrlPattern` 선행 슬래시)은 `docs/git_commit.md` Commit
+> FixedClockConfig, `redirectedUrlPattern` 선행 슬래시)은 `docs/guides/git-commit.md` Commit
 > 72~81 섹션의 본문에 원인과 함께 기록되어 있으며, 최종 코드가 정본이다. 남은 작업은
-> `docs/kakao-login-recap-checklist.md` 의 실 키 수동 QA·서버 배포 항목뿐.
+> `docs/datedate/kakao-login-recap-checklist.md` 의 실 키 수동 QA·서버 배포 항목뿐.
 
 ## Global Constraints
 
@@ -29,7 +29,7 @@
 - **예외** — 반드시 `me.singingsandhill.calendar.common.application.exception.BusinessException` 상속: `super(code, message, HttpStatus)`.
 - **트랜잭션** — 서비스 클래스 레벨 `@Transactional(readOnly = true)`, 쓰기 메서드에 `@Transactional` 오버라이드.
 - **테스트 실행 (WSL)** — `cmd.exe /c "set JAVA_HOME=C:\jdk-21&& .\gradlew.bat test --tests \"<pattern>\""` (프로젝트 루트 `/mnt/d/projects/calendar` 에서).
-- **git commit 금지** — 이 저장소에서는 절대 `git commit` 을 실행하지 않는다. 각 태스크의 커밋 스텝은 `docs/git_commit.md` 에 커밋 섹션(番号 Commit 72부터)을 **추가**하는 것으로 대체한다.
+- **git commit 금지** — 이 저장소에서는 절대 `git commit` 을 실행하지 않는다. 각 태스크의 커밋 스텝은 `docs/guides/git-commit.md` 에 커밋 섹션(番号 Commit 72부터)을 **추가**하는 것으로 대체한다.
 - **i18n** — `messages.properties`(한국어, native2ascii 이스케이프) + `messages_en.properties`(영어) 양쪽에 키 추가. 인자 없는 메시지에 `''` 금지(화면에 그대로 노출됨). 숫자 인자는 `{0,number,#}` 로 천단위 그룹화 차단 (연도 "2,026" 방지).
 - **SecurityConfig 규칙 순서** — 구체 규칙(hasRole)은 포괄 `permitAll`(`/api/**`, `/*`) 보다 **먼저** 선언. `/recap/share/**` permitAll 은 `/recap/**` hasRole 보다 먼저.
 - **카카오 공식 엔드포인트** (developers.kakao.com 확인, 2026-07-11) — 인가 `https://kauth.kakao.com/oauth/authorize`, 토큰 `https://kauth.kakao.com/oauth/token` (client_secret 은 **POST body** → `client-authentication-method: client_secret_post` 필수), 사용자 정보 `https://kapi.kakao.com/v2/user/me` (`id` Long, `kakao_account.profile.{nickname, profile_image_url}`, `properties.{nickname, profile_image}` 폴백), scope `profile_nickname`, `profile_image`. 이메일 scope 사용 금지(비즈 앱 필요, 범위 외).
@@ -216,11 +216,11 @@ Expected: PASS — 아직 SecurityConfig 를 안 건드렸으므로 영향 없�
 
 - [ ] **Step 8: git_commit.md 에 커밋 섹션 추가**
 
-`docs/git_commit.md` 끝에 추가 (git commit 은 실행하지 않는다):
+`docs/guides/git-commit.md` 끝에 추가 (git commit 은 실행하지 않는다):
 
 ```
 # Commit 72 — feat(common): 카카오 OAuth2 클라이언트 의존성·등록
-git add build.gradle src/main/resources/application.yaml .env.example src/main/java/me/singingsandhill/calendar/common/infrastructure/config/KakaoOAuth2ClientConfig.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/KakaoClientRegistrationTest.java docs/git_commit.md
+git add build.gradle src/main/resources/application.yaml .env.example src/main/java/me/singingsandhill/calendar/common/infrastructure/config/KakaoOAuth2ClientConfig.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/KakaoClientRegistrationTest.java docs/guides/git-commit.md
 git commit -m "feat(common): spring oauth2-client 의존성 + Kakao provider 등록" -m "공식 문서 엔드포인트(kauth authorize/token, kapi /v2/user/me), client_secret_post, scope profile_nickname·profile_image. 미설정 환경 부팅용 더미 기본값. KakaoClientRegistrationTest 회귀 가드. ClientRegistration 은 spring.security.oauth2.client.* 프로퍼티 대신 KakaoOAuth2ClientConfig 빈으로 직접 등록 — 프로퍼티 방식은 @WebMvcTest 슬라이스에 OAuth2ClientWebSecurityAutoConfiguration 을 끌어들여 HttpSecurity 부재로 컨텍스트 로드를 깨뜨리는 회귀를 유발함(ScheduleApiControllerTest 등)."
 ```
 
@@ -660,7 +660,7 @@ Expected: PASS (3 tests).
 
 ```
 # Commit 73 — feat(datedate): AppUser 도메인·영속성·upsert 서비스
-git add src/main/java/me/singingsandhill/calendar/datedate/domain/user/ src/main/java/me/singingsandhill/calendar/datedate/application/exception/UserNotFoundException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/AppUserService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/AppUserJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/AppUserJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/AppUserRepositoryAdapter.java src/test/java/me/singingsandhill/calendar/datedate/application/service/AppUserServiceTest.java docs/git_commit.md
+git add src/main/java/me/singingsandhill/calendar/datedate/domain/user/ src/main/java/me/singingsandhill/calendar/datedate/application/exception/UserNotFoundException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/AppUserService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/AppUserJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/AppUserJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/AppUserRepositoryAdapter.java src/test/java/me/singingsandhill/calendar/datedate/application/service/AppUserServiceTest.java docs/guides/git-commit.md
 git commit -m "feat(datedate): 카카오 사용자 AppUser 도메인·JPA 영속성·upsert" -m "kakaoId unique, 재로그인 시 닉네임·프로필·lastLoginAt 갱신(Clock 주입 결정성). 헥사고날 domain POJO+port+adapter 패턴."
 ```
 
@@ -1199,7 +1199,7 @@ Expected: 모두 PASS. 실패 시 러너 어드민 로그아웃 GET/POST 이슈(
 
 ```
 # Commit 74 — feat(security): 카카오 OAuth2 로그인 통합 + 진입점 분리 (ADR 0004)
-git add src/main/java/me/singingsandhill/calendar/datedate/infrastructure/security/ src/main/java/me/singingsandhill/calendar/datedate/presentation/support/AuthenticatedUsers.java src/main/java/me/singingsandhill/calendar/common/infrastructure/config/SecurityConfig.java src/test/java/me/singingsandhill/calendar/datedate/infrastructure/security/KakaoProfileTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/DatedateAuthSecurityTest.java src/test/java/me/singingsandhill/calendar/trading/presentation/api/TradingApiSecurityTest.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/CorsConfigTest.java docs/git_commit.md
+git add src/main/java/me/singingsandhill/calendar/datedate/infrastructure/security/ src/main/java/me/singingsandhill/calendar/datedate/presentation/support/AuthenticatedUsers.java src/main/java/me/singingsandhill/calendar/common/infrastructure/config/SecurityConfig.java src/test/java/me/singingsandhill/calendar/datedate/infrastructure/security/KakaoProfileTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/DatedateAuthSecurityTest.java src/test/java/me/singingsandhill/calendar/trading/presentation/api/TradingApiSecurityTest.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/CorsConfigTest.java docs/guides/git-commit.md
 git commit -m "feat(security): 카카오 OAuth2 로그인 + 사용자/어드민 진입점 분리" -m "KakaoOAuth2UserService 가 /v2/user/me 파싱→AppUser upsert→ROLE_USER 프린시펄(내부 userId attributes 탑재). /me·/recap/**(share 제외)·/api/me/** ROLE_USER, /recap/share/** 공개. 어드민 영역은 기존 어드민 로그인 진입점 유지, POST /logout 분리. 기존 P0-1 회귀 GREEN."
 ```
 
@@ -1522,7 +1522,7 @@ Expected: 모두 PASS (기존 렌더링 테스트로 헤더 fragment 변경 회�
 
 ```
 # Commit 75 — feat(datedate): 로그인 페이지·헤더 카카오 로그인 UI·i18n
-git add src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/AuthController.java src/main/resources/templates/auth/login.html src/main/resources/templates/fragments/header.html src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/main/resources/messages.properties src/main/resources/messages_en.properties src/main/java/me/singingsandhill/calendar/datedate/domain/owner/ReservedOwnerIds.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/AuthControllerTest.java src/test/java/me/singingsandhill/calendar/datedate/domain/owner/ReservedOwnerIdsTest.java docs/git_commit.md
+git add src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/AuthController.java src/main/resources/templates/auth/login.html src/main/resources/templates/fragments/header.html src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/main/resources/messages.properties src/main/resources/messages_en.properties src/main/java/me/singingsandhill/calendar/datedate/domain/owner/ReservedOwnerIds.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/AuthControllerTest.java src/test/java/me/singingsandhill/calendar/datedate/domain/owner/ReservedOwnerIdsTest.java docs/guides/git-commit.md
 git commit -m "feat(datedate): /login 페이지 + 헤더 카카오 로그인/프로필 UI + 예약어(me·recap·oauth2)" -m "카카오 버튼 공식 디자인(#FEE500), sec:authorize 로 ROLE_USER 분기(어드민 세션 미노출), POST /logout CSRF 폼. SEO noindex. ko/en 메시지 키."
 ```
 
@@ -2044,7 +2044,7 @@ Expected: 모두 PASS (`OwnerDashboard404IntegrationTest` 로 대시보드 변�
 
 ```
 # Commit 76 — feat(datedate): 오너-카카오 계정 연결 (자동/수동, first-claim)
-git add src/main/java/me/singingsandhill/calendar/datedate/domain/owner/ src/main/java/me/singingsandhill/calendar/datedate/application/exception/OwnerAlreadyLinkedException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/OwnerService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/OwnerJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/OwnerJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/OwnerRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/datedate/presentation/api/MeApiController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/HomeController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/OwnerController.java src/main/resources/templates/owner/dashboard.html src/main/resources/messages.properties src/main/resources/messages_en.properties src/test/java/me/singingsandhill/calendar/datedate/domain/owner/OwnerTest.java src/test/java/me/singingsandhill/calendar/datedate/application/service/OwnerServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/api/MeApiControllerTest.java docs/git_commit.md
+git add src/main/java/me/singingsandhill/calendar/datedate/domain/owner/ src/main/java/me/singingsandhill/calendar/datedate/application/exception/OwnerAlreadyLinkedException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/OwnerService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/OwnerJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/OwnerJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/OwnerRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/datedate/presentation/api/MeApiController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/HomeController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/OwnerController.java src/main/resources/templates/owner/dashboard.html src/main/resources/messages.properties src/main/resources/messages_en.properties src/test/java/me/singingsandhill/calendar/datedate/domain/owner/OwnerTest.java src/test/java/me/singingsandhill/calendar/datedate/application/service/OwnerServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/api/MeApiControllerTest.java docs/guides/git-commit.md
 git commit -m "feat(datedate): 오너-카카오 계정 연결 — POST /start 자동 + 대시보드 수동 버튼" -m "Owner.userId nullable(first-claim, 타 유저 선점 409). 어댑터 save 는 기존 엔티티 로드 후 갱신(orphanRemoval 로 인한 일정 삭제 방지). findAllByUserId 포트 추가."
 ```
 
@@ -2710,7 +2710,7 @@ Expected: 모두 PASS.
 
 ```
 # Commit 77 — feat(datedate): UserActivity 활동 이벤트 기록 (로그인 세션 한정)
-git add src/main/java/me/singingsandhill/calendar/datedate/domain/activity/ src/main/java/me/singingsandhill/calendar/datedate/application/service/UserActivityService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/UserActivityJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/UserActivityJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/UserActivityRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/datedate/presentation/api/ src/test/java/me/singingsandhill/calendar/datedate/application/service/UserActivityServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/api/ParticipantApiActivityRecordingTest.java docs/git_commit.md
+git add src/main/java/me/singingsandhill/calendar/datedate/domain/activity/ src/main/java/me/singingsandhill/calendar/datedate/application/service/UserActivityService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/UserActivityJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/UserActivityJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/UserActivityRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/datedate/presentation/api/ src/test/java/me/singingsandhill/calendar/datedate/application/service/UserActivityServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/api/ParticipantApiActivityRecordingTest.java docs/guides/git-commit.md
 git commit -m "feat(datedate): 로그인 사용자 활동 이벤트(참여·투표·일정생성) append-only 기록" -m "(userId,type,targetId) 중복 방지, REQUIRES_NEW+예외 삼킴으로 본 동작 무영향, 익명 경로 무변경. recap 집계 원천 (ADR datedate/domain/0005)."
 ```
 
@@ -3979,7 +3979,7 @@ Expected: 모두 PASS. `SeoServiceI18nTest` 로 연도 그룹화(`2,026`) 회귀
 
 ```
 # Commit 78 — feat(datedate): 연간 recap 페이지·공유 토큰·마이페이지
-git add src/main/java/me/singingsandhill/calendar/datedate/domain/recap/ src/main/java/me/singingsandhill/calendar/datedate/application/dto/RecapDto.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/InvalidRecapYearException.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/RecapShareNotFoundException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/RecapService.java src/main/java/me/singingsandhill/calendar/datedate/application/service/RecapShareService.java src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/RecapShareJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/RecapShareJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/RecapShareRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/RecapController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/MyPageController.java src/main/resources/templates/recap/ src/main/resources/templates/me/ src/main/resources/messages.properties src/main/resources/messages_en.properties src/test/java/me/singingsandhill/calendar/datedate/application/service/RecapServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/RecapControllerTest.java docs/git_commit.md
+git add src/main/java/me/singingsandhill/calendar/datedate/domain/recap/ src/main/java/me/singingsandhill/calendar/datedate/application/dto/RecapDto.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/InvalidRecapYearException.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/RecapShareNotFoundException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/RecapService.java src/main/java/me/singingsandhill/calendar/datedate/application/service/RecapShareService.java src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/RecapShareJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/RecapShareJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/RecapShareRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/RecapController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/MyPageController.java src/main/resources/templates/recap/ src/main/resources/templates/me/ src/main/resources/messages.properties src/main/resources/messages_en.properties src/test/java/me/singingsandhill/calendar/datedate/application/service/RecapServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/RecapControllerTest.java docs/guides/git-commit.md
 git commit -m "feat(datedate): 연간 Wrapped 스타일 recap + 공개 공유 토큰 + 마이페이지" -m "오너 계열(일정·연인원·요일·월·동행)+활동 계열(참여·선택일·투표 TOP3) on-the-fly 집계, Clock 고정 테스트. (userId,year) 멱등 공유 토큰, OG noindex. i18n {0,number,#} 연도 그룹화 차단."
 ```
 
@@ -4092,7 +4092,7 @@ datedate 는 인증 레이어가 없는 완전 익명 구조였다 (오너 = 공
 1. 루트 `CLAUDE.md` Security 표에 행 추가:
 
 ```markdown
-| `/me`, `/recap/**` (share 제외), `/api/me/**` | `ROLE_USER` (카카오 로그인, [ADR 0004](docs/adr/common/security/0004-kakao-oauth2-login.md)) |
+| `/me`, `/recap/**` (share 제외), `/api/me/**` | `ROLE_USER` (카카오 로그인, [ADR 0004](../../adr/common/security/0004-kakao-oauth2-login.md)) |
 | `/login`, `/oauth2/**`, `/login/oauth2/**`, `/recap/share/**` | permitAll |
 ```
 
@@ -4132,7 +4132,7 @@ cmd.exe /c "set JAVA_HOME=C:\jdk-21&& .\gradlew.bat bootRun"
 
 ```
 # Commit 79 — docs: ADR 0004(카카오 로그인)·0005(활동 이벤트 recap) + CLAUDE.md 동기화 — 마지막 커밋(git_commit.md 포함)
-git add docs/adr/common/security/0004-kakao-oauth2-login.md docs/adr/datedate/domain/0005-user-activity-event-recap.md docs/adr/README.md CLAUDE.md src/main/java/me/singingsandhill/calendar/common/CLAUDE.md src/main/java/me/singingsandhill/calendar/datedate/application/CLAUDE.md docs/superpowers/plans/2026-07-11-kakao-login-recap.md docs/git_commit.md
+git add docs/adr/common/security/0004-kakao-oauth2-login.md docs/adr/datedate/domain/0005-user-activity-event-recap.md docs/adr/README.md CLAUDE.md src/main/java/me/singingsandhill/calendar/common/CLAUDE.md src/main/java/me/singingsandhill/calendar/datedate/application/CLAUDE.md docs/superpowers/plans/2026-07-11-kakao-login-recap.md docs/guides/git-commit.md
 git commit -m "docs: ADR 0004(카카오 OAuth2)·0005(활동 이벤트 recap) + CLAUDE.md 동기화" -m "결정 변경 2건 기록: client_secret_post·진입점 분리·역할 배타 / append-only 이벤트·first-claim·on-the-fly 집계. CLAUDE.md Security 표·모듈 섹션 갱신."
 ```
 

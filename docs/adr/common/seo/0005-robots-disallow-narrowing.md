@@ -6,7 +6,7 @@
 | 날짜 | 2026-04-07 |
 | 도메인 | common |
 | 관심사 | SEO |
-| 관련 커밋 | `69b9919`, `docs/git_commit.md` Commit 9 |
+| 관련 커밋 | `69b9919`, `docs/guides/git-commit.md` Commit 9 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -54,5 +54,5 @@ UGC 차단을 *연도별로 enumerate* 해 콘텐츠 페이지는 자유롭게.
 
 - 관련 코드:
   - `src/main/resources/static/robots.txt`
-- 관련 docs: `docs/seo-evolution-playbook.md` (안티패턴: 광범위 Disallow)
-- 관련 커밋: `git log -1 69b9919`, `docs/git_commit.md` Commit 9
+- 관련 docs: `docs/seo/evolution-playbook.md` (안티패턴: 광범위 Disallow)
+- 관련 커밋: `git log -1 69b9919`, `docs/guides/git-commit.md` Commit 9

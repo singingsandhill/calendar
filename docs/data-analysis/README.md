@@ -4,7 +4,7 @@ DateDate (`datedate.site`) 의 데이터 수집·파이프라인·분석 자산 
 
 이 폴더는 GA4 / GTM / Search Console / BigQuery / Looker Studio / IndexNow / 도메인 DB
 가 어떻게 연결되어 있고, 어떤 분석이 가능하며, 무엇을 더 해야 하는지를 정리한다.
-SEO 자체 결정은 [`docs/seo-evolution-playbook.md`](../seo-evolution-playbook.md) 에,
+SEO 자체 결정은 [`docs/seo/evolution-playbook.md`](../seo/evolution-playbook.md) 에,
 배포 후 회고는 [`docs/troubleshooting/`](../troubleshooting/) 에 있고, 본 폴더는 *데이터*
 관점에 한정.
 
@@ -38,5 +38,5 @@ SEO 자체 결정은 [`docs/seo-evolution-playbook.md`](../seo-evolution-playboo
 ## 이전 분석/결정 위치
 
 - [`docs/troubleshooting/lighthouse-performance-audit.md`](../troubleshooting/lighthouse-performance-audit.md) — Lighthouse 측정 결과, GTM 측정 ID 구조 (B 항목)
-- [`docs/seo-evolution-playbook.md`](../seo-evolution-playbook.md) — SEO 단계별 발전 결정
+- [`docs/seo/evolution-playbook.md`](../seo/evolution-playbook.md) — SEO 단계별 발전 결정
 - [`docs/adr/common/seo/`](../adr/common/seo/) — SitemapService / SeoMetadata SSOT / IndexNow ADR

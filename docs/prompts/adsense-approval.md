@@ -479,7 +479,7 @@ AS-Content 의 *고유 콘텐츠 ... 전문 지식이나 개인적인 의견 등
 **사내**
 - [`docs/audit/adsense-low-value-content-policy-mapping.md`](../audit/adsense-low-value-content-policy-mapping.md) — 정책 ↔ 코드/콘텐츠 1:1 매핑 감사 (본 plan 의 보강 근거)
 - [`docs/adr/common/seo/0007-content-pages-for-adsense.md`](../adr/common/seo/0007-content-pages-for-adsense.md) — `/guide`, `/use-cases/*` 도입 결정
-- [`docs/seo-evolution-playbook.md`](../seo-evolution-playbook.md) — 콘텐츠 폭발 단계 가이드
+- [`docs/seo/evolution-playbook.md`](../seo/evolution-playbook.md) — 콘텐츠 폭발 단계 가이드
 
 ---
 

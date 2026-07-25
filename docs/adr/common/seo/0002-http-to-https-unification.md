@@ -61,5 +61,5 @@ GSC (Google Search Console) 에 "리디렉션이 포함된 페이지" 경고가 
   - `src/main/resources/application.yaml`
   - `src/main/resources/static/robots.txt`
   - `src/main/java/me/singingsandhill/calendar/common/application/service/SeoService.java`
-- 관련 docs: `docs/seo-evolution-playbook.md#23-위기-1--httphttps-혼재`, `docs/troubleshooting/google-search-console-redirect.md`, `docs/troubleshooting/nginx-configuration.md`
+- 관련 docs: `docs/seo/evolution-playbook.md#23-위기-1--httphttps-혼재`, `docs/troubleshooting/google-search-console-redirect.md`, `docs/troubleshooting/nginx-configuration.md`
 - 관련 커밋: `git log -1 19f9286`

@@ -64,5 +64,5 @@
   - `src/main/java/me/singingsandhill/calendar/stock/infrastructure/config/StockProperties.java`
   - `src/main/java/me/singingsandhill/calendar/stock/infrastructure/scheduler/StockTradingScheduler.java`
   - `src/main/resources/application.yaml`
-- 관련 docs: `docs/stock-bot.md` (시간/구간 정책)
+- 관련 docs: `docs/stock/bot.md` (시간/구간 정책)
 - 관련 커밋: `git log -1 5a5be58`

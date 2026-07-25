@@ -19,7 +19,7 @@ datedate와 함께, 같은 서버에서 돌아가는 암호화폐·주식 자동
 > IndexNow submission. The repository is a multi-domain **Java 21 / Spring Boot 4** monolith
 > (hexagonal architecture, server-side rendering + vanilla JS) self-hosted on a Jetson Nano.
 > It also runs a crypto trading bot built to cover the server cost — safety-hardened after
-> two self-conducted audits. Every significant decision is recorded in **55 ADRs**.
+> two self-conducted audits. Every significant decision is recorded in **59 ADRs**.
 
 ## 한눈에 보기
 
@@ -78,7 +78,7 @@ timeline
     2026.05 : sitemap lastmod 신뢰성 복구, 네이버 서치어드바이저 등록 : AdSense "Low value content" 리젝 → 체계적 재심사 대응
 ```
 
-전체 과정은 [`docs/seo-evolution-playbook.md`](docs/seo-evolution-playbook.md)에
+전체 과정은 [`docs/seo/evolution-playbook.md`](docs/seo/evolution-playbook.md)에
 sitemap 성숙도 모델(L0~L5), 트러블슈팅 8건, 안티패턴 10개로 정리해 두었습니다.
 
 ### 두 번의 위기와 AdSense 리젝
@@ -98,7 +98,7 @@ sitemap 성숙도 모델(L0~L5), 트러블슈팅 8건, 안티패턴 10개로 정
   해결), 인기 통계에 0표 항목·비속어가 노출되지 않도록 노출 기준(최소 2표 +
   블록리스트)을 [ADR](docs/adr/datedate/domain/0006-popularity-exposure-criteria.md)로
   결정, 회귀 테스트 6종을 추가했습니다. 현재 재심사 대응 진행 중입니다 —
-  대응 과정 전체는 [`docs/adsense-low-value-content-remediation.md`](docs/adsense-low-value-content-remediation.md)에
+  대응 과정 전체는 [`docs/seo/adsense-low-value-content-remediation.md`](docs/seo/adsense-low-value-content-remediation.md)에
   있습니다.
 
 ### 결과
@@ -240,7 +240,7 @@ Bithumb 자동매매 봇이고, 그래서 이 모듈의 이야기는 수익 자�
 혼자 개발할수록 문서가 필요합니다 — 미래의 나는 남이니까요. 이 저장소는 세 층으로
 기록합니다.
 
-- **결정은 ADR로** — [55개](docs/adr/), 도메인×관심사 매트릭스로 색인. 모든 ADR은
+- **결정은 ADR로** — [59개](docs/adr/), 도메인×관심사 매트릭스로 색인. 모든 ADR은
   "외부 트리거 → 결정 → 대안 비교 → 영향" 순서로, 트레이딩·주식 봇 ADR 대부분은
   감사 발견 사항 번호까지 역추적됩니다.
 - **사건은 감사 문서로** — 수익성 감사, 운영 리뷰, AdSense 정책 매핑 등. 사건이
@@ -302,11 +302,11 @@ WSL·Jetson 등 환경별 명령은 [`CLAUDE.md`](CLAUDE.md) 참고.
 이 README는 요약이고, 깊이는 아래에 있습니다.
 
 - [`docs/adr/`](docs/adr/) — 아키텍처 결정 기록 55건 (도메인×관심사 매트릭스)
-- [`docs/seo-evolution-playbook.md`](docs/seo-evolution-playbook.md) — SEO 0→1 과정을 재사용 가능한 플레이북으로
-- [`docs/adsense-low-value-content-remediation.md`](docs/adsense-low-value-content-remediation.md) — AdSense 리젝 대응 전 과정
+- [`docs/seo/evolution-playbook.md`](docs/seo/evolution-playbook.md) — SEO 0→1 과정을 재사용 가능한 플레이북으로
+- [`docs/seo/adsense-low-value-content-remediation.md`](docs/seo/adsense-low-value-content-remediation.md) — AdSense 리젝 대응 전 과정
 - [`docs/audit/coin-trading-profit-audit-2026-05-30.md`](docs/audit/coin-trading-profit-audit-2026-05-30.md) — 내 봇의 기대값이 음수였던 이유
 - [`docs/audit/coin-trading-operational-review-2026-07-06.md`](docs/audit/coin-trading-operational-review-2026-07-06.md) — 73건 발견 사항 운영·보안 리뷰
-- [`docs/trading-bot.md`](docs/trading-bot.md) / [`docs/stock-bot.md`](docs/stock-bot.md) — 두 봇의 전략·리스크 관리 상세
+- [`docs/trading/bot.md`](docs/trading/bot.md) / [`docs/stock/bot.md`](docs/stock/bot.md) — 두 봇의 전략·리스크 관리 상세
 - [`docs/architecture.md`](docs/architecture.md) — 헥사고날 구조와 모듈 규약
 
 ## License

@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | stock |
 | 관심사 | 모드 / 테스트 가능성 |
-| 관련 커밋 | `docs/git_commit.md` Commit 6 (PR-6) |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 6 (PR-6) |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -72,5 +72,5 @@
   - `src/test/java/me/singingsandhill/calendar/stock/domain/StockPositionTakeProfitTest.java`
   - `src/test/java/me/singingsandhill/calendar/stock/application/StockRiskServiceTimeDecayTest.java`
   - `src/test/java/me/singingsandhill/calendar/stock/application/UniverseBuilderTest.java`
-- 관련 docs: `docs/stock-bot.md` (시간 감소 임계값)
-- 관련 커밋: `docs/git_commit.md` Commit 6
+- 관련 docs: `docs/stock/bot.md` (시간 감소 임계값)
+- 관련 커밋: `docs/guides/git-commit.md` Commit 6

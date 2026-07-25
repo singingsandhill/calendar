@@ -60,5 +60,5 @@ ads.txt 는 *Content-Type 명시가 핵심* 이라 컨트롤러 필요. naver ht
 - 관련 코드:
   - `src/main/resources/static/ads.txt` 또는 `StaticResourceController` (분리된 컨트롤러)
   - `src/main/resources/static/naver52cf63f6fb22d9c9f017934c5d0b7d5c.html`
-- 관련 docs: `docs/seo-evolution-playbook.md#22-adsense-도입의-부작용`
+- 관련 docs: `docs/seo/evolution-playbook.md#22-adsense-도입의-부작용`
 - 관련 커밋: `git log -1 5b65e53`, `git log -1 e8423ac`

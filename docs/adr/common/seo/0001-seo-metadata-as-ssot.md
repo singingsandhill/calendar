@@ -56,5 +56,5 @@ MVP 출시 시점, SEO 메타(title, description, og:*, robots, canonical, JSON-
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/common/presentation/dto/SeoMetadata.java`
   - `src/main/java/me/singingsandhill/calendar/common/presentation/controller/StaticResourceController.java` (참고)
-- 관련 docs: `docs/seo-evolution-playbook.md#21-foundation-9-무엇을-미리-갖추었는가`
+- 관련 docs: `docs/seo/evolution-playbook.md#21-foundation-9-무엇을-미리-갖추었는가`
 - 관련 커밋: `git log -1 cdb552e`

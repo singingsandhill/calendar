@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | datedate |
 | 관심사 | 프론트엔드 / UX |
-| 관련 커밋 | `docs/git_commit.md` Commit 11 |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 11 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -58,4 +58,4 @@
 - 관련 코드:
   - `src/main/resources/templates/owner/dashboard.html` (이전), `fragments/create-schedule-modal.html` (현재)
   - `src/main/resources/static/js/create-schedule-modal.js`
-- 관련 커밋: `docs/git_commit.md` Commit 11
+- 관련 커밋: `docs/guides/git-commit.md` Commit 11

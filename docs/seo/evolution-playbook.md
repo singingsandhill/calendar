@@ -88,7 +88,7 @@ http://www.datedate.site/  →  http://datedate.site/  →  https://datedate.sit
 Google 은 2회 리디렉션을 "색인 부적합" 으로 분류.
 
 **해결**: 4 군데 모두 `https://` 로 통일 + nginx 에서 1회 301 로 직행.
-(자세한 절차는 [`docs/troubleshooting/google-search-console-redirect.md`](troubleshooting/google-search-console-redirect.md))
+(자세한 절차는 [`docs/troubleshooting/google-search-console-redirect.md`](../troubleshooting/google-search-console-redirect.md))
 
 **교훈:**
 - baseUrl 은 한 곳에서 정의하고 나머지는 모두 그 한 곳을 참조해야 한다.
@@ -511,8 +511,8 @@ L0→L1 전환은 비교적 쉽다. L3→L4 가 가장 어렵다 — `LocalDate.
 - [Google Search Central — hreflang](https://developers.google.com/search/docs/specialized/international/managing-multi-regional-sites)
 - [네이버 서치어드바이저 도움말](https://searchadvisor.naver.com/guide)
 - [Schema.org 스키마 카탈로그](https://schema.org/docs/full.html)
-- [`docs/troubleshooting/google-search-console-redirect.md`](troubleshooting/google-search-console-redirect.md) — HTTPS 통일 사례
-- [`docs/troubleshooting/nginx-configuration.md`](troubleshooting/nginx-configuration.md) — nginx redirect 설정
+- [`docs/troubleshooting/google-search-console-redirect.md`](../troubleshooting/google-search-console-redirect.md) — HTTPS 통일 사례
+- [`docs/troubleshooting/nginx-configuration.md`](../troubleshooting/nginx-configuration.md) — nginx redirect 설정
 
 ---
 

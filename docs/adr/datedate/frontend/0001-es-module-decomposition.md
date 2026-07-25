@@ -63,5 +63,5 @@
 - 관련 코드:
   - `src/main/resources/static/js/schedule/{main,state,calendar,voting,participants,utils}.js`
   - `src/main/resources/templates/schedule/view.html`
-- 관련 docs: `docs/datedate-architecture-review.md` (E-3-c)
+- 관련 docs: `docs/datedate/architecture-review.md` (E-3-c)
 - 관련 커밋: `git log -1 7012cc0`

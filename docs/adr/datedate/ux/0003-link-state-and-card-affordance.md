@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | datedate |
 | 관심사 | UX / 시각 |
-| 관련 커밋 | `docs/git_commit.md` Commit 14 |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 14 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -58,4 +58,4 @@
 
 - 관련 코드:
   - `src/main/resources/static/css/style.css`
-- 관련 커밋: `docs/git_commit.md` Commit 14
+- 관련 커밋: `docs/guides/git-commit.md` Commit 14

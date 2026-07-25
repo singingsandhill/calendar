@@ -151,7 +151,7 @@ This converts the most-crawled URL from "form + cards" into "form + cards + real
 Per the repo's sync rule:
 - **Fact change → update CLAUDE.md:** root `CLAUDE.md` DateDate section lists "친구 모임, 팀 회의, 여행 계획, 스터디 그룹" — add **동호회(club-activity)**. No numeric/path facts otherwise change.
 - **Decision change → ADR:** none of these are policy/structure reversals (no new module, no security/availability-model change), so **no new ADR is required**. The data-driven footer + per-slug differentiation are implementation improvements, not decisions. *(If per-slug OG image generation introduces a new asset-serving approach, note it in the relevant frontend ADR rather than a new one.)*
-- **Commit convention:** per repo workflow, do **not** run `git commit`; record the change as a section in `docs/git_commit.md`.
+- **Commit convention:** per repo workflow, do **not** run `git commit`; record the change as a section in `docs/guides/git-commit.md`.
 
 ---
 

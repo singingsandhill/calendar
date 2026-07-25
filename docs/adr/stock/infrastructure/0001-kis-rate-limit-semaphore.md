@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | stock |
 | 관심사 | 인프라 / 동시성 / 외부 API |
-| 관련 커밋 | `docs/git_commit.md` Commit 5 (PR-5) |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 5 (PR-5) |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -70,4 +70,4 @@ KIS (한국투자증권) Open API 는 호출량 한도가 좁다 (초당/분당 
   - `src/main/java/me/singingsandhill/calendar/stock/observability/StockBotMetrics.java`
   - `src/main/java/me/singingsandhill/calendar/stock/application/service/ScreeningService.java`
 - 관련 ADR: [stock/observability/0001](../observability/0001-trade-events-logger-and-bot-metrics.md), [stock/infrastructure/0002](0002-per-symbol-reentrant-lock.md), [stock/infrastructure/0003](0003-thread-pool-task-scheduler.md)
-- 관련 커밋: `docs/git_commit.md` Commit 5
+- 관련 커밋: `docs/guides/git-commit.md` Commit 5

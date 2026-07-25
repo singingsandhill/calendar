@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | stock |
 | 관심사 | 인프라 / 동시성 / 스케줄러 |
-| 관련 커밋 | `docs/git_commit.md` Commit 5 (PR-5) |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 5 (PR-5) |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -59,4 +59,4 @@ Spring 의 기본 `@Scheduled` 풀 사이즈는 1. 단일 스레드가 순차로
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/stock/infrastructure/scheduler/StockSchedulerConfig.java`
 - 관련 ADR: [stock/infrastructure/0001 KIS Semaphore](0001-kis-rate-limit-semaphore.md), [stock/infrastructure/0002 Per-Symbol Lock](0002-per-symbol-reentrant-lock.md), [stock/modes/0001 PAPER + Clock](../modes/0001-paper-backtest-mode-and-clock-bean.md)
-- 관련 커밋: `docs/git_commit.md` Commit 5
+- 관련 커밋: `docs/guides/git-commit.md` Commit 5

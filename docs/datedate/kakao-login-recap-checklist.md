@@ -2,10 +2,10 @@
 
 - 일자: 2026-07-11
 - 대상 기능: 카카오 OAuth2 로그인, 오너 계정 연결, 활동 이벤트 기록, 연간 recap + 공개 공유
-- 관련 문서: [설계 스펙](superpowers/specs/2026-07-11-kakao-login-recap-design.md) ·
-  [ADR common/security/0004](adr/common/security/0004-kakao-oauth2-login.md) ·
-  [ADR datedate/domain/0005](adr/datedate/domain/0005-user-activity-event-recap.md) ·
-  커밋 절차: `docs/git_commit.md` **Commit 72~81**
+- 관련 문서: [설계 스펙](../superpowers/specs/2026-07-11-kakao-login-recap-design.md) ·
+  [ADR common/security/0004](../adr/common/security/0004-kakao-oauth2-login.md) ·
+  [ADR datedate/domain/0005](../adr/datedate/domain/0005-user-activity-event-recap.md) ·
+  커밋 절차: `docs/guides/git-commit.md` **Commit 72~81**
 
 > 자동 테스트는 전부 통과한 상태(413 tests, 0 failures — 더미 키). 아래는 **실제
 > 카카오 키가 필요해 사람이 직접 해야 하는 작업**만 모았다.
@@ -81,7 +81,7 @@
 
 ### 1-4. 커밋
 
-- [ ] `docs/git_commit.md` 의 **Commit 72 ~ 81** 섹션을 순서대로 실행
+- [ ] `docs/guides/git-commit.md` 의 **Commit 72 ~ 81** 섹션을 순서대로 실행
       (검증: 커밋 전 `cmd.exe /c "set JAVA_HOME=C:\jdk-21&& .\gradlew.bat test"` GREEN)
 
 ---

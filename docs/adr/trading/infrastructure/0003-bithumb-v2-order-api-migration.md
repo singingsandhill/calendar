@@ -6,7 +6,7 @@
 | 날짜 | 2026-07-08 |
 | 도메인 | trading (코인) |
 | 관심사 | 인프라 / 외부 API |
-| 관련 | 마이그레이션 계획 `docs/trading-bithumb-v2-migration-plan.md`, 운영 감사 `docs/audit/coin-trading-operational-review-2026-07-06.md`, ADR-0002(선영속화+스윕) |
+| 관련 | 마이그레이션 계획 `docs/trading/bithumb-v2-migration-plan.md`, 운영 감사 `docs/audit/coin-trading-operational-review-2026-07-06.md`, ADR-0002(선영속화+스윕) |
 
 ## Context — 무엇이 문제였나
 

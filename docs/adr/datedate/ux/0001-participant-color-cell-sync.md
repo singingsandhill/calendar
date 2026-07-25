@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | datedate |
 | 관심사 | UX / 접근성 |
-| 관련 커밋 | `docs/git_commit.md` Commit 13 |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 13 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -68,4 +68,4 @@ WCAG AA 기준 대비 4.5:1 충족 색만 채택. Tailwind-600 은 흰 배경 �
   - `src/main/resources/static/js/schedule/calendar.js`
   - `src/main/resources/static/js/schedule/participants.js`
   - `src/main/resources/static/css/style.css`
-- 관련 커밋: `docs/git_commit.md` Commit 13
+- 관련 커밋: `docs/guides/git-commit.md` Commit 13

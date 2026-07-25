@@ -2,8 +2,8 @@
 
 > **목적:** 운영 감사(P0~P3) + Bithumb v2 마이그레이션 계획 전체에서 **아직 안 된 부분만** 한 곳에 모은 인덱스.
 > 각 항목의 상세 근거·영향·개선방향은 원문서에 있고, 여기서는 **상태·담당·난이도·포인터**만 관리한다.
-> 원문서: [운영 리뷰](audit/coin-trading-operational-review-2026-07-06.md) ·
-> [v2 마이그레이션 계획](trading-bithumb-v2-migration-plan.md) · [세션 인계](trading-v2-migration-handoff.md).
+> 원문서: [운영 리뷰](../audit/coin-trading-operational-review-2026-07-06.md) ·
+> [v2 마이그레이션 계획](bithumb-v2-migration-plan.md) · [세션 인계](v2-migration-handoff.md).
 > 담당 표기: **[dev]** 코드 작업(다음 세션) / **[live]** 실계좌 접근 필요(사용자 실행).
 
 ---
@@ -104,7 +104,7 @@ P0-2 코드는 완료됐으나 **기본 구성(order-api-version=v1 + clientOrde
 
 ## F. 커밋 상태 (미커밋 정리 위치)
 
-- 2026-07-06 분(P0-1·문서·P0-2 v1·§8-A/C·Phase1 착수): `docs/git_commit.md` **Section T** (commit 62~67).
+- 2026-07-06 분(P0-1·문서·P0-2 v1·§8-A/C·Phase1 착수): `docs/guides/git-commit.md` **Section T** (commit 62~67).
   이 중 62~64(P0-1·문서)는 이미 커밋됨(git log 20a9aac/4fa259d/f699d33), 65~67(주문신뢰성)은 미커밋.
 - 2026-07-08 분(§8-B 본체): **Section U**. 잔여 마감(매도 확장·422·지정가 cid·기동 스윕·프리픽스): **Section V**.
 - 워킹트리에 선재 미커밋 변경이 광범위하게 섞여 있으니, 커밋 전 파일별 `git diff` 로 이번 델타만인지 확인.
@@ -114,8 +114,8 @@ P0-2 코드는 완료됐으나 **기본 구성(order-api-version=v1 + clientOrde
 
 ## G. 참조
 
-- 감사 원문(P0~P3 상세): [`audit/coin-trading-operational-review-2026-07-06.md`](audit/coin-trading-operational-review-2026-07-06.md)
-- v2 계획(단계·게이트·안전요구): [`trading-bithumb-v2-migration-plan.md`](trading-bithumb-v2-migration-plan.md)
-- 다음 세션 인계(빌드·테스트·설계 상세): [`trading-v2-migration-handoff.md`](trading-v2-migration-handoff.md)
+- 감사 원문(P0~P3 상세): [`audit/coin-trading-operational-review-2026-07-06.md`](../audit/coin-trading-operational-review-2026-07-06.md)
+- v2 계획(단계·게이트·안전요구): [`trading-bithumb-v2-migration-plan.md`](bithumb-v2-migration-plan.md)
+- 다음 세션 인계(빌드·테스트·설계 상세): [`trading-v2-migration-handoff.md`](v2-migration-handoff.md)
 - ADR: common/security/0003(P0-1), trading/infrastructure/0002(§8-B 선영속화·스윕)·0003(v2 마이그레이션)
-- 커밋 큐: `docs/git_commit.md` Section T/U/V
+- 커밋 큐: `docs/guides/git-commit.md` Section T/U/V

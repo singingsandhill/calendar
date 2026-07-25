@@ -81,7 +81,7 @@
 
 분석 대상에서 **제외**. private 봇 운영 데이터로 GA4·BQ 와 결합 의미 없음.
 
-(단 운영 모니터링용 별도 분석은 `docs/stock-bot.md`, `docs/trading-bot.md` 참조)
+(단 운영 모니터링용 별도 분석은 `docs/stock/bot.md`, `docs/trading/bot.md` 참조)
 
 ## 3. BigQuery — events_* 테이블 구조
 

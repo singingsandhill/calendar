@@ -8,7 +8,10 @@
 
 `pinned` (관심 종목) ∪ **KIS 거래량순위 상위 N** (`rank-api-top`, FHPST01710000) 으로 그날
 유니버스를 스냅샷 캐시. 거래량순위가 실패/0건이면 정적 `fallback-codes` 로 폴백(무회귀).
-거래일 1회(pre-market) 호출되어 거래일 변경 시 재빌드. 빈 유니버스 시 `SCREENING_SKIPPED`
+pre-market(08:30) 에 초기 빌드하되, **08:30 엔 당일 거래량이 없어 rank 가 0건이므로
+스크리닝(09:20) 시점에 `refreshIfDegraded()` 가 rank=0 스냅샷을 감지해 1회 재시도**
+([ADR-0006](../../../../../../../../docs/adr/stock/algorithm/0006-universe-rank-retry-at-screening.md)).
+rank 성공 스냅샷은 그대로 유지(거래일 1회 스냅샷 정합성). 빈 유니버스 시 `SCREENING_SKIPPED`
 이벤트 + 조기 리턴.
 [ADR-0002](../../../../../../../../docs/adr/stock/algorithm/0002-universe-builder-snapshot.md)
 (스냅샷) ·
@@ -20,13 +23,17 @@
 **Score-based mode** (default, `scoring.enabled=true`):
 
 1. Floor filters (hard cut): min gap%, max gap 15%, min trade strength, min market cap 500억
+0. **거래 가능 상태 가드** — VI/거래정지/관리/정리매매/투자경고 배제 (`isTradable()`)
+1'. **선정 규칙** — 총점 ≥ `min-score-threshold`(40) **AND** 신호 점수(갭+체결강도) ≥
+   `signal-min-score`(25). `min-candidates` 강제 선정은 제거 — 조건 미달이면 0건이 정상
+   ([ADR 0008](../../../../../../../../docs/adr/stock/algorithm/0008-screening-selection-and-cost-model.md)).
 2. Composite score = weighted sum of 5 normalized factors:
    - Gap score (bell curve, center=4%, sigma=3)
    - Strength score (linear, 95~130)
    - Trade value score (log scale, 5억~500억)
    - Spread score (inverse, 0~0.5%)
    - Market cap score (log scale, 500억~10조)
-3. Sort by score descending → select top N (minCandidates guaranteed)
+3. Sort by score descending → 위 선정 규칙 통과분만 최대 `max-watchlist-size` 까지
 
 **Legacy mode** (`scoring.enabled=false`): sequential hard-cut filters (gap, market cap, trade value, strength, spread).
 

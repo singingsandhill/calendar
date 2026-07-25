@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | — | — | 7 | 3 | — | — | — | 5 | 15 |
+| **common**   | — | — | — | 7 | 3 | — | — | — | 6 | 16 |
 | **datedate** | 6 | — | 6 | — | — | — | — | — | — | 12 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
-| **trading**  | — | 1 | — | — | — | — | 14 | 1 | — | 16 |
-| **stock**    | — | 4 (동시성 포함) | — | — | — | 1 | 4 | 1 | — | 10 |
-| **합계** | 8 | 5 | 6 | 7 | 3 | 1 | 18 | 2 | 5 | **55** |
+| **trading**  | — | 3 | — | — | — | — | 14 | 1 | — | 18 |
+| **stock**    | — | 6 (동시성 포함) | — | — | — | 2 | 8 | 3 | — | 19 |
+| **합계** | 8 | 9 | 6 | 7 | 3 | 2 | 22 | 4 | 6 | **67** |
 
-총 **55개 ADR**.
+총 **67개 ADR**.
 
 ---
 
@@ -88,6 +88,15 @@
 | 2026-07-11 | common/security | [0004 카카오 OAuth2 로그인](common/security/0004-kakao-oauth2-login.md) | datedate "내 기록" 기능 — 선택적 로그인 도입 |
 | 2026-07-11 | datedate/domain | [0005 활동 이벤트 테이블 기반 연간 recap](datedate/domain/0005-user-activity-event-recap.md) | 연간 Wrapped 스타일 recap — voters 구조 무변경 |
 | 2026-07-17 | datedate/domain | [0006 인기 순위 노출 기준 (2표+블록리스트)](datedate/domain/0006-popularity-exposure-criteria.md) | 홈 첫 화면에 0표·비속어 입력 원문 노출 |
+| 2026-07-24 | stock/algorithm | [0006 거래량순위 스크리닝 시점 재시도](stock/algorithm/0006-universe-rank-retry-at-screening.md) | 봇 로그 분석 — 08:30 rank 매일 0건, 4거래일 연속 Selected: 0 |
+| 2026-07-24 | common/security | [0005 주식 봇 제어 API 관리자 전용](common/security/0005-admin-only-stock-bot-control-api.md) | 로직 리뷰 P0-1 — 무인증 봇 제어 노출 (critical) |
+| 2026-07-24 | stock/modes | [0002 PAPER 기본 모드](stock/modes/0002-paper-default-mode.md) | 로직 리뷰 P0-2 — 미검증 전략 + LIVE 기본값 |
+| 2026-07-24 | stock/infrastructure | [0005 비멱등 주문 무재시도](stock/infrastructure/0005-non-idempotent-order-no-retry.md) | 로직 리뷰 P0-4 — 응답 유실 시 중복 시장가 주문 |
+| 2026-07-24 | stock/algorithm | [0007 청산 구조 재보정 (풀백저가 손절·고정 TP3·트레일링)](stock/algorithm/0007-exit-structure-recalibration.md) | 로직 리뷰 P1-2/3/4 — 손익분기 승률 83% R:R 역전 |
+| 2026-07-24 | stock/infrastructure | [0006 주문 선영속화 + 실체결 backfill + 고아 체결 스윕](stock/infrastructure/0006-order-pre-persistence-and-fill-backfill.md) | 로직 리뷰 P1-1 — 픽션 체결가·무보호 포지션 |
+| 2026-07-24 | stock/modes | [0003 보호 전용 복구 + 최종청산 재시도·알림](stock/modes/0003-protection-only-recovery-on-restart.md) | 로직 리뷰 P1-5/6 — 재시작 시 보호 상실·청산 원샷 |
+| 2026-07-24 | stock/algorithm | [0008 선정 규칙 강화 · 비용 모델 정정 · 거래정지 가드](stock/algorithm/0008-screening-selection-and-cost-model.md) | 로직 리뷰 P2-1/2/3 — 강제 선정·점수 왜곡·세율 오차·VI 무방비 |
+| 2026-07-24 | stock/observability | [0002 일일 실적 요약 리포트](stock/observability/0002-daily-performance-report.md) | 로직 리뷰 P2-5 — PAPER 실측 데이터원 |
 
 ---
 
@@ -105,7 +114,7 @@
 - [trading/modes/](trading/modes/) — 1 ADR
 - [trading/risk/](trading/risk/) — 4 ADRs
 - [trading/infrastructure/](trading/infrastructure/) — 3 ADRs
-- [stock/algorithm/](stock/algorithm/) — 4 ADRs
+- [stock/algorithm/](stock/algorithm/) — 6 ADRs
 - [stock/infrastructure/](stock/infrastructure/) — 4 ADRs
 - [stock/modes/](stock/modes/) — 1 ADR
 - [stock/observability/](stock/observability/) — 1 ADR

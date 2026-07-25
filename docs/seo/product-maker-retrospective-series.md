@@ -274,7 +274,7 @@ manifest.json 까지 다국어로 분기시키는 과정을 다룬다.
 | 코드 | `src/main/resources/templates/fragments/head.html` | hreflang `th:if="${seo.hreflangEnabled()}"` 로 발행, `og:locale:alternate` 조건부, naver-site-verification 환경변수 폴백 | UGC noindex 와 hreflang 발행 충돌을 코드 레벨에서 막는 가드 |
 | 코드 | `src/main/resources/static/robots.txt` | `Disallow: /*/2024/` ~ `/*/2035/` 연도별 enumerate, runner/trading/stock Disallow, sitemap URL 명시 | robots.txt 와일드카드 한계, 도메인 테마 일관성을 위한 모듈별 차단 |
 | 코드 | `src/main/resources/templates/fragments/ad-slot.html`, `fragments/CLAUDE.md` | leaderboard/infeed/rectangle 슬롯이 `adsEnabled` 인자에 따라 조건부 렌더링, 페이지별 슬롯 정책 표 | 기능 페이지(폼/대시보드)와 콘텐츠 페이지(`/guide`, `/use-cases`)에 광고 정책을 다르게 적용한 근거 |
-| 문서 | `docs/seo-evolution-playbook.md` | Foundation → AdSense → HTTPS 통일 → 동적 sitemap → JSON-LD → 콘텐츠 폭발 → i18n SEO 까지의 전체 타임라인, 사이트맵 성숙도 모델 | 시리즈의 시간순 흐름과 단계별 트리거 사건 |
+| 문서 | `docs/seo/evolution-playbook.md` | Foundation → AdSense → HTTPS 통일 → 동적 sitemap → JSON-LD → 콘텐츠 폭발 → i18n SEO 까지의 전체 타임라인, 사이트맵 성숙도 모델 | 시리즈의 시간순 흐름과 단계별 트리거 사건 |
 | 문서 | `docs/audit/adsense-low-value-content-policy-mapping.md` | Google 정책 4개 문서(MA-Thin, PP-Spam, AS-Content, PP-Full) 와 코드/콘텐츠의 1:1 매핑 | AdSense 거절을 *제품 가치 점검* 으로 재해석한 관점의 근거 (3편 핵심) |
 | 문서 | `docs/adr/common/seo/0001-seo-metadata-as-ssot.md` | `SeoMetadata` SSOT 의사결정 기록, 대안과 기각 이유 | SEO SSOT 의 정당성 |
 | 문서 | `docs/adr/common/seo/0003-trustworthy-sitemap-lastmod.md` (참조) | `BuildProperties` + `findLatestActivity()` 기반 lastmod 정책 | 신뢰 가능한 사이트맵 lastmod 의 근거 |
@@ -296,5 +296,5 @@ manifest.json 까지 다국어로 분기시키는 과정을 다룬다.
 
 > 위 표의 커밋 해시는 모두 `git log --oneline` 에서 확인한 짧은 해시이며, 본문에서
 > 결정의 근거로 다룬 항목만 추렸다. 더 자세한 의사결정 기록은
-> [`docs/seo-evolution-playbook.md`](./seo-evolution-playbook.md) 와
-> [`docs/adr/common/seo/`](./adr/common/seo/) 를 함께 참고하면 좋다.
+> [`docs/seo/evolution-playbook.md`](evolution-playbook.md) 와
+> [`docs/adr/common/seo/`](../adr/common/seo/) 를 함께 참고하면 좋다.

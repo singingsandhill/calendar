@@ -136,6 +136,7 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 | `/runners/admin/**` | `ROLE_ADMIN` |
 | `/runners/admin/login` | permitAll |
 | `/api/trading/**`, `/trading`, `/trading/**` | `ROLE_ADMIN` (봇 제어·실주문·제어 대시보드, P0-1) |
+| `POST /api/stock/bot/**` | `ROLE_ADMIN` (주식 봇 제어, [ADR 0005](docs/adr/common/security/0005-admin-only-stock-bot-control-api.md)) — `GET .../status` 는 공개 대시보드용 permitAll |
 | `/me`, `/recap/**` (share 제외), `/api/me/**` | `ROLE_USER` (카카오 로그인, [ADR 0004](docs/adr/common/security/0004-kakao-oauth2-login.md)) |
 | `/login`, `/oauth2/**`, `/login/oauth2/**`, `/recap/share/**` | permitAll |
 | `/runners/**`, `/insights/**`, `/tools/**`, `/stock/**`, `/api/**`, `/h2-console/**`, static assets, `/**` | permitAll |
@@ -190,6 +191,11 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 
 - **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — `KoreaInvestmentApiClient` 의 모든 주문
   진입부에 모드 가드. PAPER/BACKTEST 는 `simulateOrder()` 인메모리 체결.
+  **기본값 PAPER** — LIVE 는 `STOCK_BOT_MODE=LIVE` 환경변수로만 활성화
+  ([ADR stock/modes/0002](docs/adr/stock/modes/0002-paper-default-mode.md)).
+- **주문 무재시도** — 주문 POST(`/order-cash`)는 비멱등이라 재시도 없이 1회만 전송
+  (`executePostNoRetry`, [ADR stock/infrastructure/0005](docs/adr/stock/infrastructure/0005-non-idempotent-order-no-retry.md));
+  조회(GET) 재시도는 유지.
 - **`Clock` 빈 (Asia/Seoul)** — `LocalTime.now(clock)` 사용 → `Clock.fixed` 로 시간 의존
   코드 결정성 테스트.
 - **동시성 3-레이어:**
@@ -198,8 +204,11 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
   3. `StockSchedulerConfig` 의 `ThreadPoolTaskScheduler(pool=4)` — 스크리닝과 트레이딩
      루프 병렬.
 - **관측성:** `TradeEvents` (`stock.trade` 카테고리) 로 거래 이벤트 한 줄 로깅,
-  `logback-spring.xml` 의 KST 자정 회전 + `stock-events.log` / `stock-sql.log` 분리,
+  `logback-spring.xml` 의 KST 자정 회전 + `stock-events.log` / `stock-sql.log` /
+  `crypto-trading.log` (trading 모듈 전용, `stock-trading.log` 오염 방지) 분리,
   `BotStatus` 에 `lastTradingTickAt` / `lastScreeningResult` / `apiCallsLast5min` 노출.
+  스크리닝 결과 메일 첨부는 발송 시점(09:20)까지의 로그 스냅샷
+  (`stock-screening-snapshot-YYYY-MM-DD.log`) — 하루 전체 로그가 아님.
 
 상세 결정 근거: [ADR stock/](docs/adr/stock/).
 

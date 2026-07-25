@@ -54,5 +54,5 @@ Spring 의 `SessionLocaleResolver` 도 비슷한 패턴 — 세션에 저장하�
 
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/common/infrastructure/config/CookieThenAcceptLanguageLocaleResolver.java`
-- 관련 docs: `docs/seo-evolution-playbook.md` (로케일 즉시 적용 단계)
+- 관련 docs: `docs/seo/evolution-playbook.md` (로케일 즉시 적용 단계)
 - 관련 커밋: `git log -1 e8dde63`

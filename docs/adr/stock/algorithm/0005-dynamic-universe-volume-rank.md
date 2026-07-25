@@ -2,11 +2,11 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 호출 시점(pre-market 1회)은 [ADR-0006](0006-universe-rank-retry-at-screening.md) 으로 보완 (08:30 엔 당일 거래량이 없어 매일 0건) |
 | 날짜 | 2026-06-03 |
 | 도메인 | stock |
 | 관심사 | 알고리즘 / 데이터 |
-| 관련 ADR | ADR-0002 (스냅샷 캐시) 의 `rank-api-top` placeholder 를 구현 |
+| 관련 ADR | ADR-0002 (스냅샷 캐시) 의 `rank-api-top` placeholder 를 구현, ADR-0006 (스크리닝 시점 재시도) |
 | 관련 이슈 | 운영 로그 분석: 5거래일 연속 `Selected: 0`, 매일 `rank=0, fallback=70` |
 
 ## Context — 무엇이 문제였나

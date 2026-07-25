@@ -5,7 +5,7 @@
 | 작성일 | 2026-05-05 |
 | 거절 사유 | "가치가 별로 없는 콘텐츠 (Low value content)" — 2026-05-02 |
 | 사이트 | datedate.site (Spring Boot 4 / Thymeleaf, `datedate` 모듈) |
-| 기존 후속 문서 | `docs/prompt/adsense_approval.md`, `docs/adr/common/seo/0007-content-pages-for-adsense.md` |
+| 기존 후속 문서 | `docs/prompts/adsense_approval.md`, `docs/adr/common/seo/0007-content-pages-for-adsense.md` |
 | 본 문서 목적 | Google 정책 4개 문서의 **구체 조항** ↔ **코드/콘텐츠 증거** 1:1 매핑. 기존 실행 계획의 미반영 항목 보완. |
 
 이 문서는 다음 4개 Google 자료를 직접 읽고 인용한 위에 작성됐습니다.
@@ -173,4 +173,4 @@ datedate 는 **제휴(affiliate) 페이지 없음**, **다른 출처 스크랩 �
 - [Publisher Policies — Google 웹 검색의 스팸 정책](https://support.google.com/publisherpolicies/answer/11035931)
 - [AdSense — 콘텐츠 및 사용자 환경](https://support.google.com/adsense/answer/10015918)
 - [AdSense — Google 게시자 정책](https://support.google.com/adsense/answer/10502938)
-- 사내: `docs/prompt/adsense_approval.md`, `docs/adr/common/seo/0007-content-pages-for-adsense.md`, `docs/seo-evolution-playbook.md`
+- 사내: `docs/prompts/adsense_approval.md`, `docs/adr/common/seo/0007-content-pages-for-adsense.md`, `docs/seo/evolution-playbook.md`

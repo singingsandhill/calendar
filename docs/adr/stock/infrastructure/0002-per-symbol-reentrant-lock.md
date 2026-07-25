@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | stock |
 | 관심사 | 인프라 / 동시성 |
-| 관련 커밋 | `docs/git_commit.md` Commit 5 (PR-5) |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 5 (PR-5) |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -62,4 +62,4 @@ JVM 락이 충분한 이유: 봇은 단일 인스턴스로 운영. 향후 액티
   - `src/main/java/me/singingsandhill/calendar/stock/application/concurrency/StockCodeLocks.java`
   - `src/main/java/me/singingsandhill/calendar/stock/application/service/StockPositionService.java`
 - 관련 ADR: [stock/infrastructure/0001 KIS Semaphore](0001-kis-rate-limit-semaphore.md), [stock/infrastructure/0003 ThreadPool](0003-thread-pool-task-scheduler.md)
-- 관련 커밋: `docs/git_commit.md` Commit 5
+- 관련 커밋: `docs/guides/git-commit.md` Commit 5

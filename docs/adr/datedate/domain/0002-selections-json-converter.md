@@ -58,5 +58,5 @@
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/converter/SelectionConverter.java`
   - `src/main/java/me/singingsandhill/calendar/datedate/domain/participant/Participant.java`
-- 관련 docs: `docs/datedate-architecture-review.md` (E-2-a)
+- 관련 docs: `docs/datedate/architecture-review.md` (E-2-a)
 - 관련 커밋: `git log -1 7012cc0`

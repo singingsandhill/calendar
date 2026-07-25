@@ -1,7 +1,7 @@
 # 코인 트레이딩 P0-2 / Bithumb v2 마이그레이션 — 세션 인계 문서
 
 > **이 문서만 읽고 바로 이어서 작업할 수 있도록 작성됨.** 다음 세션은 이 문서 + 필요 시
-> [`trading-bithumb-v2-migration-plan.md`](trading-bithumb-v2-migration-plan.md)(전체 계획·근거)만 읽으면 된다.
+> [`trading-bithumb-v2-migration-plan.md`](bithumb-v2-migration-plan.md)(전체 계획·근거)만 읽으면 된다.
 > 마지막 갱신: 2026-07-08.
 
 ---
@@ -23,9 +23,9 @@
 - **다음 작업(우선순위):**
   1. (사용자 실행) Phase 0a/2/3 소액 라이브 검증 → `order-api-version=v2` 전환 (§8 롤아웃 게이트).
   2. Phase 4 Private WS v2 — **Phase 3(전량 전환) 이후** 착수 (게이트가 LIVE 관찰이라 선행 구현 보류, 계획 §5).
-  3. **감사 P0-3·P1·P2·P3 미해결 전체** — [`trading-remaining-work.md`](trading-remaining-work.md) 백로그 참고
+  3. **감사 P0-3·P1·P2·P3 미해결 전체** — [`trading-remaining-work.md`](remaining-work.md) 백로그 참고
      (v2 마이그레이션과 독립. 권고 우선순위: P0-3+P1-4 수동주문 가드 → P1-9 defaults → P1-5 Clock/리스크 테스트 …).
-- **커밋 상태:** 2026-07-06 분은 `docs/git_commit.md` **Section T**, 2026-07-08 분은 **Section U**(§8-B 본체)와
+- **커밋 상태:** 2026-07-06 분은 `docs/guides/git-commit.md` **Section T**, 2026-07-08 분은 **Section U**(§8-B 본체)와
   **Section V**(잔여 마감 — 매도 확장·422·지정가 cid·기동 스윕·프리픽스)에 관심사별로 정리됨(미커밋).
   직접 `git commit` 금지(저장소 관례). 워킹트리에 선재 미커밋 변경도 섞여 있으니 파일별 `git diff` 확인 필요.
 
@@ -118,7 +118,7 @@ Bithumb 실 maker/taker 차등 여부, v2 order_id 가 GET /v1/order?uuid= 로 �
 - `.../trading/infrastructure/api/BithumbV2OrderApi.java` — v2 주문 어댑터
 - `.../trading/infrastructure/api/dto/BithumbV2OrderCreateResponse.java` — v2 생성 응답 DTO
 - 테스트: `BithumbApiClientIdempotencyTest`, `BithumbV2OrderApiTest`, `TradingBotServiceExecutedVolumeTest`, `TradingApiSecurityTest`
-- 문서: `docs/audit/coin-trading-operational-review-2026-07-06.md`, `docs/trading-bithumb-v2-migration-plan.md`,
+- 문서: `docs/audit/coin-trading-operational-review-2026-07-06.md`, `docs/trading/bithumb-v2-migration-plan.md`,
   `docs/troubleshooting/spring-security-webmvctest.md`, ADR `docs/adr/common/security/0003-*.md`, 이 인계 문서
 
 **수정(선재 변경과 섞였을 수 있음 — `git diff` 확인):**
@@ -217,8 +217,8 @@ OFF(코드만, v1 기본) → PAPER(오케스트레이션 회귀 확인, v2 HTTP
 
 ## 9. 참조
 
-- 전체 계획·근거: [`trading-bithumb-v2-migration-plan.md`](trading-bithumb-v2-migration-plan.md) (§0 진행현황, §5 단계, §8 안전요구)
-- 감사 근거(P0/P1/P2): [`audit/coin-trading-operational-review-2026-07-06.md`](audit/coin-trading-operational-review-2026-07-06.md)
-- 커밋 정리: `docs/git_commit.md` Section T
-- 보안 테스트 함정: [`troubleshooting/spring-security-webmvctest.md`](troubleshooting/spring-security-webmvctest.md)
+- 전체 계획·근거: [`trading-bithumb-v2-migration-plan.md`](bithumb-v2-migration-plan.md) (§0 진행현황, §5 단계, §8 안전요구)
+- 감사 근거(P0/P1/P2): [`audit/coin-trading-operational-review-2026-07-06.md`](../audit/coin-trading-operational-review-2026-07-06.md)
+- 커밋 정리: `docs/guides/git-commit.md` Section T
+- 보안 테스트 함정: [`troubleshooting/spring-security-webmvctest.md`](../troubleshooting/spring-security-webmvctest.md)
 - 관련 ADR: common/security/0003(P0-1), trading/modes·risk·infrastructure(기존 트레이딩 결정)

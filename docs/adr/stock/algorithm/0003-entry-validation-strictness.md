@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | stock |
 | 관심사 | 알고리즘 / 도메인 모델 |
-| 관련 커밋 | `docs/git_commit.md` Commit 4 (PR-4) |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 4 (PR-4) |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -66,5 +66,5 @@
   - `src/main/java/me/singingsandhill/calendar/stock/infrastructure/persistence/entity/EntryAttemptJpaEntity.java`
   - `src/main/java/me/singingsandhill/calendar/stock/infrastructure/persistence/repository/EntryAttemptJpaRepository.java`
   - `src/main/java/me/singingsandhill/calendar/stock/infrastructure/persistence/adapter/EntryAttemptRepositoryAdapter.java`
-- 관련 docs: `docs/stock-bot.md` (진입 검증 정책)
-- 관련 커밋: `docs/git_commit.md` Commit 4
+- 관련 docs: `docs/stock/bot.md` (진입 검증 정책)
+- 관련 커밋: `docs/guides/git-commit.md` Commit 4

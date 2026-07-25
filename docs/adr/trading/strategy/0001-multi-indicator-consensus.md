@@ -38,7 +38,7 @@
 | AI 모델 (RNN, Transformer) | 강력 | 학습 데이터/하이퍼파라미터 튜닝 부담, 해석성 ↓ |
 | **(선택) 가중 합산 다지표** | 해석 가능, 단위 테스트 가능 | — |
 
-각 지표의 점수 가중치는 *과거 백테스트* 결과로 결정 (`docs/trading-bot.md` 참조). 새
+각 지표의 점수 가중치는 *과거 백테스트* 결과로 결정 (`docs/trading/bot.md` 참조). 새
 지표 추가 시 가중치 조정 → 회귀 테스트 필수.
 
 ## Consequences — 영향
@@ -58,5 +58,5 @@
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/trading/application/service/SignalService.java`
   - `src/main/java/me/singingsandhill/calendar/trading/application/service/TradingBotService.java`
-- 관련 docs: `docs/trading-bot.md`
+- 관련 docs: `docs/trading/bot.md`
 - 관련 커밋: `git log -1 cbcd9e0`, `git log -1 b09a467`

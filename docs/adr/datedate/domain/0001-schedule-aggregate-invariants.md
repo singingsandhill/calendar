@@ -63,5 +63,5 @@ DDD 의 *애그리거트 = 일관성 경계* 원칙. 외부에서 setter 직접 
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/datedate/domain/schedule/Schedule.java`
   - `src/main/java/me/singingsandhill/calendar/datedate/application/service/ScheduleService.java`
-- 관련 docs: `docs/datedate-architecture-review.md` (E-2-c, E-2-b)
+- 관련 docs: `docs/datedate/architecture-review.md` (E-2-c, E-2-b)
 - 관련 커밋: `git log -1 7012cc0`

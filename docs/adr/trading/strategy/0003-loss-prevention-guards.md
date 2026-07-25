@@ -60,5 +60,5 @@
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/trading/application/service/TradingBotService.java`
   - `src/main/java/me/singingsandhill/calendar/trading/application/service/RiskManagementService.java`
-- 관련 docs: `docs/trading-bot.md` (리스크 관리)
+- 관련 docs: `docs/trading/bot.md` (리스크 관리)
 - 관련 커밋: `git log -1 22471a0`

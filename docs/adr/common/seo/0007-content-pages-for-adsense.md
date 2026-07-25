@@ -59,5 +59,5 @@ AdSense 거절 통보의 핵심 이유는 *thin content* — 폼 + CTA 만 있�
   - `src/main/resources/templates/guide.html`
   - `src/main/resources/templates/use-cases/detail.html`
   - `src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/UseCaseController.java`
-- 관련 docs: `docs/seo-evolution-playbook.md` (콘텐츠 폭발 단계)
+- 관련 docs: `docs/seo/evolution-playbook.md` (콘텐츠 폭발 단계)
 - 관련 커밋: `git log -1 71ab65e`, `git log -1 69b9919`

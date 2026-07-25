@@ -186,7 +186,7 @@
 ### 사용할 수 있는 근거 자료
 - `git log --since=2026-01 --until=2026-05 --oneline` 로 SEO/i18n 커밋과 기능
   커밋의 비율 분석.
-- `docs/seo-evolution-playbook.md` 의 16 단계 타임라인.
+- `docs/seo/evolution-playbook.md` 의 16 단계 타임라인.
 
 ### 원고화 시 주의점
 - “이게 정답이다” 어조 금지. 다른 사이드 프로젝트는 다른 우선순위가 맞을 수
@@ -318,7 +318,7 @@
 ### 관련 커밋 / 파일
 - 커밋 흐름: `cdb552e` (정적 1줄) → `7eda6e2` (동적) → `75fd434` (신뢰도)
   → `c8b970d` (bilingual)
-- 문서: `docs/seo-evolution-playbook.md` 의 *사이트맵 성숙도 모델* (L0~L5)
+- 문서: `docs/seo/evolution-playbook.md` 의 *사이트맵 성숙도 모델* (L0~L5)
 
 ### 당시 제품 문제
 - 사이트맵은 점점 더 많은 의미를 담는다 — *URL 목록* 에서 *변경 신호* 로,
@@ -357,7 +357,7 @@
 - 작은 서비스의 *지도* 는 어떤 모양이어야 하는가?
 
 ### 사용할 수 있는 근거 자료
-- `docs/seo-evolution-playbook.md` 의 사이트맵 성숙도 모델 절.
+- `docs/seo/evolution-playbook.md` 의 사이트맵 성숙도 모델 절.
 - 커밋 흐름 4개 비교.
 
 ### 원고화 시 주의점
@@ -658,7 +658,7 @@
 ### 관련 커밋 / 파일
 - `c8b970d` — `?lang=en` 쿼리 방식 채택
 - 파일: `SeoService.java` 의 `canonicalEn(path)` 헬퍼
-- 문서: `docs/seo-evolution-playbook.md` 의 다국어 URL 의사결정 트리
+- 문서: `docs/seo/evolution-playbook.md` 의 다국어 URL 의사결정 트리
 
 ### 당시 제품 문제
 - 영문 SEO 도입 시 URL 전략 결정 필요:
@@ -693,7 +693,7 @@
 
 ### 사용할 수 있는 근거 자료
 - `SeoService.canonicalEn()` 의 구현.
-- `docs/seo-evolution-playbook.md` 의 URL 전략 의사결정 트리.
+- `docs/seo/evolution-playbook.md` 의 URL 전략 의사결정 트리.
 
 ### 원고화 시 주의점
 - “쿼리 방식이 좋다/나쁘다” 단정 금지. *우리 규모에 맞다* 가 맞는 톤.
@@ -1427,7 +1427,7 @@
 
 ### 사용할 수 있는 근거 자료
 - `docs/adr/` 의 디렉토리 구조.
-- `docs/seo-evolution-playbook.md` 의 16 단계 타임라인.
+- `docs/seo/evolution-playbook.md` 의 16 단계 타임라인.
 - 본 문서 자체가 *플레이북의 재사용* 사례.
 
 ### 원고화 시 주의점
@@ -1694,7 +1694,7 @@
 
 # 부록 B. 기존 회고 시리즈 1편의 비판적 평가 요약
 
-> `docs/seo-product-maker-retrospective-series.md` 1편에 대한 비판적 검토. 본
+> `docs/seo/product-maker-retrospective-series.md` 1편에 대한 비판적 검토. 본
 > 카드 문서를 만든 *재구성의 이유*.
 
 **잘된 부분**

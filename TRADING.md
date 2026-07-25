@@ -5,8 +5,8 @@
 
 | 알고 싶은 것 | 가야 할 곳 |
 |---|---|
-| 코인 봇 8지표 컨센서스 / 리스크 / 리밸런싱 상세 | [`docs/trading-bot.md`](docs/trading-bot.md), [`src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md`](src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md) |
-| 주식 봇 갭&풀백 / TP 비순차화 / 시간 감소 임계 | [`docs/stock-bot.md`](docs/stock-bot.md), [`src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md`](src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md) |
+| 코인 봇 8지표 컨센서스 / 리스크 / 리밸런싱 상세 | [`docs/trading/bot.md`](docs/trading/bot.md), [`src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md`](src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md) |
+| 주식 봇 갭&풀백 / TP 비순차화 / 시간 감소 임계 | [`docs/stock/bot.md`](docs/stock/bot.md), [`src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md`](src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md) |
 | 결정 _왜_ (MA 수렴 억제, 적자 매매 가드, UniverseBuilder, KIS Semaphore 등) | [`docs/adr/trading/`](docs/adr/trading/), [`docs/adr/stock/`](docs/adr/stock/) |
 | 빌드·실행 / 환경변수 / 포트 | [`CLAUDE.md`](CLAUDE.md) |
 

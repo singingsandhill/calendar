@@ -65,4 +65,4 @@ ADR-0003 의 "명시적 create 의도" 원칙과 정확히 일치한다.
   - `src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/OwnerController.java`
   - `src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/OwnerDashboard404IntegrationTest.java`
 - 관련 ADR: [`datedate/domain/0003`](0003-no-auto-create-on-missing-schedule.md) — GET 무변형 원칙의 schedule 단계
-- 관련 docs: `docs/adsense-low-value-content-remediation.md`
+- 관련 docs: `docs/seo/adsense-low-value-content-remediation.md`

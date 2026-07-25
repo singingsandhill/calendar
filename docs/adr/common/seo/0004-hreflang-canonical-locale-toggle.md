@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | common |
 | 관심사 | SEO / i18n |
-| 관련 커밋 | `docs/git_commit.md` Commit 9 |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 9 |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -61,5 +61,5 @@ Google 의 hreflang 권장: 같은 콘텐츠의 다른 언어 변종은 `alterna
   - `src/main/resources/templates/fragments/header.html`
   - `src/main/resources/application.yaml`
   - `.env.example`
-- 관련 docs: `docs/seo-evolution-playbook.md` (i18n SEO 의사결정 트리)
-- 관련 커밋: `docs/git_commit.md` Commit 9
+- 관련 docs: `docs/seo/evolution-playbook.md` (i18n SEO 의사결정 트리)
+- 관련 커밋: `docs/guides/git-commit.md` Commit 9

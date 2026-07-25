@@ -63,4 +63,4 @@ Spring 의 `AcceptHeaderLocaleResolver` 만 사용하면 토글 결과가 페이
   - `src/main/java/me/singingsandhill/calendar/common/infrastructure/config/WebConfig.java`
   - `src/main/resources/messages.properties`
   - `src/main/resources/messages_en.properties`
-- 관련 docs: `CLAUDE.md` (i18n 섹션), `docs/seo-evolution-playbook.md` (i18n 의사결정 트리)
+- 관련 docs: `CLAUDE.md` (i18n 섹션), `docs/seo/evolution-playbook.md` (i18n 의사결정 트리)

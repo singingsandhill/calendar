@@ -6,7 +6,7 @@
 | 날짜 | 2026-05-01 |
 | 도메인 | stock |
 | 관심사 | 알고리즘 / 리스크 |
-| 관련 커밋 | `docs/git_commit.md` Commit 4 (PR-4) |
+| 관련 커밋 | `docs/guides/git-commit.md` Commit 4 (PR-4) |
 | 관련 이슈 | — |
 
 ## Context — 무엇이 문제였나
@@ -42,7 +42,9 @@ TP1/TP2/TP3 를 독립 트리거로 만들고 가장 강한 신호를 즉시 발
 | TP3 단일 청산 | 단순 | TP1/TP2 의 *부분 익절로 평균 진입가 끌어올리기* 전략 사라짐 |
 | **(선택) 독립 트리거, 강한 것 우선 발동** | 익절 누락 0 + 부분 익절 정책 보존 | — |
 
-부분 매도 비율은 각 TP 단계별로 다르게 정의되어 있으므로 (TP1=1/3, TP2=1/3, TP3=잔여)
+부분 매도 비율은 각 TP 단계별로 다르게 정의되어 있으므로
+(운영값 기준 TP1=`exit.tp1-ratio` 0.5 — 진입수량의 50%(잔여수량 캡),
+TP2=`exit.tp2-ratio` 0.6 — 잔여의 60%, TP3=잔여 전량. 초안의 1/3·1/3 은 미채택)
 즉시 TP3 발동 시 잔여 100% 청산 → 최대 익절. TP3 미도달 시 점진적 매도.
 
 ## Consequences — 영향
@@ -64,5 +66,5 @@ TP1/TP2/TP3 를 독립 트리거로 만들고 가장 강한 신호를 즉시 발
   - `src/main/java/me/singingsandhill/calendar/stock/domain/position/StockPosition.java`
   - `src/main/java/me/singingsandhill/calendar/stock/application/service/StockRiskService.java`
   - `src/test/java/me/singingsandhill/calendar/stock/domain/StockPositionTakeProfitTest.java`
-- 관련 docs: `docs/stock-bot.md` (TP1/TP2/TP3 정책)
-- 관련 커밋: `docs/git_commit.md` Commit 4
+- 관련 docs: `docs/stock/bot.md` (TP1/TP2/TP3 정책)
+- 관련 커밋: `docs/guides/git-commit.md` Commit 4

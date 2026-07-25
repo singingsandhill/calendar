@@ -59,5 +59,5 @@
 - 관련 코드:
   - `src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/ScheduleController.java`
   - `src/main/java/me/singingsandhill/calendar/datedate/presentation/interceptor/OwnerPathInterceptor.java`
-- 관련 docs: `docs/datedate-architecture-review.md` (E-1-c GET mutation)
+- 관련 docs: `docs/datedate/architecture-review.md` (E-1-c GET mutation)
 - 관련 커밋: `git log -1 7012cc0`
