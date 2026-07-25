@@ -34,7 +34,7 @@ class StockRiskServiceTimeDecayTest {
 
         Instant fixed = LocalDate.of(2026, 5, 1).atTime(time).atZone(KST).toInstant();
         Clock clock = Clock.fixed(fixed, KST);
-        return new StockRiskService(null, null, null, props, clock);
+        return new StockRiskService(null, null, null, props, clock, null);
     }
 
     private BigDecimal threshold(LocalTime time) throws Exception {

@@ -143,7 +143,8 @@ public class StockRiskService {
         }
         if (position.shouldTp2(currentPrice)) {
             tryFireTp(position, currentPrice, pnlPctWithFee, minProfitPct,
-                position.calculateTp2Quantity(), StockCloseReason.TP2, "TP2");
+                position.calculateTp2Quantity(stockProperties.getExit().getTp2Ratio()),
+                StockCloseReason.TP2, "TP2");
             return;
         }
         if (position.shouldTp1(currentPrice, tp1Percent)) {

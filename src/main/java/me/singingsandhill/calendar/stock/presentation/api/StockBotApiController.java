@@ -31,6 +31,7 @@ public class StockBotApiController {
         return ResponseEntity.ok(new BotStatusResponse(
             status.running(),
             status.paused(),
+            status.recoveryMode(),
             status.watchingCount(),
             status.positionCount(),
             status.tradingPhase(),
@@ -105,6 +106,8 @@ public class StockBotApiController {
     public record BotStatusResponse(
         boolean running,
         boolean paused,
+        /** 보호 전용 복구 모드 (재시작 자동 재개 — 신규 진입 차단 상태) */
+        boolean recoveryMode,
         int watchingCount,
         int positionCount,
         String tradingPhase,
