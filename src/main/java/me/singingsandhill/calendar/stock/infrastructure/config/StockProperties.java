@@ -63,11 +63,11 @@ public class StockProperties {
         private BigDecimal maxPositionSize = new BigDecimal("5000000");
         /**
          * 동작 모드:
-         *   LIVE     : 실주문 (기본값, 신중)
-         *   PAPER    : KIS 시세 사용 + 주문은 인메모리 시뮬레이션
+         *   PAPER    : KIS 시세 사용 + 주문은 인메모리 시뮬레이션 (기본값 — LIVE 는 명시적 opt-in)
+         *   LIVE     : 실주문 (STOCK_BOT_MODE=LIVE 로만 활성화, ADR stock/modes/0002)
          *   BACKTEST : 모든 시세/주문을 시뮬레이션 (히스토리 fixture)
          */
-        private Mode mode = Mode.LIVE;
+        private Mode mode = Mode.PAPER;
 
         public enum Mode { LIVE, PAPER, BACKTEST }
 
@@ -78,7 +78,7 @@ public class StockProperties {
         public BigDecimal getMaxPositionSize() { return maxPositionSize; }
         public void setMaxPositionSize(BigDecimal maxPositionSize) { this.maxPositionSize = maxPositionSize; }
         public Mode getMode() { return mode; }
-        public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.LIVE; }
+        public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.PAPER; }
     }
 
     public static class Screening {
@@ -128,7 +128,17 @@ public class StockProperties {
         private int spreadWeight = 15;
         private int marketCapWeight = 10;
         private BigDecimal minScoreThreshold = new BigDecimal("40");
+        /**
+         * @deprecated 미사용 — 점수 미달 종목을 강제 선정하던 하한이었다. 엣지 없는 날에도
+         * 매일 진입을 시도하게 만들어 제거했다 (ADR stock/algorithm/0008). 키는 하위호환 보존.
+         */
+        @Deprecated
         private int minCandidates = 3;
+        /**
+         * 신호 팩터(갭 점수 + 체결강도 점수) 최소 합. 유동성 팩터(거래대금·스프레드·시총 =
+         * 최대 45점)만으로 총점 임계(40)를 넘기던 왜곡을 막는다.
+         */
+        private BigDecimal signalMinScore = new BigDecimal("25");
         // 정규화 파라미터 (이전 ScreeningService 하드코딩 상수 → 외부화)
         private BigDecimal gapCenter = new BigDecimal("4.0");
         private BigDecimal gapSigma = new BigDecimal("3.0");
@@ -156,8 +166,12 @@ public class StockProperties {
         public void setMarketCapWeight(int marketCapWeight) { this.marketCapWeight = marketCapWeight; }
         public BigDecimal getMinScoreThreshold() { return minScoreThreshold; }
         public void setMinScoreThreshold(BigDecimal minScoreThreshold) { this.minScoreThreshold = minScoreThreshold; }
+        @Deprecated
         public int getMinCandidates() { return minCandidates; }
+        @Deprecated
         public void setMinCandidates(int minCandidates) { this.minCandidates = minCandidates; }
+        public BigDecimal getSignalMinScore() { return signalMinScore; }
+        public void setSignalMinScore(BigDecimal signalMinScore) { this.signalMinScore = signalMinScore; }
         public BigDecimal getGapCenter() { return gapCenter; }
         public void setGapCenter(BigDecimal gapCenter) { this.gapCenter = gapCenter; }
         public BigDecimal getGapSigma() { return gapSigma; }
@@ -234,11 +248,19 @@ public class StockProperties {
 
     public static class Risk {
         private BigDecimal stopLossPercent = new BigDecimal("1.5");
+        /** 풀백저가 아래 버퍼(%) — 손절 앵커 = 풀백저가 × (1 - 이 값) */
+        private BigDecimal pullbackStopBufferPercent = new BigDecimal("1.0");
+        /** 진입가 대비 최대 손실률(%) — 풀백 앵커가 이보다 벌어지면 캡으로 제한 */
+        private BigDecimal maxStopLossPercent = new BigDecimal("2.0");
         private BigDecimal trailingStopPercent = new BigDecimal("0.8");
         private BigDecimal positionSizeRatio = new BigDecimal("0.1");
         private BigDecimal commissionRate = new BigDecimal("0.00015");    // 증권사 수수료 0.015%
-        private BigDecimal sellTaxRate = new BigDecimal("0.0023");        // 거래세+농특세 0.23%
-        private BigDecimal slippageBuffer = new BigDecimal("0.002");      // 슬리피지 0.2%
+        /**
+         * 매도측 세금 (2026-01-01 이후 양도분): 코스피 = 증권거래세 0.05% + 농특세 0.15%,
+         * 코스닥·K-OTC = 0.20%(농특세 없음) → 두 시장 모두 0.20%.
+         */
+        private BigDecimal sellTaxRate = new BigDecimal("0.0020");
+        private BigDecimal slippageBuffer = new BigDecimal("0.002");      // 시장가 왕복 슬리피지 0.2%
         private BigDecimal minProfitThreshold = new BigDecimal("0.005");  // 최소 수익률 0.5%
         private boolean timeDecayEnabled = true;
         private BigDecimal minProfitThresholdLate = new BigDecimal("0.001");  // 장 후반 0.1%
@@ -248,8 +270,22 @@ public class StockProperties {
             return commissionRate.multiply(new BigDecimal("2")).add(sellTaxRate);
         }
 
+        /**
+         * 실효 청산 비용률 = 왕복 수수료·세금 + 시장가 슬리피지.
+         *
+         * 모든 주문이 시장가라 체결가가 판단 시점 시세에서 밀린다. 익절 게이트가 이 비용을
+         * 넘지 못하면 명목상 이익이어도 실제로는 순손실이다 (2026-07-24 리뷰 §4 / P2-1).
+         */
+        public BigDecimal getEffectiveExitCostRate() {
+            return getRoundTripFeeRate().add(slippageBuffer != null ? slippageBuffer : BigDecimal.ZERO);
+        }
+
         public BigDecimal getStopLossPercent() { return stopLossPercent; }
         public void setStopLossPercent(BigDecimal stopLossPercent) { this.stopLossPercent = stopLossPercent; }
+        public BigDecimal getPullbackStopBufferPercent() { return pullbackStopBufferPercent; }
+        public void setPullbackStopBufferPercent(BigDecimal v) { this.pullbackStopBufferPercent = v; }
+        public BigDecimal getMaxStopLossPercent() { return maxStopLossPercent; }
+        public void setMaxStopLossPercent(BigDecimal v) { this.maxStopLossPercent = v; }
         public BigDecimal getTrailingStopPercent() { return trailingStopPercent; }
         public void setTrailingStopPercent(BigDecimal trailingStopPercent) { this.trailingStopPercent = trailingStopPercent; }
         public BigDecimal getPositionSizeRatio() { return positionSizeRatio; }

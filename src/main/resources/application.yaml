@@ -215,6 +215,8 @@ stock:
     to: ${STOCK_MAIL_TO:}
   bot:
     enabled: ${STOCK_BOT_ENABLED:false}
+    # 실주문은 명시적 opt-in: 서버 환경변수 STOCK_BOT_MODE=LIVE 로만 활성화 (ADR stock/modes/0002)
+    mode: ${STOCK_BOT_MODE:PAPER}
     max-positions: 5
     max-position-size: 5000000
   screening:
@@ -235,6 +237,9 @@ stock:
     spread-weight: 15
     market-cap-weight: 10
     min-score-threshold: 40
+    # 신호 팩터(갭 점수 + 체결강도 점수) 최소 합 — 유동성 팩터(최대 45점)만으로 총점 임계를
+    # 넘기던 왜곡 차단 (ADR stock/algorithm/0008). min-candidates 강제 선정은 제거됨(키만 보존).
+    signal-min-score: 25
     min-candidates: 3
   entry:
     high-threshold-percent: 1.5
@@ -251,9 +256,15 @@ stock:
     tp1-ratio: 0.5
     tp2-ratio: 0.6
     tp3-percent: 10.0
-    final-exit-time: "15:20"
+    # 최종청산 cron(StockTradingScheduler 0 20 11)과 동일해야 한다. 어긋나면 11:20 강제청산
+    # 후에도 트레이딩 루프 가드가 열려 있어 재진입할 수 있다 (2026-07 드리프트 사고).
+    final-exit-time: "11:20"
   risk:
+    # 손절: 풀백저가 앵커(진입 근거 무효화 지점) + 진입가 대비 최대 손실 캡 (ADR stock/algorithm/0007).
+    # stop-loss-percent 는 레거시 키 — 현재 손절 계산은 아래 두 값만 사용.
     stop-loss-percent: 5.0
+    pullback-stop-buffer-percent: 1.0
+    max-stop-loss-percent: 2.0
     trailing-stop-percent: 3.8
     position-size-ratio: 0.1
     time-decay-enabled: true
