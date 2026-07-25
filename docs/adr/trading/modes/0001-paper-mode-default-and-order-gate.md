@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 단, **기본값 LIVE 결정은 [0002](0002-paper-default-mode.md) 로 Superseded** (모드 게이트 구조는 유효) |
 | 날짜 | 2026-05-30 |
 | 도메인 | trading (코인) |
 | 관심사 | 모드 / 실행 안전 |

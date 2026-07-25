@@ -52,14 +52,18 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 > [`docs/adr/trading/risk/0001`](../../../../../../../docs/adr/trading/risk/0001-circuit-breaker-daily-and-consecutive-loss.md).
 > 전체 진단·로드맵: [`docs/audit/coin-trading-profit-audit-2026-05-30.md`](../../../../../../../docs/audit/coin-trading-profit-audit-2026-05-30.md).
 
-- **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — 기본 **LIVE**(기존 운영 동작 유지). LIVE 가
-  아니면 `BithumbApiClient` 의 시장가 주문이 실주문 대신 현재가 기반 인메모리 체결
-  (`simulateOrder`)을 반환. 파라미터/로직 변경 검증은 `TRADING_BOT_MODE=PAPER` 권장.
+- **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — **기본 PAPER**, 실주문은 서버 환경변수
+  `TRADING_BOT_MODE=LIVE` 로만 opt-in ([ADR modes/0002](../../../../../../../docs/adr/trading/modes/0002-paper-default-mode.md)).
+  LIVE 가 아니면 `BithumbApiClient` 의 시장가 주문이 실주문 대신 현재가 기반 인메모리
+  체결(`simulateBuy`/`simulateSell`)을 반환. `TradingProperties` 의 Risk/Bot/Rebalancing
+  Java 기본값은 yaml 운영값과 정합 (P1-9 — 키 누락 시 구식 고위험 파라미터 회귀 방지).
 - **서킷브레이커 (`TradingCircuitBreaker`)** — 연속 손실 `maxConsecutiveLosses`(기본 3)
   또는 당일 실현손익 ≤ `maxDailyLossPct`(기본 -5%) 시 신규 BUY 차단(리스크 청산은 허용).
   `circuitBreakerEnabled` 로 on/off.
 - **스케줄러 풀** — `spring.task.scheduling.pool.size=4` 로 트레이딩 루프와 캔들 동기화/
   요약 잡 병렬화(느린 루프가 다른 잡을 굶기지 않도록).
+  ⚠️ `trading.bot.enabled=false` 는 `executeTradeLoop`·`syncCandles`·계좌 스냅샷·일일 요약만
+  막는다. **`CandleScheduler.cleanupOldCandles()`(자정 캔들 정리)는 가드가 없어 항상 실행**된다.
 - **트랜잭션 경계 (P0-3)** — `TradingBotService` 는 `@Transactional` 을 제거하고 주문
   HTTP/sleep 을 트랜잭션 밖에서 수행, `Trade`+`Position` 영속화만 `TransactionTemplate`
   로 원자적 저장. P0-3b 로 `RiskManagementService`/`RebalanceService` 청산·매수 경로에도
@@ -84,3 +88,37 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 - **포지션 리스크 가드 (P2)** — `maxHoldMinutes`(360) 정체 포지션 손익분기 이상이면
   `TIME_EXIT` 청산 / `blockAveragingDown`(true) 손실 포지션 보유 중 추가 매수 차단 /
   `maxCoinExposurePct`(0.8) 코인 비중 상한 초과 시 신규 매수 스킵 [ADR risk/0003].
+- **수동매매 정합 + 엔진 핑퐁 방지** ([ADR risk/0004](../../../../../../../docs/adr/trading/risk/0004-manual-trade-position-consistency-and-engine-coordination.md)) —
+  `manualBuy` 는 `Trade` 만 저장하고 Position 을 만들지 않아 그 코인이 SL/TP 무보호 +
+  리스크 루프에 비가시였고, `manualSell` 은 OPEN Position 을 닫지 않아 추적 Position ↔
+  실잔고가 드리프트(이미 판 코인을 유령 포지션으로 재매도 시도)했다 → 양쪽 모두 정합 처리.
+  신호 매매가 `lastRebalanceTime` 을 갱신하지 않아 직후 틱에 리밸런스가 발화하던
+  **엔진 핑퐁**(레그마다 taker 수수료)도 함께 차단. 위 P2-9 쿨다운 상향도 같은 ADR.
+- **지표 계산 세부** — `excludeFormingCandle`(**기본 OFF**, `TradingProperties:142`)은 형성 중
+  (index 0) 봉을 모든 지표·다이버전스 입력에서 제외할지 결정 → 켜면 룩어헤드/리페인트가
+  사라지지만 신호 타이밍이 한 봉 늦는다 ([ADR strategy/0009](../../../../../../../docs/adr/trading/strategy/0009-exclude-forming-candle.md)).
+  그 외 지표 정련: Wilder RSI ([0006](../../../../../../../docs/adr/trading/strategy/0006-wilder-rsi.md)),
+  다이버전스 피벗 강화 ([0007](../../../../../../../docs/adr/trading/strategy/0007-divergence-pivot-strengthening.md)),
+  Slow Stoch·RSI 추세 잡음 감소 ([0008](../../../../../../../docs/adr/trading/strategy/0008-indicator-noise-reduction.md)).
+
+## Presentation (`/api/trading/**` · `/trading*`)
+
+전부 `ROLE_ADMIN` (ADR common/security/0003) 이지만 표면이 넓다 — 봇을 정지시켜도 막히지
+않는 주문 경로가 있으므로 주의.
+
+| 컨트롤러 | 경로 | 비고 |
+|---|---|---|
+| `BotControlApiController` | `/api/trading/bot` — status·start·stop·pause·resume·**manual/buy**·**manual/sell**·emergency-close | 수동매매는 ADR risk/0004 정합 경로 |
+| `TradingVerificationApiController` | `/api/trading/verify` — config·price·balance·**`POST /test-order`**·trades/recent·positions/recent·full | ⚠️ 아래 경고 |
+| `ChartApiController` | `/api/trading` — candles·ticker·chart/trades | |
+| `TradeApiController` | `/api/trading` — trades·profit/summary·today·profit/daily·positions | |
+| `RebalanceApiController` | `/api/trading/rebalance` — status·execute | |
+| `TradingEventApiController` | `/api/trading/events` | |
+| `TradingDashboardController` | `/trading`, `/trades`, `/settings`, `/portfolio`, `/verify` (Thymeleaf) | |
+
+⚠️ **`POST /api/trading/verify/test-order`** — API 검증용으로 시장가 매수를 1회 전송한다
+(기본 5,500원, 최소 5,000원, `immediatelySell=true` 면 즉시 반대매매로 원상복구).
+주문 자체는 `placeMarketBuyOrder` 를 타므로 **모드 가드는 적용**되지만(PAPER 면 가상체결),
+**`bot.enabled` 와 서킷브레이커는 우회**한다 — 즉 봇을 정지·비활성화한 상태에서도 LIVE
+모드면 실주문이 나간다. 차단 조건은 API 키 설정 여부와 잔고뿐
+(`TradingVerificationApiController:197-266`).

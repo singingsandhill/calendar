@@ -86,18 +86,18 @@ public class TradingProperties {
         private double orderRatio = 0.25;
         private double orderRatioMin = 0.15;  // 변동성 높을 때 최소 비율
         private double orderRatioMax = 0.35;  // 변동성 낮을 때 최대 비율
-        private long signalCooldownMinutes = 10;  // 매매 간 최소 간격 (휩소 방지)
-        private long minHoldingMinutes = 15;      // 포지션 최소 보유 시간
+        private long signalCooldownMinutes = 30;  // 매매 간 최소 간격 (휩소 방지, P2-9: yaml 운영값과 정합)
+        private long minHoldingMinutes = 30;      // 포지션 최소 보유 시간 (P2-9: yaml 운영값과 정합)
         private long maxHoldMinutes = 360;        // P2-8: 정체 포지션 최대 보유(분). 초과+손익분기 이상이면 청산. 0=비활성
         private double maxCoinExposurePct = 0.8;  // P2-12: 코인 노출 상한(총자본 대비). 초과 시 신규 매수 스킵. 0=비활성
         private boolean blockAveragingDown = true;// P2-10: 손실 포지션 보유 중 추가 매수 차단(물타기 방지)
-        private Mode mode = Mode.LIVE;             // 운영 모드. LIVE 가 아니면 실주문 대신 인메모리 시뮬레이션 (P0-1)
+        private Mode mode = Mode.PAPER;            // 운영 모드. LIVE 는 TRADING_BOT_MODE=LIVE 명시적 opt-in (ADR modes/0002)
 
         /**
          * 봇 운영 모드.
-         * - LIVE: 실제 Bithumb 주문 전송 (기본값 — 기존 운영 동작 유지)
-         * - PAPER: 실주문 없이 현재가 기반 인메모리 체결 시뮬레이션 (파라미터 검증 권장 모드)
-         * - BACKTEST: 저장된 캔들 리플레이용 (PAPER 와 동일하게 실주문 차단)
+         * - PAPER: 실주문 없이 현재가 기반 인메모리 체결 시뮬레이션 (기본값 — LIVE 는 명시적 opt-in)
+         * - LIVE: 실제 Bithumb 주문 전송 (TRADING_BOT_MODE=LIVE 로만 활성화, ADR trading/modes/0002)
+         * - BACKTEST: 저장된 캔들 리플레이용 (현재 PAPER 와 동일하게 실주문만 차단 — 리플레이 미구현)
          */
         public enum Mode { LIVE, PAPER, BACKTEST }
 
@@ -124,7 +124,7 @@ public class TradingProperties {
         public boolean isBlockAveragingDown() { return blockAveragingDown; }
         public void setBlockAveragingDown(boolean blockAveragingDown) { this.blockAveragingDown = blockAveragingDown; }
         public Mode getMode() { return mode; }
-        public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.LIVE; }
+        public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.PAPER; }
     }
 
     public static class Indicators {
@@ -208,10 +208,12 @@ public class TradingProperties {
     }
 
     public static class Risk {
-        private double stopLoss = -0.03;
-        private double takeProfit = 0.15;
-        private double trailingStop = 0.03;
-        private double trailingActivation = 0.10;
+        // P1-9: 기본값은 application.yaml 운영값과 동일하게 유지한다 — yaml 키 하나가 누락되면
+        // 과거 미검증 파라미터(-3%/+15%/-3%/+10%)로 조용히 회귀하던 사고 방지.
+        private double stopLoss = -0.015;          // P1-1: TP +3% 와 1:2 R:R
+        private double takeProfit = 0.03;          // P1-2: 1분봉 인트라데이 실현 가능 익절
+        private double trailingStop = 0.008;       // P1-2: 트레일링을 주 승자 출구로
+        private double trailingActivation = 0.015; // P1-2: 의미있는 이익에서 활성화
         private double takerFeeRate = 0.0025;        // 0.25% Bithumb taker fee (maker 동일; 0.04% 쿠폰 보유 시 0.0004 로 설정)
         private double minProfitThreshold = 0.001;   // P1-8: 순수 net 마진 0.1%. 왕복 수수료/슬리피지는 PnL(calculateUnrealizedPnlPctWithFee)에서 이미 차감 → 이중계상 제거
         private double strongSignalMaxLoss = -0.02;  // 강한 신호 매도 시 최대 허용 손실률 -2%
@@ -254,7 +256,7 @@ public class TradingProperties {
         private double minOrderAmount = 5000.0;          // 최소 주문 금액 (KRW)
         private double slippageBuffer = 0.005;           // 0.5% 슬리피지 버퍼
         private boolean skipWhenDataInsufficient = true; // MA60 데이터 부족 시 스킵
-        private double minSellPnlPct = 0.03;             // 리밸런싱 매도 최소 손익률 3% (최소 수익 보장)
+        private double minSellPnlPct = 0.0;              // P1-4: 리밸런싱 매도는 손익 ≥ 0% 일 때만 (yaml 운영값과 정합, ADR risk/0002)
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
