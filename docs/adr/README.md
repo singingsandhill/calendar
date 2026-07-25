@@ -18,11 +18,11 @@
 | **common**   | — | — | — | 7 | 3 | — | — | — | 6 | 16 |
 | **datedate** | 6 | — | 6 | — | — | — | — | — | — | 12 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
-| **trading**  | — | 3 | — | — | — | — | 14 | 1 | — | 18 |
-| **stock**    | — | 6 (동시성 포함) | — | — | — | 2 | 8 | 3 | — | 19 |
-| **합계** | 8 | 9 | 6 | 7 | 3 | 2 | 22 | 4 | 6 | **67** |
+| **trading**  | — | 3 | — | — | — | — | 14 | 2 | — | 19 |
+| **stock**    | — | 6 (동시성 포함) | — | — | — | 2 | 9 | 3 | — | 20 |
+| **합계** | 8 | 9 | 6 | 7 | 3 | 2 | 23 | 5 | 6 | **69** |
 
-총 **67개 ADR**.
+총 **69개 ADR**.
 
 ---
 
@@ -81,6 +81,7 @@
 | 2026-05-30 | trading/strategy | [0008 지표 잡음 감소(Slow Stoch/RSI추세)](trading/strategy/0008-indicator-noise-reduction.md) | 수익성 감사 P2-5/P2-6 |
 | 2026-05-30 | trading/strategy | [0009 형성봉 제외(기본 OFF)](trading/strategy/0009-exclude-forming-candle.md) | 수익성 감사 P2-2 — 룩어헤드/리페인트 |
 | 2026-05-30 | trading/strategy | [0010 모멘텀 가중 하향](trading/strategy/0010-momentum-weight-reduction.md) | 수익성 감사 P2-7 — ADR-0001 ±135 정련 |
+| 2026-06-07 | common/security | [0002 앱인토스 미니앱용 /api CORS 허용](common/security/0002-cors-for-apps-in-toss-miniapp.md) | 미니앱(별도 origin) fetch 가 preflight 에서 차단 |
 | 2026-06-11 | datedate/domain | [0004 GET owner 자동 생성 제거 → 404 + 빈 대시보드](datedate/domain/0004-no-owner-auto-create-on-get-dashboard.md) | AdSense 재심사 감사 — 소프트 404 / GET mutation |
 | 2026-07-06 | common/security | [0003 트레이딩 제어·실주문 API 관리자 전용](common/security/0003-admin-only-trading-control-api.md) | 운영 리뷰 P0-1 — 무인증 실주문 API 노출 |
 | 2026-07-08 | trading/infrastructure | [0002 주문 선영속화 + 틱 스윕 + Position 생성](trading/infrastructure/0002-order-pre-persistence-and-tick-sweep.md) | 운영 리뷰 §8-B — 응답 유실 시 무보호 포지션 |
@@ -97,6 +98,8 @@
 | 2026-07-24 | stock/modes | [0003 보호 전용 복구 + 최종청산 재시도·알림](stock/modes/0003-protection-only-recovery-on-restart.md) | 로직 리뷰 P1-5/6 — 재시작 시 보호 상실·청산 원샷 |
 | 2026-07-24 | stock/algorithm | [0008 선정 규칙 강화 · 비용 모델 정정 · 거래정지 가드](stock/algorithm/0008-screening-selection-and-cost-model.md) | 로직 리뷰 P2-1/2/3 — 강제 선정·점수 왜곡·세율 오차·VI 무방비 |
 | 2026-07-24 | stock/observability | [0002 일일 실적 요약 리포트](stock/observability/0002-daily-performance-report.md) | 로직 리뷰 P2-5 — PAPER 실측 데이터원 |
+| 2026-07-25 | stock/algorithm | [0009 진입 풀백 하한·트레일링 비용 정합](stock/algorithm/0009-entry-floor-and-trailing-cost-alignment.md) | 수익성 검사 — 얕은 풀백 익절 불가·트레일링 본전 퇴화 |
+| 2026-07-25 | trading/modes | [0002 PAPER 기본 모드 전환](trading/modes/0002-paper-default-mode.md) | 수익성 검사 + 운영 감사 P1-8 — fail-dangerous 기본값 |
 
 ---
 
@@ -111,13 +114,13 @@
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
-- [trading/modes/](trading/modes/) — 1 ADR
+- [trading/modes/](trading/modes/) — 2 ADRs
 - [trading/risk/](trading/risk/) — 4 ADRs
 - [trading/infrastructure/](trading/infrastructure/) — 3 ADRs
-- [stock/algorithm/](stock/algorithm/) — 6 ADRs
-- [stock/infrastructure/](stock/infrastructure/) — 4 ADRs
-- [stock/modes/](stock/modes/) — 1 ADR
-- [stock/observability/](stock/observability/) — 1 ADR
+- [stock/algorithm/](stock/algorithm/) — 9 ADRs
+- [stock/infrastructure/](stock/infrastructure/) — 6 ADRs
+- [stock/modes/](stock/modes/) — 3 ADRs
+- [stock/observability/](stock/observability/) — 2 ADRs
 
 ---
 

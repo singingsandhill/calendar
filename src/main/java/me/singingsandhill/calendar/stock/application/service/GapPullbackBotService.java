@@ -8,10 +8,13 @@ import me.singingsandhill.calendar.stock.infrastructure.api.KoreaInvestmentApiCl
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Closeable;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,6 +41,11 @@ public class GapPullbackBotService {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean paused = new AtomicBoolean(false);
+    /**
+     * 보호 전용 복구 모드 — 재시작 시 오픈 포지션이 있어 자동 재개된 상태.
+     * 리스크 루프·시간청산은 돌지만 신규 진입은 차단한다 (2026-07-24 리뷰 §6 / P1-5).
+     */
+    private final AtomicBoolean recoveryMode = new AtomicBoolean(false);
 
     private final ScreeningService screeningService;
     private final PullbackDetectionService pullbackDetectionService;
@@ -48,6 +56,7 @@ public class GapPullbackBotService {
     private final StockMailService mailService;
     private final StockBotMetrics metrics;
     private final UniverseBuilder universeBuilder;
+    private final Clock clock;
 
     private LocalDateTime startedAt;
     private LocalDate currentTradingDate;
@@ -60,7 +69,8 @@ public class GapPullbackBotService {
                                   StockProperties stockProperties,
                                   StockMailService mailService,
                                   StockBotMetrics metrics,
-                                  UniverseBuilder universeBuilder) {
+                                  UniverseBuilder universeBuilder,
+                                  Clock clock) {
         this.screeningService = screeningService;
         this.pullbackDetectionService = pullbackDetectionService;
         this.positionService = positionService;
@@ -70,6 +80,36 @@ public class GapPullbackBotService {
         this.mailService = mailService;
         this.metrics = metrics;
         this.universeBuilder = universeBuilder;
+        this.clock = clock;
+    }
+
+    /**
+     * 기동 시 보호 전용 자동 재개 — 오픈 포지션이 있는데 봇이 멈춰 있으면 손절·트레일링·
+     * 11:20 강제청산이 전부 죽는다. 리스크 루프만 살리고 신규 진입은 차단한다.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void resumeProtectionOnStartup() {
+        if (!stockProperties.getBot().isEnabled() || running.get()) {
+            return;
+        }
+        LocalDate today = LocalDate.now(clock);
+        int openPositions = positionService.countOpenPositions(today);
+        if (openPositions == 0) {
+            return;
+        }
+
+        running.set(true);
+        paused.set(false);
+        recoveryMode.set(true);
+        currentTradingDate = today;
+        startedAt = LocalDateTime.now(clock);
+
+        log.warn("오픈 포지션 {}건 발견 — 보호 전용 모드로 자동 재개 (리스크 관리·시간청산만, "
+            + "신규 진입은 관리자 start() 필요)", openPositions);
+        TradeEvents.event("RECOVERY_RESUMED")
+            .with("tradingDate", today)
+            .with("openPositions", openPositions)
+            .log();
     }
 
     // ========== Bot Lifecycle ==========
@@ -90,8 +130,9 @@ public class GapPullbackBotService {
 
         running.set(true);
         paused.set(false);
-        startedAt = LocalDateTime.now();
-        currentTradingDate = LocalDate.now(KST);
+        recoveryMode.set(false); // 관리자가 명시적으로 시작 → 신규 진입까지 완전 재개
+        startedAt = LocalDateTime.now(clock);
+        currentTradingDate = LocalDate.now(clock);
 
         log.info("Gap & Pullback bot started at {}", startedAt);
         return true;
@@ -144,7 +185,7 @@ public class GapPullbackBotService {
      * 봇 상태 조회
      */
     public BotStatus getStatus() {
-        LocalDate today = LocalDate.now(KST);
+        LocalDate today = LocalDate.now(clock);
         int watchingCount = 0;
         int positionCount = 0;
 
@@ -160,6 +201,7 @@ public class GapPullbackBotService {
         return new BotStatus(
             running.get(),
             paused.get(),
+            recoveryMode.get(),
             watchingCount,
             positionCount,
             getTradingPhase(),
@@ -181,7 +223,7 @@ public class GapPullbackBotService {
             return "PAUSED";
         }
 
-        LocalTime now = LocalTime.now(KST);
+        LocalTime now = LocalTime.now(clock);
         LocalTime preMarket = LocalTime.parse(stockProperties.getTrading().getPreMarketStart());
         LocalTime marketOpen = LocalTime.parse(stockProperties.getTrading().getMarketOpen());
         LocalTime screeningEnd = LocalTime.parse(stockProperties.getTrading().getTradingLoopStart());
@@ -217,7 +259,7 @@ public class GapPullbackBotService {
         }
 
         log.info("Executing pre-market loop");
-        currentTradingDate = LocalDate.now(KST);
+        currentTradingDate = LocalDate.now(clock);
 
         // 그날의 유니버스를 미리 빌드해 캐시.
         UniverseBuilder.Snapshot universe = universeBuilder.refresh(currentTradingDate);
@@ -237,7 +279,8 @@ public class GapPullbackBotService {
         try (Closeable ignored = TradeEvents.tradingDate(currentTradingDate)) {
             log.info("Executing screening loop");
 
-            UniverseBuilder.Snapshot universe = universeBuilder.currentUniverse(currentTradingDate);
+            // 08:30 스냅샷이 폴백 전용(rank=0)이면 장중 거래량이 쌓인 지금 거래량순위를 재시도.
+            UniverseBuilder.Snapshot universe = universeBuilder.refreshIfDegraded(currentTradingDate);
             List<String> stockCodes = universe.codes();
             if (stockCodes.isEmpty()) {
                 log.warn("Universe is empty - no stocks to screen. Check stock.universe.* config.");
@@ -276,7 +319,7 @@ public class GapPullbackBotService {
             return;
         }
 
-        LocalTime now = LocalTime.now(KST);
+        LocalTime now = LocalTime.now(clock);
         LocalTime screeningEnd = LocalTime.parse(stockProperties.getTrading().getTradingLoopStart());
         LocalTime finalExit = LocalTime.parse(stockProperties.getExit().getFinalExitTime());
 
@@ -288,14 +331,25 @@ public class GapPullbackBotService {
             metrics.recordTradingTick();
             log.debug("Executing trading loop at {}", now);
 
+            // 0. 미확인 주문 스윕 (고아 체결 → 무보호 포지션 제거). 실패해도 리스크 체크는 진행.
+            try {
+                positionService.reconcileUnconfirmedOrders(currentTradingDate);
+            } catch (Exception e) {
+                log.warn("미확인 주문 스윕 실패: {}", e.getMessage());
+            }
+
             // 1. 리스크 관리 (손절/익절/트레일링)
             riskService.checkAndExecuteRiskRules(currentTradingDate);
 
             // 2. 상태 머신 업데이트
             pullbackDetectionService.updateAllStockStates(currentTradingDate);
 
-            // 3. 진입 실행
-            executeEntries();
+            // 3. 진입 실행 — 보호 전용 복구 모드에서는 신규 진입 차단
+            if (recoveryMode.get()) {
+                log.debug("복구 모드 — 신규 진입 스킵 (보호 로직만 동작)");
+            } else {
+                executeEntries();
+            }
         } catch (java.io.IOException e) {
             log.error("Closeable failure (should not happen): {}", e.getMessage());
         }
@@ -376,6 +430,7 @@ public class GapPullbackBotService {
     public record BotStatus(
         boolean running,
         boolean paused,
+        boolean recoveryMode,
         int watchingCount,
         int positionCount,
         String tradingPhase,

@@ -92,6 +92,26 @@ public class UniverseBuilder {
     }
 
     /**
+     * 스크리닝 시점(09:20) 재조회: 스냅샷이 rank=0 폴백 전용이면 거래량순위를 다시 시도한다.
+     *
+     * 08:30 pre-market 에는 당일 거래량이 없어 거래량순위가 0건이므로 (운영 로그
+     * "Volume-rank returned 0 codes" 매일 반복), 장 시작 후 20분치 거래량이 쌓인 스크리닝
+     * 시점에 재조회해야 동적 유니버스가 실제로 동작한다. rank 가 이미 있으면 기존 스냅샷을
+     * 유지해 "거래일 1회 스냅샷" 정합성(ADR-0002)을 지킨다.
+     */
+    public Snapshot refreshIfDegraded(LocalDate tradingDate) {
+        Snapshot s = latest.get();
+        if (s == null || !s.tradingDate.equals(tradingDate) || s.codes.isEmpty()) {
+            return refresh(tradingDate);
+        }
+        if (s.rankApi == 0 && stockProperties.getUniverse().getRankApiTop() > 0) {
+            log.info("Universe snapshot is fallback-only (rank=0) — retrying volume-rank at screening time");
+            return refresh(tradingDate);
+        }
+        return s;
+    }
+
+    /**
      * 캐시된 유니버스 (없으면 즉시 refresh).
      */
     public Snapshot currentUniverse(LocalDate tradingDate) {

@@ -19,29 +19,36 @@ Gap & Pullback trading bot for Korean stocks via Korea Investment Securities API
 
 ## State Machine
 
-임계는 모두 `application.yaml` 의 `stock.entry.*` 운영값 (괄호는 Java 기본값):
+임계는 모두 `application.yaml` 의 `stock.entry.*` 운영값 (Java 기본값도 동일하게 정합 —
+yaml 키 누락 시 구식 값 회귀 방지):
 
 ```
 WATCHING      -> Price >= Open x (1 + high-threshold-percent: 1.5%)      -> HIGH_FORMED
-HIGH_FORMED   -> Price <= High x (1 - pullback-min-percent:  1.0%)       -> PULLBACK
+HIGH_FORMED   -> Price <= High x (1 - pullback-min-percent:  1.5%)       -> PULLBACK
 PULLBACK      -> Price >= PullbackLow x (1 + bounce-threshold-percent: 0.2%) -> ENTRY_READY
-                 (+ 진입 검증 2/3 통과 — 체결강도·호가 불균형·풀백 지속 3~15분)
+                 (+ 진입 검증 2/3 통과 — 체결강도·호가 불균형·풀백 지속 3~15분,
+                    풀백 시작시각 미기록은 FAIL — 데이터 부족 ≠ 통과)
 ENTRY_READY   -> Buy order executed                                      -> ENTERED
 ENTERED       -> All exits completed                                     -> EXITED
 
 PULLBACK      -> Price < High x (1 - pullback-max-percent: 5.0%)         -> FILTERED_OUT (too deep)
 ```
 
+풀백 하한 1.5% 근거: 1.0~1.3% 얕은 풀백은 TP2 기대 이득이 비용 게이트(실효 0.43% +
+시간감쇠 최소수익)를 못 넘어 구조적으로 익절 불가 ([ADR 0009](../../../../../../../docs/adr/stock/algorithm/0009-entry-floor-and-trailing-cost-alignment.md)).
+
 ## Exit Rules (operating values from `application.yaml`)
 
-| Type | Condition (yaml) | Java default | Action |
-|------|----|----|----|
-| Stop Loss | `max(PullbackLow × (1 - risk.pullback-stop-buffer-percent: 1.0%), Entry × (1 - risk.max-stop-loss-percent: 2.0%))` — 통상 진입가 대비 약 -1.2% | (same) | Sell 100% |
-| TP1 | `entry.tp1-percent: 5.0` (Entry +5%) | +1.5% | Sell `tp1-ratio: 0.5` (진입수량의 50%, 잔여수량 캡) |
-| TP2 | Price >= DayHigh | (same) | Sell `tp2-ratio: 0.6` (60% remaining) |
-| TP3 | `entry.tp3-percent: 10.0` (**Entry** +10%) | +1.0% | Sell remaining |
-| Trailing | `risk.trailing-stop-percent: 3.8` (-3.8% from high, 손익분기 하한) | -0.8% | Sell remaining |
-| Time Exit | Time >= 11:20 KST (종목당 3회 재시도, 실패 시 메일 알림) | (same) | Sell 100% |
+| Type | Condition (yaml = Java default) | Action |
+|------|----|----|
+| Stop Loss | `max(PullbackLow × (1 - risk.pullback-stop-buffer-percent: 1.0%), Entry × (1 - risk.max-stop-loss-percent: 2.0%))` — 통상 진입가 대비 약 -1.2% | Sell 100% |
+| TP1 | `entry.tp1-percent: 5.0` (Entry +5%) | Sell `tp1-ratio: 0.5` (진입수량의 50%, 잔여수량 캡) |
+| TP2 | Price >= DayHigh | Sell `tp2-ratio: 0.6` (잔여의 60%, 설정값 사용) |
+| TP3 | `entry.tp3-percent: 10.0` (**Entry** +10%) | Sell remaining |
+| Trailing | `risk.trailing-stop-percent: 2.0` (-2.0% from high, 손익분기 하한 — 3.8% 는 본전 스탑으로 퇴화해 축소, [ADR 0009](../../../../../../../docs/adr/stock/algorithm/0009-entry-floor-and-trailing-cost-alignment.md)) | Sell remaining |
+| Time Exit | Time >= 11:20 KST (종목당 3회 재시도, 실패 시 메일 알림) | Sell 100% |
+
+매도 원장(`StockTrade.fee`)에도 매도 비용(수수료+거래세)이 기록된다 — 포지션 손익과 동일 비용 모델.
 
 TP1·TP2·TP3 는 *독립 트리거* (선행 의존 제거). 강한 트리거 우선 발동.
 **앵커는 모두 고정값** — 손절은 풀백저가(진입 근거), TP1·TP3 는 진입가, TP2 는 당일고가.
@@ -52,6 +59,19 @@ TP1·TP2·TP3 는 *독립 트리거* (선행 의존 제거). 강한 트리거 �
 Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (09:10) to
 0.1% (15:15), making TP triggers easier to hit later in the session. `Clock` 빈으로 시간
 의존 코드 결정성 테스트 가능.
+
+**TP 순이익 게이트 (TP1·TP2·TP3 공통):** 위 표의 가격 조건이 충족돼도 그것만으로 익절되지
+않는다. `tryFireTp` 가 `수수료차감 손익률 − 슬리피지 ≥ 시간감쇠 최소수익` 을 확인하고
+미달이면 발동을 **건너뛴다** — **TP2(당일고가 도달)도 예외가 아니다**
+(`StockRiskService:128-170`). 즉 가격 트리거는 필요조건일 뿐이고, 실제 발동 여부는 비용
+차감 후 순이익이 결정한다.
+
+**비용 모델** (`StockProperties.Risk`) — 위 "실효 0.43%" 의 구성:
+수수료 `commission-rate` 0.015% × 2(왕복) + 매도 거래세 `sell-tax-rate` 0.20%
+= 왕복 수수료 0.23%, 여기에 시장가 슬리피지 `slippage-buffer` 0.2% 를 더한
+`getEffectiveExitCostRate()` = **0.43%**. 이 값이 트레일링 손익분기 하한이자 위 순이익
+게이트의 비용 기준이다. (`StockCostModel` 이라는 클래스는 없다 — 테스트명만 그렇고 로직은
+`StockProperties.Risk` 에 있다.)
 
 ## 운영 모드 / 동시성 / 관측성
 
@@ -80,3 +100,24 @@ Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (0
 - **일일 실적 리포트** ([ADR observability/0002](../../../../../../../docs/adr/stock/observability/0002-daily-performance-report.md)) —
   11:40 cron 으로 승률·실현손익·청산 사유·진입 거절 사유를 집계해 메일 + `DAILY_REPORT` 이벤트.
   PAPER 실측(LIVE 전환 전제조건)의 데이터원.
+- **영속성/외부호출 효율** ([ADR stock/infrastructure/0004](../../../../../../../docs/adr/stock/infrastructure/0004-n-plus-one-and-batch-candle.md)) —
+  N+1 조회 제거 + `CandleService` 배치 처리 + KIS 조회 재시도.
+
+## Presentation (`/api/stock/**` · `/stock*`)
+
+`POST /api/stock/bot/**` 만 ADMIN, 나머지 조회는 공개 대시보드용 permitAll
+(ADR common/security/0005).
+
+| 컨트롤러 | 경로 |
+|---|---|
+| `StockBotApiController` | `/api/stock/bot` — `GET status`(공개) + POST start·stop·pause·resume·emergency-close(ADMIN) |
+| `StockPositionApiController` | `/api/stock/positions` — open·closed·pnl/summary |
+| `StockMonitoringApiController` | `/api/stock/monitoring` — active·state/{state} |
+| `StockEventApiController` | `/api/stock/events` — 진입/청산 + 풀백·고점형성 시그널을 시각순으로 병합한 이벤트 스트림 |
+| `StockSignalApiController` | `/api/stock/signals/{stockCode}` |
+| `StockTradeApiController` | `/api/stock/trades/{stockCode}` |
+| `StockDashboardController` | `/stock`, `/stock/history`, `/stock/settings` (Thymeleaf) |
+
+> `domain/candle` (`StockCandle`, `CandleInterval`, `StockCandleRepository`) 는 현재
+> application·presentation 에서 **호출처가 없는 비활성 스캐폴딩**이다. 캔들 기반 로직을
+> 새로 붙일 때 여기서 출발하되, 지금 동작에는 관여하지 않는다.

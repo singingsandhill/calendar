@@ -54,3 +54,21 @@ rank 성공 스냅샷은 그대로 유지(거래일 1회 스냅샷 정합성). �
 TP1·TP2·TP3 는 *독립 트리거* — 선행 의존 X. `checkTakeProfitLevels` 가 TP3 → TP2 → TP1
 순서로 평가, 가장 강한 트리거 즉시 발동. `tryFireTp` 헬퍼로 중복 코드 제거.
 [ADR](../../../../../../../../docs/adr/stock/algorithm/0004-tp-independent-triggers.md).
+
+단, 세 TP 모두 `tryFireTp` 안에서 **순이익 게이트**(수수료차감 손익률 − 슬리피지 ≥
+시간감쇠 최소수익)를 통과해야 실제로 발동한다 — 가격 조건은 필요조건일 뿐. 비용 상수와
+0.43% 실효 청산비용은 모듈 `CLAUDE.md` 참고.
+
+## 그 외 이 계층의 서비스
+
+- **`GapPullbackBotService`** — 메인 오케스트레이터. 프리마켓·스크리닝·트레이딩 루프·최종
+  청산 진입점, `recoveryMode`(재시작 시 신규 진입만 차단), 빈 유니버스 시
+  `SCREENING_SKIPPED` 이벤트 + 조기 리턴.
+- **`StockPositionService`** — 포지션 사이징, 주문 *전* `PENDING` 선영속화 →
+  실체결가·수수료 backfill, `reconcileUnconfirmedOrders()` (응답 유실분을 원장과 대조,
+  12틱 내 미발견이면 CANCELLED).
+- **`StockMailService`** — 09:20 스크리닝 결과 HTML 메일. 첨부 로그는 발송 시점까지의
+  스냅샷(`stock-screening-snapshot-YYYY-MM-DD.log`).
+- **`DailyPerformanceReportService`** — 11:40 승률·실현손익·청산 사유·진입 거절 사유 집계
+  → 메일 + `DAILY_REPORT` 이벤트
+  ([ADR observability/0002](../../../../../../../../docs/adr/stock/observability/0002-daily-performance-report.md)).
