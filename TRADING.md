@@ -87,30 +87,39 @@ TRADING_BOT_ENABLED=false   # true 로 봇 자동 시작 활성화
 
 | 시각 | 잡 |
 |---|---|
-| 08:30 | 프리마켓 — `UniverseBuilder.build()` (pinned ∪ fallback-codes) |
-| 09:20 | 스크리닝 — floor filter + 5요인 가중 score → top N + 메일 발송 |
-| 09:20~11:20 | 5초 polling 트레이딩 루프 |
-| 11:20 | 모든 포지션 강제 청산 |
+| 08:30 | 프리마켓 — `UniverseBuilder.refresh()` (pinned ∪ KIS 거래량순위 top-30, 실패 시 fallback-codes) |
+| 09:20 | 스크리닝 — rank=0 이면 거래량순위 재시도 → floor filter + 5요인 score + 신호 게이트 → 메일 |
+| 09:20~11:20 | 5초 polling 트레이딩 루프 (시작부에 미확인 주문 스윕) |
+| 11:20 | 모든 포지션 강제 청산 (종목당 3회 재시도, 실패 시 메일) |
+| 11:40 | 일일 실적 요약 리포트 ([ADR](docs/adr/stock/observability/0002-daily-performance-report.md)) |
 
 휴일: `stock.trading.holidays` (yyyy-MM-dd 리스트).
 
-### 청산 규칙 (yaml 운영값)
+### 청산 규칙 (yaml 운영값 — [ADR-0007](docs/adr/stock/algorithm/0007-exit-structure-recalibration.md))
 
 | Type | Condition | Action |
 |---|---|---|
-| Stop Loss | -5% (`risk.stop-loss-percent: 5.0`) | Sell 100% |
-| TP1 | +5% (`entry.tp1-percent: 5.0`) | Sell 50% |
+| Stop Loss | `max(PullbackLow × (1 - 1.0%), Entry × (1 - 2.0%))` — 통상 진입가 대비 약 -1.2% | Sell 100% |
+| TP1 | Entry +5% (`entry.tp1-percent: 5.0`) | Sell 진입수량 50% (잔여 캡) |
 | TP2 | DayHigh 도달 | Sell 60% remaining |
-| TP3 | DayHigh + 10% (`entry.tp3-percent: 10.0`) | Sell remaining |
-| Trailing | TrailingHigh 대비 -3.8% (`risk.trailing-stop-percent: 3.8`) | Sell remaining |
+| TP3 | **Entry** +10% (`entry.tp3-percent: 10.0`) | Sell remaining |
+| Trailing | TrailingHigh 대비 -3.8% (`risk.trailing-stop-percent: 3.8`), 손익분기 하한 | Sell remaining |
 | Time Exit | 11:20 KST | Sell 100% |
 
 TP1·TP2·TP3 는 *독립 트리거* — 선행 의존 제거 ([ADR](docs/adr/stock/algorithm/0004-tp-independent-triggers.md)).
-시간 감소 임계: 09:10 의 0.5% → 15:15 의 0.1% 로 선형 감소.
+앵커는 모두 고정값(손절=풀백저가, TP1·TP3=진입가, TP2=당일고가) — 갱신되는 당일고가를 TP3 앵커로
+쓰면 도달 불가였다. 트레일링은 부분익절(TP1·TP2·TP3 중 하나) 발생 시 활성화 + 즉시 스탑가 설정.
+익절 게이트는 수수료·세금(매도 0.20%, 2026 시행) **+ 슬리피지 0.2%** 를 차감한 순익 기준.
+시간 감소 임계: 09:10 의 0.5% → 15:15 의 0.1% 로 선형 감소(실거래창이 11:20 이라 유효 하한 ~0.36%).
 
 ### 운영 모드 / 동시성
 
-- `Bot.Mode {LIVE, PAPER, BACKTEST}` ([ADR](docs/adr/stock/modes/0001-paper-backtest-mode-and-clock-bean.md))
+- `Bot.Mode {LIVE, PAPER, BACKTEST}` — **기본 PAPER**, LIVE 는 `STOCK_BOT_MODE=LIVE` 로만 opt-in
+  ([ADR modes/0001](docs/adr/stock/modes/0001-paper-backtest-mode-and-clock-bean.md),
+  [modes/0002](docs/adr/stock/modes/0002-paper-default-mode.md)).
+  모드 분기는 주문 4개 메서드뿐 — **시세·호가·잔고 조회는 모드 무관 실 API** 라 PAPER 에서도
+  스크리닝·상태머신·리스크 루프·손익 기록이 전부 동작한다(주문만 가상).
+  `BACKTEST` 는 현재 PAPER 와 동일(히스토리 fixture 미구현).
 - `KisRestClient` `Semaphore(8, fair)` + `StockCodeLocks` (per-symbol) +
   `ThreadPoolTaskScheduler(pool=4)` 동시성 3-레이어 ([ADR-0001](docs/adr/stock/infrastructure/0001-kis-rate-limit-semaphore.md), [-0002](docs/adr/stock/infrastructure/0002-per-symbol-reentrant-lock.md), [-0003](docs/adr/stock/infrastructure/0003-thread-pool-task-scheduler.md))
 
