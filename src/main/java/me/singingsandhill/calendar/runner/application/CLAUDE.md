@@ -11,7 +11,9 @@
 
 ## Exceptions
 
-- `RunNotFoundException` (404), `DuplicateAttendanceException` (409) - both extend BusinessException
+- `RunNotFoundException` (404), `AttendanceNotFoundException` (404),
+  `DuplicateAttendanceException` (409) — all extend BusinessException
+  (`application/exception/`)
 
 ## Transaction Pattern
 

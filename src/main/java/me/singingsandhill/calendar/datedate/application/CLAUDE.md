@@ -32,8 +32,9 @@
 [ADR](../../../../../../../../docs/adr/datedate/domain/0001-schedule-aggregate-invariants.md).
 서비스는 트랜잭션·리포지토리 호출만, 비즈니스 규칙은 도메인 메서드.
 
-`Participant.selections` (`List<Integer>`) 는 `SelectionConverter` (JPA `AttributeConverter`)
-로 JSON 직렬화 — [ADR](../../../../../../../../docs/adr/datedate/domain/0002-selections-json-converter.md).
+`Participant.selections` (`List<Integer>`) 는 `SelectionListConverter` (JPA
+`AttributeConverter`, `infrastructure/persistence/converter/`) 로 JSON 직렬화 —
+[ADR](../../../../../../../../docs/adr/datedate/domain/0002-selections-json-converter.md).
 
 ## Transaction Pattern
 

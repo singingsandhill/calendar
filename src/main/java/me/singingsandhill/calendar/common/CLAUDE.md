@@ -1,7 +1,7 @@
 # Common Package
 
 > 결정 근거: [`docs/adr/common/`](../../../../../../../docs/adr/common/) — SEO 7개,
-> i18n 3개, error-handling 1개, security 4개 ADR.
+> i18n 3개, error-handling 1개, security 5개 ADR.
 
 ## BusinessException Pattern
 
@@ -40,14 +40,16 @@ Abstract base: subclasses implement `getStatus()` (HttpStatus) and `getCode()` (
 | `POST /api/stock/bot/**` | ROLE_ADMIN (주식 봇 제어, [ADR 0005](../../../../../../../docs/adr/common/security/0005-admin-only-stock-bot-control-api.md)) — `GET .../status` 는 공개 대시보드 위젯용 permitAll |
 | `/me`, `/recap`, `/recap/**`, `/api/me/**` | ROLE_USER (카카오 로그인, [ADR 0004](../../../../../../../docs/adr/common/security/0004-kakao-oauth2-login.md)) — 단 `/recap/share/**` 는 permitAll |
 | `/login`, `/oauth2/**`, `/login/oauth2/**` | permitAll |
-| `/`, `/start`, `/api/**`, `/h2-console/**`, static assets, `/runners/**`, `/insights/**`, `/use-cases/**`, `/tools`, `/tools/**`, `/stock/**`, `/api/stock/**`, `/*`, `/*/*/*` | permitAll |
+| `/`, `/start`, `/index.html`, `/privacy-policy`, `/about`, `/api/**`, `/h2-console/**`, static assets, `/insights`, `/insights/**`, `/use-cases`, `/use-cases/**`, `/tools`, `/tools/**`, `/stock`, `/stock/**`, `/api/stock/**`, `/*`, `/*/*/*` | permitAll |
+| 러너 공개 경로 — `/runners`, `/runners/announce`, `/runners/runs(/**)`, `/runners/members(/**)`, `/runners/{css,js,images}/**` | permitAll (`/runners/**` 와일드카드가 아니라 개별 매처 6줄 — `/runners/admin/**` 를 삼키지 않도록) |
 | 그 외 | authenticated |
 
 트레이딩 ROLE_ADMIN·카카오 ROLE_USER 규칙은 포괄 `permitAll`(`/api/**`, `/*`)보다 **먼저** 선언해야 함(첫 매칭 우선).
 회귀 가드: `TradingApiSecurityTest`, `StockBotApiSecurityTest`, `DatedateAuthSecurityTest`.
 
-**진입점 분리:** 어드민 경로(`/runners/admin/**`, `/trading*`, `/api/trading/**`)는 `defaultAuthenticationEntryPointFor`
-로 먼저 매핑하고, 그 외 전체는 마지막 `AnyRequestMatcher.INSTANCE` 매핑(카카오 `/login`)으로 처리한다.
+**진입점 분리:** 어드민 경로(`/runners/admin/**`, `/trading`, `/trading/**`, `/api/trading/**`,
+`/api/stock/bot/**`) 5개를 `defaultAuthenticationEntryPointFor` 로 먼저 매핑하고, 그 외 전체는 마지막
+`AnyRequestMatcher.INSTANCE` 매핑(카카오 `/login`)으로 처리한다.
 `ExceptionHandlingConfigurer#authenticationEntryPoint(...)` 를 별도로 호출하면 앞서 등록한 매핑이 통째로
 무시되므로 사용하지 않는다.
 
