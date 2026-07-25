@@ -97,18 +97,7 @@ public class ScreeningService {
         // 점수 내림차순 정렬
         candidates.sort(Comparator.comparing(StockCandidate::compositeScore).reversed());
 
-        // 상위 N개 선정 (minCandidates 보장)
-        int maxWatchlist = stockProperties.getScreening().getMaxWatchlistSize();
-        int minCandidates = stockProperties.getScoring().getMinCandidates();
-        BigDecimal minScoreThreshold = stockProperties.getScoring().getMinScoreThreshold();
-
-        List<StockCandidate> selected = new ArrayList<>();
-        for (int i = 0; i < candidates.size() && i < maxWatchlist; i++) {
-            StockCandidate c = candidates.get(i);
-            if (selected.size() < minCandidates || c.compositeScore().compareTo(minScoreThreshold) >= 0) {
-                selected.add(c);
-            }
-        }
+        List<StockCandidate> selected = selectCandidates(candidates);
 
         // 로깅
         logScoreBasedSummary(stockCodes.size(), candidates.size(), selected.size(), stats, candidates);
@@ -132,6 +121,42 @@ public class ScreeningService {
     }
 
     /**
+     * 점수순 정렬된 후보에서 최종 선정.
+     *
+     * 두 관문을 *모두* 통과해야 한다 (ADR stock/algorithm/0008):
+     *  1. 총점 &ge; {@code scoring.min-score-threshold}
+     *  2. 신호 점수(갭 + 체결강도) &ge; {@code scoring.signal-min-score}
+     *     — 유동성 팩터(거래대금·스프레드·시총 최대 45점)만으로 총점 임계를 넘기던 왜곡 차단.
+     *
+     * 과거의 {@code min-candidates} 강제 선정(점수 미달이어도 상위 N개 채우기)은 제거됐다.
+     * 조건에 맞는 종목이 없으면 그날은 선정 0건이 정상이다.
+     */
+    List<StockCandidate> selectCandidates(List<StockCandidate> sortedCandidates) {
+        int maxWatchlist = stockProperties.getScreening().getMaxWatchlistSize();
+        BigDecimal minScoreThreshold = stockProperties.getScoring().getMinScoreThreshold();
+        BigDecimal signalMinScore = stockProperties.getScoring().getSignalMinScore();
+
+        List<StockCandidate> selected = new ArrayList<>();
+        for (StockCandidate c : sortedCandidates) {
+            if (selected.size() >= maxWatchlist) {
+                break;
+            }
+            if (c.compositeScore().compareTo(minScoreThreshold) < 0) {
+                continue;
+            }
+            BigDecimal signalScore = c.gapScore().add(c.strengthScore());
+            if (signalScore.compareTo(signalMinScore) < 0) {
+                log.debug("[{}] 신호 부족 탈락: signal={} (갭 {} + 강도 {}), 기준 {} — 총점 {}",
+                    c.stock().getStockCode(), signalScore, c.gapScore(), c.strengthScore(),
+                    signalMinScore, c.compositeScore());
+                continue;
+            }
+            selected.add(c);
+        }
+        return selected;
+    }
+
+    /**
      * 단일 종목 평가 (Floor 필터 + 점수 계산)
      */
     private StockCandidate evaluateStock(String stockCode, LocalDate tradingDate, ScreeningStats stats) {
@@ -139,6 +164,17 @@ public class ScreeningService {
         if (quote == null) {
             stats.apiFailures++;
             return null;
+        }
+
+        // Floor 필터 0: 거래 가능 상태 (VI·거래정지·관리·정리매매·투자경고 배제)
+        if (!quote.isTradable()) {
+            stats.notTradable++;
+            log.debug("[{}] 거래 불가 상태 탈락: {}", stockCode, quote.tradabilityReason());
+            return null;
+        }
+        if (!quote.hasTradabilityFields()) {
+            // 응답에 상태 필드가 전혀 없으면 가드가 무력화된 것 — 필드명 확인용 계측.
+            stats.tradabilityFieldsMissing++;
         }
 
         // Floor 필터 1: 시가 미확정 방어
@@ -323,14 +359,20 @@ public class ScreeningService {
         log.info("Total: {}, Floor passed: {}, Selected: {}", total, floorPassed, selected);
         log.info("API failures: {}, Data insufficient: {}, Errors: {}",
             stats.apiFailures, stats.dataInsufficient, stats.errors);
-        log.info("Floor filtered - Gap: {}, Strength: {}, MarketCap: {}",
-            stats.gapFiltered, stats.strengthFiltered, stats.marketCapFiltered);
+        log.info("Floor filtered - Gap: {}, Strength: {}, MarketCap: {}, NotTradable: {}",
+            stats.gapFiltered, stats.strengthFiltered, stats.marketCapFiltered, stats.notTradable);
+
+        // 계측: 상태 필드가 전 종목에서 비어 있으면 거래정지 가드가 사실상 무력화된 것.
+        if (total > 0 && stats.tradabilityFieldsMissing == total) {
+            log.warn("거래 가능 상태 필드가 전 종목({})에서 비어 있음 — KIS 응답 필드명 확인 필요"
+                + " (iscd_stat_cls_code/temp_stop_yn/mrkt_warn_cls_code/sltr_yn)", total);
+        }
 
         // 침묵 실패 가드: 유니버스가 있는데 0건 선정이면 비정상 — 최다 탈락 버킷을 WARN.
         if (total > 0 && selected == 0) {
-            log.warn("0 selected from {} universe — 최다 탈락 버킷: gap={}, dataInsufficient={}, strength={}, marketCap={}, apiFail={}. 유니버스/임계 점검 필요.",
+            log.warn("0 selected from {} universe — 최다 탈락 버킷: gap={}, dataInsufficient={}, strength={}, marketCap={}, notTradable={}, apiFail={}. 유니버스/임계 점검 필요.",
                 total, stats.gapFiltered, stats.dataInsufficient, stats.strengthFiltered,
-                stats.marketCapFiltered, stats.apiFailures);
+                stats.marketCapFiltered, stats.notTradable, stats.apiFailures);
         }
 
         metrics.recordScreeningResult(total, floorPassed, selected,
@@ -513,7 +555,7 @@ public class ScreeningService {
 
     // ========== Inner types ==========
 
-    private record StockCandidate(Stock stock, BigDecimal compositeScore,
+    record StockCandidate(Stock stock, BigDecimal compositeScore,
         BigDecimal gapScore, BigDecimal strengthScore, BigDecimal tradeValueScore,
         BigDecimal spreadScore, BigDecimal marketCapScore) {}
 
@@ -526,6 +568,8 @@ public class ScreeningService {
         int tradeValueFiltered = 0;
         int strengthFiltered = 0;
         int spreadFiltered = 0;
+        int notTradable = 0;
+        int tradabilityFieldsMissing = 0;
         int floorPassed = 0;
         int passed = 0;
     }
