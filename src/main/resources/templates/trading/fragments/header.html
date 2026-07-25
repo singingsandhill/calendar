@@ -7,10 +7,17 @@
     <meta name="googlebot" content="noindex, nofollow, noarchive">
     <title>ADA Trading Bot</title>
     <!-- Preconnect for faster CDN loading -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com">
-    <!-- Tailwind CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" rel="stylesheet">
+    <!--
+      Tailwind 유틸리티: 로컬 빌드본.
+      (기존 cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css 는 v3에 존재하지 않는
+       경로라 404 → 모든 grid/spacing/dark: 클래스가 미적용 상태였음)
+      재생성 (프로젝트 루트에서):
+      npx tailwindcss@3.4 -c tailwind.trading.config.js -i tailwind.trading.input.css -o src/main/resources/static/css/trading-tw.css --minify
+    -->
+    <link rel="stylesheet" th:href="@{/css/trading-tw.css}">
+    <!-- 트레이딩 다크 터미널 테마 (tr-dark 스코프) -->
+    <link rel="stylesheet" th:href="@{/css/trading.css}">
     <!-- Lightweight Charts -->
     <script defer src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>

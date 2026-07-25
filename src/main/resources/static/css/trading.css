@@ -1,0 +1,345 @@
+/**
+ * trading.css — 코인 트레이딩 봇 다크 터미널 테마
+ *
+ * 적용 방식:
+ *  - body.tr-dark 스코프 아래에서만 다크 테마가 적용됨 (dashboard, trades)
+ *  - 기존 컴포넌트 클래스(.card, .badge, .gauge …)를 재정의하므로
+ *    JS가 생성하는 마크업은 수정 없이 그대로 동작
+ *  - trading-tw.css (빌드된 Tailwind 유틸리티) 뒤에 로드할 것
+ */
+
+:root {
+    --tr-bg: #0b0e14;
+    --tr-card: #131926;
+    --tr-card-2: #0f1520;
+    --tr-border: #222c3d;
+    --tr-border-soft: #1a2332;
+    --tr-text: #e7edf5;
+    --tr-text-2: #9aa8bc;
+    --tr-muted: #67758c;
+    --tr-pos: #34d399;
+    --tr-pos-bg: rgba(52, 211, 153, 0.12);
+    --tr-neg: #f87171;
+    --tr-neg-bg: rgba(248, 113, 113, 0.12);
+    --tr-accent: #60a5fa;
+    --tr-accent-bg: rgba(96, 165, 250, 0.12);
+    --tr-warn: #fbbf24;
+    --tr-warn-bg: rgba(251, 191, 36, 0.12);
+    --tr-neutral-bg: rgba(154, 168, 188, 0.12);
+}
+
+/* ==================== 페이지 기본 ==================== */
+body.tr-dark {
+    background:
+        radial-gradient(1200px 400px at 50% -100px, rgba(96, 165, 250, 0.06), transparent),
+        var(--tr-bg);
+    color: var(--tr-text);
+    font-feature-settings: "tnum";
+}
+
+.tr-dark h1, .tr-dark h2, .tr-dark h3 { color: var(--tr-text); }
+
+/* 페이지 타이틀 행 */
+.tr-page-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ==================== 카드 ==================== */
+.tr-dark .card {
+    background-color: var(--tr-card);
+    border: 1px solid var(--tr-border-soft);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    padding: 1rem;
+}
+.tr-dark .card .card {           /* 중첩 카드 (활성 포지션 등) */
+    background-color: var(--tr-card-2);
+    box-shadow: none;
+}
+.tr-dark .card-ok       { border-left: 3px solid var(--tr-pos); }
+.tr-dark .card-warning  { border-left: 3px solid var(--tr-warn); }
+.tr-dark .card-critical { border-left: 3px solid var(--tr-neg); }
+.tr-dark .card-notice   { border-left: 3px solid var(--tr-accent); }
+
+/* ==================== 스탯 타일 (핵심 손익 표시) ==================== */
+.tr-stat {
+    background-color: var(--tr-card);
+    border: 1px solid var(--tr-border-soft);
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.tr-stat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--tr-muted);
+}
+.tr-stat-value {
+    font-size: 1.625rem;
+    line-height: 1.2;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--tr-text);
+    white-space: nowrap;
+}
+.tr-stat-value--hero { font-size: 2.125rem; }
+.tr-stat-value--sm   { font-size: 1.25rem; }
+.tr-unit {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--tr-text-2);
+    margin-left: 0.125rem;
+}
+.tr-stat-sub {
+    font-size: 0.75rem;
+    color: var(--tr-text-2);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 손익 부호에 따른 좌측 컬러 바
+   (JS가 넣는 .positive/.negative — trading, .pnl-positive/.pnl-negative — stock 을 감지) */
+.tr-stat--pnl::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--tr-border);
+}
+.tr-stat--pnl:has(.positive)::before,
+.tr-stat--pnl:has(.pnl-positive)::before { background: var(--tr-pos); }
+.tr-stat--pnl:has(.negative)::before,
+.tr-stat--pnl:has(.pnl-negative)::before { background: var(--tr-neg); }
+.tr-stat--pnl:has(.positive),
+.tr-stat--pnl:has(.pnl-positive) { background: linear-gradient(135deg, rgba(52,211,153,0.07), transparent 55%), var(--tr-card); }
+.tr-stat--pnl:has(.negative),
+.tr-stat--pnl:has(.pnl-negative) { background: linear-gradient(135deg, rgba(248,113,113,0.07), transparent 55%), var(--tr-card); }
+
+/* tr-stat 내부의 기존 .stat-value (stock JS 가 className 을 덮어쓰는 요소) 를 히어로 크기로 */
+.tr-stat > .stat-value {
+    font-size: 1.625rem;
+    line-height: 1.25;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ==================== 손익 색상 ==================== */
+.tr-dark .positive { color: var(--tr-pos); }
+.tr-dark .negative { color: var(--tr-neg); }
+
+/* ==================== 라벨/보조 텍스트 (기존 클래스 재정의) ==================== */
+.tr-dark .stat-label {
+    color: var(--tr-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.tr-dark .stat-value {
+    color: var(--tr-text);
+    font-variant-numeric: tabular-nums;
+}
+.tr-dark .text-gray-500,
+.tr-dark .text-gray-400 { color: var(--tr-text-2); }
+
+/* ==================== 배지 ==================== */
+.tr-dark .badge {
+    padding: 0.1875rem 0.5625rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.tr-dark .badge-ok       { background: var(--tr-pos-bg);     color: var(--tr-pos); }
+.tr-dark .badge-warning  { background: var(--tr-warn-bg);    color: var(--tr-warn); }
+.tr-dark .badge-critical { background: var(--tr-neg-bg);     color: var(--tr-neg); }
+.tr-dark .badge-notice   { background: var(--tr-accent-bg);  color: var(--tr-accent); }
+.tr-dark .badge-neutral  { background: var(--tr-neutral-bg); color: var(--tr-text-2); }
+
+/* ==================== 매수/매도 표시 ==================== */
+.tr-side {
+    display: inline-block;
+    min-width: 3.25rem;
+    text-align: center;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.tr-side-BUY  { background: var(--tr-pos-bg); color: var(--tr-pos); }
+.tr-side-SELL { background: var(--tr-neg-bg); color: var(--tr-neg); }
+
+/* ==================== 테이블 ==================== */
+.tr-dark table { border-collapse: collapse; }
+.tr-dark thead th {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--tr-muted);
+    border-bottom: 1px solid var(--tr-border) !important;
+}
+.tr-dark tbody tr {
+    border-color: var(--tr-border-soft) !important;
+}
+.tr-dark tbody tr:hover { background: rgba(96, 165, 250, 0.05); }
+.tr-dark tbody td,
+.tr-dark thead th {
+    white-space: nowrap;       /* 좁은 화면에서 날짜 줄바꿈 방지 (가로 스크롤 사용) */
+}
+.tr-dark tbody td {
+    font-variant-numeric: tabular-nums;
+    color: var(--tr-text-2);
+}
+.tr-dark tbody td:first-child { color: var(--tr-muted); font-size: 0.8125rem; }
+.tr-dark .tr-num { color: var(--tr-text); }
+.tr-dark .tr-pnl-cell { font-weight: 700; }
+
+/* 실패/취소 행 강조 */
+.tr-dark .tr-row-failed {
+    background: rgba(248, 113, 113, 0.05);
+    box-shadow: inset 3px 0 0 var(--tr-neg);
+}
+
+/* ==================== 버튼 ==================== */
+.tr-dark .btn-secondary {
+    background-color: #1c2434;
+    color: var(--tr-text-2);
+    border: 1px solid var(--tr-border);
+}
+.tr-dark .btn-secondary:hover:not(:disabled) { background-color: #243044; color: var(--tr-text); }
+.tr-dark .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+.tr-dark .btn-primary { box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.25); }
+.tr-dark .btn-danger:not(:hover) { background-color: rgba(220, 38, 38, 0.85); }
+
+/* ==================== 게이지 ==================== */
+.tr-dark .gauge { background: #202a3c; height: 8px; }
+.tr-dark .gauge-marker { background: #cbd5e1; }
+
+/* ==================== 필터 칩 ==================== */
+.tr-dark #trades-filter-chips .badge {
+    cursor: pointer;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.8125rem;
+    border: 1px solid transparent;
+    transition: all 0.12s ease;
+}
+.tr-dark #trades-filter-chips .badge-neutral { background: transparent; border-color: var(--tr-border); }
+.tr-dark #trades-filter-chips .badge-neutral:hover { background: var(--tr-neutral-bg); color: var(--tr-text); }
+.tr-dark #trades-filter-chips .badge-notice { border-color: rgba(96, 165, 250, 0.4); }
+
+/* ==================== select / input ==================== */
+.tr-dark select {
+    background-color: #1c2434 !important;
+    border-color: var(--tr-border) !important;
+    color: var(--tr-text) !important;
+}
+
+/* ==================== 이벤트 목록 ==================== */
+.tr-dark #events-list > div { border-color: var(--tr-border-soft) !important; padding: 0.3125rem 0; }
+
+/* ==================== 토스트 ==================== */
+.tr-dark .toast { background: #1c2434; color: var(--tr-text); }
+
+/* ==================== 내비게이션 활성 표시 (전 페이지 공통) ==================== */
+.tr-nav-active {
+    color: #93c5fd !important;
+    font-weight: 600;
+    position: relative;
+}
+.tr-nav-active::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -0.375rem;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--tr-accent);
+}
+
+/* ==================== 차트 컨테이너 ==================== */
+.tr-chart-frame {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* ==================== 시그널 지표 그리드 ==================== */
+.tr-kv {
+    background: var(--tr-card-2);
+    border: 1px solid var(--tr-border-soft);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+}
+.tr-kv .stat-label { margin-bottom: 0.125rem; }
+.tr-kv .font-medium { font-variant-numeric: tabular-nums; color: var(--tr-text); }
+
+/* ==================== Stock 모듈 (Gap & Pullback) 다크 토큰 오버라이드 ====================
+   stock/fragments/header.html 은 CSS 변수 기반 →
+   body.tr-dark 에서 변수만 바꾸면 카드·테이블·리스크 뱃지·게이지가 모두 다크로 전환됨. */
+body.tr-dark {
+    --color-bg: var(--tr-bg);
+    --color-card: var(--tr-card);
+    --color-card-border: var(--tr-border-soft);
+    --color-text: var(--tr-text);
+    --color-muted: var(--tr-text-2);
+    --color-subtle: var(--tr-muted);
+
+    --pnl-positive: var(--tr-pos);
+    --pnl-negative: var(--tr-neg);
+    --pnl-neutral: var(--tr-text-2);
+
+    --risk-critical-fg: #fca5a5;
+    --risk-critical-bg: rgba(127, 29, 29, 0.35);
+    --risk-critical-border: rgba(220, 38, 38, 0.4);
+    --risk-warning-fg: #fcd34d;
+    --risk-warning-bg: rgba(120, 53, 15, 0.35);
+    --risk-warning-border: rgba(245, 158, 11, 0.4);
+    --risk-progress-fg: #93c5fd;
+    --risk-progress-bg: rgba(30, 58, 138, 0.35);
+    --risk-progress-border: rgba(59, 130, 246, 0.4);
+    --risk-safe-fg: #d1d5db;
+    --risk-safe-bg: rgba(55, 65, 81, 0.4);
+    --risk-safe-border: rgba(75, 85, 99, 0.6);
+}
+
+/* prefers-color-scheme 미디어쿼리 밖에 라이트 값이 하드코딩된 컴포넌트들 */
+.tr-dark .risk-trail { color: #67e8f9; background: rgba(8, 51, 68, 0.5); border-color: rgba(103, 232, 249, 0.3); }
+.tr-dark .state-watching     { background-color: rgba(30, 58, 138, 0.4);  color: #93c5fd; }
+.tr-dark .state-high_formed  { background-color: rgba(88, 28, 135, 0.4);  color: #d8b4fe; }
+.tr-dark .state-pullback     { background-color: rgba(124, 45, 18, 0.4);  color: #fdba74; }
+.tr-dark .state-entry_ready  { background-color: rgba(146, 64, 14, 0.45); color: #fcd34d; border-color: #d97706; }
+.tr-dark .state-exited       { background-color: rgba(55, 65, 81, 0.5);   color: #9ca3af; }
+.tr-dark .state-filtered_out { background-color: rgba(127, 29, 29, 0.35); color: #fca5a5; }
+
+/* Tailwind 라이트 유틸리티가 다크 배경에 얹힐 때의 보정 */
+.tr-dark .text-gray-600,
+.tr-dark .text-gray-700,
+.tr-dark .text-gray-300 { color: var(--tr-text-2); }
+.tr-dark .text-blue-600 { color: #93c5fd; }
+.tr-dark .bg-white { background-color: var(--tr-card); }
+.tr-dark .bg-gray-200 { background-color: #202a3c; }
+.tr-dark .border-gray-300 { border-color: var(--tr-border); }
+
+/* 폼 요소 (history 필터, settings 입력) */
+.tr-dark input[type="text"],
+.tr-dark input[type="number"],
+.tr-dark input[type="date"],
+.tr-dark input[type="time"],
+.tr-dark textarea {
+    background-color: #1c2434 !important;
+    border-color: var(--tr-border) !important;
+    color: var(--tr-text) !important;
+    color-scheme: dark;
+}
+.tr-dark select { color-scheme: dark; }
+
+/* ==================== 반응형 미세 조정 ==================== */
+@media (max-width: 640px) {
+    .tr-stat-value { font-size: 1.375rem; }
+    .tr-stat-value--hero { font-size: 1.625rem; }
+}

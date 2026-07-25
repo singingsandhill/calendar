@@ -11,6 +11,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -107,6 +110,78 @@ class UniverseBuilderTest {
         assertThat(snap.codes()).containsExactly("000660");
         assertThat(snap.rankApi()).isZero();
         assertThat(snap.fallback()).isEqualTo(1);
+    }
+
+    // ===== 스크리닝 시점 rank 재시도 (refreshIfDegraded) =====
+
+    @Test
+    void retriesRankAtScreeningWhenSnapshotIsFallbackOnly() {
+        // 08:30 pre-market: 장 시작 전이라 거래량순위 0건 → 폴백 스냅샷
+        when(api.getTopVolumeCodes(anyInt()))
+            .thenReturn(List.of())
+            .thenReturn(List.of("111111", "222222"));
+        UniverseBuilder b = builder(List.of("005930"), List.of("000660"), 30);
+        LocalDate day = LocalDate.of(2026, 5, 1);
+        b.refresh(day);
+
+        // 09:20 스크리닝: rank=0 이었으므로 재조회 → 동적 유니버스로 대체
+        UniverseBuilder.Snapshot snap = b.refreshIfDegraded(day);
+
+        assertThat(snap.codes()).containsExactly("005930", "111111", "222222");
+        assertThat(snap.rankApi()).isEqualTo(2);
+        assertThat(snap.fallback()).isZero();
+    }
+
+    @Test
+    void keepsFallbackWhenRetryAlsoReturnsEmpty() {
+        when(api.getTopVolumeCodes(anyInt())).thenReturn(List.of());
+        UniverseBuilder b = builder(List.of(), List.of("000660"), 30);
+        LocalDate day = LocalDate.of(2026, 5, 1);
+        b.refresh(day);
+
+        UniverseBuilder.Snapshot snap = b.refreshIfDegraded(day);
+
+        // 재시도도 0건이면 기존과 동일하게 정적 폴백 (무회귀)
+        assertThat(snap.codes()).containsExactly("000660");
+        assertThat(snap.rankApi()).isZero();
+        assertThat(snap.fallback()).isEqualTo(1);
+    }
+
+    @Test
+    void doesNotRetryWhenRankAlreadyPresent() {
+        when(api.getTopVolumeCodes(anyInt())).thenReturn(List.of("111111"));
+        UniverseBuilder b = builder(List.of(), List.of("000660"), 30);
+        LocalDate day = LocalDate.of(2026, 5, 1);
+        UniverseBuilder.Snapshot first = b.refresh(day);
+
+        UniverseBuilder.Snapshot snap = b.refreshIfDegraded(day);
+
+        // rank 가 이미 있으면 스냅샷 유지 (거래일 1회 스냅샷 정합성)
+        assertThat(snap).isSameAs(first);
+        verify(api, times(1)).getTopVolumeCodes(anyInt());
+    }
+
+    @Test
+    void doesNotRetryWhenRankDisabled() {
+        UniverseBuilder b = builder(List.of("005930"), List.of("000660"), 0);
+        LocalDate day = LocalDate.of(2026, 5, 1);
+        UniverseBuilder.Snapshot first = b.refresh(day);
+
+        UniverseBuilder.Snapshot snap = b.refreshIfDegraded(day);
+
+        assertThat(snap).isSameAs(first);
+        verify(api, never()).getTopVolumeCodes(anyInt());
+    }
+
+    @Test
+    void buildsFreshWhenNoSnapshotForDate() {
+        when(api.getTopVolumeCodes(anyInt())).thenReturn(List.of("111111"));
+        UniverseBuilder b = builder(List.of(), List.of("000660"), 30);
+
+        UniverseBuilder.Snapshot snap = b.refreshIfDegraded(LocalDate.of(2026, 5, 2));
+
+        assertThat(snap.tradingDate()).isEqualTo(LocalDate.of(2026, 5, 2));
+        assertThat(snap.codes()).containsExactly("111111");
     }
 
     // ===== 스냅샷 캐싱 =====

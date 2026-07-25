@@ -55,17 +55,17 @@
         if (!container || typeof LightweightCharts === 'undefined') return;
 
         chart = LightweightCharts.createChart(container, {
-            layout: { background: { type: 'solid', color: '#1f2937' }, textColor: '#d1d5db' },
-            grid: { vertLines: { color: '#374151' }, horzLines: { color: '#374151' } },
+            layout: { background: { type: 'solid', color: '#0f1520' }, textColor: '#9aa8bc' },
+            grid: { vertLines: { color: '#1a2332' }, horzLines: { color: '#1a2332' } },
             crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            rightPriceScale: { borderColor: '#374151' },
-            timeScale: { borderColor: '#374151', timeVisible: true, secondsVisible: false }
+            rightPriceScale: { borderColor: '#222c3d' },
+            timeScale: { borderColor: '#222c3d', timeVisible: true, secondsVisible: false }
         });
 
         candleSeries = chart.addCandlestickSeries({
-            upColor: '#22c55e', downColor: '#ef4444',
-            borderDownColor: '#ef4444', borderUpColor: '#22c55e',
-            wickDownColor: '#ef4444', wickUpColor: '#22c55e'
+            upColor: '#34d399', downColor: '#f87171',
+            borderDownColor: '#f87171', borderUpColor: '#34d399',
+            wickDownColor: '#f87171', wickUpColor: '#34d399'
         });
 
         loadChartData();
@@ -95,7 +95,7 @@
                 const markers = trades.map(t => ({
                     time: new Date(t.time).getTime() / 1000,
                     position: t.type === 'BUY' ? 'belowBar' : 'aboveBar',
-                    color: t.type === 'BUY' ? '#22c55e' : '#ef4444',
+                    color: t.type === 'BUY' ? '#34d399' : '#f87171',
                     shape: t.type === 'BUY' ? 'arrowUp' : 'arrowDown',
                     text: t.type + ' ' + t.price.toLocaleString()
                 }));
@@ -156,9 +156,8 @@
 
             // Today P&L
             if (today) {
-                const cls = today.realizedPnl >= 0 ? 'positive' : 'negative';
                 document.getElementById('card-today-pnl').innerHTML =
-                    `<span class="${cls}">${signed(today.realizedPnl)} KRW</span>`;
+                    pnlHtml(today.realizedPnl, ' KRW');
                 setText('card-today-sub',
                     `${today.doneTrades} done · ${today.failedTrades} fail · ${today.openPositions} open`);
             } else {
@@ -166,11 +165,12 @@
                 setText('card-today-sub', '');
             }
 
-            // Unrealized
-            const upClass = summary.unrealizedPnl >= 0 ? 'positive' : 'negative';
+            // Unrealized (금액을 크게, %는 보조로)
             document.getElementById('card-unrealized').innerHTML =
-                `<span class="${upClass}">${summary.unrealizedPnlPct.toFixed(2)}%</span>`;
-            setText('card-unrealized-sub', signed(summary.unrealizedPnl) + ' KRW');
+                pnlHtml(summary.unrealizedPnl, ' KRW');
+            const upClass = summary.unrealizedPnl >= 0 ? 'positive' : 'negative';
+            document.getElementById('card-unrealized-sub').innerHTML =
+                `<span class="${upClass}">${signed(summary.unrealizedPnlPct.toFixed(2))}%</span> 수익률`;
 
             // Allocation (Cash / Coin)
             const coinPct = (summary.coinRatio || 0) * 100;
@@ -296,7 +296,7 @@
             </div>
             <div class="relative" style="margin: 8px 0;">
                 <div class="gauge" style="height:8px;">
-                    <div class="gauge-fill" style="width:${(ratio*100).toFixed(1)}%; background:${pnlPct>=0?'#22c55e':'#ef4444'};"></div>
+                    <div class="gauge-fill" style="width:${(ratio*100).toFixed(1)}%; background:${pnlPct>=0?'#34d399':'#f87171'};"></div>
                 </div>
                 <div class="gauge-marker" style="left:${(entryRatio*100).toFixed(1)}%;"></div>
             </div>
@@ -480,6 +480,14 @@
         const n = typeof v === 'number' ? v : Number(v);
         if (isNaN(n)) return v;
         return (n >= 0 ? '+' : '') + n.toLocaleString();
+    }
+    /** 손익 금액 → 화살표+부호+색상 HTML (색약 대비: 부호/화살표 이중 인코딩) */
+    function pnlHtml(v, unit) {
+        if (v == null) return '-';
+        const n = Math.round(v);
+        const cls = n >= 0 ? 'positive' : 'negative';
+        const arrow = n >= 0 ? '▲' : '▼';
+        return `<span class="${cls}">${arrow} ${signed(n)}<span class="tr-unit">${unit || ''}</span></span>`;
     }
     function formatDateTime(s) {
         const d = new Date(s);

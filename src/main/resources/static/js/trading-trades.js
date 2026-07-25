@@ -85,14 +85,18 @@
         try {
             const data = await TradingFetch.json('/api/trading/profit/summary');
             const pnlClass = data.realizedPnl >= 0 ? 'positive' : 'negative';
+            const arrow = data.realizedPnl >= 0 ? '▲' : '▼';
             document.getElementById('realized-pnl').innerHTML =
-                `<span class="${pnlClass}">${formatKRW(data.realizedPnl)} KRW</span>`;
+                `<span class="${pnlClass}">${arrow} ${signed(Math.round(data.realizedPnl))}<span class="tr-unit">KRW</span></span>`;
+            const subEl = document.getElementById('realized-pnl-sub');
+            if (subEl) subEl.textContent =
+                `${data.totalTrades}회 거래 · 승률 ${data.winRate.toFixed(1)}%`;
             document.getElementById('total-trades').textContent = data.totalTrades;
             document.getElementById('win-rate').textContent = data.winRate.toFixed(1) + '%';
             document.getElementById('avg-pnl').innerHTML =
                 `<span class="${data.avgPnlPct >= 0 ? 'positive' : 'negative'}">${signed(data.avgPnlPct.toFixed(2))}%</span>`;
             document.getElementById('total-fees').innerHTML =
-                `<span class="negative">-${formatKRW(Math.abs(data.totalFeesPaid || 0))} KRW</span>`;
+                `-${formatKRW(Math.abs(data.totalFeesPaid || 0))}<span class="tr-unit">KRW</span>`;
         } catch (e) { console.error('summary fail', e); }
     }
 
@@ -141,24 +145,22 @@
 
     function renderTradeRow(t) {
         const failed = t.status === 'FAILED' || t.status === 'CANCEL';
-        const rowStyle = failed ? 'border-left: 3px solid #dc2626;' : '';
-        const rowClass = 'border-t border-gray-200 dark:border-gray-700';
+        const rowClass = 'border-t border-gray-200 dark:border-gray-700'
+            + (failed ? ' tr-row-failed' : '');
 
         const statusBadge = ({
             DONE: 'badge-ok', WAIT: 'badge-warning',
             FAILED: 'badge-critical', CANCEL: 'badge-neutral'
         }[t.status] || 'badge-neutral');
 
-        const typeBadge = t.type === 'BUY' ? 'badge-ok' : 'badge-warning';
-
         return `
-            <tr class="${rowClass}" style="${rowStyle}">
-                <td class="py-3 px-2">${formatDateTime(t.createdAt)}</td>
-                <td class="py-3 px-2"><span class="badge ${typeBadge}">${escapeHtml(t.type)}</span></td>
-                <td class="py-3 px-2 text-right">${t.price ? t.price.toLocaleString() : '-'}</td>
-                <td class="py-3 px-2 text-right">${t.volume ? t.volume.toFixed(4) : '-'}</td>
-                <td class="py-3 px-2 text-right">${t.amount ? Math.round(t.amount).toLocaleString() : '-'}</td>
-                <td class="py-3 px-2"><span class="badge ${statusBadge}">${escapeHtml(t.status)}</span></td>
+            <tr class="${rowClass}">
+                <td class="py-2.5 px-2">${formatDateTime(t.createdAt)}</td>
+                <td class="py-2.5 px-2"><span class="tr-side tr-side-${escapeHtml(t.type)}">${escapeHtml(t.type)}</span></td>
+                <td class="py-2.5 px-2 text-right tr-num">${t.price ? t.price.toLocaleString() : '-'}</td>
+                <td class="py-2.5 px-2 text-right">${t.volume ? t.volume.toFixed(4) : '-'}</td>
+                <td class="py-2.5 px-2 text-right tr-num font-semibold">${t.amount ? Math.round(t.amount).toLocaleString() : '-'}</td>
+                <td class="py-2.5 px-2 pl-4"><span class="badge ${statusBadge}">${escapeHtml(t.status)}</span></td>
             </tr>
         `;
     }
@@ -173,16 +175,16 @@
             }
             tbody.innerHTML = positions.map(p => `
                 <tr class="border-t border-gray-200 dark:border-gray-700">
-                    <td class="py-3 px-2">${p.openedAt ? formatDateTime(p.openedAt) : '-'}</td>
-                    <td class="py-3 px-2">${p.closedAt ? formatDateTime(p.closedAt) : '-'}</td>
-                    <td class="py-3 px-2 text-right">${p.entryPrice ? p.entryPrice.toLocaleString() : '-'}</td>
-                    <td class="py-3 px-2 text-right">${p.exitPrice ? p.exitPrice.toLocaleString() : '-'}</td>
-                    <td class="py-3 px-2 text-right ${(p.realizedPnlPct || 0) >= 0 ? 'positive' : 'negative'}">
+                    <td class="py-2.5 px-2">${p.openedAt ? formatDateTime(p.openedAt) : '-'}</td>
+                    <td class="py-2.5 px-2">${p.closedAt ? formatDateTime(p.closedAt) : '-'}</td>
+                    <td class="py-2.5 px-2 text-right tr-num">${p.entryPrice ? p.entryPrice.toLocaleString() : '-'}</td>
+                    <td class="py-2.5 px-2 text-right tr-num">${p.exitPrice ? p.exitPrice.toLocaleString() : '-'}</td>
+                    <td class="py-2.5 px-2 text-right tr-pnl-cell ${(p.realizedPnlPct || 0) >= 0 ? 'positive' : 'negative'}">
                         ${p.realizedPnl != null
                             ? signed(Math.round(p.realizedPnl)) + ' (' + signed(p.realizedPnlPct.toFixed(2)) + '%)'
                             : '-'}
                     </td>
-                    <td class="py-3 px-2">${reasonBadge(p.closeReason || p.status)}</td>
+                    <td class="py-2.5 px-2 pl-4">${reasonBadge(p.closeReason || p.status)}</td>
                 </tr>
             `).join('');
         } catch (e) { console.error('positions fail', e); }
@@ -207,18 +209,19 @@
             if (typeof LightweightCharts === 'undefined') return;
 
             dailyChart = LightweightCharts.createChart(container, {
-                layout: { background: { type: 'solid', color: '#1f2937' }, textColor: '#d1d5db' },
-                grid: { vertLines: { color: '#374151' }, horzLines: { color: '#374151' } },
-                rightPriceScale: { borderColor: '#374151' },
-                timeScale: { borderColor: '#374151' }
+                layout: { background: { type: 'solid', color: '#0f1520' }, textColor: '#9aa8bc' },
+                grid: { vertLines: { color: '#1a2332' }, horzLines: { color: '#1a2332' } },
+                rightPriceScale: { borderColor: '#222c3d' },
+                timeScale: { borderColor: '#222c3d' }
             });
             const series = dailyChart.addHistogramSeries({ priceFormat: { type: 'volume' } });
             const chartData = data.map(d => ({
                 time: d.date,
                 value: d.realizedPnl,
-                color: d.realizedPnl >= 0 ? '#22c55e' : '#ef4444'
+                color: d.realizedPnl >= 0 ? '#34d399' : '#f87171'
             })).reverse();
             series.setData(chartData);
+            dailyChart.timeScale().fitContent();
         } catch (e) { console.error('daily chart fail', e); }
     }
 

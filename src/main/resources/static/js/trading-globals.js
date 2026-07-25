@@ -184,7 +184,15 @@
         }
     };
 
-    document.addEventListener('DOMContentLoaded', () => StatusBar.start());
+    document.addEventListener('DOMContentLoaded', () => {
+        StatusBar.start();
+        // 현재 페이지 내비게이션 링크 강조
+        const path = location.pathname.replace(/\/$/, '') || '/trading';
+        document.querySelectorAll('nav a[href^="/trading"]').forEach(a => {
+            const href = a.getAttribute('href').replace(/\/$/, '');
+            if (href === path) a.classList.add('tr-nav-active');
+        });
+    });
 
     root.TradingFetch = Fetch;
     root.TradingToast = Toast;

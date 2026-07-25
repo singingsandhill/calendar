@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head th:replace="~{stock/fragments/header :: header}"></head>
-<body class="min-h-screen">
+<body class="tr-dark min-h-screen">
 
 <nav th:replace="~{stock/fragments/header :: navbar}"></nav>
 
@@ -41,40 +41,40 @@
     <!-- ============ Alert Strip (조건부) ============ -->
     <div id="alert-container" class="mb-4 space-y-2"></div>
 
-    <!-- ============ P&L Summary ============ -->
-    <section class="card mb-4" aria-label="오늘 손익 요약">
-        <div class="flex items-center justify-between mb-3">
+    <!-- ============ P&L Summary (히어로 타일) ============ -->
+    <section class="mb-4" aria-label="오늘 손익 요약">
+        <div class="flex items-center justify-between mb-2">
             <h2 class="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">Today</h2>
             <span class="text-xs text-gray-500" th:text="${#temporals.format(tradingDate, 'yyyy-MM-dd')}">2026-04-23</span>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-                <div class="stat-label">Realized P&amp;L</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="tr-stat tr-stat--pnl">
+                <div class="tr-stat-label">Realized P&amp;L · 실현손익</div>
                 <div class="stat-value" id="pnl-realized">—</div>
-                <div class="text-xs" id="pnl-realized-sub">—</div>
+                <div class="tr-stat-sub" id="pnl-realized-sub">—</div>
             </div>
-            <div>
-                <div class="stat-label">Unrealized P&amp;L</div>
+            <div class="tr-stat tr-stat--pnl">
+                <div class="tr-stat-label">Unrealized P&amp;L · 평가손익</div>
                 <div class="stat-value" id="pnl-unrealized">—</div>
-                <div class="text-xs text-gray-500" id="pnl-unrealized-sub">오픈 포지션 기준</div>
+                <div class="tr-stat-sub" id="pnl-unrealized-sub">오픈 포지션 기준</div>
             </div>
-            <div>
-                <div class="stat-label">Open / Watching</div>
+            <div class="tr-stat">
+                <div class="tr-stat-label">Open / Watching</div>
                 <div class="stat-value">
                     <span id="stat-open">0</span>
                     <span class="text-gray-400 text-xl font-normal"> / </span>
                     <span id="stat-watching" class="text-xl">0</span>
                 </div>
-                <div class="text-xs text-gray-500">포지션 / 감시</div>
+                <div class="tr-stat-sub">포지션 / 감시</div>
             </div>
-            <div>
-                <div class="stat-label">Win / Lose</div>
+            <div class="tr-stat">
+                <div class="tr-stat-label">Win / Lose · 승률</div>
                 <div class="stat-value">
                     <span class="pnl-positive" id="stat-win">0</span>
                     <span class="text-gray-400 text-xl font-normal"> / </span>
                     <span class="pnl-negative" id="stat-lose">0</span>
                 </div>
-                <div class="text-xs text-gray-500" id="stat-winrate">—</div>
+                <div class="tr-stat-sub" id="stat-winrate">—</div>
             </div>
         </div>
     </section>

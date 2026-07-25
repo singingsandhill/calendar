@@ -1,47 +1,48 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head th:replace="~{trading/fragments/header :: header}"></head>
-<body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+<body class="tr-dark min-h-screen">
 
 <nav th:replace="~{trading/fragments/header :: navbar}"></nav>
 
-<main class="container mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold mb-6 dark:text-white">Trade History</h1>
+<main class="container mx-auto px-4 py-5">
+    <h1 class="tr-page-title mb-4">Trade History · 거래 내역</h1>
 
-    <!-- Profit Summary -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <div class="card">
-            <div class="stat-label">Realized P&amp;L</div>
-            <div class="stat-value" id="realized-pnl">…</div>
+    <!-- 손익 요약: 실현손익을 크게, 나머지는 컴팩트하게 -->
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-3">
+        <div class="tr-stat tr-stat--pnl col-span-2">
+            <div class="tr-stat-label">Realized P&amp;L · 누적 실현손익</div>
+            <div class="tr-stat-value tr-stat-value--hero" id="realized-pnl">…</div>
+            <div class="tr-stat-sub" id="realized-pnl-sub"></div>
         </div>
-        <div class="card">
-            <div class="stat-label">Total Trades</div>
-            <div class="stat-value" id="total-trades">-</div>
+        <div class="tr-stat">
+            <div class="tr-stat-label">Trades · 거래 수</div>
+            <div class="tr-stat-value" id="total-trades">-</div>
         </div>
-        <div class="card">
-            <div class="stat-label">Win Rate</div>
-            <div class="stat-value" id="win-rate">-</div>
+        <div class="tr-stat">
+            <div class="tr-stat-label">Win Rate · 승률</div>
+            <div class="tr-stat-value" id="win-rate">-</div>
         </div>
-        <div class="card">
-            <div class="stat-label">Avg P&amp;L</div>
-            <div class="stat-value" id="avg-pnl">-</div>
+        <div class="tr-stat tr-stat--pnl">
+            <div class="tr-stat-label">Avg P&amp;L · 평균 손익</div>
+            <div class="tr-stat-value" id="avg-pnl">-</div>
         </div>
-        <div class="card">
-            <div class="stat-label">Total Fees</div>
-            <div class="stat-value text-base" id="total-fees">-</div>
+        <div class="tr-stat">
+            <div class="tr-stat-label">Fees · 수수료</div>
+            <div class="tr-stat-value tr-stat-value--sm" id="total-fees">-</div>
         </div>
     </div>
 
     <!-- Daily P&L Chart -->
-    <div class="card mb-6">
-        <h2 class="text-lg font-semibold mb-4 dark:text-white">Daily P&amp;L (30d)</h2>
-        <div id="daily-chart" style="height: 200px;"></div>
+    <div class="card mb-3">
+        <h2 class="text-base font-semibold mb-3">Daily P&amp;L · 일별 실현손익 (30d)</h2>
+        <div id="daily-chart" class="tr-chart-frame" style="height: 220px;"></div>
     </div>
 
     <!-- Trades Table -->
-    <div class="card">
-        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 class="text-lg font-semibold dark:text-white">Recent Trades</h2>
+    <div class="card mb-3">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 class="text-base font-semibold">Recent Trades · 최근 주문</h2>
             <div class="flex items-center gap-2 text-xs">
                 <span class="text-gray-500">갱신: <span id="trades-updated">-</span></span>
                 <button id="trades-refresh-btn" type="button" class="btn-secondary text-xs">Refresh</button>
@@ -57,17 +58,17 @@
 
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="text-gray-500 border-b border-gray-300 dark:border-gray-700">
+                <thead>
                     <tr>
-                        <th class="text-left py-3 px-2">Time</th>
-                        <th class="text-left py-3 px-2">Type</th>
-                        <th class="text-right py-3 px-2">Price</th>
-                        <th class="text-right py-3 px-2">Volume</th>
-                        <th class="text-right py-3 px-2">Amount</th>
-                        <th class="text-left py-3 px-2">Status</th>
+                        <th class="text-left py-2 px-2">Time</th>
+                        <th class="text-left py-2 px-2">Type</th>
+                        <th class="text-right py-2 px-2">Price</th>
+                        <th class="text-right py-2 px-2">Volume</th>
+                        <th class="text-right py-2 px-2">Amount (KRW)</th>
+                        <th class="text-left py-2 px-2 pl-4">Status</th>
                     </tr>
                 </thead>
-                <tbody id="trades-table" class="dark:text-gray-300">
+                <tbody id="trades-table">
                     <tr><td colspan="6" class="text-center py-8">Loading…</td></tr>
                 </tbody>
             </table>
@@ -75,27 +76,27 @@
 
         <div class="flex justify-center mt-4 space-x-2 items-center text-sm">
             <button id="prev-btn" type="button" class="btn-secondary" disabled>Previous</button>
-            <span class="px-4 py-2 text-gray-500 dark:text-gray-400" id="page-info">Page 1</span>
+            <span class="px-4 py-2 text-gray-500" id="page-info">Page 1</span>
             <button id="next-btn" type="button" class="btn-secondary">Next</button>
         </div>
     </div>
 
     <!-- Positions Table -->
-    <div class="card mt-6">
-        <h2 class="text-lg font-semibold mb-4 dark:text-white">Position History</h2>
+    <div class="card">
+        <h2 class="text-base font-semibold mb-3">Position History · 포지션 손익</h2>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="text-gray-500 border-b border-gray-300 dark:border-gray-700">
+                <thead>
                     <tr>
-                        <th class="text-left py-3 px-2">Opened</th>
-                        <th class="text-left py-3 px-2">Closed</th>
-                        <th class="text-right py-3 px-2">Entry</th>
-                        <th class="text-right py-3 px-2">Exit</th>
-                        <th class="text-right py-3 px-2">P&amp;L</th>
-                        <th class="text-left py-3 px-2">Reason</th>
+                        <th class="text-left py-2 px-2">Opened</th>
+                        <th class="text-left py-2 px-2">Closed</th>
+                        <th class="text-right py-2 px-2">Entry</th>
+                        <th class="text-right py-2 px-2">Exit</th>
+                        <th class="text-right py-2 px-2">P&amp;L (KRW / %)</th>
+                        <th class="text-left py-2 px-2 pl-4">Reason</th>
                     </tr>
                 </thead>
-                <tbody id="positions-table" class="dark:text-gray-300">
+                <tbody id="positions-table">
                     <tr><td colspan="6" class="text-center py-8">Loading…</td></tr>
                 </tbody>
             </table>

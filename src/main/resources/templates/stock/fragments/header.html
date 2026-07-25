@@ -6,8 +6,23 @@
     <meta name="robots" content="noindex, nofollow, noarchive">
     <meta name="googlebot" content="noindex, nofollow, noarchive">
     <title>Stock Trading Bot - Gap & Pullback</title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" rel="stylesheet">
+    <!--
+      Tailwind 유틸리티: 로컬 빌드본 (CDN dist 경로는 v3에 존재하지 않아 404였음 — trading/fragments/header.html 참고)
+      재생성 (프로젝트 루트에서):
+      npx tailwindcss@3.4 -c tailwind.trading.config.js -i tailwind.trading.input.css -o src/main/resources/static/css/trading-tw.css --minify
+    -->
+    <link rel="stylesheet" th:href="@{/css/trading-tw.css}">
+    <!-- 다크 터미널 테마 (body.tr-dark 스코프, trading 페이지와 공유) -->
+    <link rel="stylesheet" th:href="@{/css/trading.css}">
+    <script>
+        // 현재 페이지 내비게이션 링크 강조
+        document.addEventListener('DOMContentLoaded', () => {
+            const path = location.pathname.replace(/\/$/, '') || '/stock';
+            document.querySelectorAll('nav a[href^="/stock"]').forEach(a => {
+                if (a.getAttribute('href').replace(/\/$/, '') === path) a.classList.add('tr-nav-active');
+            });
+        });
+    </script>
     <style>
         :root {
             --color-bg: #f3f4f6;
