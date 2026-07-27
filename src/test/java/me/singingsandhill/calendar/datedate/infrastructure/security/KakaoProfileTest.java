@@ -42,6 +42,33 @@ class KakaoProfileTest {
     }
 
     @Test
+    @DisplayName("카카오가 http 로 내려준 프로필 이미지 URL 을 https 로 정규화한다")
+    void upgradesInsecureProfileImageUrl() {
+        Map<String, Object> attributes = Map.of(
+                "id", 12345L,
+                "kakao_account", Map.of("profile", Map.of(
+                        "profile_image_url", "http://k.kakaocdn.net/dn/abc/img_640x640.jpg")));
+
+        KakaoProfile profile = KakaoProfile.from(attributes);
+
+        assertThat(profile.profileImageUrl())
+                .isEqualTo("https://k.kakaocdn.net/dn/abc/img_640x640.jpg");
+    }
+
+    @Test
+    @DisplayName("properties 폴백 경로의 http URL 도 https 로 정규화한다")
+    void upgradesInsecureProfileImageUrlFromProperties() {
+        Map<String, Object> attributes = Map.of(
+                "id", 99L,
+                "properties", Map.of("profile_image", "http://k.kakaocdn.net/dn/xyz/img_110x110.jpg"));
+
+        KakaoProfile profile = KakaoProfile.from(attributes);
+
+        assertThat(profile.profileImageUrl())
+                .isEqualTo("https://k.kakaocdn.net/dn/xyz/img_110x110.jpg");
+    }
+
+    @Test
     @DisplayName("id (Integer 타입 포함) 를 Long 으로 정규화한다")
     void normalizesIntegerId() {
         KakaoProfile profile = KakaoProfile.from(Map.of("id", 777));

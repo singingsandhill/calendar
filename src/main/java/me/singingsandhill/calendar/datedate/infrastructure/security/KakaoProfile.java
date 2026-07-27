@@ -26,11 +26,21 @@ public record KakaoProfile(Long kakaoId, String nickname, String profileImageUrl
         String nickname = firstNonBlank(
                 (String) profile.get("nickname"),
                 (String) properties.get("nickname"));
-        String imageUrl = firstNonBlank(
+        String imageUrl = toHttps(firstNonBlank(
                 (String) profile.get("profile_image_url"),
-                (String) properties.get("profile_image"));
+                (String) properties.get("profile_image")));
 
         return new KakaoProfile(number.longValue(), nickname, imageUrl);
+    }
+
+    /**
+     * 카카오는 프로필 이미지 URL 을 http 스킴으로 내려준다. HTTPS 페이지에서 그대로
+     * {@code <img src>} 로 렌더링하면 혼합 콘텐츠(mixed content)가 되므로 https 로 올린다.
+     */
+    private static String toHttps(String url) {
+        return url != null && url.startsWith("http://")
+                ? "https://" + url.substring("http://".length())
+                : url;
     }
 
     private static String firstNonBlank(String first, String second) {
