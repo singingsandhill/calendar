@@ -205,6 +205,23 @@ class SeoServiceI18nTest {
         assertThat(en.title()).contains("Dashboard");
     }
 
+    @Test
+    @DisplayName("Recap 공유 SEO — canonical(=og:url) 이 토큰을 포함하며 noindex 는 유지된다")
+    void recapShareSeo_canonicalIncludesToken() {
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+        SeoMetadata seo = service.getRecapShareSeo("지수", 2026, "abc-token");
+
+        // head.html 이 canonical 을 og:url 로도 사용한다 — 토큰이 빠지면 핸들러 없는 404 URL 을 가리킨다.
+        assertThat(seo.canonical()).isEqualTo(BASE_URL + "/recap/share/abc-token");
+        assertThat(seo.canonicalKo()).isEqualTo(BASE_URL + "/recap/share/abc-token");
+        assertThat(seo.canonicalEn()).isEqualTo(BASE_URL + "/recap/share/abc-token?lang=en");
+
+        // 개인 데이터 페이지 정책 (ADR datedate/domain/0005) 동시 고정
+        assertThat(seo.robots()).isEqualTo("noindex, nofollow");
+        assertThat(seo.hreflangEnabled()).isFalse();
+        assertThat(seo.adsEnabled()).isFalse();
+    }
+
     // ===== 공개 SEO 페이지 — hreflang 활성 =====
 
     @Test

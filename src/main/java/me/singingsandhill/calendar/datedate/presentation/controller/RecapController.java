@@ -69,7 +69,7 @@ public class RecapController {
         RecapShare share = recapShareService.getByToken(token);
         RecapDto recap = recapService.buildRecap(share.getUserId(), share.getYear());
         model.addAttribute("recap", recap);
-        model.addAttribute("seo", seoService.getRecapShareSeo(recap.nickname(), recap.year()));
+        model.addAttribute("seo", seoService.getRecapShareSeo(recap.nickname(), recap.year(), token));
         return "recap/share";
     }
 }

@@ -287,8 +287,8 @@ public class SeoService {
     }
 
     /** recap 공유 페이지 (공개 URL 이지만 개인 데이터 — noindex, OG 는 카카오톡 미리보기용). */
-    public SeoMetadata getRecapShareSeo(String nickname, int year) {
-        String path = "/recap/share";
+    public SeoMetadata getRecapShareSeo(String nickname, int year, String token) {
+        String path = "/recap/share/" + token;
         return SeoMetadata.builder()
             .title(m("seo.recapShare.title", nickname, year))
             .description(m("seo.recapShare.description", nickname, year))

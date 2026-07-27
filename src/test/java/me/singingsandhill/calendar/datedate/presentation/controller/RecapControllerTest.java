@@ -140,7 +140,7 @@ class RecapControllerTest {
         when(recapShareService.getByToken("abc-token")).thenReturn(
                 new RecapShare(1L, 42L, 2026, "abc-token", LocalDateTime.now()));
         when(recapService.buildRecap(42L, 2026)).thenReturn(sampleRecap());
-        when(seoService.getRecapShareSeo(eq("지수"), anyInt()))
+        when(seoService.getRecapShareSeo(eq("지수"), anyInt(), eq("abc-token")))
                 .thenReturn(SeoMetadata.builder().title("리캡 공유").robots("noindex, nofollow").build());
 
         mockMvc.perform(get("/recap/share/abc-token"))
