@@ -82,6 +82,10 @@ Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (0
   무재시도(`executePostNoRetry`, ADR stock/infrastructure/0005), 봇 제어 API 는
   `POST /api/stock/bot/**` ADMIN 전용 (ADR common/security/0005).
 - **`Semaphore(8, fair)` (KisRestClient)** + **`StockCodeLocks` (per-symbol ReentrantLock)** + **`ThreadPoolTaskScheduler(pool=4)`** 동시성 3-레이어.
+- **체결강도 데이터 소스** — 시세 TR(FHKST01010100, inquire-price)에는 체결강도 필드가 없다.
+  스크리닝 Floor 3·진입 검증의 체결강도는 주식현재가 체결(FHKST01010300, inquire-ccnl)의
+  `tday_rltv`(최신 행)를 `KisRestClient.getTradeStrength()` 로 조회하며, 실패/부재 시 null →
+  데이터 부족 처리 ([ADR stock/infrastructure/0007](../../../../../../../docs/adr/stock/infrastructure/0007-trade-strength-source-inquire-ccnl.md)).
 - **주문 신뢰성** ([ADR stock/infrastructure/0006](../../../../../../../docs/adr/stock/infrastructure/0006-order-pre-persistence-and-fill-backfill.md)) —
   매수는 주문 *전* `PENDING` 거래 선영속화 → 응답 성공 시 ODNO 부착 + 당일주문체결조회로
   **실체결가·수수료 backfill**(포지션 진입가도 실체결 기준). 응답 유실분은 트레이딩 루프

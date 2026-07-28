@@ -18,11 +18,11 @@
 | **common**   | — | — | — | 7 | 3 | — | — | — | 6 | 16 |
 | **datedate** | 6 | — | 6 | — | — | — | — | — | — | 12 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
-| **trading**  | — | 3 | — | — | — | — | 14 | 2 | — | 19 |
-| **stock**    | — | 6 (동시성 포함) | — | — | — | 2 | 9 | 3 | — | 20 |
-| **합계** | 8 | 9 | 6 | 7 | 3 | 2 | 23 | 5 | 6 | **69** |
+| **trading**  | — | 4 | — | — | — | — | 15 | 2 | — | 21 |
+| **stock**    | — | 7 (동시성 포함) | — | — | — | 2 | 9 | 3 | — | 21 |
+| **합계** | 8 | 11 | 6 | 7 | 3 | 2 | 24 | 5 | 6 | **72** |
 
-총 **69개 ADR**.
+총 **72개 ADR**.
 
 ---
 
@@ -100,6 +100,9 @@
 | 2026-07-24 | stock/observability | [0002 일일 실적 요약 리포트](stock/observability/0002-daily-performance-report.md) | 로직 리뷰 P2-5 — PAPER 실측 데이터원 |
 | 2026-07-25 | stock/algorithm | [0009 진입 풀백 하한·트레일링 비용 정합](stock/algorithm/0009-entry-floor-and-trailing-cost-alignment.md) | 수익성 검사 — 얕은 풀백 익절 불가·트레일링 본전 퇴화 |
 | 2026-07-25 | trading/modes | [0002 PAPER 기본 모드 전환](trading/modes/0002-paper-default-mode.md) | 수익성 검사 + 운영 감사 P1-8 — fail-dangerous 기본값 |
+| 2026-07-27 | stock/infrastructure | [0007 체결강도 소스 inquire-ccnl 전환](stock/infrastructure/0007-trade-strength-source-inquire-ccnl.md) | 운영 로그 — cttr 필드 부재로 스크리닝 전멸·진입검증 상시 FAIL |
+| 2026-07-27 | trading/infrastructure | [0004 Reactor Netty 커넥션 풀 idle 폐기](trading/infrastructure/0004-reactor-netty-connection-pool-policy.md) | 운영 로그 — stale 커넥션 PrematureCloseException 반복 |
+| 2026-07-27 | trading/risk | [0005 현재가 조회 실패 시 진입 가드 차단](trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md) | 운영 로그 — 조회 실패 시 가드 우회 매수(fail-open) |
 
 ---
 
@@ -108,17 +111,17 @@
 - [common/seo/](common/seo/) — 7 ADRs
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
-- [common/security/](common/security/) — 4 ADRs
+- [common/security/](common/security/) — 5 ADRs
 - [datedate/domain/](datedate/domain/) — 6 ADRs
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
 - [trading/modes/](trading/modes/) — 2 ADRs
-- [trading/risk/](trading/risk/) — 4 ADRs
-- [trading/infrastructure/](trading/infrastructure/) — 3 ADRs
+- [trading/risk/](trading/risk/) — 5 ADRs
+- [trading/infrastructure/](trading/infrastructure/) — 4 ADRs
 - [stock/algorithm/](stock/algorithm/) — 9 ADRs
-- [stock/infrastructure/](stock/infrastructure/) — 6 ADRs
+- [stock/infrastructure/](stock/infrastructure/) — 7 ADRs
 - [stock/modes/](stock/modes/) — 3 ADRs
 - [stock/observability/](stock/observability/) — 2 ADRs
 

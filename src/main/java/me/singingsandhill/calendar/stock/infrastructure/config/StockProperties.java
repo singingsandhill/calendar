@@ -89,7 +89,7 @@ public class StockProperties {
         private BigDecimal maxGapPercent = new BigDecimal("7.0");
         private BigDecimal minMarketCap = new BigDecimal("150000000000");
         private BigDecimal minTradeValue = new BigDecimal("500000000");
-        private BigDecimal minTradeStrength = new BigDecimal("110");
+        private BigDecimal minTradeStrength = new BigDecimal("100");
         private BigDecimal maxSpreadPercent = new BigDecimal("0.3");
         private int maxWatchlistSize = 10;
         private BigDecimal floorGapPercent = new BigDecimal("0.5");

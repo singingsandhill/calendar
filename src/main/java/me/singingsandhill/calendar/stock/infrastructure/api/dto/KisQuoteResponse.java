@@ -20,9 +20,6 @@ public record KisQuoteResponse(
     @JsonProperty("acml_tr_pbmn") BigDecimal tradeValue,
     @JsonProperty("hts_avls") BigDecimal marketCap,
     @JsonProperty("vol_tnrt") BigDecimal volumeTurnover,
-    @JsonProperty("seln_cntg_smtn") BigDecimal totalSellVolume,
-    @JsonProperty("shnu_cntg_smtn") BigDecimal totalBuyVolume,
-    @JsonProperty("cttr") BigDecimal contractStrength,
     /** 종목 상태 구분 (00:정상 51:관리 52:투자위험 53:투자경고 54:투자주의 58:거래정지 59:단기과열) */
     @JsonProperty("iscd_stat_cls_code") String statusCode,
     /** 임시정지 여부 (Y/N) — VI 발동에 따른 단일가 전환 구간 포함 */
@@ -40,12 +37,10 @@ public record KisQuoteResponse(
     public KisQuoteResponse(String stockCode, BigDecimal currentPrice, BigDecimal openPrice,
                             BigDecimal highPrice, BigDecimal lowPrice, BigDecimal prevClosePrice,
                             BigDecimal priceChange, BigDecimal changeRate, Long volume,
-                            BigDecimal tradeValue, BigDecimal marketCap, BigDecimal volumeTurnover,
-                            BigDecimal totalSellVolume, BigDecimal totalBuyVolume,
-                            BigDecimal contractStrength) {
+                            BigDecimal tradeValue, BigDecimal marketCap, BigDecimal volumeTurnover) {
         this(stockCode, currentPrice, openPrice, highPrice, lowPrice, prevClosePrice,
             priceChange, changeRate, volume, tradeValue, marketCap, volumeTurnover,
-            totalSellVolume, totalBuyVolume, contractStrength, null, null, null, null);
+            null, null, null, null);
     }
 
     /** 거래정지·단기과열 등 매매를 피해야 하는 종목 상태 코드. */
@@ -98,28 +93,6 @@ public record KisQuoteResponse(
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
     }
-    /**
-     * 체결강도.
-     *
-     * KIS 주식현재가 시세(FHKST01010100)는 체결강도를 {@code cttr} 필드로 직접 제공한다.
-     * 과거 구현은 누적 매도/매수 체결량({@code seln_cntg_smtn}/{@code shnu_cntg_smtn})으로
-     * 계산했으나, 해당 TR 응답이 두 필드를 주지 않아 체결강도가 항상 0 → 스크리닝/진입이
-     * 전량 차단됐다. 따라서 {@code cttr} 를 우선 사용하고, 없을 때만 누적 체결량으로 폴백한다.
-     */
-    public BigDecimal calculateTradeStrength() {
-        // KIS 가 직접 제공하는 체결강도(cttr) 우선.
-        if (contractStrength != null && contractStrength.compareTo(BigDecimal.ZERO) > 0) {
-            return contractStrength.setScale(2, java.math.RoundingMode.HALF_UP);
-        }
-        // 폴백: 누적 체결량 기반 계산 (cttr 미제공 TR / 단위 테스트 호환).
-        if (totalSellVolume == null || totalSellVolume.compareTo(BigDecimal.ZERO) == 0
-                || totalBuyVolume == null) {
-            return BigDecimal.ZERO;
-        }
-        return totalBuyVolume.multiply(new BigDecimal("100"))
-            .divide(totalSellVolume, 2, java.math.RoundingMode.HALF_UP);
-    }
-
     /**
      * 갭 비율 계산 ((시가 - 전일종가) / 전일종가 * 100)
      */

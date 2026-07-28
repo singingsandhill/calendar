@@ -22,7 +22,6 @@ class KisQuoteTradabilityTest {
         return new KisQuoteResponse("005930", new BigDecimal("70000"), new BigDecimal("69000"),
             new BigDecimal("71000"), new BigDecimal("68000"), new BigDecimal("68500"),
             BigDecimal.ZERO, BigDecimal.ZERO, 1L, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE,
-            BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("110"),
             statusCode, tempStop, marketWarn, liquidation);
     }
 

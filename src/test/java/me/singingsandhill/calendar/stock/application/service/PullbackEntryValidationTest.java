@@ -79,7 +79,6 @@ class PullbackEntryValidationTest {
         return new KisQuoteResponse("005930", price, new BigDecimal("98000"),
             new BigDecimal("101000"), new BigDecimal("97000"), new BigDecimal("97500"),
             BigDecimal.ZERO, BigDecimal.ZERO, 1_000_000L, new BigDecimal("1000000000"),
-            new BigDecimal("300000000000"), BigDecimal.ONE,
-            BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("120"));
+            new BigDecimal("300000000000"), BigDecimal.ONE);
     }
 }

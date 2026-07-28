@@ -211,13 +211,6 @@ public class KisRestClient {
     }
 
     private KisQuoteResponse mapToQuoteResponse(Map<String, Object> output, String stockCode) {
-        BigDecimal contractStrength = parseBigDecimal(output.get("cttr"));
-        if (contractStrength.signum() == 0) {
-            // cttr=0 은 스크리닝 dataInsufficient 탈락의 주요 원인(2026-07-22 갭 통과 63종목 전탈락).
-            // KIS 가 필드를 비워 보내는지 / 파싱 실패인지 원시값으로 판별하기 위한 계측.
-            log.warn("[{}] 체결강도(cttr) 미집계 응답 — raw cttr={}, acml_vol={}, stck_prpr={}",
-                stockCode, output.get("cttr"), output.get("acml_vol"), output.get("stck_prpr"));
-        }
         return new KisQuoteResponse(
             stockCode,
             parseBigDecimal(output.get("stck_prpr")),
@@ -231,14 +224,63 @@ public class KisRestClient {
             parseBigDecimal(output.get("acml_tr_pbmn")),
             parseBigDecimal(output.get("hts_avls")).multiply(HUNDRED_MILLION),
             parseBigDecimal(output.get("vol_tnrt")),
-            parseBigDecimal(output.get("seln_cntg_smtn")),
-            parseBigDecimal(output.get("shnu_cntg_smtn")),
-            contractStrength,
             asString(output.get("iscd_stat_cls_code")),
             asString(output.get("temp_stop_yn")),
             asString(output.get("mrkt_warn_cls_code")),
             asString(output.get("sltr_yn"))
         );
+    }
+
+    /**
+     * 체결강도 조회 (주식현재가 체결, FHKST01010300) - 재시도 포함.
+     *
+     * 시세(inquire-price) 응답에는 체결강도 필드가 없다 — 당일 체결강도({@code tday_rltv})는
+     * 이 TR 의 최근 체결 행에서만 얻는다 (ADR stock/infrastructure/0007). 최신(첫) 행 값을
+     * 반환하고, 실패/빈 응답/필드 부재는 null — 0 이 아니라 null 로 미집계를 구분해
+     * 호출측(스크리닝 Floor 3·진입 검증)이 데이터 부족으로 처리하게 한다.
+     */
+    public BigDecimal getTradeStrength(String stockCode) {
+        log.debug("Fetching trade strength for {}", stockCode);
+
+        if (!authService.isConfigured()) {
+            log.warn("KIS API not configured, skipping trade strength fetch");
+            return null;
+        }
+
+        Map<String, String> headers = authService.buildAuthHeaders("FHKST01010300");
+
+        Map<String, Object> response = executeGetWithRetry("getTradeStrength(" + stockCode + ")",
+            client -> client.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/uapi/domestic-stock/v1/quotations/inquire-ccnl")
+                    .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                    .queryParam("FID_INPUT_ISCD", stockCode)
+                    .build())
+                .headers(h -> headers.forEach(h::set))
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
+
+        if (response == null || !"0".equals(response.get("rt_cd"))
+                || !(response.get("output") instanceof List<?> rows) || rows.isEmpty()) {
+            log.warn("[{}] 체결강도(inquire-ccnl) 미확보 — rt_cd={}, rows={}", stockCode,
+                response != null ? response.get("rt_cd") : "null",
+                response != null && response.get("output") instanceof List<?> r ? r.size() : "n/a");
+            return null;
+        }
+        Object latest = rows.get(0);
+        Object raw = latest instanceof Map<?, ?> m ? m.get("tday_rltv") : null;
+        if (raw == null || raw.toString().isBlank()) {
+            // 필드명 불일치/미집계 판별용 계측 — null 은 호출측에서 데이터 부족 처리.
+            log.warn("[{}] 체결강도(tday_rltv) 부재 — firstRowKeys={}", stockCode,
+                latest instanceof Map<?, ?> m ? m.keySet() : "n/a");
+            return null;
+        }
+        try {
+            return new BigDecimal(raw.toString().trim());
+        } catch (NumberFormatException e) {
+            log.warn("[{}] 체결강도(tday_rltv) 파싱 실패 — raw={}", stockCode, raw);
+            return null;
+        }
     }
 
     private String asString(Object value) {

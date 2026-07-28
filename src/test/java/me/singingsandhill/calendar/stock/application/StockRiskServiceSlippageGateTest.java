@@ -69,8 +69,7 @@ class StockRiskServiceSlippageGateTest {
     private static KisQuoteResponse quoteAtTp1() {
         return new KisQuoteResponse("005930", new BigDecimal("105000"), new BigDecimal("98000"),
             new BigDecimal("106000"), new BigDecimal("97000"), new BigDecimal("97500"),
-            BigDecimal.ZERO, BigDecimal.ZERO, 1L, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE,
-            BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("110"));
+            BigDecimal.ZERO, BigDecimal.ZERO, 1L, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE);
     }
 
     @Test

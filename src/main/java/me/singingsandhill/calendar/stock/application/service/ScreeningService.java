@@ -186,7 +186,6 @@ public class ScreeningService {
         BigDecimal gapPercent = quote.calculateGapPercent();
         BigDecimal floorGap = stockProperties.getScreening().getFloorGapPercent();
         BigDecimal floorMaxGap = stockProperties.getScoring().getFloorMaxGap();
-        BigDecimal tradeStrength = quote.calculateTradeStrength();
         BigDecimal floorStrength = stockProperties.getScreening().getFloorTradeStrength();
 
         // Floor 필터 2: 최소 갭
@@ -196,8 +195,15 @@ public class ScreeningService {
             return null;
         }
 
+        // 체결강도는 시세 응답이 아니라 inquire-ccnl(tday_rltv) 별도 조회 — 갭 통과 종목만
+        // (ADR stock/infrastructure/0007). null(조회 실패/미집계)은 0 으로 수렴시켜 아래 분기로.
+        BigDecimal tradeStrength = kisApiClient.getTradeStrength(stockCode);
+        if (tradeStrength == null) {
+            tradeStrength = BigDecimal.ZERO;
+        }
+
         // Floor 필터 3: 최소 체결강도
-        // strength=0 은 장 초반 KIS API 미집계 상태. skipZeroStrength=true 면 스킵, false 면 통과시킴.
+        // strength=0 은 ccnl 미집계/조회 실패. skipZeroStrength=true 면 스킵, false 면 통과시킴.
         if (tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
             if (stockProperties.getScreening().isSkipZeroStrength()) {
                 stats.dataInsufficient++;
@@ -502,9 +508,9 @@ public class ScreeningService {
             return null;
         }
 
-        BigDecimal tradeStrength = quote.calculateTradeStrength();
+        BigDecimal tradeStrength = kisApiClient.getTradeStrength(stockCode);
         BigDecimal minStrength = stockProperties.getScreening().getMinTradeStrength();
-        if (tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
+        if (tradeStrength == null || tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
             stats.dataInsufficient++;
             return null;
         }

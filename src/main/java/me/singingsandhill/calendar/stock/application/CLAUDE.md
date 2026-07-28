@@ -23,6 +23,9 @@ rank 성공 스냅샷은 그대로 유지(거래일 1회 스냅샷 정합성). �
 **Score-based mode** (default, `scoring.enabled=true`):
 
 1. Floor filters (hard cut): min gap%, max gap 15%, min trade strength, min market cap 500억
+   — 체결강도는 시세 응답이 아니라 `getTradeStrength()`(inquire-ccnl `tday_rltv`, 갭 통과
+   종목만 조회)에서 얻는다; null 이면 dataInsufficient 스킵
+   ([ADR infrastructure/0007](../../../../../../../../docs/adr/stock/infrastructure/0007-trade-strength-source-inquire-ccnl.md))
 0. **거래 가능 상태 가드** — VI/거래정지/관리/정리매매/투자경고 배제 (`isTradable()`)
 1'. **선정 규칙** — 총점 ≥ `min-score-threshold`(40) **AND** 신호 점수(갭+체결강도) ≥
    `signal-min-score`(25). `min-candidates` 강제 선정은 제거 — 조건 미달이면 0건이 정상

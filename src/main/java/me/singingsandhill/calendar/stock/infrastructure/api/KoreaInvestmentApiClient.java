@@ -107,14 +107,12 @@ public class KoreaInvestmentApiClient {
     }
 
     /**
-     * 체결강도 조회
+     * 체결강도 조회 — 주식현재가 체결(FHKST01010300, inquire-ccnl)의 tday_rltv.
+     * 시세 TR 에는 체결강도 필드가 없다 (ADR stock/infrastructure/0007).
+     * 실패/미집계 시 null.
      */
     public BigDecimal getTradeStrength(String stockCode) {
-        KisQuoteResponse quote = getQuote(stockCode);
-        if (quote != null) {
-            return quote.calculateTradeStrength();
-        }
-        return null;
+        return restClient.getTradeStrength(stockCode);
     }
 
     /**

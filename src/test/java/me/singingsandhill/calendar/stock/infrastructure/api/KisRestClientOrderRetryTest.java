@@ -80,7 +80,7 @@ class KisRestClientOrderRetryTest {
         server.enqueue(new MockResponse().setResponseCode(500).setBody("{}"));
         server.enqueue(json("{\"rt_cd\":\"0\",\"output\":{\"stck_prpr\":\"70000\","
             + "\"stck_oprc\":\"69500\",\"stck_hgpr\":\"70500\",\"stck_lwpr\":\"69000\","
-            + "\"stck_sdpr\":\"69000\",\"cttr\":\"105.5\"}}"));
+            + "\"stck_sdpr\":\"69000\"}}"));
 
         assertThat(client.getQuote("005930")).isNotNull();
         // 멱등 조회는 기존 재시도 유지 — 500 후 1회 재시도로 총 2회

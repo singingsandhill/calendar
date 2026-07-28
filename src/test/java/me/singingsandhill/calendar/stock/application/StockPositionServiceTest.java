@@ -98,8 +98,7 @@ class StockPositionServiceTest {
         return new KisQuoteResponse("005930", price, new BigDecimal("98000"),
             new BigDecimal("101000"), new BigDecimal("97000"), new BigDecimal("97500"),
             BigDecimal.ZERO, BigDecimal.ZERO, 1_000_000L, new BigDecimal("1000000000"),
-            new BigDecimal("300000000000"), BigDecimal.ONE,
-            BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("120"));
+            new BigDecimal("300000000000"), BigDecimal.ONE);
     }
 
     private static KisOrderDetailResponse orderHistoryWith(String odno, int filledQty, String avgPrice) {
@@ -169,8 +168,7 @@ class StockPositionServiceTest {
         KisQuoteResponse halted = new KisQuoteResponse("005930", new BigDecimal("100000"),
             new BigDecimal("98000"), new BigDecimal("101000"), new BigDecimal("97000"),
             new BigDecimal("97500"), BigDecimal.ZERO, BigDecimal.ZERO, 1L, BigDecimal.ONE,
-            BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
-            new BigDecimal("120"), "00", "Y", "00", "N");
+            BigDecimal.ONE, BigDecimal.ONE, "00", "Y", "00", "N");
         when(kisApiClient.getQuote("005930")).thenReturn(halted);
 
         StockPosition position = service.openPosition(entryReadyStock());
