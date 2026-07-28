@@ -6,8 +6,7 @@
 ![Tests](https://img.shields.io/badge/tests-413%20passing-brightgreen)
 ![Self-hosted](https://img.shields.io/badge/self--hosted-Jetson%20Nano-76B900)
 
-카톡방의 "언제 되세요?" 지옥에서 시작한 사이드 프로젝트입니다. 지금은 집 한구석의
-Jetson Nano 위에서 실제 사용자를 받으며 운영 중입니다. 이 저장소(`calendar`)는
+여러명이서 일정을 조율할 때 불편함을 느껴 해결해보고자 시작한 일정 조율 서비스입니다. 이 저장소(`calendar`)는
 datedate와 함께, 같은 서버에서 돌아가는 암호화폐·주식 자동매매 봇을 담은
 멀티 도메인 모노리스입니다.
 
