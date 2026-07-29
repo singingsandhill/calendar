@@ -96,8 +96,8 @@ ADR 누락 사고 방지: PR 에서 `CLAUDE.md` 가 수정됐는데 `docs/adr/` 
 
 ### 커밋·되돌리기 어려운 작업
 
-- **커밋·푸시를 직접 실행하지 않는다.** 변경 후 `docs/git_commit.md`(gitignore 대상 — 작성용 스크래치)에
-  규약에 맞는 섹션을 덧붙인다. 확정분은 추적 파일 `docs/guides/git-commit.md` 에 누적된다.
+- **커밋·푸시를 직접 실행하지 않는다.** 변경 후 `docs/guides/git-commit.md`(gitignore 대상 — 작성용 스크래치)에
+  규약에 맞는 섹션을 덧붙인다.
 - 형식 규약은 `docs/guides/git-commit.md` 헤더 — cmd.exe 호환(큰따옴표만), `git add` 한 줄, 같은 파일이
   여러 커밋에 걸리면 처음 등장하는 커밋이 소유, 배치의 마지막 커밋이 로그 파일 자신을 포함.
 - 외부로 나가거나 되돌리기 어려운 작업은 실행 전에 확인받는다.
@@ -152,7 +152,8 @@ Hexagonal Architecture (Ports & Adapters). Each module has `domain/` (entities, 
 
 **infrastructure/config/**
 - `SecurityConfig` — Spring Security 경로별 접근 규칙
-- `WebConfig` — 인터셉터 3개(`LocaleChangeInterceptor` `?lang=ko`/`?lang=en`,
+- `WebConfig` — 인터셉터 3개(`LocaleChangeInterceptor` `?lang=ko`/`?lang=en`, 잘못된 lang 값은
+  무시(`ignoreInvalidLocale=true` — 봇 스캔 500 방지),
   `cacheControlInterceptor`, `ownerPathInterceptor`) + `ShallowEtagHeaderFilter` +
   `contentLanguageFilter`(`Content-Language` 헤더) + `messageSource()` 빈.
   캐시 정책: `/runners/admin` 은 no-cache, SEO 페이지는 `public, max-age`
@@ -294,7 +295,10 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 ## External Integrations
 
 **Spring WebFlux (Reactor)** — Trading 모듈:
-- `WebClientConfig` — Netty WebClient: 연결 10초, 읽기/쓰기 30초 타임아웃
+- `WebClientConfig` — Netty WebClient: 연결 10초, 읽기/쓰기 30초 타임아웃 + 커넥션 풀
+  idle 폐기(maxIdleTime 10s / maxLifeTime 5m / evictInBackground 30s — stale 커넥션
+  `PrematureCloseException` 방지, [ADR trading/infrastructure/0004](docs/adr/trading/infrastructure/0004-reactor-netty-connection-pool-policy.md)).
+  이 빌더 빈은 싱글턴이라 **stock 모듈 KIS 클라이언트도 같은 HttpClient·풀 공유**
 - `BithumbApiClient` — `BithumbPublicApi` + `BithumbPrivateApi` 래핑; `BithumbJwtGenerator`로 JWT 인증
 
 **Spring Mail (Gmail SMTP)** — Stock 모듈:
