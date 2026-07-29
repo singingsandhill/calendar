@@ -4,10 +4,8 @@
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.0-6DB33F)
 ![Tests](https://img.shields.io/badge/tests-413%20passing-brightgreen)
-![Self-hosted](https://img.shields.io/badge/self--hosted-Jetson%20Nano-76B900)
 
-카톡방의 "언제 되세요?" 지옥에서 시작한 사이드 프로젝트입니다. 지금은 집 한구석의
-Jetson Nano 위에서 실제 사용자를 받으며 운영 중입니다. 이 저장소(`calendar`)는
+여러명이서 일정을 조율할 때 불편함을 느껴 해결해보고자 시작한 일정 조율 서비스입니다. 이 저장소(`calendar`)는
 datedate와 함께, 같은 서버에서 돌아가는 암호화폐·주식 자동매매 봇을 담은
 멀티 도메인 모노리스입니다.
 
@@ -17,7 +15,7 @@ datedate와 함께, 같은 서버에서 돌아가는 암호화폐·주식 자동
 > reaching **3.4k users in the first half of 2026** — mostly via organic search, driven by
 > hand-built JSON-LD structured data, a bilingual hreflang/canonical strategy, and daily
 > IndexNow submission. The repository is a multi-domain **Java 21 / Spring Boot 4** monolith
-> (hexagonal architecture, server-side rendering + vanilla JS) self-hosted on a Jetson Nano.
+> (hexagonal architecture, server-side rendering + vanilla JS)
 > It also runs a crypto trading bot built to cover the server cost — safety-hardened after
 > two self-conducted audits. Every significant decision is recorded in **59 ADRs**.
 
@@ -161,7 +159,7 @@ GTM 트리거 세부 매핑과 DB→BigQuery 미러링은 백로그에 있는 �
 
 ## Trading Bot — 서버비는 봇이 벌게 하자
 
-자가 호스팅이라도 전기세와 도메인비는 나갑니다. 그 비용을 충당해 보려고 만든
+서버 비용을 충당해 보려고 만든
 Bithumb 자동매매 봇이고, 그래서 이 모듈의 이야기는 수익 자랑이 아니라
 **"돈이 걸린 코드를 어떻게 안전하게 굴리는가"**입니다.
 
@@ -280,16 +278,13 @@ Java 21 · Spring Boot 4.0.0 · Spring Data JPA/H2(MySQL 호환 모드) · Sprin
 WebFlux(거래소 API) · Thymeleaf SSR + vanilla JS ES modules(프론트 프레임워크 없음) ·
 Tailwind(봇 대시보드) · Gradle · JUnit 5/Mockito/AssertJ.
 
-배포는 nginx 뒤의 **Jetson Nano 홈서버**입니다. 제약이 많은 환경이 오히려 폰트 서브셋,
-ETag/Cache-Control 전략 같은 성능 튜닝의 동기가 됐습니다.
-
 <details>
 <summary><b>직접 실행해 보기</b></summary>
 
 ```bash
 # Java 21 필요
 cp .env.example .env      # 필요시 API 키 등 편집 (봇 미사용 시 그대로 두면 됨)
-./gradlew bootRun         # http://localhost:8081
+./gradlew bootRun         # http://local:8081
 ./gradlew test
 ```
 
