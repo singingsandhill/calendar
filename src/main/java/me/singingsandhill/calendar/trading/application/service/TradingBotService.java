@@ -375,23 +375,26 @@ public class TradingBotService {
             return;
         }
 
-        // P2-10/P2-12: 진입 가드 — 물타기 차단 + 코인 노출 상한
+        // P2-10/P2-12: 진입 가드 — 물타기 차단 + 코인 노출 상한.
+        // ADR risk/0005: 현재가 조회 실패 시 가드를 건너뛰지 않고 매수를 차단한다 (fail-safe).
         Double currentPriceForGuard = bithumbApiClient.getCurrentPrice();
-        if (currentPriceForGuard != null) {
-            BigDecimal currentPrice = BigDecimal.valueOf(currentPriceForGuard);
-            List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
-            if (blocksAveragingDown(openPositions, currentPrice)) {
-                log.info("Skipping BUY for {} - averaging-down blocked (기존 포지션 손실 중)", market);
-                return;
-            }
-            BithumbAccountResponse coinAccount = bithumbApiClient.getCoinBalance();
-            BigDecimal coinBalance = coinAccount != null ? new BigDecimal(coinAccount.balance()) : BigDecimal.ZERO;
-            BigDecimal coinValue = coinBalance.multiply(currentPrice);
-            BigDecimal totalEquity = availableKrw.add(coinValue);
-            if (exceedsExposureCap(coinValue, totalEquity)) {
-                log.info("Skipping BUY for {} - coin exposure cap reached (코인 비중 상한)", market);
-                return;
-            }
+        if (currentPriceForGuard == null) {
+            log.warn("Skipping BUY for {} - current price unavailable (entry guards not evaluable)", market);
+            return;
+        }
+        BigDecimal currentPrice = BigDecimal.valueOf(currentPriceForGuard);
+        List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
+        if (blocksAveragingDown(openPositions, currentPrice)) {
+            log.info("Skipping BUY for {} - averaging-down blocked (기존 포지션 손실 중)", market);
+            return;
+        }
+        BithumbAccountResponse coinAccount = bithumbApiClient.getCoinBalance();
+        BigDecimal coinBalance = coinAccount != null ? new BigDecimal(coinAccount.balance()) : BigDecimal.ZERO;
+        BigDecimal coinValue = coinBalance.multiply(currentPrice);
+        BigDecimal totalEquity = availableKrw.add(coinValue);
+        if (exceedsExposureCap(coinValue, totalEquity)) {
+            log.info("Skipping BUY for {} - coin exposure cap reached (코인 비중 상한)", market);
+            return;
         }
 
         // ATR 기반 동적 비율 계산 (변동성에 따라 15~35% 조정)
@@ -1042,7 +1045,7 @@ public class TradingBotService {
     /**
      * P1-4: 진입(매수) 리스크 가드. 서킷브레이커·물타기 차단·코인 노출상한 중 하나라도 걸리면 true(차단).
      * 자동 매수(executeBuy)와 수동 매수(manualBuy)가 동일 가드를 통과하도록 공용화.
-     * (현재가/코인잔고 조회 실패 시 물타기·노출 가드는 보수적으로 통과시키지 않고 스킵 — executeBuy 와 동일 정책.)
+     * ADR risk/0005: 현재가 조회 실패 시 가드 평가 불가 → 차단(true). 우회가 아니다.
      */
     boolean entryRiskGuardsBlock(String market) {
         if (circuitBreaker.isEntryBlocked(dayStartEquity(market), realizedPnlToday(market))) {
@@ -1051,23 +1054,25 @@ public class TradingBotService {
             return true;
         }
         Double currentPriceForGuard = bithumbApiClient.getCurrentPrice();
-        if (currentPriceForGuard != null) {
-            BigDecimal currentPrice = BigDecimal.valueOf(currentPriceForGuard);
-            List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
-            if (blocksAveragingDown(openPositions, currentPrice)) {
-                log.info("Entry blocked - averaging-down guard (기존 포지션 손실 중)");
-                return true;
-            }
-            BithumbAccountResponse coinAccount = bithumbApiClient.getCoinBalance();
-            BigDecimal coinBalance = coinAccount != null ? new BigDecimal(coinAccount.balance()) : BigDecimal.ZERO;
-            BigDecimal coinValue = coinBalance.multiply(currentPrice);
-            BithumbAccountResponse krwAccount = bithumbApiClient.getKrwBalance();
-            BigDecimal availableKrw = krwAccount != null ? new BigDecimal(krwAccount.balance()) : BigDecimal.ZERO;
-            BigDecimal totalEquity = availableKrw.add(coinValue);
-            if (exceedsExposureCap(coinValue, totalEquity)) {
-                log.info("Entry blocked - coin exposure cap (코인 비중 상한)");
-                return true;
-            }
+        if (currentPriceForGuard == null) {
+            log.warn("Entry blocked - current price unavailable (guards not evaluable)");
+            return true;
+        }
+        BigDecimal currentPrice = BigDecimal.valueOf(currentPriceForGuard);
+        List<Position> openPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN);
+        if (blocksAveragingDown(openPositions, currentPrice)) {
+            log.info("Entry blocked - averaging-down guard (기존 포지션 손실 중)");
+            return true;
+        }
+        BithumbAccountResponse coinAccount = bithumbApiClient.getCoinBalance();
+        BigDecimal coinBalance = coinAccount != null ? new BigDecimal(coinAccount.balance()) : BigDecimal.ZERO;
+        BigDecimal coinValue = coinBalance.multiply(currentPrice);
+        BithumbAccountResponse krwAccount = bithumbApiClient.getKrwBalance();
+        BigDecimal availableKrw = krwAccount != null ? new BigDecimal(krwAccount.balance()) : BigDecimal.ZERO;
+        BigDecimal totalEquity = availableKrw.add(coinValue);
+        if (exceedsExposureCap(coinValue, totalEquity)) {
+            log.info("Entry blocked - coin exposure cap (코인 비중 상한)");
+            return true;
         }
         return false;
     }

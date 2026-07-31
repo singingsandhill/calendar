@@ -88,6 +88,8 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 - **포지션 리스크 가드 (P2)** — `maxHoldMinutes`(360) 정체 포지션 손익분기 이상이면
   `TIME_EXIT` 청산 / `blockAveragingDown`(true) 손실 포지션 보유 중 추가 매수 차단 /
   `maxCoinExposurePct`(0.8) 코인 비중 상한 초과 시 신규 매수 스킵 [ADR risk/0003].
+  현재가 조회 실패 시 가드 평가 불가 → 신규 매수(자동·수동 공통) 차단 — fail-open 아님
+  ([ADR risk/0005](../../../../../../../docs/adr/trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md)).
 - **수동매매 정합 + 엔진 핑퐁 방지** ([ADR risk/0004](../../../../../../../docs/adr/trading/risk/0004-manual-trade-position-consistency-and-engine-coordination.md)) —
   `manualBuy` 는 `Trade` 만 저장하고 Position 을 만들지 않아 그 코인이 SL/TP 무보호 +
   리스크 루프에 비가시였고, `manualSell` 은 OPEN Position 을 닫지 않아 추적 Position ↔
