@@ -55,6 +55,8 @@ public class WebConfig implements WebMvcConfigurer {
     public LocaleChangeInterceptor localeChangeInterceptor() {
         LocaleChangeInterceptor interceptor = new LocaleChangeInterceptor();
         interceptor.setParamName("lang");
+        // 봇 스캔이 ?lang=<경로조작> 으로 parseLocale IAE → 500 을 만들던 것을 무시(DEBUG)로 강등.
+        interceptor.setIgnoreInvalidLocale(true);
         return interceptor;
     }
 

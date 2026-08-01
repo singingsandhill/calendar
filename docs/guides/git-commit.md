@@ -964,10 +964,6 @@ git commit -m "chore(stock): PAPER/BACKTEST 는 체결 조회 스킵 + BACKTEST 
 # =====================================================================
 # 배경: 코인·주식 수익성 검사(2026-07-25) 결론 실행. 주식 = 비용 게이트를 넘을 수 없는
 # 진입 제거 + 러너 정상화 + 버그 3건. 코인 = 감사 P1-5/P1-8/P1-9 해소. 전체 스위트 GREEN
-# (신규: RiskManagementServiceTriggerTest 6, PullbackEntryValidationTest 2 포함).
-# ⚠️ application.yaml 에 stock(entry·risk)·trading(bot.mode) 변경이 섞여 있음 — 110/112 에서
-#    git add -p 로 해당 훅만 스테이징. (앞선 103~109 미실행 상태로 순서대로 실행 시, 공유
-#    파일의 이 섹션 변경분이 앞 커밋에 함께 딸려 들어갈 수 있음 — 내용 유실은 없음.)
 
 # Commit 110 — ✅ DONE() fix(stock): 진입 풀백 하한 1.5% + 트레일링 2.0% — 비용 게이트 정합 (ADR stock/algorithm/0009)
 git add -p src/main/resources/application.yaml
@@ -997,14 +993,8 @@ git commit -m "test(trading): 손절/익절/트레일링 트리거 경계 테스
 # 전체 스위트 GREEN(85 클래스 / 503 테스트 / 실패 0).
 # 검증: 정정 심볼 코드 존재 재grep + 낡은 심볼 0건 + ADR 링크 무결성 + ADR 색인 완전성
 #       + 템플릿 13디렉터리 대조 + gradlew test.
-# ⚠️ stock/CLAUDE.md · trading/CLAUDE.md · docs/adr/README.md 는 Commit 110/112/113 과
-#    공유되는 파일 — 앞 커밋들을 아직 실행하지 않았다면 이 커밋에서는 git add -p 로
-#    문서 감사 훅만 스테이징(수치 변경분은 110/112 소유). 내용 유실은 없음.
 
 # Commit 114 — ✅ DONE() docs: CLAUDE.md 전수 감사 — 사실 오류 6건 정정 + 누락 동작·열거 보강
-# 주: Commit 113 이 이미 docs/git_commit.md 를 커밋하므로(그 시점 파일에 이 114 섹션도 포함됨)
-#     순서대로 실행하면 아래 git_commit.md add 는 no-op 이 된다 — 나머지 문서 파일만 커밋된다.
-#     113 을 실행하지 않고 114 만 단독 실행할 때만 git_commit.md 가 실제로 스테이징된다.
 git add -p src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md docs/adr/README.md
 git add CLAUDE.md src/main/java/me/singingsandhill/calendar/common/CLAUDE.md src/main/java/me/singingsandhill/calendar/trading/application/CLAUDE.md src/main/java/me/singingsandhill/calendar/stock/application/CLAUDE.md src/main/java/me/singingsandhill/calendar/runner/application/CLAUDE.md src/main/java/me/singingsandhill/calendar/datedate/application/CLAUDE.md src/main/resources/templates/fragments/CLAUDE.md docs/git_commit.md
 git commit -m "docs: CLAUDE.md 전수 감사 — 존재하지 않는 심볼 정정 + 누락 동작·열거 보강" -m "11개 CLAUDE.md 전수 대조. ① 사실 오류 6건: SecurityConfig 에 /** 전역 permitAll 은 존재하지 않음(실제 /* + /*/*/*) — 루트 표를 선언 순서 12행으로 재작성하고 /runners/admin/login(permitAll)이 /runners/admin/**(ADMIN) 보다 먼저여야 로그인이 가능하다는 순서 의존성을 명시(기존 표는 행 순서가 반대로 오해 유발); BithumbApiClient.simulateOrder 없음 → simulateBuy/simulateSell; SelectionConverter → SelectionListConverter; alwaysUseMessageFormat 은 코드베이스 어디에도 설정되지 않음(Spring 기본값 false 이며 WebConfig 는 setFallbackToSystemLocale(false) 만 호출) — 'WebConfig 가 설정' 서술 정정; common security ADR 4개 → 5개; 'trading.bot.enabled=false 이면 모든 잡 스킵' 은 거짓 — CandleScheduler.cleanupOldCandles() 는 가드가 없어 항상 실행(주식은 5개 메서드 전부 가드되어 정확 — 두 모듈의 차이를 양쪽 문서에 명시). ② 누락 동작: /api/trading/verify/test-order 가 시장가 매수를 전송하며 모드 가드는 받지만 bot.enabled·서킷브레이커를 우회한다는 경고 신설(봇 정지 상태에서도 LIVE 면 실주문) + trading·stock presentation 컨트롤러 전체 표; BUY 신호의 MA60 억제 게이트(현재가<MA60 이면 다이버전스·RSI<30·거래량 스파이크 중 하나 없으면 HOLD 강제, Issue #9); 주식 TP1·TP2·TP3 가 전부 순이익 게이트(수수료차감 손익 − 슬리피지 ≥ 시간감쇠 최소수익)를 통과해야 발동하며 TP2(당일고가)도 예외 아님 + 실효 청산비용 0.43% 구성(0.015%×2 + 0.20% + 0.2%); TradingEventService 의 REQUIRES_NEW(호출자 롤백에도 이벤트 잔존) 및 ProfitService; 리밸런스 default-ratio 폴백·NEUTRAL 구간; excludeFormingCandle(기본 OFF)·RSI 추세 lookback. ③ 미반영 Accepted ADR 반영: trading/risk/0004(수동매매 Position 정합·엔진 핑퐁), trading/strategy/0006~0009, stock/infrastructure/0004. ④ 열거 누락: 템플릿 표에 auth·me·recap·tools·runners|stock|trading/fragments 7디렉터리 + about/faq/portfolio/verify/create/announce/attendance-form 누락분 보강(49파일·13디렉터리 대조 완료); common 클래스 목록에 CorsConfig·Adsense·IndexNow·KakaoOAuth2ClientConfig·IndexNowService·LocaleLinks·AdsenseModelAdvice; 스케줄러 표에 IndexNowScheduler(03:30 KST)·주식 11:40 일일 리포트; AuthController·MyPageController·RecapController 잔여 라우트; AttendanceNotFoundException; fragments 표에 create-schedule-modal.html. ⑤ docs/adr/README.md 색인에 누락돼 있던 common/security/0002(CORS) 행 추가 — 매트릭스 합계는 이미 포함돼 있어 수치 변경 없음. 프로덕션 코드 무변경."
@@ -1042,9 +1032,88 @@ git commit -m "fix(datedate): recap 공유 페이지 canonical/og:url 에 토큰
 # 검증: RED 선확인(expected "https://k.kakaocdn.net/...", but was "http://...") 2건 →
 #       GREEN, 전체 스위트 85 클래스 / 506 테스트 / 실패 0.
 
-# Commit 116 — fix(datedate): 카카오 프로필 이미지 URL http→https 정규화 — 마지막 커밋(git-commit.md 포함)
-# 주: Commit 115 가 이미 docs/guides/git-commit.md 를 커밋하므로(그 시점 파일에 이 116
-#     섹션도 포함됨) 순서대로 실행하면 아래 git-commit.md add 는 no-op 이 된다.
-#     115 를 실행하지 않고 116 만 단독 실행할 때만 실제로 스테이징된다.
+# Commit 116 — ✅ DONE() fix(datedate): 카카오 프로필 이미지 URL http→https 정규화 — 마지막 커밋(git-commit.md 포함)
 git add src/main/java/me/singingsandhill/calendar/datedate/infrastructure/security/KakaoProfile.java src/test/java/me/singingsandhill/calendar/datedate/infrastructure/security/KakaoProfileTest.java docs/guides/git-commit.md
 git commit -m "fix(datedate): 카카오 프로필 이미지 URL 을 https 로 정규화" -m "카카오 /v2/user/me 가 profile_image_url(및 properties.profile_image 폴백)을 http 스킴으로 내려주는데 KakaoProfile.from 이 원본을 그대로 통과시켜, HTTPS 로 서빙되는 페이지에서 <img src=\"http://k.kakaocdn.net/...\"> 가 렌더링되고 있었다. 브라우저 콘솔에 Chrome 의 혼합 콘텐츠 경고가 로그인 사용자 전 페이지(공용 헤더 4곳 + 마이페이지 1곳)에서 반복 출력된다. Chrome 81+ 는 이런 수동적 리소스를 자동으로 https 로 올려 재요청하고 실패 시 http 로 폴백하지 않고 차단하므로, 현재는 k.kakaocdn.net 이 HTTPS 를 정상 제공(TLS 핸드셰이크·인증서 검증 통과)해 이미지가 보이지만 CDN 이 특정 경로에서 HTTPS 를 주지 못하면 곧바로 깨진 이미지가 된다 — 브라우저 자동 업그레이드에 의존하지 않도록 서버에서 확정한다. 수정은 파싱 단계 한 곳(KakaoProfile.toHttps): profile 우선·properties 폴백이 firstNonBlank 로 합류한 뒤 한 번만 정규화되므로 두 경로가 함께 커버되고, 렌더 지점 5곳을 각각 손대는 중복이 없다. 저장 값도 자연히 치유된다 — KakaoOAuth2UserService 는 upsert 가 반환한 AppUser.getProfileImageUrl() 을 appProfileImage 속성에 싣고 AppUserService.upsertKakaoUser 는 재로그인마다 refreshProfile 로 갱신하므로, 기존 http 로 저장된 행은 다음 로그인 시점에 https 로 덮인다(별도 데이터 마이그레이션 불필요). http:// 접두사가 아닌 값(이미 https, 프로토콜 상대 //, null)은 그대로 통과. 회귀 가드 2건: KakaoProfileTest 의 upgradesInsecureProfileImageUrl(kakao_account.profile 경로) / upgradesInsecureProfileImageUrlFromProperties(properties 폴백 경로) — 수정 전 RED 확인 후 GREEN, 기존 4건 포함 6건 전부 통과."
+
+# =====================================================================
+# 운영 로그(2026-07-27) 문제 3건 수정 — 스크리닝 전멸 / PrematureClose / lang 500
+# =====================================================================
+# 배경: 트레이딩 로직 수정 후 운영 로그 분석에서 확정된 문제 3건. ① 스크리닝 30종목 전부
+# "체결강도(cttr) 미집계 — raw cttr=null" → Selected 0: KIS 공식 스펙(koreainvestment/
+# open-trading-api 샘플) 검증 결과 시세 TR(FHKST01010100, 82필드)에는 cttr 도 폴백 필드
+# (seln_cntg_smtn/shnu_cntg_smtn)도 없다 — 존재하지 않는 필드 파싱(d8b0158 의 P0-3 "수정"
+# 자체가 같은 사고 2회째). 체결강도 실소재는 inquire-ccnl(FHKST01010300) tday_rltv.
+# ② PrematureCloseException BEFORE response 가 매분 :05 루프에서 3~10분 간격 반복:
+# HttpClient.create() 기본 풀에 idle 폐기 없음 → 서버가 닫은 stale 커넥션 재사용. 부수로
+# 조회 실패 시 TradingBotService 진입 가드가 if(price!=null) 구조라 무가드 매수 진행
+# (fail-open, javadoc 과 실동작 반대). ③ 봇 스캔 ?lang=../../..가 LocaleChangeInterceptor
+# parseLocale IAE → 요청마다 500 + ERROR 스택트레이스.
+# 비문제(수정 없음): 08:30 volume-rank rows=0 → 09:20 재시도 성공은 ADR stock/algorithm/
+# 0006 의도대로, ThinkPHP 스캔은 Tomcat 파싱 거부(INFO), 메일 첨부는 첨부명만 스냅샷 명명.
+# 검증: 4단계 전부 RED 선확인(11테스트 중 8 RED — 500/전멸/가드우회/cttr=0 전부 재현) →
+#       GREEN, 전체 스위트 90 클래스 / 514 테스트 / 실패 0.
+
+# Commit 117 — ✅ DONE() fix(stock): 체결강도 소스를 inquire-ccnl(tday_rltv) 로 전환 (ADR stock/infrastructure/0007)
+git add src/main/java/me/singingsandhill/calendar/stock/infrastructure/api/KisRestClient.java src/main/java/me/singingsandhill/calendar/stock/infrastructure/api/dto/KisQuoteResponse.java src/main/java/me/singingsandhill/calendar/stock/infrastructure/api/KoreaInvestmentApiClient.java src/main/java/me/singingsandhill/calendar/stock/application/service/ScreeningService.java src/main/java/me/singingsandhill/calendar/stock/infrastructure/config/StockProperties.java src/test/java/me/singingsandhill/calendar/stock/infrastructure/api/KisRestClientTradeStrengthTest.java src/test/java/me/singingsandhill/calendar/stock/application/service/ScreeningFloorStrengthTest.java src/test/java/me/singingsandhill/calendar/stock/infrastructure/api/dto/KisQuoteResponseTest.java src/test/java/me/singingsandhill/calendar/stock/infrastructure/api/dto/KisQuoteTradabilityTest.java src/test/java/me/singingsandhill/calendar/stock/application/StockPositionServiceTest.java src/test/java/me/singingsandhill/calendar/stock/application/StockRiskServiceSlippageGateTest.java src/test/java/me/singingsandhill/calendar/stock/application/StockRiskServiceTimeExitTest.java src/test/java/me/singingsandhill/calendar/stock/application/service/PullbackEntryValidationTest.java src/test/java/me/singingsandhill/calendar/stock/infrastructure/api/KisRestClientOrderRetryTest.java docs/adr/stock/infrastructure/0007-trade-strength-source-inquire-ccnl.md docs/adr/README.md src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md src/main/java/me/singingsandhill/calendar/stock/application/CLAUDE.md
+git commit -m "fix(stock): 체결강도 소스를 inquire-ccnl(tday_rltv) 로 전환 (ADR stock/infrastructure/0007)" -m "2026-07-27 09:20 스크리닝 30종목 전멸(gap 11 + dataInsufficient 19, Selected 0)의 근본 원인: 시세 TR(FHKST01010100, inquire-price)의 cttr 필드를 체결강도로 파싱했으나 KIS 공식 스펙(공식 GitHub 샘플 82필드)에 cttr 는 존재하지 않는다 — 폴백 필드(seln_cntg_smtn/shnu_cntg_smtn)도, inquire-price-2(FHPST01010000, 54필드)에도 없음. d8b0158(P0-3) 의 cttr 매핑 결정을 supersede. 체결강도 실소재인 주식현재가 체결(FHKST01010300, inquire-ccnl)의 tday_rltv(최신 행)를 KisRestClient.getTradeStrength() 신설로 조회 — executeGetWithRetry(GET 재시도 유지)·Semaphore 게이트 경유, 실패/빈 응답/필드 부재는 0 이 아닌 null(미집계 구분). 스크리닝은 갭 통과 종목만 조회(+11콜 수준)하고 null 은 기존 skipZeroStrength 경로로 안전 탈락(무회귀). 진입 검증(PullbackDetectionService 조건 1, 기존 상시 FAIL)은 KoreaInvestmentApiClient.getTradeStrength 위임 교체로 자동 연결(null=FAIL 로직 기존 그대로, 콜 수 불변). 존재하지 않는 필드 3개와 calculateTradeStrength() 는 이번 이동으로 전부 미사용이 되어 제거 — 같은 사고(스펙 미검증 필드 매핑) 2회 전력의 3회째를 구조적 차단. 부수: minTradeStrength Java 기본 110→100 (yaml 정합 규칙, 레거시 경로용). 회귀 가드: KisRestClientTradeStrengthTest(실스펙 스텁 — cttr 없는 quote + tday_rltv 있는 ccnl, 최신 행/재시도/null 4케이스) + ScreeningFloorStrengthTest(ccnl 소스로 Floor 3 통과 + null 시 안전 탈락) — 수정 전 RED(0 반환/전멸 재현) 확인 후 GREEN. 잔여 위험: tday_rltv 필드명은 실API 로만 최종 확인 가능 — 부재 시 null 안전 탈락 + WARN 계측으로 다음 거래일 로그에서 판별. 리뷰 보강: 테스트가 tr_id(FHKST01010300)·FID 파라미터·'시세 엔드포인트 미호출'까지 단정(TR 오선택 회귀 가드), 갭 탈락 종목 미조회(콜 예산)·skipZeroStrength=false 시 null→floor(95) 보정 고정 테스트 추가. 부수 정정: docs/adr/README.md View 3 의 common/security 4→5 (기존 오류 — 이번 총계 72 갱신으로 표면화된 자기모순 해소)."
+
+# Commit 118 — ✅ DONE() fix(trading): Reactor Netty 커넥션 풀 idle 폐기 정책 (ADR trading/infrastructure/0004)
+# 주의: 루트 CLAUDE.md 는 이 커밋이 소유 — Commit 120 의 lang 사실 1줄 + 기존 미커밋
+#       git_commit.md→guides/git-commit.md 경로 정정 2줄이 함께 들어간다(내용 유실 없음).
+git add src/main/java/me/singingsandhill/calendar/trading/infrastructure/config/WebClientConfig.java src/test/java/me/singingsandhill/calendar/trading/infrastructure/config/WebClientConfigTest.java docs/adr/trading/infrastructure/0004-reactor-netty-connection-pool-policy.md CLAUDE.md
+git commit -m "fix(trading): Reactor Netty 커넥션 풀 idle 폐기 정책 (ADR trading/infrastructure/0004)" -m "운영 로그에 PrematureCloseException(BEFORE response)이 매분 :05 트레이딩 루프에서 3~10분 간격으로 밤새 반복 — 커넥션 ID 접미사(-4~-128)가 풀 재사용 커넥션임을 지시. 원인은 HttpClient.create() 기본 ConnectionProvider: maxIdleTime 무한·evictInBackground 없음이라 Bithumb 이 keep-alive idle 로 닫은 stale 커넥션을 재사용. ConnectionProvider(maxIdleTime 10s / maxLifeTime 5m / evictInBackground 30s) 로 서버보다 먼저 폐기 — 크립토 루프(매분)는 틱 간 폐기, stock 5초 루프는 warm 재사용 유지. 기존 타임아웃 3종 불변. GET 재시도는 보류(원인은 풀이 제거, 잔여 실패는 risk/0005 fail-safe 가 흡수; HttpClient 전역 retry 는 주문 POST 오염 위험이라 금지 — 비멱등 무재시도 불변). 이 빌더 빈은 싱글턴이라 stock KIS 클라이언트도 같은 풀 공유(KisRestClient 는 자체 재시도 보유라 무해). 이 예외의 실영향은 단순 노이즈가 아니었다: 조회 실패 틱에 손절/익절/트레일링 체크 스킵·SELL 스킵·(수정 전) 진입 가드 우회 — 가드 건은 Commit 119. ConnectionProvider 는 @Bean(destroyMethod=dispose) 로 등록해 컨텍스트 종료 시 evict 태스크·풀 정리(테스트 컨텍스트 캐싱 잔존 방지). 수치는 introspection API 부재로 단정 테스트 불가 — 풀 이름 스모크만 두고 완치 판정은 다음날 로그(PrematureCloseException 0건). 부수로 reactor.netty WARN 이 root 로거를 타고 stock-trading.log 를 오염시키던 것도 원인 소멸로 해소."
+
+# Commit 119 — ✅ DONE() fix(trading): 현재가 조회 실패 시 진입 가드 차단 (ADR trading/risk/0005)
+git add src/main/java/me/singingsandhill/calendar/trading/application/service/TradingBotService.java src/test/java/me/singingsandhill/calendar/trading/application/service/TradingBotServiceGuardFailSafeTest.java docs/adr/trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md
+git commit -m "fix(trading): 현재가 조회 실패 시 진입 가드는 우회가 아니라 차단 (ADR trading/risk/0005)" -m "executeBuy(:379)·entryRiskGuardsBlock(:1053) 의 if (currentPriceForGuard != null) 구조는 현재가 조회 실패 시 물타기 차단(P2-10)·코인 노출상한(P2-12) 가드를 평가하지 않고 매수를 진행시켰다(fail-open) — javadoc 은 '보수적으로 통과시키지 않고 스킵' 이라 실동작과 반대. 2026-07-27 로그의 PrematureCloseException 경로(orderbook 실패 → getCurrentPrice null)가 이 우회를 실제로 밟는다: 손실 포지션 보유 중에도 무가드 신규 매수 가능. null 이면 조기 리턴(executeBuy)/차단 true(entryRiskGuardsBlock) 로 반전 — manualBuy 도 같은 가드 공유라 함께 fail-safe(의도된 확장). 청산·리스크 경로(SELL)는 이 가드와 무관해 영향 없음. 비용은 해당 틱 매수 1회 유실뿐(다음 틱 60초 재평가) — 주문 무재시도(불확실하면 돈이 안 나가는 쪽)와 같은 실패 모드 선택. javadoc 정정 포함. 회귀 가드: TradingBotServiceGuardFailSafeTest 2케이스(가드 true / 주문 미전송 verify never) — 수정 전 RED(NeverWantedButInvoked 로 매수 진행 재현) 확인 후 GREEN."
+
+# Commit 120 — fix(common): 잘못된 ?lang= 값 무시 (ignoreInvalidLocale) — 마지막 커밋(git-commit.md 포함)
+git add src/main/java/me/singingsandhill/calendar/common/infrastructure/config/WebConfig.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/LocaleChangeInvalidLangTest.java docs/guides/git-commit.md
+git commit -m "fix(common): 잘못된 ?lang= 값을 500 없이 무시 (ignoreInvalidLocale)" -m "봇 스캔 ?lang=../../../../tmp/index1 이 LocaleChangeInterceptor.preHandle 의 parseLocale IAE 로 전파돼 요청마다 500 + MvcExceptionHandler ERROR 스택트레이스(에러 디스패치에서 인터셉터가 재차 터져 이중 로깅)를 만들었다 — 공격은 실패하지만 외부 입력만으로 5xx·ERROR 노이즈 유발. setIgnoreInvalidLocale(true) 한 줄: Spring 이 IAE 를 catch 해 DEBUG 만 남기고 진행(6.2.8 동작 확인), 로케일은 기존 리졸버 체인(쿠키→Accept-Language→ko, 화이트리스트 방어 기존대로)로 폴백. 잘못된 lang 값을 넣는 테스트가 리포 전체 0건이던 공백을 LocaleChangeInvalidLangTest 2케이스로 보강(경로조작 값 200 + lang=en Content-Language 회귀 짝) — 수정 전 RED(200 기대, 실제 500) 확인 후 GREEN. 결정 변경이 아닌 결함 수정이라 신규 ADR 없음(비결정성 문턱), 루트 CLAUDE.md WebConfig 사실 1줄은 Commit 118 에 흡수."
+
+# =====================================================================
+# 인사이트 트렌드 평균 투표 0.0 표시 버그
+# =====================================================================
+# 배경: /insights/trends "이용 현황 > 상세 통계" 에서 등록 229 / 투표 200 인데도
+# "장소당 평균 투표" 가 0.0 으로 표시된다는 관측에서 출발. 평균 3종 중 "일정당 평균
+# 참여자 수" 만 정상이었다는 비대칭이 단서 — 이 값만 InsightsService 에서 double 로
+# 계산되고, 장소/메뉴 평균 2종은 템플릿 SpEL 에서 long/long 으로 계산되고 있었다.
+# 정수 나눗셈이라 1 미만 평균은 전부 0 으로 잘리고 formatDecimal(...,1,1) 이 ".0" 을
+# 덧붙여 "0.0" 이라는 그럴듯한 값으로 위장됐다. th:if 등록수>0 가드가 0 나눗셈 예외를
+# 막아버려 조용히 실패(무예외·무로그).
+# 데이터는 정상 — 수정 후 값은 0.9/0.8 (등록만 되고 투표 0인 장소·메뉴 다수).
+# 결정 변경이 아닌 산술 결함 수정이라 신규 ADR 없음(비결정성 문턱), CLAUDE.md 의
+# InsightsService 사실 기술("집계 인기 통계")도 불변.
+# 전수 확인: 템플릿 전체 #numbers.formatDecimal/formatPercent 사용처 15곳 중 동일
+# 정수 나눗셈은 이 2곳뿐 — stock/settings.html·stock/fragments/formats.html·
+# trading/settings.html 은 BigDecimal 또는 단일 값이라 무영향.
+# 검증: RED 선확인(avgVotesPerLocation/avgVotesPerMenu 부재로 컴파일 실패 6건) →
+#       GREEN 5테스트, 실제 렌더 확인(메뉴 3표/6개 → 정수나눗셈이면 0.0, 실제 0.5).
+
+# Commit 121 — fix(datedate): 장소/메뉴당 평균 투표 정수 나눗셈 절삭
+git add src/main/java/me/singingsandhill/calendar/datedate/application/dto/ServiceStatsDto.java src/main/java/me/singingsandhill/calendar/datedate/application/service/InsightsService.java src/main/resources/templates/insights/trends.html src/test/java/me/singingsandhill/calendar/datedate/application/service/InsightsServiceTest.java docs/troubleshooting/thymeleaf-spel-integer-division.md docs/troubleshooting/README.md
+git commit -m "fix(datedate): 장소/메뉴당 평균 투표가 0.0 으로 절삭되던 문제" -m "insights/trends.html 이 장소·메뉴당 평균 투표를 뷰에서 직접 계산했는데 stats.totalLocationVotes / stats.totalLocations 양쪽이 long 이라 SpEL 이 정수 나눗셈을 수행했다. 운영값 200/229·72/87 은 둘 다 0 으로 잘리고 #numbers.formatDecimal(...,1,1) 이 소수부 .0 을 붙여 '0.0' 이라는 정상처럼 보이는 값을 출력한다 — th:if 등록수>0 가드가 0 나눗셈 예외까지 막아 예외도 로그도 남지 않는 조용한 실패였다. 같은 화면의 '일정당 평균 참여자 수' 만 멀쩡했던 이유는 그 값이 이미 InsightsService 에서 (double) 캐스트로 계산된 필드였기 때문 — 즉 산술이 뷰에 있는 것 자체가 원인이다. 수정은 같은 메서드 안에 이미 있던 avgParticipants 패턴(0 가드 + (double) 캐스트)을 그대로 재사용해 avgVotesPerLocation/avgVotesPerMenu 를 서비스에서 계산하고 ServiceStatsDto 에 double 로 실어 보내며, 템플릿은 필드만 출력한다. 등록 0건일 때 행을 숨기는 th:if 가드는 의미가 남아 유지. 산술이 서비스로 내려오면서 단위 테스트로 고정 가능해졌고 InsightsService 는 그간 테스트가 0건이었다 — InsightsServiceTest 5케이스 신설(운영값 재현 0.873/0.827, 소수부 보존 7/2=3.5, 등록 0건 0 가드, avgParticipantsPerSchedule 회귀, 원시 카운트 통과). 수정 전 RED(신규 접근자 부재로 컴파일 실패 6건) 확인 후 GREEN, 실제 앱 렌더로도 확인(개발 DB 메뉴 3표/6개 → 정수 나눗셈이면 0.0, 실제 0.5 출력). 표시 로직만 바뀌고 집계 소스(count()/countAllVotes())는 불변 — 분모가 만료·삭제 미필터 전역 카운트라 평균이 1 미만인 것은 지표 정의 문제로 별건. 예외·로그·테스트 실패가 전부 0인 조용한 실패라 재발 시 진단 비용이 큰 유형이므로 docs/troubleshooting/thymeleaf-spel-integer-division.md 로 문서화(README 인덱스 + '표시 값 오류(예외·로그 없음)' Quick Reference 추가): 위장 메커니즘(formatDecimal 이 절삭값에 .0 을 덧붙임 / th:if 0가드가 ArithmeticException 이라는 유일한 발견 경로 차단), 같은 화면의 정상 지표와 대조해 원인을 좁히는 진단 순서, 전수 검사 grep 2종(수정 전 236·252 행 적중 확인), 몫이 나누어떨어지지 않는 7/2=3.5 케이스를 테스트에 넣어야 하는 이유(3/6=0.5 형태만 있으면 분모>분자 조건에서만 잡힘)."
+
+# =====================================================================
+# GSC BreadcrumbList "'item' 입력란 누락" — 리치 결과 제외 6건
+# =====================================================================
+# 배경: Google Search Console 이 2026-05-20 부터 "'item' 입력란이 누락되었습니다
+# (경로: 'itemListElement')" 를 6개 URL 에 보고 (use-cases 5개 + tools/date-diff).
+# Google 규격은 마지막을 제외한 모든 ListItem 에 item 을 요구하는데, SeoService 의
+# breadcrumb 텍스트 블록 7곳이 전부 position 1 에만 item 을 넣는 형태였다. 그래서
+# 2단계 페이지(guide/faq/about/privacy/terms/insights)는 item 없는 크럼브가 마지막이라
+# 유효했고, 3단계인 getUseCaseSeo/getDateDiffSeo 만 중간 크럼브가 걸려 정확히 6개 URL
+# 이 신고됐다 — 계층 깊이에 따라 결과가 갈린 것이 원인 판별의 단서.
+# 중간 크럼브에 URL 을 채우는 길은 막혀 있었다: /use-cases·/tools 허브 페이지가 없다
+# (UseCaseController 는 /{slug} 만, HomeController 는 /tools/date-diff 만, 템플릿 index
+# 없음, SitemapService 에도 없음) — 채우면 404 를 가리키는 breadcrumb 이 된다.
+# 결정 변경(구조 전환)이라 신규 ADR common/seo/0008 작성.
+# 검증: RED 선확인(신규 breadcrumbList_everyItemHasUrl 이 /guide position=2 에서 실패)
+#       → GREEN 14테스트, 전체 스위트 91 클래스 / 520 테스트 / 실패 0.
+#       실제 렌더 확인(bootRun + curl): 9개 breadcrumb 페이지 x ko/en 18케이스 전부
+#       크럼브 2개(홈 1개) + item 전원 절대 URL + position 연속.
+
+# Commit 122 — fix(seo): BreadcrumbList 2단계 + 모든 ListItem 에 item (ADR common/seo/0008)
+git add src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/test/java/me/singingsandhill/calendar/datedate/application/service/SeoServiceI18nTest.java src/main/resources/messages.properties src/main/resources/messages_en.properties docs/adr/common/seo/0008-breadcrumb-item-on-every-listitem.md docs/adr/README.md src/main/java/me/singingsandhill/calendar/datedate/application/CLAUDE.md
+git commit -m "fix(seo): BreadcrumbList 2단계 축소 + 모든 ListItem 에 item URL (ADR common/seo/0008)" -m "GSC 가 2026-05-20 부터 리치 결과 오류 'item 입력란이 누락되었습니다(경로: itemListElement)' 를 6개 URL 에 보고했다 — UseCaseSlugs.ALL 5개와 /tools/date-diff. Google 규격은 마지막을 제외한 모든 ListItem 에 item 을 요구하는데 SeoService 의 breadcrumb 텍스트 블록 7곳이 전부 position 1 에만 item 을 넣고 있었다. 그래서 결과가 계층 깊이에 따라 갈렸다: 2단계 페이지(guide/faq/about/privacy/terms/insights/trends)는 item 없는 크럼브가 마지막이라 규격상 유효해 무사했고, 3단계인 getUseCaseSeo/getDateDiffSeo 만 중간 크럼브(활용 사례/도구)가 걸렸다 — 3단계 메서드가 정확히 이 둘이고 신고된 6개 URL 과 일치한다. 중간 크럼브에 URL 을 부여하는 수정은 불가능했다: /use-cases·/tools 허브 페이지가 존재하지 않는다(UseCaseController 는 @GetMapping(/{slug}) 뿐, HomeController 는 /tools/date-diff 만, 두 템플릿 디렉토리에 index 없음, SitemapService 에도 없음) — 채우면 오류를 404 를 가리키는 품질 문제로 바꿔치기할 뿐이다. 이미 유효하게 동작하던 6개 페이지와 같은 형태로 수렴시키는 쪽을 골라 홈 → 현재 페이지 2단계로 축소하고, 마지막 항목까지 포함해 모든 ListItem 에 item 절대 URL(baseUrl+path, 같은 JSON-LD 의 url 필드와 동일 규약)을 채운다 — 규격상 마지막 item 은 선택이지만 계층이 하나 늘면 기존 마지막이 중간이 되어 곧바로 같은 오류가 되기 때문이고, 이번 사고가 정확히 그 형태였다. 7곳에 복붙돼 있던 블록은 breadcrumbJsonLd(leafName, leafPath) 헬퍼로 단일화해 불변식이 한 곳에만 존재하게 했다(-94줄). 크럼브 1개인 getHomeSeo 와 RunnerController 는 이미 item 이 있어 무변경. 중간 크럼브 제거로 참조가 사라진 seo.breadcrumb.useCases/seo.breadcrumb.tools 를 ko/en 양쪽에서 제거(화면 breadcrumb 은 별개 키 tool.breadcrumb.* 라 무영향). 회귀 가드: SeoServiceI18nTest.breadcrumbList_everyItemHasUrl — ko/en 양쪽 UseCaseSlugs.ALL 전수로 모든 ListItem 의 item 존재·절대 URL·position 연속성을 검증한다. 기존 allJsonLd_validJsonBothLocales 는 readTree 파싱만 해서 이 버그를 통과시켰다(JSON 유효성과 스키마 규격은 다른 층). 수정 전 RED(/guide position=2 에서 item 누락) 확인 후 GREEN, 전체 스위트 91 클래스 520 테스트 실패 0, 실제 렌더로도 확인(bootRun + curl 로 9개 breadcrumb 페이지 x ko/en 18케이스 전부 통과). 남은 불일치: /tools/date-diff 의 화면 breadcrumb(templates/tools/date-diff.html)은 여전히 홈/도구/날짜 계산기 3단계를 표시해 구조화 데이터와 어긋난다 — Google 권장사항상 일치가 바람직하나 오류는 아니고 UI 변경은 별도 판단으로 남긴다. 허브 페이지 신설은 기각이 아니라 보류이며, 만들면 헬퍼 한 곳 수정으로 3단계 복원 가능(ADR 0008 Superseded 검토)."
