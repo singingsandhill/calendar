@@ -233,7 +233,7 @@
                 </div>
                 <div class="stats-detail-row" th:if="${stats.totalLocations > 0}">
                     <span class="label" th:text="#{insights.detail.location.avg}">장소당 평균 투표</span>
-                    <span class="value" th:text="${#numbers.formatDecimal(stats.totalLocationVotes / stats.totalLocations, 1, 1)}">0.0</span>
+                    <span class="value" th:text="${#numbers.formatDecimal(stats.avgVotesPerLocation, 1, 1)}">0.0</span>
                 </div>
             </div>
 
@@ -249,7 +249,7 @@
                 </div>
                 <div class="stats-detail-row" th:if="${stats.totalMenus > 0}">
                     <span class="label" th:text="#{insights.detail.menu.avg}">메뉴당 평균 투표</span>
-                    <span class="value" th:text="${#numbers.formatDecimal(stats.totalMenuVotes / stats.totalMenus, 1, 1)}">0.0</span>
+                    <span class="value" th:text="${#numbers.formatDecimal(stats.avgVotesPerMenu, 1, 1)}">0.0</span>
                 </div>
             </div>
         </div>

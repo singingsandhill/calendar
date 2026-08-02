@@ -13,6 +13,7 @@ This directory contains solutions to common issues encountered during developmen
 | [Nginx Configuration](nginx-configuration.md) | http2 deprecated, server_name 충돌, 리디렉션 설정 |
 | [Lighthouse Performance Audit](lighthouse-performance-audit.md) | datedate.site 폰트/manifest 최적화 — Pretendard 동적 서브셋, Noto 로케일 분기, manifest i18n |
 | [Spring Security @WebMvcTest](spring-security-webmvctest.md) | 보안 슬라이스 테스트 — 컨텍스트 로딩 실패(전이 의존성), @WithMockUser 미적용 → post-processor |
+| [Thymeleaf SpEL 정수 나눗셈](thymeleaf-spel-integer-division.md) | 템플릿에서 계산한 평균이 항상 0.0 — long/long 절삭, formatDecimal 이 위장, th:if 가 예외 은폐 |
 
 ## Quick Reference
 
@@ -31,6 +32,12 @@ This directory contains solutions to common issues encountered during developmen
   - See: [Thymeleaf + Java Records](thymeleaf-javascript-records.md#undefined-property-in-javascript)
 - `Query did not return a unique result: N results were returned`
   - See: [JPA NonUniqueResultException](jpa-non-unique-result-exception.md)
+
+### 표시 값 오류 (예외·로그 없음)
+- 원시 카운트는 정상인데 화면의 평균·비율만 `0.0` (또는 소수부가 항상 `.0`)
+  - See: [Thymeleaf SpEL 정수 나눗셈](thymeleaf-spel-integer-division.md#원인)
+- 템플릿 표현식 안에서 `/` 로 나눗셈하는 코드 전수 검사
+  - See: [Thymeleaf SpEL 정수 나눗셈](thymeleaf-spel-integer-division.md#디버깅)
 
 ### SEO / Indexing Errors
 - "리디렉션이 포함된 페이지" - Google Search Console 색인 실패

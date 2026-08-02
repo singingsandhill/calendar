@@ -7,6 +7,8 @@ public record ServiceStatsDto(
         long totalMenus,
         long totalLocationVotes,
         long totalMenuVotes,
-        double avgParticipantsPerSchedule
+        double avgParticipantsPerSchedule,
+        double avgVotesPerLocation,
+        double avgVotesPerMenu
 ) {
 }

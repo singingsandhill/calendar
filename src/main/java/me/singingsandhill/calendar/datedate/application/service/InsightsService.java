@@ -70,6 +70,12 @@ public class InsightsService {
         double avgParticipants = totalSchedules > 0
                 ? (double) totalParticipants / totalSchedules
                 : 0;
+        double avgVotesPerLocation = totalLocations > 0
+                ? (double) totalLocationVotes / totalLocations
+                : 0;
+        double avgVotesPerMenu = totalMenus > 0
+                ? (double) totalMenuVotes / totalMenus
+                : 0;
 
         return new ServiceStatsDto(
                 totalSchedules,
@@ -78,7 +84,9 @@ public class InsightsService {
                 totalMenus,
                 totalLocationVotes,
                 totalMenuVotes,
-                avgParticipants
+                avgParticipants,
+                avgVotesPerLocation,
+                avgVotesPerMenu
         );
     }
 }
