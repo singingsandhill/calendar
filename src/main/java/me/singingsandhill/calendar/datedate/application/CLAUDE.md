@@ -17,7 +17,9 @@
 - **PopularityService** - 시간 가중 점수 기반 장소/메뉴 인기 순위. 노출 기준: 집계 후
   최소 2표 + 비속어 블록리스트, 홈·트렌드·top 전역 적용
   ([ADR](../../../../../../../../docs/adr/datedate/domain/0006-popularity-exposure-criteria.md)).
-- **SeoService** - 페이지 타입별 SEO 메타데이터 (i18n + JSON-LD 포함).
+- **SeoService** - 페이지 타입별 SEO 메타데이터 (i18n + JSON-LD 포함). BreadcrumbList 는
+  `breadcrumbJsonLd()` 한 곳에서만 생성 — 홈 → 현재 페이지 2단계, **모든 `ListItem` 에 `item` 필수**
+  ([ADR](../../../../../../../../docs/adr/common/seo/0008-breadcrumb-item-on-every-listitem.md)).
 - **InsightsService** - 집계 인기 통계 (`/insights/trends`).
 - **AppUserService** - 카카오 프로필 upsert (`kakaoId` unique, 재로그인 시 닉네임·프로필·lastLoginAt 갱신).
 - **UserActivityService** - 로그인 사용자 활동 이벤트(참여·투표·일정생성) append-only 기록,

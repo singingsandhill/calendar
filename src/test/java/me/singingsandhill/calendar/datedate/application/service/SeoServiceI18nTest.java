@@ -15,6 +15,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
@@ -301,5 +302,82 @@ class SeoServiceI18nTest {
             json.readTree(service.getUseCaseSeo("travel-planning").jsonLd());
             json.readTree(service.getUseCaseSeo("study-group").jsonLd());
         }
+    }
+
+    // ===== BreadcrumbList 규격 =====
+
+    @Test
+    @DisplayName("모든 BreadcrumbList 의 ListItem 은 item URL 을 갖는다 (GSC \"'item' 입력란이 누락되었습니다\" 방지)")
+    void breadcrumbList_everyItemHasUrl() throws Exception {
+        Locale[] locales = { Locale.KOREAN, Locale.ENGLISH };
+        for (Locale locale : locales) {
+            LocaleContextHolder.setLocale(locale);
+
+            List<SeoMetadata> pages = new ArrayList<>(List.of(
+                service.getHomeSeo(),
+                service.getGuideSeo(),
+                service.getInsightsTrendsSeo(),
+                service.getAboutSeo(),
+                service.getPrivacySeo(),
+                service.getTermsSeo(),
+                service.getFaqSeo(),
+                service.getDateDiffSeo()));
+            for (String slug : UseCaseSlugs.ALL) {
+                pages.add(service.getUseCaseSeo(slug));
+            }
+
+            for (SeoMetadata seo : pages) {
+                assertBreadcrumbItemsComplete(locale, seo);
+            }
+        }
+    }
+
+    /**
+     * BreadcrumbList 의 모든 {@code ListItem} 이 {@code name} + 절대 URL {@code item} 을 갖고
+     * {@code position} 이 1 부터 연속인지 검증한다.
+     *
+     * <p>Google 규격은 <em>마지막을 제외한</em> 항목에만 {@code item} 을 요구하지만, 여기서는 마지막까지
+     * 전부 확인한다 — 계층이 하나 늘어나는 순간 기존 마지막 항목이 중간이 되어 곧바로 오류가 되기 때문이다.
+     */
+    private void assertBreadcrumbItemsComplete(Locale locale, SeoMetadata seo) throws Exception {
+        JsonNode root = json.readTree(seo.jsonLd());
+        assertThat(root.isArray())
+            .as("[%s] %s — jsonLd 는 최상위 배열이어야 한다", locale, seo.canonical())
+            .isTrue();
+
+        int breadcrumbCount = 0;
+        for (JsonNode node : root) {
+            if (!"BreadcrumbList".equals(node.path("@type").asText())) {
+                continue;
+            }
+            breadcrumbCount++;
+
+            JsonNode elements = node.path("itemListElement");
+            assertThat(elements.isArray())
+                .as("[%s] %s — itemListElement 는 배열이어야 한다", locale, seo.canonical())
+                .isTrue();
+
+            int expectedPosition = 1;
+            for (JsonNode element : elements) {
+                String where = "[%s] %s position=%d".formatted(locale, seo.canonical(), expectedPosition);
+
+                assertThat(element.path("position").asInt())
+                    .as("%s — position 은 1 부터 연속이어야 한다", where)
+                    .isEqualTo(expectedPosition);
+                assertThat(element.path("name").asText())
+                    .as("%s — name 누락", where)
+                    .isNotBlank();
+                assertThat(element.path("item").asText())
+                    .as("%s — item 누락 (Google 리치 결과에서 제외됨)", where)
+                    .isNotBlank()
+                    .startsWith(BASE_URL);
+
+                expectedPosition++;
+            }
+        }
+
+        assertThat(breadcrumbCount)
+            .as("[%s] %s — BreadcrumbList 가 없다", locale, seo.canonical())
+            .isEqualTo(1);
     }
 }

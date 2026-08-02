@@ -112,6 +112,43 @@ public class SeoService {
         return m("seo.common.priceCurrency");
     }
 
+    /**
+     * 홈 → 현재 페이지 2단계 BreadcrumbList 객체를 만든다.
+     *
+     * <p>Google 은 <em>마지막을 제외한</em> 모든 {@code ListItem} 에 {@code item} 을 요구한다. 여기서는
+     * 마지막 항목까지 전부 채워 계층이 늘어나도 규칙이 깨지지 않게 한다 — 중간 항목에 {@code item} 이 없어
+     * use-case 5개와 date-diff 가 리치 결과에서 제외된 전례가 있다 (ADR common/seo/0008).
+     *
+     * <p>URL 은 같은 JSON-LD 안의 {@code "url"} 필드와 동일하게 {@code baseUrl + path} (ko 정규 URL) 을 쓴다.
+     *
+     * @param leafName 이스케이프 전 원문 — 내부에서 {@link #jsonEscape} 처리한다
+     * @param leafPath {@code /} 로 시작하는 페이지 경로
+     */
+    private String breadcrumbJsonLd(String leafName, String leafPath) {
+        return """
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "%s",
+                        "item": "%s/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "%s",
+                        "item": "%s%s"
+                    }
+                ]
+            }""".formatted(
+                mJson("seo.breadcrumb.home"), baseUrl,
+                jsonEscape(leafName), baseUrl, leafPath
+            );
+    }
+
     // ===== 페이지별 SEO =====
 
     /** 홈페이지 (랜딩). */
@@ -376,23 +413,7 @@ public class SeoService {
                     }
                 ]
             },
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "%s",
-                        "item": "%s/"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "%s"
-                    }
-                ]
-            }]
+            %s]
             """.formatted(
                 mJson("seo.guide.howTo.name"),
                 mJson("seo.guide.howTo.description"),
@@ -402,8 +423,7 @@ public class SeoService {
                 mJson("seo.guide.step3.name"), mJson("seo.guide.step3.text"), baseUrl,
                 mJson("seo.guide.step4.name"), mJson("seo.guide.step4.text"), baseUrl,
                 mJson("seo.guide.step5.name"), mJson("seo.guide.step5.text"), baseUrl,
-                mJson("seo.breadcrumb.home"), baseUrl,
-                mJson("seo.breadcrumb.guide")
+                breadcrumbJsonLd(m("seo.breadcrumb.guide"), path)
             );
 
         return SeoMetadata.builder()
@@ -447,36 +467,13 @@ public class SeoService {
                 "description": "%s",
                 "url": "%s/use-cases/%s"
             },
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "%s",
-                        "item": "%s/"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "%s"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 3,
-                        "name": "%s"
-                    }
-                ]
-            },
+            %s,
             %s]
             """.formatted(
                 jsonEscape(title), BRAND_NAME,
                 jsonEscape(description),
                 baseUrl, slug,
-                mJson("seo.breadcrumb.home"), baseUrl,
-                mJson("seo.breadcrumb.useCases"),
-                jsonEscape(title),
+                breadcrumbJsonLd(title, path),
                 trailingObjects
             );
 
@@ -582,29 +579,12 @@ public class SeoService {
                 "description": "%s",
                 "url": "%s/insights/trends"
             },
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "%s",
-                        "item": "%s/"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "%s"
-                    }
-                ]
-            }]
+            %s]
             """.formatted(
                 mJson("seo.insights.webPageName"),
                 mJson("seo.insights.webPageDescription"),
                 baseUrl,
-                mJson("seo.breadcrumb.home"), baseUrl,
-                mJson("seo.breadcrumb.insights")
+                breadcrumbJsonLd(m("seo.breadcrumb.insights"), path)
             );
 
         return SeoMetadata.builder()
@@ -658,23 +638,7 @@ public class SeoService {
                     }
                 }
             },
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "%s",
-                        "item": "%s/"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "%s"
-                    }
-                ]
-            }]
+            %s]
             """.formatted(
                 mJson("seo.about.webPageName"),
                 mJson("seo.about.webPageDescription"),
@@ -685,8 +649,7 @@ public class SeoService {
                 baseUrl, DEFAULT_OG_IMAGE,
                 mJson("seo.about.description"),
                 contactUrl,
-                mJson("seo.breadcrumb.home"), baseUrl,
-                mJson("seo.breadcrumb.about")
+                breadcrumbJsonLd(m("seo.breadcrumb.about"), path)
             );
 
         return SeoMetadata.builder()
@@ -736,29 +699,12 @@ public class SeoService {
                 "description": "%s",
                 "url": "%s%s"
             },
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "%s",
-                        "item": "%s/"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "%s"
-                    }
-                ]
-            }]
+            %s]
             """.formatted(
                 mJson(prefix + ".webPageName"),
                 mJson(prefix + ".webPageDescription"),
                 baseUrl, path,
-                mJson("seo.breadcrumb.home"), baseUrl,
-                mJson(breadcrumbKey)
+                breadcrumbJsonLd(m(breadcrumbKey), path)
             );
 
         return SeoMetadata.builder()
@@ -792,27 +738,10 @@ public class SeoService {
                     %s
                 ]
             },
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "%s",
-                        "item": "%s/"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "%s"
-                    }
-                ]
-            }]
+            %s]
             """.formatted(
                 buildFaqMainEntity(6, "seo.faq"),
-                mJson("seo.breadcrumb.home"), baseUrl,
-                mJson("seo.breadcrumb.faq")
+                breadcrumbJsonLd(m("seo.breadcrumb.faq"), path)
             );
 
         return SeoMetadata.builder()
@@ -874,37 +803,14 @@ public class SeoService {
                 },
                 "inLanguage": "%s"
             },
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "%s",
-                        "item": "%s/"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "%s"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 3,
-                        "name": "%s"
-                    }
-                ]
-            }]
+            %s]
             """.formatted(
                 mJson("seo.dateDiff.appName"),
                 mJson("seo.dateDiff.appDescription"),
                 baseUrl,
                 priceCurrency(),
                 inLanguage(),
-                mJson("seo.breadcrumb.home"), baseUrl,
-                mJson("seo.breadcrumb.tools"),
-                mJson("seo.breadcrumb.dateDiff")
+                breadcrumbJsonLd(m("seo.breadcrumb.dateDiff"), path)
             );
 
         return SeoMetadata.builder()

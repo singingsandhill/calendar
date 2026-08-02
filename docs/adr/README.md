@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | — | — | 7 | 3 | — | — | — | 6 | 16 |
+| **common**   | — | — | — | 8 | 3 | — | — | — | 6 | 17 |
 | **datedate** | 6 | — | 6 | — | — | — | — | — | — | 12 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 4 | — | — | — | — | 15 | 2 | — | 21 |
 | **stock**    | — | 7 (동시성 포함) | — | — | — | 2 | 9 | 3 | — | 21 |
-| **합계** | 8 | 11 | 6 | 7 | 3 | 2 | 24 | 5 | 6 | **72** |
+| **합계** | 8 | 11 | 6 | 8 | 3 | 2 | 24 | 5 | 6 | **73** |
 
-총 **72개 ADR**.
+총 **73개 ADR**.
 
 ---
 
@@ -103,12 +103,13 @@
 | 2026-07-27 | stock/infrastructure | [0007 체결강도 소스 inquire-ccnl 전환](stock/infrastructure/0007-trade-strength-source-inquire-ccnl.md) | 운영 로그 — cttr 필드 부재로 스크리닝 전멸·진입검증 상시 FAIL |
 | 2026-07-27 | trading/infrastructure | [0004 Reactor Netty 커넥션 풀 idle 폐기](trading/infrastructure/0004-reactor-netty-connection-pool-policy.md) | 운영 로그 — stale 커넥션 PrematureCloseException 반복 |
 | 2026-07-27 | trading/risk | [0005 현재가 조회 실패 시 진입 가드 차단](trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md) | 운영 로그 — 조회 실패 시 가드 우회 매수(fail-open) |
+| 2026-07-30 | common/seo | [0008 BreadcrumbList 2단계 + 전 항목 item](common/seo/0008-breadcrumb-item-on-every-listitem.md) | GSC "'item' 입력란 누락" — 3단계 중간 크럼브 URL 부재로 6개 URL 리치 결과 제외 |
 
 ---
 
 ## 도메인별 폴더 구조
 
-- [common/seo/](common/seo/) — 7 ADRs
+- [common/seo/](common/seo/) — 8 ADRs
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 5 ADRs
