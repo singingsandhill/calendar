@@ -31,7 +31,8 @@ import java.util.Optional;
  * <p>lastmod 정책:
  * <ul>
  *   <li>정적 페이지: {@link BuildProperties#getTime()} (배포 시각). 빌드 시 {@code build-info.properties} 미생성이면 startup 시각 폴백.</li>
- *   <li>insights/trends: 인기 데이터(Location/Menu) 의 가장 최근 createdAt. 데이터 없으면 빌드 시각.</li>
+ *   <li>insights/trends: 인기 데이터(Location/Menu) 의 가장 최근 createdAt. 데이터가 아예 없으면
+ *       엔트리 자체를 싣지 않는다 — 그 경우 페이지가 noindex 로 응답하므로 sitemap 에 광고하면 모순.</li>
  * </ul>
  */
 @Service

@@ -29,7 +29,12 @@ KST 로 통일.
   의 `springBoot { buildInfo() }` 활성화로 `META-INF/build-info.properties` 자동
   생성, `BuildProperties` 빈 주입.
 - **인사이트 페이지 lastmod = `Location/MenuRepository.findLatestActivity()`** —
-  `SELECT MAX(createdAt)` 쿼리. 데이터 없으면 buildTime fallback.
+  `SELECT MAX(createdAt)` 쿼리.
+  > **정정 (2026-05-28, `061626f`):** 최초 결정은 "데이터 없으면 buildTime fallback" 이었으나,
+  > 데이터가 비면 `SeoService` 가 그 페이지를 `noindex` 로 응답한다는 사실이 뒤늦게 드러났다
+  > (sitemap 광고 ↔ noindex 모순). 이후 `computeInsightsLastmodIfPresent()` 가 `Optional.empty()`
+  > 를 반환하면 **엔트리 자체를 싣지 않는** 동작으로 바뀌었다. 위 fallback 문장은 현재 코드와
+  > 다르므로 이 각주가 실제 동작이다.
 - **`SitemapEntry.lastmod` 타입** `LocalDate` → `OffsetDateTime`. 출력 형식 `2026-05-01`
   → `2026-05-01T11:20:06.997+09:00` (KST).
 - **`escapeXml()` 헬퍼** — `& < > " '` 5개 미리 정의 엔티티 escape. 모든 `<loc>` /
@@ -70,5 +75,7 @@ ISO 8601 풀 정밀도 + KST offset 은 sitemap 표준 권장 형식. XML escape
   - `src/main/java/me/singingsandhill/calendar/datedate/domain/menu/MenuRepository.java`
   - `build.gradle`
   - `src/test/java/me/singingsandhill/calendar/common/application/service/SitemapServiceHreflangTest.java`
-- 관련 docs: `docs/seo/evolution-playbook.md` (sitemap 성숙도 모델 L0~L5)
+- 관련 docs: `docs/seo/evolution-playbook.md` (sitemap 성숙도 모델 L0~L5),
+  [`docs/audit/sitemap-audit-2026-08-02.md`](../../../audit/sitemap-audit-2026-08-02.md)
+  (라이브 점검 — 이 ADR 이 고른 buildTime lastmod 의 비용 실측)
 - 관련 커밋: `docs/guides/git-commit.md` Commit 8

@@ -12,8 +12,11 @@ Disallow: /runners/runs/create
 Allow: /$
 Allow: /insights/trends
 Allow: /guide
+Allow: /about
+Allow: /faq
 Allow: /privacy
 Allow: /terms
+Allow: /tools/date-diff
 Allow: /use-cases/
 
 # Block API endpoints
@@ -29,7 +32,7 @@ Disallow: /stock/
 
 # Block user-generated schedule pages (/{ownerId}/20xx/mm)
 # Slash suffix ensures /runners/2026-recap style URLs are NOT blocked
-# Note: /runners/runs/ and /runners/members/ Allow rules above take precedence (longer match)
+# Note: 겹치는 경우 Allow/Disallow 중 더 긴 패턴이 이긴다 (Google 해석) — 위 Allow 목록은 sitemap 수록 경로의 미러
 # robots.txt 는 character class 를 지원하지 않으므로 연도별 enumerate 가 필요. 7~10년치 미리 추가.
 Disallow: /*/2024/
 Disallow: /*/2025/
