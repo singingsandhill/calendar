@@ -78,4 +78,4 @@ CORS: `CorsConfig` 가 `/api/**` 한정 `CorsConfigurationSource` 빈을 제공�
   ([ADR](../../../../../../../docs/adr/common/seo/0003-trustworthy-sitemap-lastmod.md)).
 - `IndexNowService` — `indexnow.enabled=true` 일 때만 매일 03:30 KST `SitemapService`
   URL 들을 `api.indexnow.org` 에 POST. 4xx/5xx/네트워크 예외는 모두 fail-soft (WARN 만).
-  키 파일은 `static/1dfcb4404e1d4f6fae3423fd163f97b8.txt`, 같은 호스트로 서빙되어야 함.
+  키 파일은 `static/1dfcb4404e1d4f6fae3423fd163f97b8.txt`, 같은 호스트로 서빙되어야 함 ([ADR](../../../../../../../docs/adr/common/seo/0009-indexnow-active-submission.md)).

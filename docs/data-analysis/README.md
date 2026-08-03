@@ -39,4 +39,4 @@ SEO 자체 결정은 [`docs/seo/evolution-playbook.md`](../seo/evolution-playboo
 
 - [`docs/troubleshooting/lighthouse-performance-audit.md`](../troubleshooting/lighthouse-performance-audit.md) — Lighthouse 측정 결과, GTM 측정 ID 구조 (B 항목)
 - [`docs/seo/evolution-playbook.md`](../seo/evolution-playbook.md) — SEO 단계별 발전 결정
-- [`docs/adr/common/seo/`](../adr/common/seo/) — SitemapService / SeoMetadata SSOT / IndexNow ADR
+- [`docs/adr/common/seo/`](../adr/common/seo/) — SitemapService / SeoMetadata SSOT / [IndexNow 능동 색인 제출](../adr/common/seo/0009-indexnow-active-submission.md)

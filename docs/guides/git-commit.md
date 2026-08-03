@@ -79,12 +79,6 @@
 # 형식 메모: Section H 이후 컨벤션 유지 — -m "..." 메시지 본문의 슬래시는 ／
 #   (U+FF0F full-width solidus) 로 표기. PowerShell + Git for Windows (MSYS) 의
 #   인자 path-conversion 회피용. git add 파일 경로 / # 코멘트의 / 는 일반 / 유지
-#   (시스템 경로 / 코멘트는 git 에 전달되지 않음).
-# 컨텍스트: AdSense 거절 사유가 "Low value content / 가치 있는 인벤토리" 임이
-#   확인되어 1차 plan 의 *분량 가설* 폐기. 실측에서 use-case 본문은 ~500-600단어,
-#   privacy／terms 는 ~700-800단어로 분량 자체는 충분 — 진짜 신호는 마케팅 카피
-#   톤 + 게시자 신원 모호 + 사이트맵 정합성 + thin-page 노출. 본 섹션의 5개
-#   커밋이 이 4축을 일괄 처리.
 # Commit 23 — ✅ DONE () feat(seo): 환경변수 기반 AdSense + UseCaseSlugs SSOT + Runner noindex + ad-slot 인접 마진
 # Commit 24 — ✅ DONE () feat(seo): SeoService 4축 보강 + ／about 신뢰 페이지 + insights hasData + use-case 5섹션 템플릿
 # Commit 25 — ✅ DONE () refactor(seo): SitemapService — Runner 4 + 동적 Run 루프 제거 + UseCaseSlugs.ALL 루프 + ／about 양방향 (RunRepository 의존성 제거)
@@ -986,13 +980,6 @@ git commit -m "test(trading): 손절/익절/트레일링 트리거 경계 테스
 # =====================================================================
 # CLAUDE.md 전수 감사 — 문서·코드 사실 정합 (2026-07-25)
 # =====================================================================
-# 배경: 프로젝트 11개 CLAUDE.md 를 소스코드와 1:1 대조 감사. 루트 CLAUDE.md 가 스스로 정한
-# 규칙("모듈별 CLAUDE.md 는 현재 코드의 사실만 담는다")에서 이탈한 3종을 정정 — ① 존재하지
-# 않는 심볼·경로를 지목한 사실 오류(문서를 믿고 grep 하면 못 찾음), ② 안전·수익에 직결되나
-# 어느 문서에도 없던 동작, ③ 표·목록 열거 누락. 문서 전용 변경 — 프로덕션 코드 무변경,
-# 전체 스위트 GREEN(85 클래스 / 503 테스트 / 실패 0).
-# 검증: 정정 심볼 코드 존재 재grep + 낡은 심볼 0건 + ADR 링크 무결성 + ADR 색인 완전성
-#       + 템플릿 13디렉터리 대조 + gradlew test.
 
 # Commit 114 — ✅ DONE() docs: CLAUDE.md 전수 감사 — 사실 오류 6건 정정 + 누락 동작·열거 보강
 git add -p src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md docs/adr/README.md
@@ -1068,52 +1055,66 @@ git commit -m "fix(trading): Reactor Netty 커넥션 풀 idle 폐기 정책 (ADR
 git add src/main/java/me/singingsandhill/calendar/trading/application/service/TradingBotService.java src/test/java/me/singingsandhill/calendar/trading/application/service/TradingBotServiceGuardFailSafeTest.java docs/adr/trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md
 git commit -m "fix(trading): 현재가 조회 실패 시 진입 가드는 우회가 아니라 차단 (ADR trading/risk/0005)" -m "executeBuy(:379)·entryRiskGuardsBlock(:1053) 의 if (currentPriceForGuard != null) 구조는 현재가 조회 실패 시 물타기 차단(P2-10)·코인 노출상한(P2-12) 가드를 평가하지 않고 매수를 진행시켰다(fail-open) — javadoc 은 '보수적으로 통과시키지 않고 스킵' 이라 실동작과 반대. 2026-07-27 로그의 PrematureCloseException 경로(orderbook 실패 → getCurrentPrice null)가 이 우회를 실제로 밟는다: 손실 포지션 보유 중에도 무가드 신규 매수 가능. null 이면 조기 리턴(executeBuy)/차단 true(entryRiskGuardsBlock) 로 반전 — manualBuy 도 같은 가드 공유라 함께 fail-safe(의도된 확장). 청산·리스크 경로(SELL)는 이 가드와 무관해 영향 없음. 비용은 해당 틱 매수 1회 유실뿐(다음 틱 60초 재평가) — 주문 무재시도(불확실하면 돈이 안 나가는 쪽)와 같은 실패 모드 선택. javadoc 정정 포함. 회귀 가드: TradingBotServiceGuardFailSafeTest 2케이스(가드 true / 주문 미전송 verify never) — 수정 전 RED(NeverWantedButInvoked 로 매수 진행 재현) 확인 후 GREEN."
 
-# Commit 120 — fix(common): 잘못된 ?lang= 값 무시 (ignoreInvalidLocale) — 마지막 커밋(git-commit.md 포함)
+# Commit 120 — ✅ DONE() fix(common): 잘못된 ?lang= 값 무시 (ignoreInvalidLocale) — 마지막 커밋(git-commit.md 포함)
 git add src/main/java/me/singingsandhill/calendar/common/infrastructure/config/WebConfig.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/LocaleChangeInvalidLangTest.java docs/guides/git-commit.md
 git commit -m "fix(common): 잘못된 ?lang= 값을 500 없이 무시 (ignoreInvalidLocale)" -m "봇 스캔 ?lang=../../../../tmp/index1 이 LocaleChangeInterceptor.preHandle 의 parseLocale IAE 로 전파돼 요청마다 500 + MvcExceptionHandler ERROR 스택트레이스(에러 디스패치에서 인터셉터가 재차 터져 이중 로깅)를 만들었다 — 공격은 실패하지만 외부 입력만으로 5xx·ERROR 노이즈 유발. setIgnoreInvalidLocale(true) 한 줄: Spring 이 IAE 를 catch 해 DEBUG 만 남기고 진행(6.2.8 동작 확인), 로케일은 기존 리졸버 체인(쿠키→Accept-Language→ko, 화이트리스트 방어 기존대로)로 폴백. 잘못된 lang 값을 넣는 테스트가 리포 전체 0건이던 공백을 LocaleChangeInvalidLangTest 2케이스로 보강(경로조작 값 200 + lang=en Content-Language 회귀 짝) — 수정 전 RED(200 기대, 실제 500) 확인 후 GREEN. 결정 변경이 아닌 결함 수정이라 신규 ADR 없음(비결정성 문턱), 루트 CLAUDE.md WebConfig 사실 1줄은 Commit 118 에 흡수."
 
 # =====================================================================
 # 인사이트 트렌드 평균 투표 0.0 표시 버그
 # =====================================================================
-# 배경: /insights/trends "이용 현황 > 상세 통계" 에서 등록 229 / 투표 200 인데도
-# "장소당 평균 투표" 가 0.0 으로 표시된다는 관측에서 출발. 평균 3종 중 "일정당 평균
-# 참여자 수" 만 정상이었다는 비대칭이 단서 — 이 값만 InsightsService 에서 double 로
-# 계산되고, 장소/메뉴 평균 2종은 템플릿 SpEL 에서 long/long 으로 계산되고 있었다.
-# 정수 나눗셈이라 1 미만 평균은 전부 0 으로 잘리고 formatDecimal(...,1,1) 이 ".0" 을
-# 덧붙여 "0.0" 이라는 그럴듯한 값으로 위장됐다. th:if 등록수>0 가드가 0 나눗셈 예외를
-# 막아버려 조용히 실패(무예외·무로그).
-# 데이터는 정상 — 수정 후 값은 0.9/0.8 (등록만 되고 투표 0인 장소·메뉴 다수).
-# 결정 변경이 아닌 산술 결함 수정이라 신규 ADR 없음(비결정성 문턱), CLAUDE.md 의
-# InsightsService 사실 기술("집계 인기 통계")도 불변.
-# 전수 확인: 템플릿 전체 #numbers.formatDecimal/formatPercent 사용처 15곳 중 동일
-# 정수 나눗셈은 이 2곳뿐 — stock/settings.html·stock/fragments/formats.html·
-# trading/settings.html 은 BigDecimal 또는 단일 값이라 무영향.
-# 검증: RED 선확인(avgVotesPerLocation/avgVotesPerMenu 부재로 컴파일 실패 6건) →
-#       GREEN 5테스트, 실제 렌더 확인(메뉴 3표/6개 → 정수나눗셈이면 0.0, 실제 0.5).
 
-# Commit 121 — fix(datedate): 장소/메뉴당 평균 투표 정수 나눗셈 절삭
+# Commit 121 — ✅ DONE() fix(datedate): 장소/메뉴당 평균 투표 정수 나눗셈 절삭
 git add src/main/java/me/singingsandhill/calendar/datedate/application/dto/ServiceStatsDto.java src/main/java/me/singingsandhill/calendar/datedate/application/service/InsightsService.java src/main/resources/templates/insights/trends.html src/test/java/me/singingsandhill/calendar/datedate/application/service/InsightsServiceTest.java docs/troubleshooting/thymeleaf-spel-integer-division.md docs/troubleshooting/README.md
 git commit -m "fix(datedate): 장소/메뉴당 평균 투표가 0.0 으로 절삭되던 문제" -m "insights/trends.html 이 장소·메뉴당 평균 투표를 뷰에서 직접 계산했는데 stats.totalLocationVotes / stats.totalLocations 양쪽이 long 이라 SpEL 이 정수 나눗셈을 수행했다. 운영값 200/229·72/87 은 둘 다 0 으로 잘리고 #numbers.formatDecimal(...,1,1) 이 소수부 .0 을 붙여 '0.0' 이라는 정상처럼 보이는 값을 출력한다 — th:if 등록수>0 가드가 0 나눗셈 예외까지 막아 예외도 로그도 남지 않는 조용한 실패였다. 같은 화면의 '일정당 평균 참여자 수' 만 멀쩡했던 이유는 그 값이 이미 InsightsService 에서 (double) 캐스트로 계산된 필드였기 때문 — 즉 산술이 뷰에 있는 것 자체가 원인이다. 수정은 같은 메서드 안에 이미 있던 avgParticipants 패턴(0 가드 + (double) 캐스트)을 그대로 재사용해 avgVotesPerLocation/avgVotesPerMenu 를 서비스에서 계산하고 ServiceStatsDto 에 double 로 실어 보내며, 템플릿은 필드만 출력한다. 등록 0건일 때 행을 숨기는 th:if 가드는 의미가 남아 유지. 산술이 서비스로 내려오면서 단위 테스트로 고정 가능해졌고 InsightsService 는 그간 테스트가 0건이었다 — InsightsServiceTest 5케이스 신설(운영값 재현 0.873/0.827, 소수부 보존 7/2=3.5, 등록 0건 0 가드, avgParticipantsPerSchedule 회귀, 원시 카운트 통과). 수정 전 RED(신규 접근자 부재로 컴파일 실패 6건) 확인 후 GREEN, 실제 앱 렌더로도 확인(개발 DB 메뉴 3표/6개 → 정수 나눗셈이면 0.0, 실제 0.5 출력). 표시 로직만 바뀌고 집계 소스(count()/countAllVotes())는 불변 — 분모가 만료·삭제 미필터 전역 카운트라 평균이 1 미만인 것은 지표 정의 문제로 별건. 예외·로그·테스트 실패가 전부 0인 조용한 실패라 재발 시 진단 비용이 큰 유형이므로 docs/troubleshooting/thymeleaf-spel-integer-division.md 로 문서화(README 인덱스 + '표시 값 오류(예외·로그 없음)' Quick Reference 추가): 위장 메커니즘(formatDecimal 이 절삭값에 .0 을 덧붙임 / th:if 0가드가 ArithmeticException 이라는 유일한 발견 경로 차단), 같은 화면의 정상 지표와 대조해 원인을 좁히는 진단 순서, 전수 검사 grep 2종(수정 전 236·252 행 적중 확인), 몫이 나누어떨어지지 않는 7/2=3.5 케이스를 테스트에 넣어야 하는 이유(3/6=0.5 형태만 있으면 분모>분자 조건에서만 잡힘)."
 
 # =====================================================================
 # GSC BreadcrumbList "'item' 입력란 누락" — 리치 결과 제외 6건
 # =====================================================================
-# 배경: Google Search Console 이 2026-05-20 부터 "'item' 입력란이 누락되었습니다
-# (경로: 'itemListElement')" 를 6개 URL 에 보고 (use-cases 5개 + tools/date-diff).
-# Google 규격은 마지막을 제외한 모든 ListItem 에 item 을 요구하는데, SeoService 의
-# breadcrumb 텍스트 블록 7곳이 전부 position 1 에만 item 을 넣는 형태였다. 그래서
-# 2단계 페이지(guide/faq/about/privacy/terms/insights)는 item 없는 크럼브가 마지막이라
-# 유효했고, 3단계인 getUseCaseSeo/getDateDiffSeo 만 중간 크럼브가 걸려 정확히 6개 URL
-# 이 신고됐다 — 계층 깊이에 따라 결과가 갈린 것이 원인 판별의 단서.
-# 중간 크럼브에 URL 을 채우는 길은 막혀 있었다: /use-cases·/tools 허브 페이지가 없다
-# (UseCaseController 는 /{slug} 만, HomeController 는 /tools/date-diff 만, 템플릿 index
-# 없음, SitemapService 에도 없음) — 채우면 404 를 가리키는 breadcrumb 이 된다.
-# 결정 변경(구조 전환)이라 신규 ADR common/seo/0008 작성.
-# 검증: RED 선확인(신규 breadcrumbList_everyItemHasUrl 이 /guide position=2 에서 실패)
-#       → GREEN 14테스트, 전체 스위트 91 클래스 / 520 테스트 / 실패 0.
-#       실제 렌더 확인(bootRun + curl): 9개 breadcrumb 페이지 x ko/en 18케이스 전부
-#       크럼브 2개(홈 1개) + item 전원 절대 URL + position 연속.
-
-# Commit 122 — fix(seo): BreadcrumbList 2단계 + 모든 ListItem 에 item (ADR common/seo/0008)
+# Commit 122 —  ✅ DONE() fix(seo): BreadcrumbList 2단계 + 모든 ListItem 에 item (ADR common/seo/0008)
 git add src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/test/java/me/singingsandhill/calendar/datedate/application/service/SeoServiceI18nTest.java src/main/resources/messages.properties src/main/resources/messages_en.properties docs/adr/common/seo/0008-breadcrumb-item-on-every-listitem.md docs/adr/README.md src/main/java/me/singingsandhill/calendar/datedate/application/CLAUDE.md
 git commit -m "fix(seo): BreadcrumbList 2단계 축소 + 모든 ListItem 에 item URL (ADR common/seo/0008)" -m "GSC 가 2026-05-20 부터 리치 결과 오류 'item 입력란이 누락되었습니다(경로: itemListElement)' 를 6개 URL 에 보고했다 — UseCaseSlugs.ALL 5개와 /tools/date-diff. Google 규격은 마지막을 제외한 모든 ListItem 에 item 을 요구하는데 SeoService 의 breadcrumb 텍스트 블록 7곳이 전부 position 1 에만 item 을 넣고 있었다. 그래서 결과가 계층 깊이에 따라 갈렸다: 2단계 페이지(guide/faq/about/privacy/terms/insights/trends)는 item 없는 크럼브가 마지막이라 규격상 유효해 무사했고, 3단계인 getUseCaseSeo/getDateDiffSeo 만 중간 크럼브(활용 사례/도구)가 걸렸다 — 3단계 메서드가 정확히 이 둘이고 신고된 6개 URL 과 일치한다. 중간 크럼브에 URL 을 부여하는 수정은 불가능했다: /use-cases·/tools 허브 페이지가 존재하지 않는다(UseCaseController 는 @GetMapping(/{slug}) 뿐, HomeController 는 /tools/date-diff 만, 두 템플릿 디렉토리에 index 없음, SitemapService 에도 없음) — 채우면 오류를 404 를 가리키는 품질 문제로 바꿔치기할 뿐이다. 이미 유효하게 동작하던 6개 페이지와 같은 형태로 수렴시키는 쪽을 골라 홈 → 현재 페이지 2단계로 축소하고, 마지막 항목까지 포함해 모든 ListItem 에 item 절대 URL(baseUrl+path, 같은 JSON-LD 의 url 필드와 동일 규약)을 채운다 — 규격상 마지막 item 은 선택이지만 계층이 하나 늘면 기존 마지막이 중간이 되어 곧바로 같은 오류가 되기 때문이고, 이번 사고가 정확히 그 형태였다. 7곳에 복붙돼 있던 블록은 breadcrumbJsonLd(leafName, leafPath) 헬퍼로 단일화해 불변식이 한 곳에만 존재하게 했다(-94줄). 크럼브 1개인 getHomeSeo 와 RunnerController 는 이미 item 이 있어 무변경. 중간 크럼브 제거로 참조가 사라진 seo.breadcrumb.useCases/seo.breadcrumb.tools 를 ko/en 양쪽에서 제거(화면 breadcrumb 은 별개 키 tool.breadcrumb.* 라 무영향). 회귀 가드: SeoServiceI18nTest.breadcrumbList_everyItemHasUrl — ko/en 양쪽 UseCaseSlugs.ALL 전수로 모든 ListItem 의 item 존재·절대 URL·position 연속성을 검증한다. 기존 allJsonLd_validJsonBothLocales 는 readTree 파싱만 해서 이 버그를 통과시켰다(JSON 유효성과 스키마 규격은 다른 층). 수정 전 RED(/guide position=2 에서 item 누락) 확인 후 GREEN, 전체 스위트 91 클래스 520 테스트 실패 0, 실제 렌더로도 확인(bootRun + curl 로 9개 breadcrumb 페이지 x ko/en 18케이스 전부 통과). 남은 불일치: /tools/date-diff 의 화면 breadcrumb(templates/tools/date-diff.html)은 여전히 홈/도구/날짜 계산기 3단계를 표시해 구조화 데이터와 어긋난다 — Google 권장사항상 일치가 바람직하나 오류는 아니고 UI 변경은 별도 판단으로 남긴다. 허브 페이지 신설은 기각이 아니라 보류이며, 만들면 헬퍼 한 곳 수정으로 3단계 복원 가능(ADR 0008 Superseded 검토)."
+
+# =====================================================================
+# IndexNow — 코드는 완비, 운영 플래그 미설정으로 도입 후 무동작
+# =====================================================================
+# 배경: "key 를 주입하면 바로 등록 가능한가" 라는 물음에서 출발. 확인해 보니 주입할
+# key 가 없다 — cb257f0(2026-05-18) 한 커밋으로 구현이 끝났고 key/key-location/host/
+# endpoint 가 application.yaml 에 리터럴로 들어가 있으며, 키 파일도 저장소에 커밋돼
+# 프로덕션에서 이미 200 으로 서빙된다(본문 32바이트, 개행 없이 키와 일치 — 실측).
+# 막고 있는 것은 운영 환경의 INDEXNOW_ENABLED 하나뿐이다. 값이 없으면 기본 false 로
+# 떨어지고 IndexNowScheduler 의 ConditionalOnProperty 가 빈 등록 자체를 막는다.
+# 함정: logs/stock-trading-*.log 에 IndexNow 200/403/host-mismatch 로그가 남아 있어
+# 동작 중으로 오독하기 쉽지만, 수십 ms 간격으로 IndexNowServiceTest 6케이스의 기대
+# 결과와 같은 순서로 찍힌 테스트 실행 흔적이다. 운영 제출 증거는 없다.
+# 문서 결함: docs/data-analysis/README.md 가 존재하지 않는 IndexNow ADR 을 가리키고
+# 있었다(grep -ri indexnow docs/adr 0건). 결정 소급 기록으로 참조를 사실로 만든다.
+# 코드 변경 없음 — 결정 변경이 아니라 미기록 결정의 소급 문서화.
+# 검증: IndexNowServiceTest tests=6 failures=0 errors=0 (결과 XML 확인),
+#       프로덕션 키 파일 GET 본문 일치 실측.
+
+# Commit 123 — docs(seo): IndexNow 결정 ADR 소급 작성 (ADR common/seo/0009) — 마지막 커밋(git-commit.md 포함)
+git add docs/adr/common/seo/0009-indexnow-active-submission.md docs/adr/README.md docs/data-analysis/README.md src/main/java/me/singingsandhill/calendar/common/CLAUDE.md .env.example docs/guides/git-commit.md
+git commit -m "docs(seo): IndexNow 결정 ADR 소급 작성 + 운영 활성화 안내 (ADR common/seo/0009)" -m "IndexNow 는 cb257f0 한 커밋으로 구현이 끝났고 이후 코드 변경이 없다 — key/key-location/host/endpoint 는 application.yaml 에 리터럴로 박혀 있고, 키 파일(static/1dfcb4404e1d4f6fae3423fd163f97b8.txt, 32바이트·개행 없음)은 StaticResourceController 의 명시 GetMapping 과 SecurityConfig permitAll 로 노출되며 프로덕션에서 실제 200 + 본문 일치를 확인했다. 흔히 남아 있으리라 예상하는 키 주입 단계가 없다는 뜻이다. 그런데도 도입 후 한 번도 제출된 적이 없는데, 운영 환경에 INDEXNOW_ENABLED 가 없어 기본값 false 로 떨어지고 IndexNowScheduler 의 ConditionalOnProperty 가 빈 등록 자체를 막기 때문이다 — docs/data-analysis/04-todo.md P1-4 가 이 상태를 운영 환경 확인 필요로만 열어두고 있었다. 판단을 흐리는 함정이 하나 있다: logs/stock-trading-*.log 에 IndexNow 200/403/host-mismatch 로그가 남아 동작 중처럼 보이지만, 수십 ms 간격으로 IndexNowServiceTest 6케이스의 기대 결과와 정확히 같은 순서로 찍힌 테스트 실행 흔적이다. 이번 커밋은 코드를 건드리지 않고 두 공백만 메운다. 첫째, 결정이 ADR 없이 코드에만 있었다 — 일 1회 03:30 KST 배치, 사이트맵 URL 전량 + bilingual 엔트리의 ?lang=en 확장을 중복 제거해 단일 POST, indexnow.host 와 다른 호스트 URL 사전 필터, 상태코드 예외화 억제 + 바깥 try/catch 로 전 구간 fail-soft, opt-in 기본 false. 게다가 docs/data-analysis/README.md 는 존재하지도 않는 IndexNow ADR 을 가리키고 있었다(grep -ri indexnow docs/adr 0건). common/seo/0009 를 소급 작성해 그 참조를 사실로 만들고 링크를 실제 파일로 교체했다. ADR 에는 결정뿐 아니라 이번에 드러난 한계도 남겼다 — 운영 플래그에 전적으로 의존(코드·키·키 파일이 다 있어도 켜지 않으면 아무 일도 없고 실제로 오래 방치됐다), indexnow.host 와 app.base-url 이 독립 설정이라 어긋나면 전량 탈락 후 WARN 한 줄만 남음, 수동 트리거 부재로 플래그를 켠 뒤 첫 제출까지 최대 24시간, ?lang=en 확장이 SitemapService.appendLangEn 과 IndexNowService.collectSitemapUrls 두 곳에 중복, 키 교체 시 5곳(yaml 2줄·정적 파일명·컨트롤러 매핑·SecurityConfig permitAll·테스트 상수) 동시 수정. 콘솔 등록은 제출의 전제조건이 아니라 결과 확인 수단이라는 점도 명시했다 — 제출 자체는 keyLocation 의 키 파일 검증으로 성립한다. 둘째, .env.example 은 값을 false 로 유지한 채 주석에 운영에서만 true 라는 사실만 덧붙였다 — 제출 URL 이 app.base-url 기준이라 개발 인스턴스에서 켜면 실서비스 URL 을 중복 제출하기 때문이고, 기본값을 끄는 것이 원래 결정의 취지다. ADR 신설에 따라 docs/adr/README.md 인덱스 4곳(매트릭스 common SEO 8→9·행 합계 17→18, SEO 열 합계 8→9, 총계 73→74, 시간순 표에 2026-05-18 행 삽입, 폴더 목록 8→9 ADRs)과 common/CLAUDE.md 의 IndexNowService 항목 ADR 링크(같은 절의 SeoMetadata·SitemapService 는 이미 링크를 달고 있어 일관성 회복)를 갱신했다. 루트 CLAUDE.md 는 사실 변경이 없어 무수정. 검증: main 소스 무변경이라 회귀 확인 목적으로 IndexNowServiceTest 를 FQCN 지정 실행 — tests=6 failures=0 errors=0 을 결과 XML 로 확인했고, 프로덕션 키 파일을 실제로 받아 본문이 키와 정확히 일치함을 실측했다. 운영 활성화 자체는 이 저장소 밖이다 — 원격 서버 .env 에 INDEXNOW_ENABLED=true 를 추가하고 재시작해야 하며, 다음 03:30 KST 로그에서 IndexNow submitted N urls, status=200 을 확인해야 완료다(N 은 현재 사이트맵 13엔트리 x ko/en 기준 26 근처). 아직 미검증이라 data-analysis README 의 IndexNow 상태 표기와 04-todo P1-4 는 이번에 바꾸지 않고 그대로 뒀다 — 로그로 확인된 뒤 갱신한다."
+
+# =====================================================================
+# sitemap.xml 점검 — 산출물은 정상, 공백은 문서·테스트 쪽
+# =====================================================================
+# 배경: sitemap.xml 전반 점검 요청. 코드 정적 분석 + 라이브 배포본 실측(전 URL 상태코드·
+# 헤더·canonical·hreflang·title) + 공개 라우트 전수 대조 3방향으로 확인.
+# 결과: 죽은 URL 0건(26개 전부 200), 색인 대상인데 누락 0건, 비대상인데 수록 0건,
+# hreflang 상호참조·x-default·canonical 정합 100%. 연속 호출 lastmod 동일(요청마다
+# 변동하는 안티패턴 아님). 즉 산출물 자체는 손댈 것이 없다.
+# 발견 1(보류): lastmod 가 빌드 시각이라 콘텐츠 무관 재배포에도 24개 URL 이 전부 갱신
+# 신호를 낸다. 점검 중 실제로 2026-07-26T03:26:02 → 2026-08-02T12:40:54 로 바뀌는 것을
+# 관측했고, 최근 30일 커밋 52건 중 수록 페이지 콘텐츠를 바꾼 건 8건뿐이다. 다만 이는
+# ADR-0003 이 Rationale 표에서 의식적으로 고른 트레이드오프이고 Google 은 부정확한
+# lastmod 를 무시할 뿐 페널티가 없어, 설계 변경은 보류하고 비용만 수치로 남긴다.
+# 발견 2: ADR-0003 과 Javadoc 이 코드와 불일치(insights fallback) → 정정.
+# 발견 3: robots.txt Allow 목록 반쪽 미러 + 존재하지 않는 규칙을 가리키는 주석 → 정리.
+# 발견 4: 사이트맵 HTTP 레벨/robots 정합 회귀 가드 전무 → 테스트 4종 신설.
+# 검증: RED 선확인(없는 경로 수록 → 302 로 실패 / robots 에 Disallow 추가 → 차단 판정
+#       true 로 실패) 후 임시 변경 되돌리고 GREEN. 사이트맵 출력 바이트 변화 없음.
+
+# Commit 124 — docs(seo): sitemap.xml 점검 보고서 + 회귀 가드 4종 — 마지막 커밋(git-commit.md 포함)
+git add docs/audit/sitemap-audit-2026-08-02.md src/test/java/me/singingsandhill/calendar/common/presentation/controller/SitemapEndpointTest.java src/main/resources/static/robots.txt docs/adr/common/seo/0003-trustworthy-sitemap-lastmod.md src/main/java/me/singingsandhill/calendar/common/application/service/SitemapService.java docs/guides/git-commit.md
+git commit -m "docs(seo): sitemap.xml 점검 보고서 + HTTP/robots 회귀 가드 4종" -m "sitemap.xml 을 코드·라이브 배포본·커버리지 3방향으로 점검했다. 산출물은 손댈 것이 없었다: 수록 26 URL(13 엔트리 x ko/en) 전부 HTTP 200 으로 죽은 URL 0건, index,follow 페이지 집합과 사이트맵 집합이 정확히 일치해 누락·과다 수록 0건, 블록당 ko/en/x-default 3개씩 78개 hreflang 이 자기 자신을 포함해 상호참조를 충족하며, 표본 5개 페이지의 canonical 이 사이트맵 loc 과 문자 단위로 같고 en URL 은 self-canonical 이다. 13개 경로 전부 ko/en 의 title 과 html lang 이 달라 hreflang 이 빈 약속도 아니다. 연속 3회 호출 lastmod 가 동일해 playbook Case 6 이 경고하는 요청마다 변동하는 형태도 아니다. 그래서 이번 커밋은 사이트맵 생성 로직을 전혀 건드리지 않으며 출력 바이트도 그대로다. 발견은 네 가지다. (1) lastmod 가 BuildProperties 즉 배포 시각이라 콘텐츠와 무관한 재배포에도 정적 24개 URL 이 전부 갱신 신호를 낸다 — 점검 도중 값이 2026-07-26T03:26:02 에서 2026-08-02T12:40:54 로 바뀌는 것을 실제로 관측했고, 최근 30일 커밋 52건 중 수록 페이지의 템플릿·메시지를 바꾼 것은 8건뿐이라 나머지 배포는 전부 허위 갱신이다. 다만 이것은 결함이 아니라 ADR-0003 이 Rationale 표에서 페이지별 콘텐츠 hash 추적을 인프라 비용으로 기각하며 고른 트레이드오프이고, Google 은 부정확한 lastmod 에 페널티를 주는 게 아니라 그 값을 무시하므로 손해가 신호 하나를 잃는 선에서 끝난다 — 설계 변경은 보류하고 비용을 처음으로 수치화해 보고서에 남기며 대안 3안(페이지별 실제 수정일 맵/lastmod 제거/git 파생)을 비교표로 정리했다. (2) ADR-0003 과 SitemapService Javadoc 이 둘 다 insights 데이터가 없으면 buildTime fallback 이라고 적었지만 코드는 엔트리 자체를 싣지 않는다 — 2026-05-28 061626f 에서 sitemap 광고와 noindex 응답이 모순된다는 이유로 바뀌었는데 ADR 이 따라가지 않았다. 결정 변경이 아니라 문서를 코드에 맞추는 정정이라 신규 ADR 없이 ADR 본문에 정정 각주를 달고 Javadoc 문장을 고쳤다. (3) robots.txt 의 Allow 목록에서 /about·/faq·/tools/date-diff 가 빠져 반쪽 미러였다 — default-allow 라 크롤링 동작에는 무해하지만 목록만 보면 이 셋이 허용 대상이 아닌 것처럼 읽힌다. 세 줄을 채우고, 이미 삭제된 Allow: /runners/runs/ 규칙을 근거로 들던 주석을 최장 패턴 우선 규칙 설명으로 교체했다. Disallow 규칙과 연도 열거는 ADR-0005 결정 그대로 두었다. (4) 기존 테스트 16개(hreflang 14 + whitelist 2)는 생성된 XML 문자열만 보고 그 XML 이 실제로 서빙되는지·광고하는 URL 이 존재하는지·robots.txt 에 막히지 않는지는 아무도 확인하지 않았는데, 이 저장소의 대표적 색인 사고 두 건이 정확히 그 공백에서 났다(2026-01 http/https 불일치 ADR-0002, 2026-04 Disallow: /*/* 로 콘텐츠 페이지 전면 차단 ADR-0005). SitemapEndpointTest 4종을 신설한다: sitemap.xml 이 200/application-xml/max-age=86400 으로 서빙되는지, 모든 loc 이 MockMvc 로 2xx 를 응답하는지(playbook 미완 체크리스트의 모든 URL 200 자동 검증을 닫는다), robots.txt 가 사이트맵 URL 을 막지 않는지(Allow/Disallow 최장 패턴 우선이라는 Google 해석을 그대로 구현해 판정), Sitemap: 줄이 app.base-url 과 일치하는지. 기존 통합 테스트 패턴(SpringBootTest + AutoConfigureMockMvc + ActiveProfiles test + MockMvc 주입)을 그대로 재사용했다. 검증은 RED 선확인부터 했다 — 존재하지 않는 경로를 getSitemapEntries 에 넣으면 302 를 받아 200~299 기대에서 실패하고, robots.txt 에 그 경로 Disallow 를 넣으면 차단 판정이 true 가 되어 실패한다. 두 임시 변경을 되돌린 뒤 사이트맵 3개 테스트 클래스 20개(신규 4 + hreflang 14 + whitelist 2) 전부 GREEN, 결과 XML 로 실행 개수 확인. 조치하지 않고 보고서에만 남긴 것: escapeXml 이 changefreq/priority/lastmod 에 미적용(전부 코드 내 리터럴이라 실제 위험 없음), hreflangEntryCountReasonable 의 12*2*3 하드코딩이 화이트리스트 테스트와 중복(의도된 가드라 유지), 사이트맵 응답마다 findLatestActivity SQL 2회(24시간 캐시 + 저트래픽이라 무시 가능), 그리고 범위 밖 두 건 — /stock* 의 noindex 가 SeoMetadata 가 아니라 템플릿 하드코딩에만 있고 Disallow: /stock/ 이 맨 URL /stock 을 매칭하지 못한다는 점, /use-cases·/tools 허브가 404 라는 ADR-0008 보류 항목."

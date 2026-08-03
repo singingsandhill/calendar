@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | — | — | 8 | 3 | — | — | — | 6 | 17 |
+| **common**   | — | — | — | 9 | 3 | — | — | — | 6 | 18 |
 | **datedate** | 6 | — | 6 | — | — | — | — | — | — | 12 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 4 | — | — | — | — | 15 | 2 | — | 21 |
 | **stock**    | — | 7 (동시성 포함) | — | — | — | 2 | 9 | 3 | — | 21 |
-| **합계** | 8 | 11 | 6 | 8 | 3 | 2 | 24 | 5 | 6 | **73** |
+| **합계** | 8 | 11 | 6 | 9 | 3 | 2 | 24 | 5 | 6 | **74** |
 
-총 **73개 ADR**.
+총 **74개 ADR**.
 
 ---
 
@@ -67,6 +67,7 @@
 | 2026-05-01 | datedate/ux | [0001 참가자 색 ↔ 셀 강조 동기화](datedate/ux/0001-participant-color-cell-sync.md) | 누가 선택했는지 식별 불가 |
 | 2026-05-01 | datedate/ux | [0002 온보딩 배너 영구화](datedate/ux/0002-onboarding-banner-persistence.md) | 다시 열 방법 부재 |
 | 2026-05-01 | datedate/ux | [0003 링크 4-state + 카드 어포던스](datedate/ux/0003-link-state-and-card-affordance.md) | 탭 오인 / :visited 보라 |
+| 2026-05-18 | common/seo | [0009 IndexNow 능동 색인 제출](common/seo/0009-indexnow-active-submission.md) | 크롤러 재방문 대기로 인한 색인 지연 — Bing/Yandex/Naver 보조 채널 |
 | 2026-05-30 | trading/modes | [0001 PAPER 기본 모드 + 주문 게이트](trading/modes/0001-paper-mode-default-and-order-gate.md) | 수익성 감사 P0-1 — 실거래 사고 방지 / 백테스트 |
 | 2026-05-30 | trading/risk | [0001 서킷브레이커(일일·연속 손실)](trading/risk/0001-circuit-breaker-daily-and-consecutive-loss.md) | 수익성 감사 P0-2 — 데스스파이럴 차단 |
 | 2026-05-30 | trading/risk | [0002 리밸런싱 회계 정합](trading/risk/0002-rebalance-position-accounting.md) | 수익성 감사 P1-3 — 유령 코인/잔고 드리프트 |
@@ -109,7 +110,7 @@
 
 ## 도메인별 폴더 구조
 
-- [common/seo/](common/seo/) — 8 ADRs
+- [common/seo/](common/seo/) — 9 ADRs
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 5 ADRs
