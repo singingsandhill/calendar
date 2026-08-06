@@ -7,9 +7,13 @@
 ## 유니버스 (UniverseBuilder)
 
 `pinned` (관심 종목) ∪ **KIS 거래량순위 상위 N** (`rank-api-top`, FHPST01710000) 으로 그날
-유니버스를 스냅샷 캐시. 거래량순위가 실패/0건이면 정적 `fallback-codes` 로 폴백(무회귀).
-pre-market(08:30) 에 초기 빌드하되, **08:30 엔 당일 거래량이 없어 rank 가 0건이므로
-스크리닝(09:20) 시점에 `refreshIfDegraded()` 가 rank=0 스냅샷을 감지해 1회 재시도**
+유니버스를 스냅샷 캐시. 거래량순위가 **요청한 top-N 에 미달하면**(실패/0건/부분응답) 정적
+`fallback-codes` 를 **합집합으로 보강**한다 — 부분 응답은 폴백을 대체하지 않는다
+([ADR-0010](../../../../../../../../docs/adr/stock/algorithm/0010-universe-degradation-threshold.md);
+2026-08-03 에 1건 응답이 "비어 있지 않다"는 이유로 70종목 안전망을 통째로 껐다).
+pre-market(08:30) 은 `refreshStaticOnly()` 로 **거래량순위를 아예 호출하지 않는다** — 그 시각엔
+당일 거래량이 없어 rank 가 구조적으로 0~1건이다. **스크리닝(09:20) 시점에 `refreshIfDegraded()`
+가 `rankApi < rank-api-top` 스냅샷을 감지해 1회 재시도**
 ([ADR-0006](../../../../../../../../docs/adr/stock/algorithm/0006-universe-rank-retry-at-screening.md)).
 rank 성공 스냅샷은 그대로 유지(거래일 1회 스냅샷 정합성). 빈 유니버스 시 `SCREENING_SKIPPED`
 이벤트 + 조기 리턴.

@@ -19,15 +19,22 @@ import static org.mockito.Mockito.when;
 /**
  * UniverseBuilder 동작 회귀 테스트.
  *
- * 기대:
- *  - rank-api-top &gt; 0 이면 KIS 거래량순위 결과를 동적 유니버스로 사용 (pinned ∪ rank).
- *  - 거래량순위가 비었거나(0건) API 가 실패하면 정적 fallback-codes 로 폴백 (무회귀).
+ * 기대 (ADR stock/algorithm/0010 — 부분 응답 임계):
+ *  - rank-api-top &gt; 0 이고 거래량순위가 <b>요청한 top-N 을 모두 반환</b>하면 동적 유니버스로 사용 (pinned ∪ rank).
+ *  - 거래량순위가 top-N 에 <b>미달</b>하면(0건 포함) 정적 fallback-codes 를 합집합으로 보강.
  *  - 동일 코드는 중복 제거.
  *  - 캐싱: 같은 거래일에 두 번 호출하면 같은 Snapshot.
  */
 class UniverseBuilderTest {
 
     private final KoreaInvestmentApiClient api = mock(KoreaInvestmentApiClient.class);
+
+    /** 요청 수를 모두 채운 rank 응답 생성 (완전 응답 = 폴백 미사용 조건). */
+    private static List<String> rankCodes(int count) {
+        return java.util.stream.IntStream.range(0, count)
+            .mapToObj(i -> String.format("%06d", 100000 + i))
+            .toList();
+    }
 
     /** rank 비활성(rank-api-top=0) 빌더 — 정적 fallback 경로 테스트용. */
     private UniverseBuilder builder(List<String> pinned, List<String> fallback) {
@@ -64,16 +71,35 @@ class UniverseBuilderTest {
     // ===== 동적 거래량순위 경로 (rank 활성) =====
 
     @Test
-    void usesVolumeRankWhenEnabled() {
+    void usesVolumeRankWhenResponseIsComplete() {
         when(api.getTopVolumeCodes(anyInt())).thenReturn(List.of("111111", "222222"));
-        UniverseBuilder b = builder(List.of("005930"), List.of("999999"), 30);
+        UniverseBuilder b = builder(List.of("005930"), List.of("999999"), 2);
 
         UniverseBuilder.Snapshot snap = b.refresh(LocalDate.of(2026, 5, 1));
 
-        // pinned ∪ rank; rank 성공 시 정적 fallback(999999) 은 섞이지 않는다.
+        // pinned ∪ rank; rank 가 요청 수(2)를 모두 채웠으므로 정적 fallback(999999) 은 섞이지 않는다.
         assertThat(snap.codes()).containsExactly("005930", "111111", "222222");
         assertThat(snap.rankApi()).isEqualTo(2);
         assertThat(snap.fallback()).isZero();
+    }
+
+    /**
+     * 2026-08-03 사고 재현: 거래량순위가 30건 요청에 1건만 반환.
+     *
+     * 과거 계약(`rankCodes.isEmpty()`)에서는 1건이 "비어 있지 않다"는 이유로 70종목 정적 안전망이
+     * 통째로 스킵돼 하루치 유니버스가 1종목이 됐다. 부분 응답은 폴백을 <b>대체</b>하지 않고
+     * <b>합집합</b>이어야 한다.
+     */
+    @Test
+    void unionsStaticPoolWhenRankResponseIsPartial() {
+        when(api.getTopVolumeCodes(anyInt())).thenReturn(List.of("252670"));
+        UniverseBuilder b = builder(List.of(), List.of("000660", "035420"), 30);
+
+        UniverseBuilder.Snapshot snap = b.refresh(LocalDate.of(2026, 8, 3));
+
+        assertThat(snap.codes()).containsExactly("252670", "000660", "035420");
+        assertThat(snap.rankApi()).isEqualTo(1);
+        assertThat(snap.fallback()).isEqualTo(2);
     }
 
     @Test
@@ -85,6 +111,19 @@ class UniverseBuilderTest {
 
         assertThat(snap.codes()).containsExactly("005930", "111111");
         assertThat(snap.rankApi()).isEqualTo(2);
+    }
+
+    /** 프리마켓(08:30)은 당일 거래량이 없어 거래량순위가 무의미 — 정적 소스만으로 스냅샷. */
+    @Test
+    void refreshStaticOnlySkipsRankApiEntirely() {
+        UniverseBuilder b = builder(List.of("005930"), List.of("000660", "035420"), 30);
+
+        UniverseBuilder.Snapshot snap = b.refreshStaticOnly(LocalDate.of(2026, 5, 1));
+
+        assertThat(snap.codes()).containsExactly("005930", "000660", "035420");
+        assertThat(snap.rankApi()).isZero();
+        assertThat(snap.fallback()).isEqualTo(2);
+        verify(api, never()).getTopVolumeCodes(anyInt());
     }
 
     @Test
@@ -120,16 +159,37 @@ class UniverseBuilderTest {
         when(api.getTopVolumeCodes(anyInt()))
             .thenReturn(List.of())
             .thenReturn(List.of("111111", "222222"));
-        UniverseBuilder b = builder(List.of("005930"), List.of("000660"), 30);
+        UniverseBuilder b = builder(List.of("005930"), List.of("000660"), 2);
         LocalDate day = LocalDate.of(2026, 5, 1);
         b.refresh(day);
 
-        // 09:20 스크리닝: rank=0 이었으므로 재조회 → 동적 유니버스로 대체
+        // 09:20 스크리닝: rank=0 이었으므로 재조회 → 완전 응답이라 동적 유니버스로 대체
         UniverseBuilder.Snapshot snap = b.refreshIfDegraded(day);
 
         assertThat(snap.codes()).containsExactly("005930", "111111", "222222");
         assertThat(snap.rankApi()).isEqualTo(2);
         assertThat(snap.fallback()).isZero();
+    }
+
+    /**
+     * 2026-08-03 사고 재현 2: 08:30 스냅샷의 rank 가 1건(≠0)이면 과거 계약에서는
+     * `rankApi == 0` 이 아니라는 이유로 09:20 재시도(ADR-0006)마저 발동하지 않았다.
+     */
+    @Test
+    void retriesRankAtScreeningWhenSnapshotRankIsPartial() {
+        when(api.getTopVolumeCodes(anyInt()))
+            .thenReturn(List.of("252670"))
+            .thenReturn(rankCodes(30));
+        UniverseBuilder b = builder(List.of(), List.of("000660"), 30);
+        LocalDate day = LocalDate.of(2026, 8, 3);
+        b.refresh(day);
+
+        UniverseBuilder.Snapshot snap = b.refreshIfDegraded(day);
+
+        verify(api, times(2)).getTopVolumeCodes(anyInt());
+        assertThat(snap.rankApi()).isEqualTo(30);
+        assertThat(snap.fallback()).isZero();
+        assertThat(snap.codes()).hasSize(30).doesNotContain("000660");
     }
 
     @Test
@@ -148,15 +208,15 @@ class UniverseBuilderTest {
     }
 
     @Test
-    void doesNotRetryWhenRankAlreadyPresent() {
-        when(api.getTopVolumeCodes(anyInt())).thenReturn(List.of("111111"));
+    void doesNotRetryWhenRankResponseIsComplete() {
+        when(api.getTopVolumeCodes(anyInt())).thenReturn(rankCodes(30));
         UniverseBuilder b = builder(List.of(), List.of("000660"), 30);
         LocalDate day = LocalDate.of(2026, 5, 1);
         UniverseBuilder.Snapshot first = b.refresh(day);
 
         UniverseBuilder.Snapshot snap = b.refreshIfDegraded(day);
 
-        // rank 가 이미 있으면 스냅샷 유지 (거래일 1회 스냅샷 정합성)
+        // rank 가 요청 수를 모두 채웠으면 스냅샷 유지 (거래일 1회 스냅샷 정합성)
         assertThat(snap).isSameAs(first);
         verify(api, times(1)).getTopVolumeCodes(anyInt());
     }
@@ -176,7 +236,7 @@ class UniverseBuilderTest {
     @Test
     void buildsFreshWhenNoSnapshotForDate() {
         when(api.getTopVolumeCodes(anyInt())).thenReturn(List.of("111111"));
-        UniverseBuilder b = builder(List.of(), List.of("000660"), 30);
+        UniverseBuilder b = builder(List.of(), List.of("000660"), 1);
 
         UniverseBuilder.Snapshot snap = b.refreshIfDegraded(LocalDate.of(2026, 5, 2));
 

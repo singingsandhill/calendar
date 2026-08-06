@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted — 호출 시점(pre-market 1회)은 [ADR-0006](0006-universe-rank-retry-at-screening.md) 으로 보완 (08:30 엔 당일 거래량이 없어 매일 0건) |
+| 상태 | Accepted — 호출 시점(pre-market 1회)은 [ADR-0006](0006-universe-rank-retry-at-screening.md) 으로 보완 (08:30 엔 당일 거래량이 없어 매일 0건). 폴백 조건 "rank 가 비었을 때만" 은 [ADR-0010](0010-universe-degradation-threshold.md) 으로 "top-N 미달일 때" 로 보강 (1건 응답이 안전망을 무력화한 2026-08-03 사고) |
 | 날짜 | 2026-06-03 |
 | 도메인 | stock |
 | 관심사 | 알고리즘 / 데이터 |

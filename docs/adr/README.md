@@ -22,7 +22,7 @@
 | **stock**    | — | 7 (동시성 포함) | — | — | — | 2 | 9 | 3 | — | 21 |
 | **합계** | 8 | 11 | 6 | 9 | 3 | 2 | 24 | 5 | 6 | **74** |
 
-총 **74개 ADR**.
+총 **75개 ADR**.
 
 ---
 
@@ -105,6 +105,7 @@
 | 2026-07-27 | trading/infrastructure | [0004 Reactor Netty 커넥션 풀 idle 폐기](trading/infrastructure/0004-reactor-netty-connection-pool-policy.md) | 운영 로그 — stale 커넥션 PrematureCloseException 반복 |
 | 2026-07-27 | trading/risk | [0005 현재가 조회 실패 시 진입 가드 차단](trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md) | 운영 로그 — 조회 실패 시 가드 우회 매수(fail-open) |
 | 2026-07-30 | common/seo | [0008 BreadcrumbList 2단계 + 전 항목 item](common/seo/0008-breadcrumb-item-on-every-listitem.md) | GSC "'item' 입력란 누락" — 3단계 중간 크럼브 URL 부재로 6개 URL 리치 결과 제외 |
+| 2026-08-03 | stock/algorithm | [0010 유니버스 열화 판정 = top-N 미달](stock/algorithm/0010-universe-degradation-threshold.md) | 운영 로그 — rank 1건 응답이 정적 안전망·09:20 재시도를 동시에 무력화, 하루치 유니버스 1종목 |
 
 ---
 
@@ -122,7 +123,7 @@
 - [trading/modes/](trading/modes/) — 2 ADRs
 - [trading/risk/](trading/risk/) — 5 ADRs
 - [trading/infrastructure/](trading/infrastructure/) — 4 ADRs
-- [stock/algorithm/](stock/algorithm/) — 9 ADRs
+- [stock/algorithm/](stock/algorithm/) — 10 ADRs
 - [stock/infrastructure/](stock/infrastructure/) — 7 ADRs
 - [stock/modes/](stock/modes/) — 3 ADRs
 - [stock/observability/](stock/observability/) — 2 ADRs

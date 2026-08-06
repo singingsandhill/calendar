@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 재시도 조건 `rankApi == 0` 은 [ADR-0010](0010-universe-degradation-threshold.md) 으로 `rankApi < rank-api-top` 으로 보강. 08:30 `refresh()` 유지 결정도 0010 에서 `refreshStaticOnly()` 로 대체 |
 | 날짜 | 2026-07-24 |
 | 도메인 | stock |
 | 관심사 | 알고리즘 / 데이터 |

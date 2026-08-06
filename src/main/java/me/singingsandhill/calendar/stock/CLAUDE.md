@@ -8,8 +8,9 @@ Gap & Pullback trading bot for Korean stocks via Korea Investment Securities API
 ## Trading Flow
 
 ```
-08:30  PreMarket    -> UniverseBuilder.refresh() (pinned ∪ KIS 거래량순위 top-N, 실패 시 fallback-codes)
-09:20  Screening    -> rank=0 스냅샷이면 거래량순위 재시도(refreshIfDegraded, ADR-0006 — 08:30 엔 당일 거래량 없음)
+08:30  PreMarket    -> UniverseBuilder.refreshStaticOnly() (pinned ∪ fallback-codes — 거래량순위 미호출, ADR-0010)
+09:20  Screening    -> rank 이 top-N 미달인 스냅샷이면 거래량순위 재시도(refreshIfDegraded, ADR-0006·0010)
+                       미달 시 fallback-codes 를 합집합으로 보강 + UNIVERSE_DEGRADED 이벤트
                        -> Floor filter + composite score ranking (top N) + email alert (첨부는 09:20 시점 스냅샷)
 09:20~ Trading loop -> Every 5s (polling-interval-seconds): risk check -> state update -> enter if ready
 11:20  Final Exit   -> Force close all remaining positions (`exit.final-exit-time` 은 청산 cron 과 동일하게 11:20 유지)
@@ -56,8 +57,11 @@ TP1·TP2·TP3 는 *독립 트리거* (선행 의존 제거). 강한 트리거 �
 트레일링은 부분익절(TP1·TP2·TP3 중 하나)이 발생하면 활성화되고, 활성화 시점에 스탑가가 즉시 설정된다.
 레거시 `risk.stop-loss-percent` 는 손절 계산에 사용되지 않는다(키만 보존).
 
-Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (09:10) to
-0.1% (15:15), making TP triggers easier to hit later in the session. `Clock` 빈으로 시간
+Time-decay take profit: minimum profit threshold decreases linearly from
+`risk.min-profit-threshold` (0.5%) at `trading.trading-loop-start` (09:20) to 0 at
+`exit.final-exit-time` (11:20), making TP triggers easier to hit later in the session.
+**종점은 설정에서 유도한다** — 상수 09:10/15:15 시절엔 봇 운영 창이 곡선의 약 36% 만
+지나가 후반 구간이 도달 불가였다 (ADR algorithm/0001·0009·0010). `Clock` 빈으로 시간
 의존 코드 결정성 테스트 가능.
 
 **TP 순이익 게이트 (TP1·TP2·TP3 공통):** 위 표의 가격 조건이 충족돼도 그것만으로 익절되지
@@ -96,7 +100,14 @@ Time-decay take profit: minimum profit threshold decreases linearly from 0.5% (0
   **신규 진입은 차단**. 관리자 `start()` 시 해제. `BotStatus.recoveryMode` 로 노출.
 - **`TradeEvents` 로거** + **KST 자정 회전** + **`BotStatus.{recoveryMode, lastTradingTickAt, lastScreeningResult, apiCallsLast5min}`** 메트릭.
 - **`StockBotConfigValidator`** — 기동 시(`ApplicationReadyEvent`) 유효 설정 1줄 요약 + 위험/부정합(LIVE 모드, 빈 유니버스, floor>entry, 메일 미설정) WARN. 진단 전용, 동작 불변.
-- **스크리닝 침묵 실패 가드** — 유니버스가 있는데 `Selected: 0` 이면 최다 탈락 버킷을 WARN.
+- **스크리닝 침묵 실패 가드** — 유니버스가 있는데 `Selected: 0` 이면 탈락 버킷을 WARN.
+  버킷은 **원인별로 분리**돼 있다: `openPriceMissing`/`zeroTradeStrength` (구 `dataInsufficient`),
+  `gapBelowFloor`/`gapAboveCeiling` (구 `gapFiltered`) — 합산 카운터로는 2026-07-20~23 의
+  4일 연속 0건에서 근본 원인을 특정할 수 없었다. 합계는 `ScreeningSnapshot` 의 파생 접근자로 유지.
+- **09:20 스크리닝 메일** — 본문 최상단에 유니버스 크기(`rank`/`fallback`/`pinned` 내역)를
+  인쇄하고, 정적 안전망보다 작으면 경고 문구를 붙인다. "스크리닝 조건" 블록은
+  `scoring.enabled` 분기로 **실제 적용되는 임계**를 출력 (score 모드에서 legacy 키를
+  인쇄하던 문제 — 08-03 에 실효 갭 상한 15% 를 10% 로 표시).
 - **거래정지·VI 가드** ([ADR algorithm/0008](../../../../../../../docs/adr/stock/algorithm/0008-screening-selection-and-cost-model.md)) —
   시세 응답의 `iscd_stat_cls_code`/`temp_stop_yn`/`mrkt_warn_cls_code`/`sltr_yn` 로
   `KisQuoteResponse.isTradable()` 판정. 스크리닝 Floor 0번 + **진입 직전 재확인**.

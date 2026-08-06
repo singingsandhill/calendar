@@ -261,8 +261,10 @@ public class GapPullbackBotService {
         log.info("Executing pre-market loop");
         currentTradingDate = LocalDate.now(clock);
 
-        // 그날의 유니버스를 미리 빌드해 캐시.
-        UniverseBuilder.Snapshot universe = universeBuilder.refresh(currentTradingDate);
+        // 그날의 유니버스를 미리 빌드해 캐시. 이 시각엔 당일 거래량이 없어 거래량순위가
+        // 구조적으로 0~1건이므로 정적 소스(pinned ∪ fallback)만 쓴다 — 동적 소스는 장중
+        // 거래량이 쌓인 09:20 refreshIfDegraded 가 담당 (ADR stock/algorithm/0010).
+        UniverseBuilder.Snapshot universe = universeBuilder.refreshStaticOnly(currentTradingDate);
         log.info("Pre-market universe size: {}", universe.codes().size());
     }
 
@@ -298,7 +300,7 @@ public class GapPullbackBotService {
                 .log();
 
             try {
-                mailService.sendScreeningResult(currentTradingDate, selectedStocks);
+                mailService.sendScreeningResult(currentTradingDate, selectedStocks, universe);
             } catch (Exception e) {
                 log.error("Failed to send screening result email: {}", e.getMessage());
             }

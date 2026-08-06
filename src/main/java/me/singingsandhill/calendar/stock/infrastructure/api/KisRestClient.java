@@ -462,7 +462,13 @@ public class KisRestClient {
             log.warn("Volume-rank success but 0 codes — rows={}, firstRowKeys={}",
                 rows.size(), first instanceof Map<?, ?> m ? m.keySet() : "n/a");
         }
-        log.debug("Volume-rank returned {} codes", codes.size());
+        if (codes.size() < count) {
+            // 축소 응답은 정상이 아니다 — 호출측(UniverseBuilder)이 정적 폴백으로 보강하지만,
+            // 원인(장 전 호출/파라미터 오류/스펙 변경)은 여기서만 판별 가능하다.
+            log.warn("Volume-rank returned {} codes (requested {})", codes.size(), count);
+        } else {
+            log.debug("Volume-rank returned {} codes", codes.size());
+        }
         return codes;
     }
 
