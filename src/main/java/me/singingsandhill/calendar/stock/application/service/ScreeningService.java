@@ -179,7 +179,7 @@ public class ScreeningService {
 
         // Floor 필터 1: 시가 미확정 방어
         if (quote.openPrice() == null || quote.openPrice().compareTo(BigDecimal.ZERO) == 0) {
-            stats.dataInsufficient++;
+            stats.openPriceMissing++;
             return null;
         }
 
@@ -188,10 +188,16 @@ public class ScreeningService {
         BigDecimal floorMaxGap = stockProperties.getScoring().getFloorMaxGap();
         BigDecimal floorStrength = stockProperties.getScreening().getFloorTradeStrength();
 
-        // Floor 필터 2: 최소 갭
-        if (gapPercent.compareTo(floorGap) < 0 || gapPercent.compareTo(floorMaxGap) > 0) {
-            stats.gapFiltered++;
-            log.debug("[{}] Floor 갭 탈락: gap={}% (기준: {}~{}%)", stockCode, gapPercent, floorGap, floorMaxGap);
+        // Floor 필터 2: 최소 갭. 하한 미달과 상한 초과는 원인이 정반대라 따로 센다
+        // (하한 다수 = 유니버스가 갭 없는 종목 위주 / 상한 다수 = 급등주 위주).
+        if (gapPercent.compareTo(floorGap) < 0) {
+            stats.gapBelowFloor++;
+            log.debug("[{}] Floor 갭 탈락(하한 미달): gap={}% (기준: {}~{}%)", stockCode, gapPercent, floorGap, floorMaxGap);
+            return null;
+        }
+        if (gapPercent.compareTo(floorMaxGap) > 0) {
+            stats.gapAboveCeiling++;
+            log.debug("[{}] Floor 갭 탈락(상한 초과): gap={}% (기준: {}~{}%)", stockCode, gapPercent, floorGap, floorMaxGap);
             return null;
         }
 
@@ -206,7 +212,7 @@ public class ScreeningService {
         // strength=0 은 ccnl 미집계/조회 실패. skipZeroStrength=true 면 스킵, false 면 통과시킴.
         if (tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
             if (stockProperties.getScreening().isSkipZeroStrength()) {
-                stats.dataInsufficient++;
+                stats.zeroTradeStrength++;
                 log.debug("[{}] 체결강도 미집계(=0): 데이터 부족으로 스킵", stockCode);
                 return null;
             }
@@ -363,10 +369,12 @@ public class ScreeningService {
                                        ScreeningStats stats, List<StockCandidate> candidates) {
         log.info("=== Screening Summary (Score-based) ===");
         log.info("Total: {}, Floor passed: {}, Selected: {}", total, floorPassed, selected);
-        log.info("API failures: {}, Data insufficient: {}, Errors: {}",
-            stats.apiFailures, stats.dataInsufficient, stats.errors);
-        log.info("Floor filtered - Gap: {}, Strength: {}, MarketCap: {}, NotTradable: {}",
-            stats.gapFiltered, stats.strengthFiltered, stats.marketCapFiltered, stats.notTradable);
+        log.info("API failures: {}, Data insufficient: {} (openPriceMissing={}, zeroStrength={}), Errors: {}",
+            stats.apiFailures, stats.dataInsufficient(),
+            stats.openPriceMissing, stats.zeroTradeStrength, stats.errors);
+        log.info("Floor filtered - Gap: {} (below={}, above={}), Strength: {}, MarketCap: {}, NotTradable: {}",
+            stats.gapFiltered(), stats.gapBelowFloor, stats.gapAboveCeiling,
+            stats.strengthFiltered, stats.marketCapFiltered, stats.notTradable);
 
         // 계측: 상태 필드가 전 종목에서 비어 있으면 거래정지 가드가 사실상 무력화된 것.
         if (total > 0 && stats.tradabilityFieldsMissing == total) {
@@ -376,20 +384,26 @@ public class ScreeningService {
 
         // 침묵 실패 가드: 유니버스가 있는데 0건 선정이면 비정상 — 최다 탈락 버킷을 WARN.
         if (total > 0 && selected == 0) {
-            log.warn("0 selected from {} universe — 최다 탈락 버킷: gap={}, dataInsufficient={}, strength={}, marketCap={}, notTradable={}, apiFail={}. 유니버스/임계 점검 필요.",
-                total, stats.gapFiltered, stats.dataInsufficient, stats.strengthFiltered,
+            log.warn("0 selected from {} universe — 탈락 버킷: gapBelowFloor={}, gapAboveCeiling={}, "
+                    + "openPriceMissing={}, zeroStrength={}, strength={}, marketCap={}, notTradable={}, apiFail={}. "
+                    + "유니버스/임계 점검 필요.",
+                total, stats.gapBelowFloor, stats.gapAboveCeiling,
+                stats.openPriceMissing, stats.zeroTradeStrength, stats.strengthFiltered,
                 stats.marketCapFiltered, stats.notTradable, stats.apiFailures);
         }
 
         metrics.recordScreeningResult(total, floorPassed, selected,
-            stats.dataInsufficient, stats.gapFiltered);
+            stats.openPriceMissing, stats.zeroTradeStrength,
+            stats.gapBelowFloor, stats.gapAboveCeiling);
 
         TradeEvents.event("SCREENING_SUMMARY")
             .with("total", total)
             .with("floorPassed", floorPassed)
             .with("selected", selected)
-            .with("dataInsufficient", stats.dataInsufficient)
-            .with("gapFiltered", stats.gapFiltered)
+            .with("openPriceMissing", stats.openPriceMissing)
+            .with("zeroTradeStrength", stats.zeroTradeStrength)
+            .with("gapBelowFloor", stats.gapBelowFloor)
+            .with("gapAboveCeiling", stats.gapAboveCeiling)
             .with("strengthFiltered", stats.strengthFiltered)
             .with("apiFailures", stats.apiFailures)
             .log();
@@ -483,7 +497,7 @@ public class ScreeningService {
         }
 
         if (quote.openPrice() == null || quote.openPrice().compareTo(BigDecimal.ZERO) == 0) {
-            stats.dataInsufficient++;
+            stats.openPriceMissing++;
             return null;
         }
 
@@ -491,8 +505,12 @@ public class ScreeningService {
         BigDecimal minGap = stockProperties.getScreening().getMinGapPercent();
         BigDecimal maxGap = stockProperties.getScreening().getMaxGapPercent();
 
-        if (gapPercent.compareTo(minGap) < 0 || gapPercent.compareTo(maxGap) > 0) {
-            stats.gapFiltered++;
+        if (gapPercent.compareTo(minGap) < 0) {
+            stats.gapBelowFloor++;
+            return null;
+        }
+        if (gapPercent.compareTo(maxGap) > 0) {
+            stats.gapAboveCeiling++;
             return null;
         }
 
@@ -511,7 +529,7 @@ public class ScreeningService {
         BigDecimal tradeStrength = kisApiClient.getTradeStrength(stockCode);
         BigDecimal minStrength = stockProperties.getScreening().getMinTradeStrength();
         if (tradeStrength == null || tradeStrength.compareTo(BigDecimal.ZERO) == 0) {
-            stats.dataInsufficient++;
+            stats.zeroTradeStrength++;
             return null;
         }
         if (tradeStrength.compareTo(minStrength) < 0) {
@@ -553,9 +571,9 @@ public class ScreeningService {
         log.info("=== Screening Summary (Legacy) ===");
         log.info("Total: {}, Passed: {}, Selected: {}", total, qualified, selected);
         log.info("API failures: {}, Data insufficient: {}, Errors: {}",
-            stats.apiFailures, stats.dataInsufficient, stats.errors);
+            stats.apiFailures, stats.dataInsufficient(), stats.errors);
         log.info("Filtered - Gap: {}, MarketCap: {}, TradeValue: {}, Strength: {}, Spread: {}",
-            stats.gapFiltered, stats.marketCapFiltered, stats.tradeValueFiltered,
+            stats.gapFiltered(), stats.marketCapFiltered, stats.tradeValueFiltered,
             stats.strengthFiltered, stats.spreadFiltered);
     }
 
@@ -565,11 +583,24 @@ public class ScreeningService {
         BigDecimal gapScore, BigDecimal strengthScore, BigDecimal tradeValueScore,
         BigDecimal spreadScore, BigDecimal marketCapScore) {}
 
+    /**
+     * 스크리닝 탈락 사유 집계.
+     *
+     * {@code dataInsufficient} / {@code gapFiltered} 는 <b>원인이 다른 둘을 합친 값</b>이었고,
+     * 그래서 2026-07-20~23 의 4일 연속 0건 선정에서 근본 원인(체결강도 미집계)을 로그만으로
+     * 특정할 수 없었다. 이제 원인별로 따로 세고 합계는 파생값으로 유지한다(하위호환).
+     */
     private static class ScreeningStats {
         int apiFailures = 0;
         int errors = 0;
-        int dataInsufficient = 0;
-        int gapFiltered = 0;
+        /** 시가 미확정(openPrice null/0) — 장 초반 또는 거래 없는 종목. */
+        int openPriceMissing = 0;
+        /** 체결강도 미집계(inquire-ccnl tday_rltv 부재/조회 실패) — 데이터 소스 문제 신호. */
+        int zeroTradeStrength = 0;
+        /** 갭 하한 미달 — 유니버스에 갭 종목이 없다는 신호. */
+        int gapBelowFloor = 0;
+        /** 갭 상한 초과 — 유니버스가 급등주 위주라는 신호. */
+        int gapAboveCeiling = 0;
         int marketCapFiltered = 0;
         int tradeValueFiltered = 0;
         int strengthFiltered = 0;
@@ -578,6 +609,14 @@ public class ScreeningService {
         int tradabilityFieldsMissing = 0;
         int floorPassed = 0;
         int passed = 0;
+
+        int dataInsufficient() {
+            return openPriceMissing + zeroTradeStrength;
+        }
+
+        int gapFiltered() {
+            return gapBelowFloor + gapAboveCeiling;
+        }
     }
 
     // ========== Query Methods ==========

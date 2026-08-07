@@ -46,10 +46,20 @@ public class StockBotMetrics {
         return lastTradingTickAt.get();
     }
 
+    /**
+     * 스크리닝 요약 기록.
+     *
+     * 탈락 사유는 원인별로 받는다 — 합산된 {@code dataInsufficient}/{@code gapFiltered} 만으로는
+     * "시가 미확정"과 "체결강도 미집계"를, "갭 하한 미달"과 "상한 초과"를 구분할 수 없어
+     * 2026-07-20~23 의 4일 연속 0건 선정에서 근본 원인을 특정하지 못했다.
+     * 합계는 {@link ScreeningSnapshot} 의 파생 접근자로 유지한다.
+     */
     public void recordScreeningResult(int total, int floorPassed, int selected,
-                                       int dataInsufficient, int gapFiltered) {
+                                       int openPriceMissing, int zeroTradeStrength,
+                                       int gapBelowFloor, int gapAboveCeiling) {
         lastScreeningResult.set(new ScreeningSnapshot(
-            Instant.now(), total, floorPassed, selected, dataInsufficient, gapFiltered));
+            Instant.now(), total, floorPassed, selected,
+            openPriceMissing, zeroTradeStrength, gapBelowFloor, gapAboveCeiling));
     }
 
     public ScreeningSnapshot getLastScreeningResult() {
@@ -68,7 +78,19 @@ public class StockBotMetrics {
         int total,
         int floorPassed,
         int selected,
-        int dataInsufficient,
-        int gapFiltered
-    ) {}
+        int openPriceMissing,
+        int zeroTradeStrength,
+        int gapBelowFloor,
+        int gapAboveCeiling
+    ) {
+        /** 데이터 부족 합계 — 기존 대시보드/API 호환용 파생값. */
+        public int dataInsufficient() {
+            return openPriceMissing + zeroTradeStrength;
+        }
+
+        /** 갭 탈락 합계 — 기존 대시보드/API 호환용 파생값. */
+        public int gapFiltered() {
+            return gapBelowFloor + gapAboveCeiling;
+        }
+    }
 }
