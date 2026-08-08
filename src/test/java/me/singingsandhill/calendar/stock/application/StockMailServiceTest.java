@@ -5,6 +5,7 @@ import jakarta.mail.Part;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import me.singingsandhill.calendar.stock.application.service.StockMailService;
+import me.singingsandhill.calendar.stock.application.service.UniverseBuilder;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -50,24 +51,61 @@ class StockMailServiceTest {
         return props;
     }
 
-    @Test
-    void attachmentIsNamedAsSnapshotNotAsDailyLogFile() throws Exception {
+    private String sendAndCaptureHtml(StockProperties props, UniverseBuilder.Snapshot universe,
+                                       List<String> fileNames) throws Exception {
         when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
-        StockMailService service = new StockMailService(mailSender, mailEnabledProps());
+        StockMailService service = new StockMailService(mailSender, props);
 
-        service.sendScreeningResult(LocalDate.of(2026, 5, 1), List.of());
+        service.sendScreeningResult(LocalDate.of(2026, 5, 1), List.of(), universe);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
         MimeMessage message = captor.getValue();
         message.saveChanges();
 
-        List<String> fileNames = new ArrayList<>();
         StringBuilder html = new StringBuilder();
         collect(message, fileNames, html);
+        return html.toString();
+    }
+
+    @Test
+    void attachmentIsNamedAsSnapshotNotAsDailyLogFile() throws Exception {
+        List<String> fileNames = new ArrayList<>();
+        String html = sendAndCaptureHtml(mailEnabledProps(), null, fileNames);
 
         assertThat(fileNames).containsExactly("stock-screening-snapshot-2026-05-01.log");
-        assertThat(html.toString()).contains("스냅샷");
+        assertThat(html).contains("스냅샷");
+    }
+
+    /**
+     * 2026-08-03: 유니버스가 1종목이었는데 메일에 그 사실이 없어, 선정 1건이 임계 문제인지
+     * 유니버스 문제인지 구분할 수 없었다.
+     */
+    @Test
+    void bodyReportsUniverseSizeAndFlagsCollapse() throws Exception {
+        StockProperties props = mailEnabledProps();
+        props.getUniverse().setFallbackCodes(List.of("000660", "035420", "005930"));
+
+        String html = sendAndCaptureHtml(props,
+            new UniverseBuilder.Snapshot(LocalDate.of(2026, 5, 1), List.of("252670"), 0, 0, 1),
+            new ArrayList<>());
+
+        assertThat(html).contains("유니버스").contains("1종목").contains("거래량순위 1");
+        // 정적 안전망(3종목)보다 작으므로 경고 문구가 붙어야 한다
+        assertThat(html).contains("정적 안전망");
+    }
+
+    @Test
+    void bodyPrintsScoreModeThresholds_notLegacyOnes() throws Exception {
+        StockProperties props = mailEnabledProps();  // scoring.enabled 기본 true
+
+        String html = sendAndCaptureHtml(props, null, new ArrayList<>());
+
+        // 실효 상한은 scoring.floor-max-gap(15) — legacy max-gap-percent(7 기본) 이 아니다
+        assertThat(html).contains("갭 범위(Floor)")
+            .contains(props.getScoring().getFloorMaxGap().toPlainString())
+            .contains("신호점수");
+        assertThat(html).doesNotContain("최소 거래대금");
     }
 
     private static void collect(Part part, List<String> fileNames, StringBuilder html) throws Exception {

@@ -39,7 +39,8 @@ public class StockMailService {
     /**
      * 스크리닝 결과 이메일 발송
      */
-    public void sendScreeningResult(LocalDate tradingDate, List<Stock> stocks) {
+    public void sendScreeningResult(LocalDate tradingDate, List<Stock> stocks,
+                                     UniverseBuilder.Snapshot universe) {
         if (!stockProperties.getMail().isEnabled()) {
             log.debug("Stock mail is disabled, skipping email");
             return;
@@ -57,7 +58,7 @@ public class StockMailService {
 
             helper.setTo(to);
             helper.setSubject(buildSubject(tradingDate, stocks.size()));
-            helper.setText(buildHtmlContent(tradingDate, stocks), true);
+            helper.setText(buildHtmlContent(tradingDate, stocks, universe), true);
 
             attachLogFile(helper, tradingDate);
 
@@ -182,12 +183,32 @@ public class StockMailService {
         return String.format("[Stock Bot] %s 스크리닝 결과: %d개 종목 감지", dateStr, stockCount);
     }
 
-    private String buildHtmlContent(LocalDate tradingDate, List<Stock> stocks) {
+    private String buildHtmlContent(LocalDate tradingDate, List<Stock> stocks,
+                                     UniverseBuilder.Snapshot universe) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("<html><body style='font-family: Arial, sans-serif;'>");
         sb.append("<h2>Gap & Pullback 스크리닝 결과</h2>");
         sb.append("<p><strong>날짜:</strong> ").append(tradingDate.format(DATE_FORMATTER)).append("</p>");
+        // 유니버스 크기는 선정 0~1건의 원인을 가르는 첫 단서다 — 2026-08-03 엔 유니버스가
+        // 1종목이었는데 그 사실이 메일 어디에도 없어 스크리닝 임계 문제로 오인될 수 있었다.
+        if (universe != null) {
+            int size = universe.codes().size();
+            // 정상이라면 유니버스는 최소한 정적 안전망만큼은 된다 (rank 미달 시 합집합으로 보강되므로).
+            // 그보다 작으면 설정이나 API 응답에 문제가 있는 것이다.
+            int expectedMin = stockProperties.getUniverse().getFallbackCodes().size();
+            boolean tooSmall = size < expectedMin;
+            sb.append("<p").append(tooSmall ? " style='color: #c00; font-weight: bold;'" : "")
+                .append("><strong>유니버스:</strong> ")
+                .append(size).append("종목 (거래량순위 ").append(universe.rankApi())
+                .append(", 정적폴백 ").append(universe.fallback())
+                .append(", 핀 ").append(universe.pinned()).append(")");
+            if (tooSmall) {
+                sb.append(" &larr; 정적 안전망(").append(expectedMin)
+                    .append("종목)보다 작습니다. 거래량순위 API 응답과 stock.universe.* 설정을 확인하세요.");
+            }
+            sb.append("</p>");
+        }
         sb.append("<p><strong>감지된 종목:</strong> ").append(stocks.size()).append("개</p>");
 
         if (stocks.isEmpty()) {
@@ -225,13 +246,27 @@ public class StockMailService {
             sb.append("</tbody></table>");
         }
 
+        // 실제 적용되는 임계를 인쇄한다. score 모드(기본)와 legacy 모드는 읽는 키가 다르므로
+        // 분기하지 않으면 운영자가 적용되지도 않는 값을 보게 된다 — 08-03 에 실효 갭 상한이
+        // scoring.floor-max-gap(15%) 인데 메일은 legacy max-gap-percent(10%) 를 인쇄했다.
+        StockProperties.Screening screening = stockProperties.getScreening();
+        StockProperties.Scoring scoring = stockProperties.getScoring();
         sb.append("<h3>스크리닝 조건</h3>");
         sb.append("<ul>");
-        sb.append("<li>갭 범위: ").append(stockProperties.getScreening().getMinGapPercent())
-            .append("% ~ ").append(stockProperties.getScreening().getMaxGapPercent()).append("%</li>");
-        sb.append("<li>최소 시가총액: ").append(formatBillions(stockProperties.getScreening().getMinMarketCap())).append("억</li>");
-        sb.append("<li>최소 거래대금: ").append(formatBillions(stockProperties.getScreening().getMinTradeValue())).append("억</li>");
-        sb.append("<li>최소 체결강도: ").append(stockProperties.getScreening().getMinTradeStrength()).append("</li>");
+        if (scoring.isEnabled()) {
+            sb.append("<li>갭 범위(Floor): ").append(screening.getFloorGapPercent())
+                .append("% ~ ").append(scoring.getFloorMaxGap()).append("%</li>");
+            sb.append("<li>최소 체결강도(Floor): ").append(screening.getFloorTradeStrength()).append("</li>");
+            sb.append("<li>최소 시가총액(Floor): ").append(formatBillions(scoring.getFloorMinMarketCap())).append("억</li>");
+            sb.append("<li>선정 총점: ").append(scoring.getMinScoreThreshold())
+                .append("점 이상 &amp; 신호점수(갭+체결강도): ").append(scoring.getSignalMinScore()).append("점 이상</li>");
+        } else {
+            sb.append("<li>갭 범위: ").append(screening.getMinGapPercent())
+                .append("% ~ ").append(screening.getMaxGapPercent()).append("%</li>");
+            sb.append("<li>최소 시가총액: ").append(formatBillions(screening.getMinMarketCap())).append("억</li>");
+            sb.append("<li>최소 거래대금: ").append(formatBillions(screening.getMinTradeValue())).append("억</li>");
+            sb.append("<li>최소 체결강도: ").append(screening.getMinTradeStrength()).append("</li>");
+        }
         sb.append("</ul>");
 
         sb.append("<p style='color: #999; font-size: 12px;'>첨부 로그는 발송 시점(09:20 스크리닝 직후)까지의 스냅샷입니다 — 이후 트레이딩 구간 로그는 서버의 stock-trading.log 를 확인하세요.</p>");
