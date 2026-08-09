@@ -171,10 +171,16 @@ public class StockRiskService {
     }
 
     /**
-     * 시간 기반 최소 수익률 임계값 계산
-     * 09:10 → minProfitThreshold (0.5%)
-     * 15:15 → minProfitThresholdLate (0.1%) 또는 0%
-     * 선형 감소
+     * 시간 기반 최소 수익률 임계값 계산.
+     *
+     * {@code trading.trading-loop-start} → minProfitThreshold (0.5%)
+     * {@code exit.final-exit-time}       → 0%
+     * 그 사이 선형 감소.
+     *
+     * 종점을 설정에서 유도하는 이유: 과거에는 09:10/15:15 가 코드에 하드코딩돼 있었는데
+     * 봇의 실제 운영 창은 09:20~11:20 이라 곡선의 약 36% 만 지나간 채 강제청산됐다.
+     * minProfitThresholdLate(0.1%)·0% 종점은 도달할 수 없는 값이었다
+     * (매직넘버 외부화 — ADR stock/algorithm/0001, 비용 게이트 — ADR stock/algorithm/0009).
      */
     private BigDecimal calculateTimeDecayThreshold() {
         StockProperties.Risk riskConfig = stockProperties.getRisk();
@@ -184,8 +190,8 @@ public class StockRiskService {
         }
 
         LocalTime now = LocalTime.now(clock);
-        LocalTime tradingStart = LocalTime.of(9, 10);
-        LocalTime tradingEnd = LocalTime.of(15, 15);
+        LocalTime tradingStart = LocalTime.parse(stockProperties.getTrading().getTradingLoopStart());
+        LocalTime tradingEnd = LocalTime.parse(stockProperties.getExit().getFinalExitTime());
 
         if (now.isBefore(tradingStart)) {
             return riskConfig.getMinProfitThreshold();

@@ -17,9 +17,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Time-decay minProfitThreshold 회귀 테스트.
  *
- *  09:10 시작점: minProfitThreshold (기본 0.5%)
- *  15:15 종점:   0 (또는 minProfitThresholdLate)
- *  중간 시각:    선형 보간
+ *  시작점 {@code trading.trading-loop-start}(09:20): minProfitThreshold (기본 0.5%)
+ *  종점   {@code exit.final-exit-time}(11:20):       0
+ *  중간 시각: 선형 보간
+ *
+ * 종점이 코드 상수(09:10/15:15)가 아니라 설정에서 온다는 것이 이 테스트의 핵심이다 —
+ * 상수 시절엔 봇의 운영 창(09:20~11:20)이 곡선의 약 36% 만 지나가 후반 구간이 죽은 코드였다.
  */
 class StockRiskServiceTimeDecayTest {
 
@@ -45,28 +48,48 @@ class StockRiskServiceTimeDecayTest {
     }
 
     @Test
-    void atStart_returnsEarlyThreshold() throws Exception {
-        BigDecimal v = threshold(LocalTime.of(9, 10));
+    void atTradingLoopStart_returnsEarlyThreshold() throws Exception {
+        BigDecimal v = threshold(LocalTime.of(9, 20));
         assertThat(v).isEqualByComparingTo("0.005");
     }
 
     @Test
-    void afterEnd_returnsZero() throws Exception {
-        BigDecimal v = threshold(LocalTime.of(15, 15));
+    void atFinalExitTime_returnsZero() throws Exception {
+        BigDecimal v = threshold(LocalTime.of(11, 20));
         assertThat(v).isEqualByComparingTo("0");
     }
 
     @Test
     void midSession_returnsLinearlyInterpolated() throws Exception {
-        // 09:10 -> 15:15 = 365 분
-        // 12:12.5 ≈ 50% progress -> 0.005 - (0.005 - 0.001) * 0.5 = 0.003
-        BigDecimal v = threshold(LocalTime.of(12, 13));
-        assertThat(v.doubleValue()).isCloseTo(0.003, org.assertj.core.data.Offset.offset(0.0002));
+        // 09:20 -> 11:20 = 120 분. 10:20 = 50% progress
+        // -> 0.005 - (0.005 - 0.001) * 0.5 = 0.003
+        BigDecimal v = threshold(LocalTime.of(10, 20));
+        assertThat(v.doubleValue()).isCloseTo(0.003, org.assertj.core.data.Offset.offset(0.0001));
     }
 
     @Test
     void beforeStart_returnsEarlyThreshold() throws Exception {
         BigDecimal v = threshold(LocalTime.of(9, 0));
         assertThat(v).isEqualByComparingTo("0.005");
+    }
+
+    /** 종점이 설정에서 온다 — 창을 좁히면 같은 시각의 임계가 달라져야 한다. */
+    @Test
+    void decayEndpointsComeFromConfigNotConstants() throws Exception {
+        StockProperties props = new StockProperties();
+        props.getRisk().setTimeDecayEnabled(true);
+        props.getRisk().setMinProfitThreshold(new BigDecimal("0.005"));
+        props.getRisk().setMinProfitThresholdLate(new BigDecimal("0.001"));
+        props.getTrading().setTradingLoopStart("09:20");
+        props.getExit().setFinalExitTime("10:20");
+
+        Instant fixed = LocalDate.of(2026, 5, 1).atTime(LocalTime.of(9, 50)).atZone(KST).toInstant();
+        StockRiskService service = new StockRiskService(null, null, null, props, Clock.fixed(fixed, KST), null);
+        Method m = StockRiskService.class.getDeclaredMethod("calculateTimeDecayThreshold");
+        m.setAccessible(true);
+
+        // 창이 60분이면 09:50 은 50% 지점 -> 0.003 (기본 창 09:20~11:20 이라면 0.004)
+        assertThat(((BigDecimal) m.invoke(service)).doubleValue())
+            .isCloseTo(0.003, org.assertj.core.data.Offset.offset(0.0001));
     }
 }

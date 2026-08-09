@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 잔여 매직넘버 하나(time-decay 종점 `LocalTime.of(9,10)`/`(15,15)`)는 2026-08-03 에 `trading.trading-loop-start`/`exit.final-exit-time` 유도로 정리 ([ADR-0010](0010-universe-degradation-threshold.md) 과 같은 배치). 상수 시절엔 봇 운영 창(09:20~11:20)이 곡선의 약 36% 만 지나가 후반 구간이 도달 불가였다 — 비용 게이트 영향은 [ADR-0009](0009-entry-floor-and-trailing-cost-alignment.md) 참고 |
 | 날짜 | 2026-05-01 |
 | 도메인 | stock |
 | 관심사 | 알고리즘 / 설정 |
