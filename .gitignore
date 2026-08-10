@@ -50,3 +50,4 @@ logs/
 docs/git_commit.md
 
 .claude/*
+/git_commit.md

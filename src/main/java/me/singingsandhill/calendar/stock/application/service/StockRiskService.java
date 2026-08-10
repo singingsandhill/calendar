@@ -88,7 +88,7 @@ public class StockRiskService {
 
         BigDecimal currentPrice = quote.currentPrice();
 
-        // 1. 손절 체크 (-1.5%)
+        // 1. 손절 체크 (풀백저가 앵커 + 진입가 대비 최대 손실 캡 — StockPosition.resolveStopLossPrice)
         if (position.shouldStopLoss(currentPrice)) {
             log.warn("STOP_LOSS triggered for {}: current={}, stopLoss={}",
                 stockCode, currentPrice, position.getStopLossPrice());
@@ -175,7 +175,7 @@ public class StockRiskService {
      *
      * {@code trading.trading-loop-start} → minProfitThreshold (0.5%)
      * {@code exit.final-exit-time}       → 0%
-     * 그 사이 선형 감소.
+     * 그 사이는 minProfitThresholdLate(0.1%) 를 향해 선형 감소하고, 종점에서 0 이 된다.
      *
      * 종점을 설정에서 유도하는 이유: 과거에는 09:10/15:15 가 코드에 하드코딩돼 있었는데
      * 봇의 실제 운영 창은 09:20~11:20 이라 곡선의 약 36% 만 지나간 채 강제청산됐다.
