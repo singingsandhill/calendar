@@ -92,6 +92,7 @@ public class TradingProperties {
         private double maxCoinExposurePct = 0.8;  // P2-12: 코인 노출 상한(총자본 대비). 초과 시 신규 매수 스킵. 0=비활성
         private boolean blockAveragingDown = true;// P2-10: 손실 포지션 보유 중 추가 매수 차단(물타기 방지)
         private Mode mode = Mode.PAPER;            // 운영 모드. LIVE 는 TRADING_BOT_MODE=LIVE 명시적 opt-in (ADR modes/0002)
+        private int candleRetentionDays = 90;      // 캔들 보관 일수. 신호 품질 분석의 지표 재계산 지평 (ADR infrastructure/0005)
 
         /**
          * 봇 운영 모드.
@@ -125,6 +126,8 @@ public class TradingProperties {
         public void setBlockAveragingDown(boolean blockAveragingDown) { this.blockAveragingDown = blockAveragingDown; }
         public Mode getMode() { return mode; }
         public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.PAPER; }
+        public int getCandleRetentionDays() { return candleRetentionDays; }
+        public void setCandleRetentionDays(int candleRetentionDays) { this.candleRetentionDays = candleRetentionDays; }
     }
 
     public static class Indicators {

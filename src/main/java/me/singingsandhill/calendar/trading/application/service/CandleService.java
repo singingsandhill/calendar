@@ -110,15 +110,23 @@ public class CandleService {
     }
 
     /**
-     * 오래된 캔들 데이터 정리 (7일 이상)
+     * 오래된 캔들 데이터 정리.
+     *
+     * <p>보관기간은 {@code trading.bot.candle-retention-days} (기본 90일). 이 값이 곧
+     * 지표 재계산·백테스트의 지평이다 — 삭제된 구간은 복구할 수 없으므로 분석 목적으로
+     * 넉넉히 잡는다 (ADR trading/infrastructure/0005).
+     *
+     * <p>주의: 호출자인 {@code CandleScheduler.cleanupOldCandles()} 에는 다른 잡과 달리
+     * {@code bot.enabled} 가드가 없어 봇이 꺼져 있어도 실행된다 (기존 동작 유지).
      */
     @Transactional
     public int cleanupOldCandles() {
-        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(7);
+        int retentionDays = tradingProperties.getBot().getCandleRetentionDays();
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(retentionDays);
         int deleted = candleRepository.deleteByDateTimeBefore(cutoffDate);
 
         if (deleted > 0) {
-            log.info("Deleted {} old candles", deleted);
+            log.info("Deleted {} candles older than {} days", deleted, retentionDays);
         }
 
         return deleted;

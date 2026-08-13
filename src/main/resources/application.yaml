@@ -152,6 +152,10 @@ trading:
     order-ratio: 0.25
     signal-cooldown-minutes: 30    # [P2-9] 10→30: 1분봉 과회전·수수료 churn 억제 (감사 권장 ≥60, PAPER 백테스트로 조정)
     min-holding-minutes: 30        # [P2-9] 15→30: 최소 보유 시간 상향
+    # 캔들 보관 일수. 7일이면 지표 재계산·백테스트 지평이 1주라 신호 품질 분석이 불가능했다.
+    # 1분봉 × 1시장 = 1,440행/일 → 90일 ≈ 129,600행 (H2 파일 증가분 20MB 미만).
+    # ADR trading/infrastructure/0005.
+    candle-retention-days: 90
   indicators:
     ma-short: 5
     ma-mid: 20
@@ -274,9 +278,9 @@ stock:
     time-decay-enabled: true
     min-profit-threshold-late: 0.001
   universe:
-    # 항상 포함되는 핀 종목 (사용자 화이트리스트). 빈 배열이면 fallback-codes 만 사용.
+    # 항상 포함되는 핀 종목 (사용자 화이트리스트). 빈 배열이면 거래량순위 ∪ (미달 시) fallback-codes 만 사용.
     pinned: []
-    # 정적 안전망 풀: KIS 거래량순위(rank-api-top)가 실패하거나 0건일 때만 사용한다.
+    # 정적 안전망 풀: KIS 거래량순위(rank-api-top)가 요청한 top-N 에 미달하면 합집합으로 보강한다.
     # 갭 + 풀백 전략은 강세 모멘텀 종목에서만 작동하므로 변동성 높은 종목 위주 구성.
     fallback-codes:
       # === 코스피 대형주 ===
