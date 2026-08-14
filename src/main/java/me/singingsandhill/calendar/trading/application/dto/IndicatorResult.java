@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.trading.application.dto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,8 +15,28 @@ public record IndicatorResult(
     BigDecimal stochD,
     BigDecimal volumeMa,
     BigDecimal currentVolume,
-    int rsiTrend
+    int rsiTrend,
+    // 변동성. Signal 로 함께 영속화해 사후 분석에서 쓴다 — 예전에는 TradingBotService 가
+    // 계산해 쓰고 버려서 포지션 사이징 결정을 재구성할 수 없었다 (ADR trading/observability/0002).
+    // 기존 10개 인자 뒤에 append 한다 — 위치 인자가 밀리면 조용히 값이 뒤바뀐다.
+    BigDecimal atr
 ) {
+    /**
+     * 가격 대비 변동성(%). 저장·분석용 파생값이며 상태를 따로 들지 않는다.
+     *
+     * <p>주문 사이징은 계속 {@code IndicatorService.calculateATRPercent(market)} 를 쓴다 —
+     * 그쪽은 자체적으로 캔들을 다시 읽고 {@code excludeFormingCandle} 을 따르지 않으므로,
+     * 그 플래그를 켜면 두 값이 갈라질 수 있다. 그래서 실제 적용된 주문 비중은 별도로
+     * {@code trading_trades.order_ratio} 에 기록한다.
+     */
+    public BigDecimal atrPercent() {
+        if (atr == null || currentPrice == null || currentPrice.signum() == 0) {
+            return null;
+        }
+        return atr.divide(currentPrice, 6, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+    }
+
     public Map<String, BigDecimal> toMap() {
         Map<String, BigDecimal> map = new HashMap<>();
         map.put("currentPrice", currentPrice);
@@ -27,6 +48,7 @@ public record IndicatorResult(
         map.put("stochD", stochD);
         map.put("volumeMa", volumeMa);
         map.put("currentVolume", currentVolume);
+        map.put("atr", atr);
         return map;
     }
 

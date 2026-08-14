@@ -31,6 +31,16 @@ public class Signal {
     private boolean executed;
     private final LocalDateTime createdAt;
 
+    // 분석용 결정 입력 (ADR trading/observability/0002).
+    // 생성자가 이미 25인자다. 여기에 4개를 더 붙이면 인접한 BigDecimal 인자끼리 자리가 바뀌어도
+    // 컴파일이 통과하고, 그 뒤 모든 행이 조용히 오염된다. 그래서 이 넷만은 이름 있는 setter 로 받는다
+    // (같은 클래스의 id·executed 가 이미 가변이다). 다섯 번째가 필요해지면 그때는
+    // ScoreBreakdown / IndicatorSnapshot / DivergenceSnapshot 중첩 레코드로 실제 분해를 한다.
+    private BigDecimal atr;
+    private BigDecimal atrPercent;
+    private BigDecimal volumeMa;
+    private BigDecimal currentVolume;
+
     public Signal(Long id, String market, LocalDateTime signalTime, SignalType signalType,
                   int totalScore, Integer maCrossScore, Integer maTrendScore,
                   Integer rsiDivergenceScore, Integer rsiLevelScore,
@@ -120,4 +130,13 @@ public class Signal {
     public BigDecimal getCurrentPrice() { return currentPrice; }
     public boolean isExecuted() { return executed; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public BigDecimal getAtr() { return atr; }
+    public void setAtr(BigDecimal atr) { this.atr = atr; }
+    public BigDecimal getAtrPercent() { return atrPercent; }
+    public void setAtrPercent(BigDecimal atrPercent) { this.atrPercent = atrPercent; }
+    public BigDecimal getVolumeMa() { return volumeMa; }
+    public void setVolumeMa(BigDecimal volumeMa) { this.volumeMa = volumeMa; }
+    public BigDecimal getCurrentVolume() { return currentVolume; }
+    public void setCurrentVolume(BigDecimal currentVolume) { this.currentVolume = currentVolume; }
 }

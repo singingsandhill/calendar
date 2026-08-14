@@ -3,6 +3,7 @@ package me.singingsandhill.calendar.trading.infrastructure.persistence.adapter;
 import me.singingsandhill.calendar.trading.domain.signal.DivergenceType;
 import me.singingsandhill.calendar.trading.domain.signal.Signal;
 import me.singingsandhill.calendar.trading.domain.signal.SignalRepository;
+import me.singingsandhill.calendar.trading.domain.signal.SignalSample;
 import me.singingsandhill.calendar.trading.domain.signal.SignalType;
 import me.singingsandhill.calendar.trading.infrastructure.persistence.entity.SignalJpaEntity;
 import me.singingsandhill.calendar.trading.infrastructure.persistence.repository.SignalJpaRepository;
@@ -72,6 +73,48 @@ public class SignalRepositoryAdapter implements SignalRepository {
         return jpaRepository.countByMarketAndExecuted(market, executed);
     }
 
+    @Override
+    public List<SignalSample> findSamplesByMarketAndSignalTimeBetween(String market,
+                                                                     LocalDateTime start,
+                                                                     LocalDateTime end) {
+        return jpaRepository.findSamples(market, start, end)
+                .stream()
+                .map(this::toSample)
+                .toList();
+    }
+
+    private SignalSample toSample(SignalJpaRepository.SignalSampleView view) {
+        return new SignalSample(
+                view.getId(),
+                view.getSignalTime(),
+                SignalType.valueOf(view.getSignalType()),
+                view.getTotalScore() != null ? view.getTotalScore() : 0,
+                view.getMaCrossScore(),
+                view.getMaTrendScore(),
+                view.getRsiDivergenceScore(),
+                view.getRsiLevelScore(),
+                view.getStochDivergenceScore(),
+                view.getStochLevelScore(),
+                view.getVolumeDivergenceScore(),
+                view.getRsiTrendScore(),
+                view.getMa60(),
+                view.getRsi(),
+                view.getStochK(),
+                view.getStochD(),
+                toDivergence(view.getRsiDivergence()),
+                toDivergence(view.getStochDivergence()),
+                toDivergence(view.getVolumeDivergence()),
+                view.getCurrentPrice(),
+                view.getVolumeMa(),
+                view.getCurrentVolume(),
+                view.getAtrPercent()
+        );
+    }
+
+    private DivergenceType toDivergence(String value) {
+        return value != null ? DivergenceType.valueOf(value) : null;
+    }
+
     private SignalJpaEntity toEntity(Signal signal) {
         SignalJpaEntity entity = new SignalJpaEntity();
         if (signal.getId() != null) {
@@ -101,11 +144,15 @@ public class SignalRepositoryAdapter implements SignalRepository {
         entity.setCurrentPrice(signal.getCurrentPrice());
         entity.setExecuted(signal.isExecuted());
         entity.setCreatedAt(signal.getCreatedAt());
+        entity.setAtr(signal.getAtr());
+        entity.setAtrPercent(signal.getAtrPercent());
+        entity.setVolumeMa(signal.getVolumeMa());
+        entity.setCurrentVolume(signal.getCurrentVolume());
         return entity;
     }
 
     private Signal toDomain(SignalJpaEntity entity) {
-        return new Signal(
+        Signal signal = new Signal(
                 entity.getId(),
                 entity.getMarket(),
                 entity.getSignalTime(),
@@ -132,5 +179,10 @@ public class SignalRepositoryAdapter implements SignalRepository {
                 entity.isExecuted(),
                 entity.getCreatedAt()
         );
+        signal.setAtr(entity.getAtr());
+        signal.setAtrPercent(entity.getAtrPercent());
+        signal.setVolumeMa(entity.getVolumeMa());
+        signal.setCurrentVolume(entity.getCurrentVolume());
+        return signal;
     }
 }

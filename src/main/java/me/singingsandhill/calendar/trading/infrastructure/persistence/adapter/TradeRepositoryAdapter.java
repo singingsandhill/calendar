@@ -103,11 +103,15 @@ public class TradeRepositoryAdapter implements TradeRepository {
         if (trade.getId() != null) {
             entity.setId(trade.getId());
         }
+        // 분석용 필드는 생성자 인자가 아니라 setter 로 옮긴다 — 신호 기반 매매에서만 채워지는
+        // 선택적 값이라 4개 정적 팩토리 전부의 시그니처를 넓히지 않는다 (ADR trading/observability/0002).
+        entity.setSignalId(trade.getSignalId());
+        entity.setOrderRatio(trade.getOrderRatio());
         return entity;
     }
 
     private Trade toDomain(TradeJpaEntity entity) {
-        return new Trade(
+        Trade trade = new Trade(
                 entity.getId(),
                 entity.getUuid(),
                 entity.getPositionId(),
@@ -127,5 +131,8 @@ public class TradeRepositoryAdapter implements TradeRepository {
                 entity.getCreatedAt(),
                 entity.getClientOrderId()
         );
+        trade.setSignalId(entity.getSignalId());
+        trade.setOrderRatio(entity.getOrderRatio());
+        return trade;
     }
 }

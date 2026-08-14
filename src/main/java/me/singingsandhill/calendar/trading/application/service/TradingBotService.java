@@ -196,18 +196,52 @@ public class TradingBotService {
                 log.error("Submitted-order sweep failed for {}", market, e);
             }
 
-            // 1. 캔들 데이터 업데이트
-            candleService.fetchAndSaveCandles();
+            // 1. 캔들 데이터 업데이트 — 실패해도 리스크 체크를 막지 않는다 (ADR trading/risk/0006).
+            //    리스크 판정은 캔들이 아니라 실시간 현재가를 쓰므로 캔들이 낡아도 오발동하지 않는다.
+            //    대신 신규 진입·리밸런싱은 억제한다 — stale 캔들로 계산한 신호로 새 리스크를
+            //    떠안는 것은 예전(틱 전체 중단)보다 나쁘다.
+            boolean candlesFresh = true;
+            try {
+                candleService.fetchAndSaveCandles();
+            } catch (Exception e) {
+                candlesFresh = false;
+                log.error("Candle sync failed for {} (risk check continues, trading suppressed)", market, e);
+                this.lastError = e.getClass().getSimpleName() + ": " + e.getMessage();
+                tradingEventService.record(TradingEventLevel.WARNING, "CANDLE_SYNC_FAILED",
+                        market, "캔들 동기화 실패 — 리스크 체크는 계속, 신규 매매 억제: " + this.lastError);
+            }
 
-            // 2. 리스크 체크 (손절/익절) - 최우선
+            // 2. 리스크 체크 (손절/익절) - 최우선.
+            //    이 순서는 불변식이다 — 신호 생성이 이보다 앞서면 그쪽의 예외·지연이 손절을 막는다.
+            //    관측성은 주문 경로를 게이팅하지 않는다 (ADR trading/observability/0003).
+            //    가드: TradingBotServiceLoopSignalRecordingTest.riskCheckRunsBeforeSignalGeneration
             CloseReason closeReason = riskManagementService.checkAndExecuteRiskRules(market);
+
+            // 3. 신호 생성 (Issue #10: 리밸런싱 전에 신호 먼저 확인).
+            //    청산이 일어난 틱에도 기록한다 — 예전에는 여기 도달하기 전에 return 해서
+            //    손절·익절이 발동한 분의 지표 상태가 분석용 1분 시계열에서 통째로 빠졌다.
+            //    청산은 이미 끝났으므로 여기서 무엇이 실패해도 자본 보호에는 영향이 없다.
+            //    예외를 삼키는 이유: 삼키지 않으면 바깥 catch 가 LOOP_ERROR 를 남겨, 관측을 위해
+            //    추가한 코드가 예전에 없던 운영 경보를 만들어낸다.
+            Signal signal = null;
+            try {
+                signal = signalService.generateSignal(market);
+            } catch (Exception e) {
+                log.error("Signal generation failed for {} (loop continues)", market, e);
+            }
+
             if (closeReason != null) {
                 log.info("Position closed due to: {}", closeReason);
+                return;   // 4~6 단계 스킵 — 기존 조기 return 의 매매 억제 효과 그대로
+            }
+
+            if (!candlesFresh) {
+                // 리스크 체크(2)와 신호 기록(3)은 이미 끝났다. 여기서 멈추는 것은 stale 캔들이
+                // 신규 진입·리밸런싱을 태우지 않게 하기 위해서다 (ADR trading/risk/0006).
+                log.warn("Skipping trade steps for {} - candle data is stale", market);
                 return;
             }
 
-            // 3. 신호 생성 (Issue #10: 리밸런싱 전에 신호 먼저 확인)
-            Signal signal = signalService.generateSignal(market);
             if (signal == null) {
                 log.warn("Failed to generate signal");
                 return;
@@ -401,6 +435,9 @@ public class TradingBotService {
         double orderRatio = calculateDynamicOrderRatio(market);
         BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(orderRatio))
                 .setScale(0, RoundingMode.DOWN);
+        // 실제 적용된 비중을 Trade 에 남긴다 — 보간값은 double 이라 0.30000000000000004 로 나오므로
+        // 저장 전에 4자리로 맞춘다 (ADR trading/observability/0002).
+        final BigDecimal appliedOrderRatio = BigDecimal.valueOf(orderRatio).setScale(4, RoundingMode.HALF_UP);
 
         // 슬리피지 버퍼 적용 (0.5% 적게 주문하여 예상보다 적은 체결 방지)
         double slippageBuffer = tradingProperties.getRisk().getSlippageBuffer();
@@ -419,6 +456,8 @@ public class TradingBotService {
                 cid = bithumbApiClient.newClientOrderId();
                 submittedTrade = Trade.createSubmittedBuy(cid, market, adjustedOrderAmount,
                         signal.getTotalScore(), "Auto buy signal");
+                submittedTrade.setSignalId(signal.getId());
+                submittedTrade.setOrderRatio(appliedOrderRatio);
                 tradeRepository.save(submittedTrade);
             }
 
@@ -477,6 +516,8 @@ public class TradingBotService {
                 String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
                 trade = Trade.createBuyOrder(uuid, market, entryPrice, orderAmount, "market",
                         signal.getTotalScore(), "Auto buy signal");
+                trade.setSignalId(signal.getId());
+                trade.setOrderRatio(appliedOrderRatio);
             }
             trade.markExecuted(entryPrice, volume, fee);
 
@@ -818,6 +859,7 @@ public class TradingBotService {
                 cid = bithumbApiClient.newClientOrderId();
                 submittedTrade = Trade.createSubmittedSell(cid, position.getId(), market,
                         position.getEntryVolume(), signal.getTotalScore(), "Auto sell signal");
+                submittedTrade.setSignalId(signal.getId());
                 tradeRepository.save(submittedTrade);
             }
 
@@ -865,6 +907,7 @@ public class TradingBotService {
                 String uuid = response.uuid() != null ? response.uuid() : UUID.randomUUID().toString();
                 trade = Trade.createSellOrder(uuid, position.getId(), market, exitPrice,
                         position.getEntryVolume(), "market", signal.getTotalScore(), "Auto sell signal");
+                trade.setSignalId(signal.getId());
             }
             trade.markExecuted(exitPrice, position.getEntryVolume(), fee);
 
@@ -1093,9 +1136,6 @@ public class TradingBotService {
     }
 
     /**
-     * P2-12: 코인 노출 상한 — 코인 가치/총자본이 maxCoinExposurePct 이상이면 신규 매수 스킵.
-     */
-    /**
      * #3: 수동 매도 후 추적 OPEN 포지션을 FIFO 로 청산 기록 (추가 주문 없이 회계 정합 — 실제 매도는
      * 이미 manual 주문으로 체결됨). 남은 청산량이 0 이 될 때까지 오래된 포지션부터 닫는다.
      */
@@ -1122,6 +1162,9 @@ public class TradingBotService {
         }
     }
 
+    /**
+     * P2-12: 코인 노출 상한 — 코인 가치/총자본이 maxCoinExposurePct 이상이면 신규 매수 스킵.
+     */
     boolean exceedsExposureCap(BigDecimal coinValue, BigDecimal totalEquity) {
         double cap = tradingProperties.getBot().getMaxCoinExposurePct();
         if (cap <= 0 || coinValue == null || totalEquity == null || totalEquity.signum() <= 0) {
@@ -1152,7 +1195,7 @@ public class TradingBotService {
 
     /**
      * ATR 기반 동적 주문 비율 계산
-     * 변동성 높음(ATR% > 3%): 15%, 보통(1-3%): 선형 보간, 낮음(< 1%): 35%
+     * 변동성 높음(ATR% ≥ 3%): 15%, 보통(1~3%): 선형 보간, 낮음(ATR% ≤ 1%): 35%
      *
      * @param market 마켓
      * @return 동적 주문 비율 (0.15 ~ 0.35)

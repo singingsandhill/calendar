@@ -62,7 +62,10 @@ public class IndicatorService {
                 // P2-13: 거래량 MA 는 전용 메서드로 직접 계산 (Candle 생성자 악용 제거 — 동작 동일)
                 calculateVolumeMA(indicatorCandles, tradingProperties.getIndicators().getVolumeMa()),
                 currentVolume,
-                rsiTrend
+                rsiTrend,
+                // ATR 은 이미 로드한 캔들로 계산한다 — calculateATRPercent(market) 를 부르면
+                // 같은 틱에 캔들을 두 번 읽는다 (requiredCandles=80 ≫ atrPeriod+1=15).
+                calculateATR(indicatorCandles, tradingProperties.getIndicators().getAtrPeriod())
         );
     }
 
@@ -192,7 +195,7 @@ public class IndicatorService {
 
     /**
      * RSI 추세 계산
-     * 현재 RSI가 이전 RSI보다 상승 중이면 상승 추세
+     * rsiTrendLookback(기본 3) 봉 전 RSI 와 비교해 minRsiTrendDelta(기본 2.0) 초과 변동일 때만 추세로 인정
      */
     public int calculateRsiTrend(List<Candle> candles, int period) {
         // P2-6: 인접봉(1봉) 대신 lookback 봉 전 RSI 와 비교 + 최소 델타 요구 (1분봉 잡음 제거)

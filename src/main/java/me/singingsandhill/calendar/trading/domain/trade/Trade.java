@@ -25,6 +25,12 @@ public class Trade {
     private final LocalDateTime createdAt;
     // §8-B: 클라이언트 부여 멱등키 (1~36자, [A-Za-z0-9-_]). 응답 유실 시 이 키로 거래소 재조회.
     private final String clientOrderId;
+    // 분석용 — 이 체결을 유발한 Signal 의 id. 신호 기반 매매에서만 채워지고
+    // 리스크 청산·리밸런싱·수동 매매에서는 null 이다. null 자체가 "신호로 난 체결이 아니다" 라는 정보다.
+    // (ADR trading/observability/0002)
+    private Long signalId;
+    // 분석용 — 이 매수에 실제로 적용된 동적 주문 비중(ATR 기반). 매수에만 채워진다.
+    private BigDecimal orderRatio;
 
     public Trade(Long id, String uuid, Long positionId, String market,
                  TradeType tradeType, String orderType, BigDecimal price, BigDecimal volume,
@@ -158,4 +164,8 @@ public class Trade {
     public LocalDateTime getExecutedAt() { return executedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public String getClientOrderId() { return clientOrderId; }
+    public Long getSignalId() { return signalId; }
+    public void setSignalId(Long signalId) { this.signalId = signalId; }
+    public BigDecimal getOrderRatio() { return orderRatio; }
+    public void setOrderRatio(BigDecimal orderRatio) { this.orderRatio = orderRatio; }
 }

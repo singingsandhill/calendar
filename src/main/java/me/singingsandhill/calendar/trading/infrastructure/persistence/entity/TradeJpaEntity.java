@@ -5,7 +5,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "trading_trades")
+@Table(name = "trading_trades", indexes = {
+        // position_id 는 FK 없는 평범한 Long 이라 findByPositionId 가 풀스캔이었다.
+        @Index(name = "idx_trading_trades_position", columnList = "position_id"),
+        @Index(name = "idx_trading_trades_market_created", columnList = "market, created_at")
+})
 public class TradeJpaEntity {
 
     @Id
@@ -63,6 +67,16 @@ public class TradeJpaEntity {
     // §8-B: 클라이언트 부여 멱등키. nullable — 선영속화 경로(v2 또는 clientOrderIdEnabled)에서만 채워짐.
     @Column(name = "client_order_id", length = 36)
     private String clientOrderId;
+
+    // 분석용 (ADR trading/observability/0002). nullable — 신호 기반 매매에서만 채워지고
+    // 리스크 청산·리밸런싱·수동 매매는 null. FK 를 걸지 않는 것은 이 모듈의 기존 관례
+    // (position_id 도 평범한 Long) 이며, 신호는 정리되지 않으므로 고아 참조 위험도 없다.
+    @Column(name = "signal_id")
+    private Long signalId;
+
+    // 이 매수에 실제 적용된 동적 주문 비중(ATR 기반). 매수에만 채워진다.
+    @Column(name = "order_ratio", precision = 10, scale = 4)
+    private BigDecimal orderRatio;
 
     protected TradeJpaEntity() {}
 
@@ -127,4 +141,8 @@ public class TradeJpaEntity {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public String getClientOrderId() { return clientOrderId; }
     public void setClientOrderId(String clientOrderId) { this.clientOrderId = clientOrderId; }
+    public Long getSignalId() { return signalId; }
+    public void setSignalId(Long signalId) { this.signalId = signalId; }
+    public BigDecimal getOrderRatio() { return orderRatio; }
+    public void setOrderRatio(BigDecimal orderRatio) { this.orderRatio = orderRatio; }
 }

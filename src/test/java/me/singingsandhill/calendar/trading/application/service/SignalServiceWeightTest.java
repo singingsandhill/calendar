@@ -22,7 +22,7 @@ class SignalServiceWeightTest {
     }
 
     private IndicatorResult ind(String price, String ma5, String ma20, String ma60) {
-        return new IndicatorResult(bd(price), bd(ma5), bd(ma20), bd(ma60), null, null, null, null, null, 0);
+        return new IndicatorResult(bd(price), bd(ma5), bd(ma20), bd(ma60), null, null, null, null, null, 0, null);
     }
 
     private int maTrendScore(IndicatorResult i) throws Exception {

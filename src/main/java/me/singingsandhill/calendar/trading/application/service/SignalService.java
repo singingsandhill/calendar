@@ -81,6 +81,13 @@ public class SignalService {
                 indicators.currentPrice(), false, LocalDateTime.now()
         );
 
+        // 결정 시점의 입력을 함께 남긴다 — 나중에 캔들로 재계산하려 해도 캔들은 정리되고,
+        // 재계산은 "그 순간의 설정" 을 복원할 수 없다 (ADR trading/observability/0002).
+        signal.setAtr(indicators.atr());
+        signal.setAtrPercent(indicators.atrPercent());
+        signal.setVolumeMa(indicators.volumeMa());
+        signal.setCurrentVolume(indicators.currentVolume());
+
         signalRepository.save(signal);
         log.info("Signal generated for {}: {} (score: {})", market, signalType, totalScore);
 
@@ -90,7 +97,7 @@ public class SignalService {
     /**
      * MA 크로스오버 점수 계산
      * 실제 골든크로스 이벤트: +25, 실제 데드크로스 이벤트: -25
-     * MA5 > MA20 상태 유지: +10, MA5 < MA20 상태 유지: -10
+     * MA5 > MA20 상태 유지: +5, MA5 < MA20 상태 유지: -5
      * MA 수렴 시 (|MA5-MA20|/MA20 < threshold) 크로스 점수 억제 (횡보장 노이즈 방지)
      */
     private int calculateMaCrossScore(IndicatorResult indicators, BigDecimal[] prevMAs) {
@@ -138,7 +145,7 @@ public class SignalService {
 
     /**
      * MA 추세 점수 계산
-     * 현재가 > MA60: +15, 현재가 < MA60: -15
+     * 현재가 > MA60: +8, 현재가 < MA60: -8
      */
     private int calculateMaTrendScore(IndicatorResult indicators) {
         if (indicators.ma60() == null || indicators.currentPrice() == null) {
