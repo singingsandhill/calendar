@@ -5,7 +5,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "trading_positions")
+@Table(name = "trading_positions", indexes = {
+        // 신호 품질 분석의 청산사유·진입맥락 집계가 기간으로 스캔한다 (ADR trading/observability/0001).
+        @Index(name = "idx_trading_positions_market_closed", columnList = "market, status, closed_at"),
+        @Index(name = "idx_trading_positions_market_opened", columnList = "market, opened_at")
+})
 public class PositionJpaEntity {
 
     @Id
