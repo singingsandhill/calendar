@@ -16,13 +16,13 @@
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | **common**   | — | — | — | 9 | 3 | — | — | — | 6 | 18 |
-| **datedate** | 6 | — | 6 | — | — | — | — | — | — | 12 |
+| **datedate** | 7 | — | 6 | — | — | — | — | — | — | 13 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
-| **trading**  | — | 4 | — | — | — | — | 15 | 2 | — | 21 |
-| **stock**    | — | 7 (동시성 포함) | — | — | — | 2 | 9 | 3 | — | 21 |
-| **합계** | 8 | 11 | 6 | 9 | 3 | 2 | 24 | 5 | 6 | **74** |
+| **trading**  | — | 5 | — | — | — | 3 | 16 | 2 | — | 26 |
+| **stock**    | — | 7 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 22 |
+| **합계** | 9 | 12 | 6 | 9 | 3 | 5 | 26 | 5 | 6 | **81** |
 
-총 **75개 ADR**.
+총 **81개 ADR**.
 
 ---
 
@@ -106,6 +106,12 @@
 | 2026-07-27 | trading/risk | [0005 현재가 조회 실패 시 진입 가드 차단](trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md) | 운영 로그 — 조회 실패 시 가드 우회 매수(fail-open) |
 | 2026-07-30 | common/seo | [0008 BreadcrumbList 2단계 + 전 항목 item](common/seo/0008-breadcrumb-item-on-every-listitem.md) | GSC "'item' 입력란 누락" — 3단계 중간 크럼브 URL 부재로 6개 URL 리치 결과 제외 |
 | 2026-08-03 | stock/algorithm | [0010 유니버스 열화 판정 = top-N 미달](stock/algorithm/0010-universe-degradation-threshold.md) | 운영 로그 — rank 1건 응답이 정적 안전망·09:20 재시도를 동시에 무력화, 하루치 유니버스 1종목 |
+| 2026-08-06 | trading/infrastructure | [0005 캔들 보관 90일 + 설정화](trading/infrastructure/0005-candle-retention-for-analysis.md) | 감사 P2 판단 유보 — 7일 하드코딩이 지표 재계산·파라미터 리플레이를 구조적으로 봉쇄 |
+| 2026-08-06 | trading/observability | [0001 신호 품질 분석 온-리드 집계 + 온디맨드 페이지](trading/observability/0001-signal-quality-analytics-page.md) | 감사 P2-1·출구 R:R 이 "백테스트 없는 prior" 로 미해결 — 이미 쌓인 신호를 읽을 수단 부재 |
+| 2026-08-06 | trading/observability | [0002 결정 입력 영속화 (signal_id·ATR·거래량·주문비중)](trading/observability/0002-decision-input-persistence.md) | 체결↔신호 조인 키 부재 + `executed` 죽은 컬럼 + ATR·적용 비중 계산 후 폐기 |
+| 2026-08-06 | trading/observability | [0003 리스크 청산 틱에도 신호 기록](trading/observability/0003-signal-series-continuity-on-risk-exit.md) | 조기 return 으로 손절·익절 발동 분의 지표 상태가 1분 시계열에서 체계적으로 결측 |
+| 2026-08-08 | trading/risk | [0006 캔들 동기화 실패는 리스크 체크를 게이팅하지 않는다](trading/risk/0006-candle-sync-failure-does-not-gate-risk-check.md) | observability/0003 후속 ② — 캔들 수집 한 줄이 무방비라 조회 실패가 그 틱의 손절·익절을 통째로 스킵 |
+| 2026-08-13 | datedate/domain | [0007 랜덤 owner ID 미사용 보장 + 공간 1000배](datedate/domain/0007-collision-free-random-owner-id.md) | 14,400 조합·중복 무검사 — 누적 141건이면 충돌 확률 50%, 충돌 시 남의 페이지 착지·선점 |
 
 ---
 
@@ -115,14 +121,15 @@
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 5 ADRs
-- [datedate/domain/](datedate/domain/) — 6 ADRs
+- [datedate/domain/](datedate/domain/) — 7 ADRs
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
 - [trading/modes/](trading/modes/) — 2 ADRs
-- [trading/risk/](trading/risk/) — 5 ADRs
-- [trading/infrastructure/](trading/infrastructure/) — 4 ADRs
+- [trading/risk/](trading/risk/) — 6 ADRs
+- [trading/infrastructure/](trading/infrastructure/) — 5 ADRs
+- [trading/observability/](trading/observability/) — 3 ADRs
 - [stock/algorithm/](stock/algorithm/) — 10 ADRs
 - [stock/infrastructure/](stock/infrastructure/) — 7 ADRs
 - [stock/modes/](stock/modes/) — 3 ADRs
