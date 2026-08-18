@@ -63,6 +63,21 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
   이벤트 기록은 남는다**(사후 추적 가능성이 목적, `TradingEventService:34`).
 - **`ProfitService`** — 계좌 스냅샷·일일 요약·today/profit-summary 집계 생성.
   `DailySummaryScheduler` 두 잡의 실제 구현체.
+- **`TradingAnalyticsService`** — 신호 품질 분석 7개 섹션. `/trading/analytics` 가 요청 시점에
+  호출한다 ([ADR observability/0001](../../../../../../../../docs/adr/trading/observability/0001-signal-quality-analytics-page.md)).
+  주의할 점 네 가지:
+  1. **전방수익은 캔들이 아니라 `trading_signals.current_price` 로 계산한다** — 신호가 매 분
+     기록되므로 그 테이블 자체가 1분 가격 시계열이고, 점수 입력과 가격 원천이 같아 기준가
+     불일치가 없다. 목표 시각 ±90초 안의 최근접 행만 쓰고 없으면 결측 처리 —
+     인덱스 산술(`i + 15`)은 시계열 구멍 때문에 조용히 틀린다.
+  2. **`n` 이 아니라 `effectiveN`(= resolved / 지평분)을 본다.** 매 분 관측치라 +60분 창은
+     인접 행끼리 59분이 겹친다. n=10,000 이어도 독립 관측은 약 170이다.
+  3. **매수 게이트는 `SignalService.determineSignalType` 의 복제본**이다(`evaluateBuyGate`).
+     추출하면 분석을 위해 실주문 경로를 고쳐야 하므로 일부러 복제했고,
+     `TradingAnalyticsGateParityTest` 가 드리프트를 빌드 실패로 만든다. **이 테스트가 깨지면
+     리팩터링 중이라도 넘어가면 안 된다** — 임계 반사실이 조용히 거짓이 된다는 뜻이다.
+  4. 신호 읽기만 엔티티가 아니라 `SignalSample` 투영을 쓴다 — 90일 ≈ 130,000행을 엔티티로
+     읽으면 1차 캐시에 남아 요청 내내 힙을 붙잡는다(Jetson Nano 고려).
 
 ## Circuit Breaker (P0-2)
 
@@ -70,3 +85,9 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
 ≤ `maxDailyLossPct`(기본 -5%) 시 신규 BUY 차단(리스크 청산은 허용). 청산 결과는
 `executeSell`/`closePosition` 에서 집계, 진입 차단은 `executeBuy` 진입부에서 판정.
 근거: [ADR](../../../../../../../../docs/adr/trading/risk/0001-circuit-breaker-daily-and-consecutive-loss.md).
+
+재시작 시 `consecutiveLosses`(인메모리)는 0 으로 리셋된다. 보호 전용 자동재개
+([ADR modes/0003](../../../../../../../../docs/adr/trading/modes/0003-protection-only-recovery-on-restart.md))의
+`executeTradeLoop` recovery 게이트는 신호 기록(3) 직후·매매 단계(4~6) 앞 — 리스크 체크
+우선 불변식(`riskCheckRunsBeforeSignalGeneration`)과 청산 틱 신호 기록(ADR observability/0003)을
+보존하는 유일한 위치다. 게이트를 이 앞으로 옮기면 안 된다.

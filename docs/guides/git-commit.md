@@ -213,20 +213,6 @@ git commit -m "docs(seo): sitemap.xml 점검 보고서 + HTTP/robots 회귀 가�
 # =====================================================================
 # Stock 봇 — 2026-08-03 유니버스 붕괴 + 스크리닝 관측성
 # =====================================================================
-# 배경: logs/stock-screening-snapshot-2026-08-03.log 를 출발점으로 개선점 도출 요청.
-# 로그가 드러낸 것: 08:30 "Volume-rank returned 1 codes" → "Universe refreshed: 1 codes
-# (pinned=0, fallback=0, rank=1)" → 09:20 재조회 없이 "Starting gap screening for 1 stocks"
-# → 유일 픽 252670(ETF) 선정. 하루치 유니버스가 1종목이었는데 WARN 은 한 줄도 없었다.
-# 원인: 폴백 조건(rankCodes.isEmpty())과 재시도 조건(rankApi == 0)이 둘 다 "비었는가"만
-# 검사한다. 1건은 비어 있지 않으므로 70종목 안전망과 ADR-0006 재시도가 동시에 꺼졌다.
-# 즉 성공한 API 호출 하나가 안전망 두 개를 껐다.
-# 선행 진단 정정: 2026-07-20~23 의 4일 연속 Selected: 0 은 이번 범위가 아니다 — 원인이던
-# 체결강도 전 종목 0 은 274f9de(2026-07-29, ADR infrastructure/0007)에서 이미 해결됐고
-# 08-03 의 str=164.61 이 정상 동작 증거다. 다만 그 4일의 원인을 로그로 특정할 수 없었던
-# 이유(dataInsufficient 가 서로 다른 두 원인을 합산)는 그대로 남아 있어 Commit 126 이 고친다.
-# 사용자 결정으로 범위를 P0 유니버스 + P3 관측성으로 한정. 보류 항목은 결과 보고 참고.
-# 검증: RED 선확인(임계 로직 변경 전 08-03 재현 테스트 2개만 실패, 나머지 14개 통과) 후
-#       GREEN. 전체 스위트 93 클래스 / 534 테스트 / failures 0 / errors 0 을 결과 XML 로 확인.
 
 # Commit 125 — ✅ DONE() fix(stock): 유니버스 열화 판정을 top-N 미달로 (ADR stock/algorithm/0010)
 # 주의: GapPullbackBotService 는 Commit 127 의 sendScreeningResult 시그니처 변경도 흡수.
@@ -243,101 +229,45 @@ git commit -m "refactor(stock): 스크리닝 탈락 버킷을 원인별로 분�
 git add src/main/java/me/singingsandhill/calendar/stock/application/service/StockMailService.java src/test/java/me/singingsandhill/calendar/stock/application/StockMailServiceTest.java
 git commit -m "feat(stock): 09:20 스크리닝 메일에 유니버스 크기 + score 모드 실효 임계" -m "2026-08-03 에 유니버스가 1종목이었다는 사실이 메일 어디에도 없었다. 메일 자체는 발송된다 — buildSubject 에 0건 전용 제목까지 있어 선정 0~1건인 날에도 운영자에게 도착한다. 그런데 본문에는 선정된 종목만 있어서, 선정이 1건인 것이 임계가 빡빡해서인지 볼 종목이 1개뿐이어서인지 구분할 방법이 없었다. sendScreeningResult 에 UniverseBuilder.Snapshot 을 넘겨 본문 최상단에 유니버스 N종목 (거래량순위 R, 정적폴백 F, 핀 P) 한 줄을 찍는다. 크기가 정적 안전망(stock.universe.fallback-codes)보다 작으면 빨간 굵은 글씨로 경고 문구를 덧붙인다 — 열화 판정을 top-N 미달로 바꾼 뒤에는 rank 가 부족해도 폴백이 합집합으로 들어오므로, 유니버스가 안전망보다 작다는 것은 설정이나 API 응답에 문제가 있다는 뜻이다. 임계값은 설정에서 유도하므로 매직넘버가 없다. 두 번째로 스크리닝 조건 블록이 인쇄하던 값을 실제 적용되는 값으로 바꿨다. 이 블록은 min-gap-percent / max-gap-percent / min-market-cap / min-trade-value / min-trade-strength 를 찍었는데, 이들은 legacy 모드(scoring.enabled=false) 전용이고 운영 기본값인 score 모드에서는 아무 역할도 하지 않는다. 08-03 에 실효 갭 상한은 scoring.floor-max-gap 인 15% 였지만 메일은 legacy max-gap-percent 인 10% 를 인쇄했다 — gap 9.76% 픽을 받아 든 운영자가 상한 근처라고 오독하기 딱 좋은 상태였다. scoring.enabled 로 분기해 score 모드에서는 floor-gap-percent ~ scoring.floor-max-gap, floor-trade-strength, scoring.floor-min-market-cap, 그리고 선정 관문인 min-score-threshold 와 signal-min-score 를 인쇄한다. legacy 모드 출력은 그대로 남겨 두 경로 모두 자기 임계를 보여준다. 실효 임계 12개를 application.yaml 로 끌어올리는 작업(현재 Java 기본값에만 존재)은 이번 범위가 아니라 손대지 않았다 — 여기서는 메일이 인쇄하는 값을 실제 적용되는 값에 맞추는 데까지만 했다. 테스트는 기존 attachmentIsNamedAsSnapshotNotAsDailyLogFile 의 발송·파싱 부분을 sendAndCaptureHtml 헬퍼로 뽑아 재사용하고 2개를 추가했다: 유니버스 1종목 스냅샷을 넘기면 본문에 크기와 내역이 찍히고 정적 안전망(3종목)보다 작아 경고 문구가 붙는지, score 모드에서 floor-max-gap 과 신호점수가 인쇄되고 legacy 전용 최소 거래대금 항목은 나오지 않는지. 3개 전부 GREEN."
 
-# Commit 128 — fix(stock): time-decay 종점을 운영 창에서 유도 — 마지막 커밋(git-commit.md 포함)
+# Commit 128 — ✅ DONE() fix(stock): time-decay 종점을 운영 창에서 유도 — 마지막 커밋(git-commit.md 포함)
 git add src/main/java/me/singingsandhill/calendar/stock/application/service/StockRiskService.java src/test/java/me/singingsandhill/calendar/stock/application/StockRiskServiceTimeDecayTest.java docs/adr/stock/algorithm/0001-time-config-and-magic-numbers-externalized.md docs/adr/stock/algorithm/0009-entry-floor-and-trailing-cost-alignment.md docs/guides/git-commit.md
 git commit -m "fix(stock): time-decay 최소수익 종점을 하드코딩 대신 운영 창에서 유도" -m "calculateTimeDecayThreshold 가 LocalTime.of(9, 10) 과 LocalTime.of(15, 15) 를 코드에 박고 있었다. 봇의 실제 운영 창은 trading.trading-loop-start(09:20)에서 exit.final-exit-time(11:20)까지 두 시간이므로, 365분 곡선 중 130분만 지나간 채 강제청산된다. 11:20 시점 임계가 0.358% 로 곡선의 약 36% 지점이고, 설정에 적힌 minProfitThresholdLate 0.1% 와 그 뒤의 0% 종점은 도달할 수 없는 값이었다 — 장 후반으로 갈수록 익절을 쉽게 한다는 설계 의도가 실제로는 3분의 1만 작동한 셈이다. 두 종점을 stockProperties 에서 읽는다. executeTradingLoop 가 이미 같은 두 키를 LocalTime.parse 로 읽고 있어 같은 패턴을 그대로 쓰며, getTradingLoopStart() 는 screeningEnd(09:20) 폴백이 있고 finalExitTime 은 Java 기본값 11:20 이라 둘 다 null 이 될 수 없다. 파싱 실패는 이미 트레이딩 루프에서 먼저 터지므로 새 실패 모드도 아니다. 이것은 동작 변경이다. 같은 시각의 임계가 09:20 에 0.489%에서 0.500%로, 10:20 에 0.423%에서 0.300%로, 11:20 에 0.358%에서 0(구간 종점)으로 바뀐다. TP1·TP2·TP3 공통 순이익 게이트가 장 후반에 실제로 완화되며, 특히 작은 이익에서도 발동할 수 있는 TP2(당일고가 도달)에 영향이 크다. ADR algorithm/0001 이 매직넘버 외부화를 결정하고도 남겨둔 마지막 상수라 그 ADR 의 Status 에 정리 사실을 적었고, 비용 게이트를 다룬 ADR algorithm/0009 의 Status 에는 위 세 시각의 임계 변화를 수치로 남겼다 — 손익분기 계산의 전제가 바뀌기 때문이다. StockRiskServiceTimeDecayTest 는 09:10/15:15 상수를 단정하고 있어 새 종점으로 갱신했고, 종점이 설정에서 온다는 것 자체를 단정하는 케이스를 추가했다 — final-exit-time 을 10:20 으로 좁히면 09:50 의 임계가 0.004 가 아니라 0.003 이 되어야 한다. 5개 전부 GREEN 이고, 같은 클래스를 공유하는 StockRiskServiceSlippageGateTest·StockRiskServiceTimeExitTest 도 무수정 GREEN 이다. 배치 마무리로 전체 스위트를 돌려 93 클래스 534 테스트 failures 0 errors 0 을 결과 XML 로 확인했다."
 
 # =====================================================================
 # 코인 봇 — 신호 품질 분석 페이지 + 결정 입력 영속화 (2026-08-06)
 # =====================================================================
-# 배경: "메일 기능을 활용해 봇 개선용 DB 값을 첨부 발송하면 어떨까" 라는 요청에서 출발.
-# 조사 결과 전제가 유리한 쪽으로 틀렸다 — SignalService.generateSignal 이 매 루프 틱마다
-# 조건 없이 trading_signals 에 1행을 남기고(HOLD 포함, ~1,440행／일) 삭제 스케줄러가 없어
-# 영구 보관된다. 8개 구성점수·원지표·그 시점 현재가가 다 있고, current_price 가 매 분 있어
-# 그 테이블 자체가 1분 가격 시계열이다. 즉 필요한 데이터셋은 이미 존재했고 읽을 수단만 없었다.
-# 사용자 결정: 산출물은 메일이 아니라 /trading/analytics 관리자 페이지. 데이터 기록 공백은
-# 전부 수정. 주기는 스케줄러 없이 온디맨드(권고 채택).
-# 동기: docs/audit/coin-trading-profit-audit-2026-05-30.md 가 P2-1(거래량 다이버전스 ±20
-# 과대가중)을 "백테스트 없는 prior" 로 low 강등한 채 남겼고, remaining-work.md:100 이
-# "나머지 P2 는 라이브 전환 이후 데이터 기반으로" 라고 적어뒀다. 그 데이터가 지금 쌓여 있다.
-# 검증: 커밋별 RED 선확인 후 GREEN. 전체 스위트 99 클래스 ／ 585 테스트 ／ failures 0 ／
-#       errors 0 을 build/test-results/test/*.xml 로 확인 (기준선 93 ／ 534).
-# 주의: 이 배치는 Commit 126~128(stock) 이 아직 미실행인 상태에서 작성됐다. 순서대로
-#       126~128 을 먼저 실행할 것. 이 배치의 add 목록에는 stock 파일이 하나도 없어
-#       서로 파일이 겹치지 않는다. 단 Commit 128 이 docs/guides/git-commit.md 를 포함하므로
-#       128 을 실행하면 아래 129~135 섹션도 함께 커밋된다 — 정상이며, 135 는 그 뒤의
-#       DONE 마커 갱신분을 담게 된다.
-# 워킹트리 잡음: docs/{stock/bot.md, datedate/architecture-review.md, prompts/*.md} 6개는
-#       내용 변경 0 인데 통째로 CRLF 로 바뀌어 raw diff 2,242줄이 잡힌다(.gitattributes 에
-#       *.md 규칙 없음). 이 배치에서 전부 제외했다. 별도 위생 커밋으로 LF 복원 + 규칙 추가 권장.
-
-# Commit 129 — fix(trading): 캔들 보관 기간 외부화 + 7일→90일 (ADR infrastructure/0005)
+# Commit 129 — ✅ DONE() fix(trading): 캔들 보관 기간 외부화 + 7일→90일 (ADR infrastructure/0005)
 # 주의: application.yaml 은 Commit 145 의 stock.universe 주석 정정 2줄도 흡수한다(주석만).
 git add src/main/java/me/singingsandhill/calendar/trading/infrastructure/config/TradingProperties.java src/main/java/me/singingsandhill/calendar/trading/application/service/CandleService.java src/main/resources/application.yaml src/test/java/me/singingsandhill/calendar/trading/application/service/CandleServiceRetentionTest.java docs/adr/trading/infrastructure/0005-candle-retention-for-analysis.md
 git commit -m "fix(trading): 캔들 보관 기간 외부화 + 7일→90일 (ADR trading／infrastructure／0005)" -m "CandleService.cleanupOldCandles 가 LocalDateTime.now().minusDays(7) 을 코드에 박고 있었고, 호출자인 CandleScheduler 의 자정 크론에는 다른 잡과 달리 bot.enabled 가드가 없어 봇을 꺼둔 기간에도 실행됐다. 그래서 1분봉 보관 지평이 영구히 1주로 고정돼, 지표 파라미터를 바꿔 과거에 다시 돌려보는 것이 구조적으로 불가능했다. Bithumb 캔들 API 는 과거 구간을 무한정 주지 않으므로 삭제된 구간은 복구할 수 없다 — 이 항목만은 결정을 미루는 것 자체가 매일 손실이라 배치 첫 커밋으로 올린다. TradingProperties.Bot 에 candleRetentionDays=90 을 추가하고 application.yaml 의 trading.bot.candle-retention-days 와 값을 일치시켰다. 새 중첩 클래스를 만들지 않고 Bot 에 둔 것은 그쪽이 이미 market·maxPositions·쿨다운 등 운영 파라미터를 담은 묶음이기 때문이고, Java 기본값을 yaml 과 맞춘 것은 P1-9 의 교훈(키 누락 시 구식 값으로 폴백) 때문이다. 90일 근거는 용량이다 — 1분봉 x 1시장 = 1,440행／일이므로 90일이면 129,600행, 행당 약 200B 로 26MB 미만이다. 현재 DB 파일이 643KB 라 지배적 테이블이 되지만 여전히 사소하고, 365일(약 105MB)은 파일을 다루기 번거롭게 만든다. deleteByDateTimeBefore 는 candle_date_time 단독 조건인데 기존 유니크 인덱스가 market 으로 시작해 이 조건에 쓰이지 않으므로 자정 삭제는 풀스캔이지만, 13만 행에서는 밀리초 단위라 인덱스를 따로 추가하지 않았다. CandleScheduler 의 bot.enabled 가드 부재는 이번 범위 밖으로 남겼다 — CLAUDE.md·모듈 CLAUDE.md 가 명시적으로 문서화한 알려진 동작이고 보관기간을 90일로 늘리면 실질 영향이 거의 사라진다(다만 90일 넘게 꺼두면 여전히 손실이라 ADR Consequences 에 후속으로 적었다). 테스트는 RED 를 두 단계로 확인했다 — 설정 키만 먼저 추가하고 CandleService 는 그대로 둔 상태로 CandleServiceRetentionTest 를 돌려, 2개 중 cutoffComesFromConfigNotHardcodedSevenDays 하나만 실패(컷오프가 여전히 7일 전)하고 javaDefaultMatchesYamlOperationalValue 는 통과하는 것을 본 뒤 CandleService 를 고쳐 2개 전부 GREEN 으로 만들었다. 이 테스트가 단정하는 것은 값이 90이라는 사실이 아니라 값이 설정에서 온다는 사실이다 — 임의의 두 보관기간(1일·90일)에 대해 컷오프가 그만큼 움직이는지를 호출 전후 시각 사이 구간으로 검사한다(stock 의 decayEndpointsComeFromConfigNotConstants 와 같은 기법)."
 
-# Commit 130 — feat(trading): 결정 입력 영속화 — signal_id·ATR·거래량 맥락·적용 주문비중 (ADR observability/0002)
-# 주의: TradeJpaEntity·SignalJpaEntity 는 Commit 132 의 @Index 추가도 흡수한다.
-#       TradingBotService 는 Commit 131 의 executeTradeLoop 재구조화도 흡수한다.
-#       SignalRepositoryAdapter 는 Commit 133 의 투영 매핑도 흡수한다.
-#       SignalService·IndicatorService·TradingBotService 는 Commit 144 의 주석 수치 정정도
-#       흡수한다(주석만, 동작 불변 — TradingBotService 는 P2-12 javadoc 재부착 포함).
-#       TradingBotService 는 Commit 136 의 캔들 실패 가드(ADR risk/0006)도 흡수한다 —
-#       executeTradeLoop 1단계 try/catch + candlesFresh 조기 return. 이 커밋의 메시지에는
-#       그 근거가 없으므로, 그 변경의 판단 근거는 Commit 136 을 볼 것.
-#       (git add -p 미지원 환경이라 같은 파일의 두 관심사를 분리할 수 없다.)
+# Commit 130 — ✅ DONE() feat(trading): 결정 입력 영속화 — signal_id·ATR·거래량 맥락·적용 주문비중 (ADR observability/0002)
 git add src/main/java/me/singingsandhill/calendar/trading/domain/trade/Trade.java src/main/java/me/singingsandhill/calendar/trading/domain/signal/Signal.java src/main/java/me/singingsandhill/calendar/trading/infrastructure/persistence/entity/TradeJpaEntity.java src/main/java/me/singingsandhill/calendar/trading/infrastructure/persistence/entity/SignalJpaEntity.java src/main/java/me/singingsandhill/calendar/trading/infrastructure/persistence/adapter/TradeRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/trading/infrastructure/persistence/adapter/SignalRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/trading/application/service/TradingBotService.java src/main/java/me/singingsandhill/calendar/trading/application/service/SignalService.java src/main/java/me/singingsandhill/calendar/trading/application/service/IndicatorService.java src/main/java/me/singingsandhill/calendar/trading/application/dto/IndicatorResult.java src/test/java/me/singingsandhill/calendar/trading/application/service/TradingBotServiceSignalLinkTest.java src/test/java/me/singingsandhill/calendar/trading/application/service/SignalServiceWeightTest.java docs/adr/trading/observability/0002-decision-input-persistence.md
 git commit -m "feat(trading): 결정 입력을 결정 시점에 영속화 (ADR trading／observability／0002)" -m "trading_signals 는 결정 입력이 풍부한데 결과 쪽에서 원인을 되짚을 방법이 없었다. trading_trades 에 남는 신호 정보는 signal_score 정수 하나와 signal_reason 문자열뿐이고 signal_id 가 없다. 반대 방향도 막혀 있었다 — trading_signals.executed 는 Signal.markExecuted() 가 저장소 전체에서 한 번도 호출되지 않아 항상 false 인 죽은 컬럼이다. 그래서 이 체결이 어느 신호에서 나왔는가를 타임스탬프 근사로만 추정할 수 있었다. 계산해놓고 버리는 값도 있었다. ATR 은 calculateDynamicOrderRatio 가 주문 크기를 정하는 데 쓰지만 저장하지 않고, 실제 적용된 비중도 마찬가지라 포지션 사이징 결정을 DB 로 재구성할 수 없었다. volumeMa／currentVolume 은 IndicatorResult 에는 있는데 SignalJpaEntity 에 컬럼이 없었고, 이 둘은 MA60 하회 시 매수 확인 게이트의 거래량 스파이크 분기 입력이라 없으면 임계 반사실 분석에서 그 분기를 판정할 수 없다. trading_trades 에 signal_id 와 order_ratio 를, trading_signals 에 atr·atr_percent·volume_ma·current_volume 을 추가했다. 전부 nullable 이라 ddl-auto=update 가 ALTER TABLE ADD COLUMN 으로 처리하며 기존 행은 null 로 남는다. signal_id 는 신호 기반 매수·매도에서만 채우고 리스크 청산·리밸런싱·수동 매매는 의도적으로 null 로 둔다 — null 자체가 신호로 난 체결이 아니라는 정보다. 특히 청산 틱의 동시각 신호를 청산 Trade 에 붙이지 않는다: 그건 이 신호가 이 청산을 유발했다는 거짓을 기록하는 것이고 signal_id 기반 집계를 전부 오염시킨다. order_ratio 는 매수에만 채우며 저장 전 setScale(4, HALF_UP) 을 건다 — 보간 결과가 double 이라 ATR 1.5% 에서 0.29999999999999993 이 그대로 들어가기 때문이고, 테스트가 이 값을 0.30 으로 비교하며 scale 이 4인지까지 단정한다. 필드 추가는 생성자가 아니라 이름 있는 setter 로 했다. Signal 생성자는 이미 25인자인데 여기 4개를 더 붙이면 29인자 위치 호출이 되고, 인접한 BigDecimal 둘이 뒤바뀌어도 컴파일이 통과해 그 뒤 모든 행이 조용히 오염된다 — 이 배치에서 가장 위험한 실패 모드라 판단했다. 같은 클래스의 id·executed 와 Trade 의 positionId·signalScore 가 이미 가변이라 선례도 있다. 다섯 번째 필드가 필요해지면 그때 ScoreBreakdown／IndicatorSnapshot 중첩 레코드로 실제 분해를 하는 것을 ADR 후속으로 적었다. ATR 은 IndicatorService.calculate() 가 이미 로드한 80봉으로 계산한다 — calculateATRPercent(market) 을 부르면 같은 틱에 캔들을 두 번 읽는다(그 메서드는 자체적으로 19봉을 다시 읽는다). 주문 사이징이 쓰는 calculateATRPercent 자체는 건드리지 않았다: 그쪽은 excludeFormingCandle 을 따르지 않아 그 플래그를 켜면 IndicatorResult.atrPercent() 와 값이 갈릴 수 있고, 그래서 재유도 대신 실제 적용된 비중을 따로 기록하는 쪽을 골랐다. IndicatorResult 의 새 인자 atr 은 기존 10개 뒤에 append 했다 — 중간에 끼우면 위치 인자가 밀린다. 이 레코드의 생성 지점은 저장소 전체에 IndicatorService:51 과 SignalServiceWeightTest:25 둘뿐이라 비용이 낮았다. 테스트는 TradingBotServiceSignalLinkTest 6종을 신설했다: 매수·매도가 signal_id 를 남기는지, ATR 미확보 시 기본 비율 0.25 와 고변동성 0.15 가 기록되는지, 보간값이 4자리로 반올림돼 저장 가능한 형태가 되는지, 그리고 수동 매도가 signal_id 를 null 로 두는지(가드 — 변경 전후 모두 통과). manualSell 케이스는 P0-3 킬스위치 때문에 bot.enabled=true 로 열어야 실제 주문 경로를 탄다는 점을 먼저 확인했다. 기존 SignalServiceWeightTest 는 IndicatorResult 인자 추가에 맞춰 null 하나를 더했고 단정은 그대로다. 회귀 증거로 주문 신뢰성 테스트군(TradingBotServiceOrderReconciliationTest·TradingV2LostResponseSweepTest·TradingBotServiceExecutedVolumeTest)이 무수정 GREEN 임을 확인했다 — 새 필드는 순수 데이터라 §8-B 스윕 경로가 읽지 않는다."
 
-# Commit 131 — fix(trading): 리스크 청산 틱에도 신호 기록 (ADR observability/0003)
-# 주의: TradingBotService 본체 변경은 Commit 130 이 소유. 여기는 테스트와 ADR 만.
-#       observability/0003 은 Commit 136 의 "후속 ② 는 risk/0006 으로 닫혔다" 갱신도 흡수한다.
+# Commit 131 — ✅ DONE() fix(trading): 리스크 청산 틱에도 신호 기록 (ADR observability/0003)
 git add src/test/java/me/singingsandhill/calendar/trading/application/service/TradingBotServiceLoopSignalRecordingTest.java docs/adr/trading/observability/0003-signal-series-continuity-on-risk-exit.md
 git commit -m "fix(trading): 리스크 청산 틱에도 신호 기록 — 관측성은 주문 경로를 게이팅하지 않는다 (ADR trading／observability／0003)" -m "executeTradeLoop 은 리스크 체크가 CloseReason 을 돌려주면 그 자리에서 return 해 신호 생성 단계까지 가지 않았다. 그래서 손절·익절·트레일링이 발동한 분에는 trading_signals 행이 통째로 없었다 — 분석에 가장 정보량이 큰 순간인 청산 직전의 지표 상태가 1분 관측 시계열에서 정확히 빠져 있었다는 뜻이고, 구멍이 특정 사건과 체계적으로 겹치는 것은 단순 결측보다 나쁘다. 리스크 체크 호출 위치는 그대로 두고 조기 return 을 신호는 기록하되 매매 단계 4~6 은 건너뛴다로 바꿨다. 행동 변화는 청산 틱에 trading_signals 행 1개가 더 생긴다는 것뿐이고 매수·매도·리밸런싱 판단은 이전과 동일하게 억제된다. 신호 생성을 리스크 체크 앞으로 옮기는 대안은 기각했다 — generateSignal 은 캔들 DB 조회와 DivergenceService.detect 와 calculatePreviousMAs 를 하므로 거기서 예외가 나거나 쿼리가 느리면 그 틱의 손절이 지연되거나 실행되지 않는다. 관측성이 자본 보호를 게이팅해선 안 된다는 것이 이 커밋의 요지다. RiskManagementService 가 신호 행을 쓰는 대안(리스크 애그리거트에 신호 도메인 의존을 새로 만든다)과 RISK_EXIT 합성 행을 넣는 대안(점수를 계산한 적 없는 행이 섞여 균일 관측 시계열 전제를 깨뜨린다)도 ADR Rationale 표에 기각 사유와 함께 남겼다. 신호 생성은 try／catch 로 감쌌는데, 삼키는 이유는 없던 운영 경보를 만들지 않기 위해서다 — 삼키지 않으면 바깥 catch 가 lastError 와 LOOP_ERROR 이벤트를 남기지만 이전에는 이 경로에서 신호 생성 자체를 하지 않았으므로 그런 경보가 존재할 수 없었다. generateSignal 이 null 을 돌려주는 경우(캔들 없음)에는 합성 행을 만들지 않는다. 테스트 5종을 신설했고 RED 가 정확히 하나였다 — riskExitTick_stillGeneratesSignal 이 WantedButNotInvoked 로 실패하고 나머지 4개(가드)는 변경 전에도 통과했다. 그 4개가 중요하다: riskCheckRunsBeforeSignalGeneration 은 InOrder 로 순서를 못박아 나중에 누가 신호 생성을 위로 올리면 빌드가 깨지게 하고, riskExitTick_skipsRebalanceAndTrade 는 단계 4~6 억제가 유지되는지를 never() 로 지키며, signalGenerationFailureOnRiskExitTick_doesNotRaiseNewLoopError 는 lastError 가 null 이고 LOOP_ERROR 이벤트가 없음을 단정한다. 범위 밖으로 남긴 구조적 공백 두 가지는 ADR Consequences 에 적었다 — 봇 정지·일시정지 구간, 그리고 executeTradeLoop 의 candleService.fetchAndSaveCandles() 가 try／catch 없이 호출돼 캔들 조회 실패가 그 틱의 리스크 체크까지 통째로 건너뛰게 만드는 문제. 후자는 관측성이 아니라 자본 보호 사안이라 별도 결정으로 다뤄야 한다."
 
-# Commit 132 — perf(trading): 트레이딩 테이블 인덱스 (동작 불변)
-# 주의: SignalJpaEntity·TradeJpaEntity 의 @Index 는 Commit 130 이 흡수. 여기는 PositionJpaEntity 만.
+# Commit 132 — ✅ DONE() perf(trading): 트레이딩 테이블 인덱스 (동작 불변)
 git add src/main/java/me/singingsandhill/calendar/trading/infrastructure/persistence/entity/PositionJpaEntity.java
 git commit -m "perf(trading): 트레이딩 테이블 인덱스 추가 (동작 불변)" -m "분석 페이지의 집계는 전부 기간 스캔인데 trading_signals·trading_positions·trading_trades 에 인덱스가 하나도 없었다(indexes 가 선언된 테이블은 trading_events 뿐이다). trading_signals 는 매 분 1행이 쌓여 90일이면 13만 행이므로 무인덱스 범위 스캔은 페이지 로드마다 풀스캔이 된다. 세 테이블에 @Table(indexes=...) 로 선언한다 — trading_signals(market, signal_time), trading_positions(market, status, closed_at)·(market, opened_at), trading_trades(position_id)·(market, created_at). Hibernate 의 SchemaUpdate 는 JDBC 메타데이터에 없는 인덱스명에 CREATE INDEX 를 발행하므로 ddl-auto=update 로 기존 테이블에도 생성되지만, 인덱스명으로 매칭하기 때문에 같은 이름을 다른 컬럼으로 재사용하면 재생성하지 않는다는 점에 주의한다. 실제 생성 여부는 첫 bootRun 후 INFORMATION_SCHEMA.INDEXES 로 확인하는 것이 안전하다. 부수 이득도 있다 — trading_positions(market, status, closed_at) 은 접두 (market, status) 로 findByMarketAndStatus·countByMarketAndStatus·findOpenPositionsByMarket 을 함께 커버하는데 이들은 매 루프 틱마다 실행되고, trading_trades(position_id) 는 FK 없는 평범한 Long 이라 findByPositionId 가 풀스캔이던 것을 없앤다. 비용은 trading_signals 의 분당 insert 마다 인덱스 1개 쓰기가 늘어나는 것이며 모듈 CLAUDE.md 에 그 사실을 적었다. 인덱스는 물리 설계 사실이지 정책·임계·구조 결정이 아니라서 ADR 을 만들지 않았다(docs/adr/README.md 작성 규칙의 비결정성 변경 항목). 새 테스트는 없다 — 스키마 변경이고 동작은 불변이며, 전체 스위트가 무수정 GREEN 인 것이 그 증거다."
 
-# Commit 133 — feat(trading): TradingAnalyticsService — 신호 품질 분석 집계 (ADR observability/0001)
-# 주의: SignalRepositoryAdapter 의 투영 매핑은 Commit 130 이 흡수.
-#       docs/adr/README.md 는 이 배치의 ADR 4건을 전부 이 커밋이 소유(두 뷰 + 폴더 목록 + 매트릭스).
-#       docs/adr/README.md 는 Commit 136 의 risk/0006 등재(총계 79→80, trading 알고리즘 15→16,
-#       trading/risk 5→6 ADRs, 날짜순 뷰 1행)도 흡수한다 — 실행 시 총계가 80 인 것이 정상이다.
+# Commit 133 — ✅ DONE() feat(trading): TradingAnalyticsService — 신호 품질 분석 집계 (ADR observability/0001)
 git add src/main/java/me/singingsandhill/calendar/trading/domain/signal/SignalSample.java src/main/java/me/singingsandhill/calendar/trading/domain/signal/SignalComponent.java src/main/java/me/singingsandhill/calendar/trading/domain/signal/SignalRepository.java src/main/java/me/singingsandhill/calendar/trading/infrastructure/persistence/repository/SignalJpaRepository.java src/main/java/me/singingsandhill/calendar/trading/application/dto/AnalyticsReport.java src/main/java/me/singingsandhill/calendar/trading/application/service/TradingAnalyticsService.java src/test/java/me/singingsandhill/calendar/trading/application/service/TradingAnalyticsServiceTest.java src/test/java/me/singingsandhill/calendar/trading/application/service/TradingAnalyticsGateParityTest.java docs/adr/trading/observability/0001-signal-quality-analytics-page.md docs/adr/README.md
 git commit -m "feat(trading): 신호 품질 분석 집계 — 전방수익·구성요소 엣지·임계 반사실 (ADR trading／observability／0001)" -m "감사 문서가 백테스트 없이는 판단 불가로 남긴 항목들(P2-1 거래량 다이버전스 ±20 과대가중, P1-1／P1-2 로 바꾼 손절 -1.5% ／ TP +3% ／ 트레일링 -0.8% 의 실효성)에 데이터로 답하기 위한 집계 서비스다. 7개 섹션을 계산한다: 데이터 충분성, 점수 구간별 전방수익, 구성요소별 조건부 엣지, 임계 반사실, 청산사유별 실현 성과, 진입 맥락→결과, 비용 현실. 전방수익은 trading_candles 가 아니라 신호 자신의 current_price 로 계산한다 — 신호가 매 분 기록되므로 그 테이블 자체가 1분 가격 시계열이고, 캔들은 정리되지만 신호는 영구 보관이라 지평이 길며, 점수 입력과 가격 원천이 같아 기준가 불일치가 없다. 오독을 막는 장치 세 개를 자료구조에 박았다. 첫째 effectiveN — 매 분 관측치가 생기므로 +60분 전방수익은 인접 행끼리 59분이 겹치고 n=10,000 이어도 독립 관측은 약 170이다. HorizonStat 이 resolved 와 effectiveN 을 나란히 들고 effectiveN 30 미만이면 reliable()=false 를 돌려주며, 페이지는 그 칸을 흐리게 렌더한다. 둘째 net 수익률 — 왕복 taker 수수료만 0.50% 라 평균 +0.3% 구간은 gross 로 양수여도 손실이다. 셋째 커버리지 패널을 최상단에 두고 표본 부족 사유를 실제 수치와 함께 나열한다. 구성요소별 엣지에는 잔차점수(총점 - 그 요소 몫의 평균)를 함께 낸다 — 조건부 평균은 교란돼 있어서 어떤 요소가 켜진 부분집합에는 같이 켜진 다른 요소가 전부 섞여 있고, 잔차가 전체 평균보다 크면 그 요소가 아니라 원래 점수가 높은 구간을 보고 있는 것이다. 이 컬럼이 없으면 P2-1 에 대해 확신에 찬 오답이 나온다. 세 가지 설계 결정을 ADR 에 남겼다. (1) 신호 읽기만 엔티티가 아니라 SignalSample 투영을 쓴다 — 90일이 13만 행이고 @Transactional(readOnly=true) 안에서 엔티티로 읽으면 전부 1차 캐시에 남아 요청이 끝날 때까지 힙을 붙잡는데 이 앱은 Jetson Nano 에서도 돈다. 포지션·체결은 수십~수백 건이라 기존 관례대로 엔티티를 읽는다. (2) 매수 게이트를 SignalService 에서 추출하지 않고 복제했다 — 추출하면 분석 기능을 위해 실주문 신호 생성 경로를 수정해야 하는데 그게 이 작업이 통제하려는 위험 그 자체다. 대신 TradingAnalyticsGateParityTest 가 14개 시나리오를 두 구현에 각각 넣어 판정이 갈리면 빌드를 깨뜨린다. 이 테스트가 실제로 드리프트를 잡는지 확인하려고 분석 게이트의 MA60 분기를 일시적으로 무력화해 3건이 실패하는 것을 본 뒤 되돌렸다. (3) 전방 조회에 인덱스 산술(i+15)을 쓰지 않는다 — 시계열에 구멍이 있어 인덱스로 세면 조용히 엉뚱한 시각의 가격을 집는다. 목표 시각 ±90초 안의 최근접 행만 쓰고 없으면 결측으로 버리며, 버린 비율을 커버리지에 표기한다. 진입 맥락 조인은 인과 방향을 지킨다 — 신호가 매수를 유발하므로 신호는 반드시 체결보다 앞선다. 대칭 최근접 매칭을 하면 T+31초에 열린 포지션이 T+60초 신호(거리 29초)에 붙어 그 매매 뒤에 생성된 신호를 원인으로 기록하게 되므로, signal_time <= opened_at 이면서 90초 이내인 가장 최근 신호만 쓴다. 리밸런싱·수동 매수는 신호와 무관해 예측력을 희석하므로 제외하고 제외 건수를 표기한다. 비용 지표의 주 값은 수수료／진입 명목금액이다 — 수수료／gross 는 gross <= 0 이면 부호가 뒤집히거나 0 근처에서 발산해 의미가 없어 null 로 둔다. 임계 반사실은 MA60 하회 시 거래량 스파이크 분기를 판정해야 하는데 그 입력이 observability/0002 이전 행에 없어서, 단일 숫자가 아니라 하한~상한 범위와 판정불가 건수로 낸다. 테스트는 TradingAnalyticsServiceTest 17종과 GateParityTest 16종이다. 전방수익 꼬리 경계에서는 처음에 단정을 틀리게 썼다가 실제 값으로 정정했다 — i=85 는 목표 100분에 대해 마지막 관측치가 99분이라 60초 차로 허용오차 안이고 i=86 부터 결측이다. docs/adr/README.md 는 이 배치의 ADR 4건을 두 뷰와 폴더 목록에 추가하면서 선재 드리프트도 정정했다: 실제 파일이 79개(추가 전 75개)인데 매트릭스 합계는 74였고, 원인은 Commit 125 의 stock/algorithm/0010 이 폴더 목록에만 반영되고 매트릭스 셀(9)이 그대로였던 것이다."
 
-# Commit 134 — feat(trading): /trading/analytics 관리자 분석 페이지
+# Commit 134 — ✅ DONE() feat(trading): /trading/analytics 관리자 분석 페이지
 git add src/main/java/me/singingsandhill/calendar/trading/presentation/controller/TradingDashboardController.java src/main/resources/templates/trading/analytics.html src/main/resources/templates/trading/fragments/header.html src/test/java/me/singingsandhill/calendar/trading/presentation/controller/TradingAnalyticsPageTest.java
 git commit -m "feat(trading): ／trading／analytics 신호 품질 분석 페이지" -m "TradingAnalyticsService 의 리포트를 Thymeleaf 로 렌더한다. 스케줄러도 스냅샷 저장도 두지 않고 요청 시점에 계산한다 — 페이지는 보낼 것이 없어 주기 갱신 개념이 없고, 신호·포지션이 영구 보관이라 과거 어느 구간이든 다시 계산하면 되며 지난주 대비 비교도 기간만 바꾸면 된다. 구간은 ?days= 쿼리 파라미터(7／14／30／60／90, 기본 30)이고 서비스가 1~180 으로 클램프한다. JSON 엔드포인트는 만들지 않았다 — 기존 ／api／trading／** 는 전부 특정 JS 파일이 폴링하기 때문에 존재하는데 이 페이지에는 폴링할 이유가 없고, 소비자 없이 12개 레코드 트리를 추적하는 표면을 늘릴 이유도 없다. 구간 선택도 GET 폼 하나라 새 JS 파일이 필요 없다. SecurityConfig 는 건드리지 않았다 — ／trading／** 는 규칙 #1 에서 이미 ROLE_ADMIN 이고 포괄 permitAll 보다 앞에 선언돼 있다. 그 사실 자체를 TradingAnalyticsPageTest 가 고정한다: 미인증은 리다이렉트, ROLE_USER 는 403, ROLE_ADMIN 만 200 이다. 템플릿은 커밋된 trading-tw.css 에 이미 존재하는 유틸리티 클래스와 trading.css 의 tr-* 컴포넌트 클래스만 쓴다 — 새 클래스를 쓰면 npx tailwindcss 재생성이 필요해지고 15KB 최소화 CSS 덩어리가 로직 diff 한가운데 들어온다. 커밋 전에 템플릿의 모든 class 토큰을 두 CSS 파일에 대조해 누락이 없음을 확인했다. 빈 데이터 처리는 섹션을 숨기는 대신 표본 부족 사유를 실제 수치와 함께 보여주는 쪽으로 했다 — 점수 구간의 n=0 도 그 점수가 한 번도 안 나왔다는 정보이므로 행을 지우지 않는다. 테스트는 5종인데 그중 adminRendersAllSectionsWhenDataExists 가 핵심이다: 빈 리포트만 렌더하면 th:unless 로 감싼 본문 표 6개가 통째로 건너뛰어져 표 안의 Thymeleaf 표현식 오류를 잡지 못하므로, 채운 리포트를 넣고 응답 HTML 에 각 섹션 제목과 실제 데이터(점수 구간 라벨·청산 사유·구성요소 표시명)가 들어 있는지 문자열로 단정한다. daysParamIsClampedToMaxWindow 는 ?days=9999 로 들어와도 화면에 표시되는 구간이 실제 계산 구간과 일치하는지를 본다."
 
 # Commit 135 — docs(trading): CLAUDE.md·TRADING.md·bot.md 동기화
-# 주의: trading/CLAUDE.md 는 Commit 136 의 "캔들 실패 틱" 항목(ADR risk/0006)도 흡수한다.
-#       루트 CLAUDE.md 는 Commit 143 의 정정 한 줄(git-commit.md 를 "gitignore 대상" 이라 한
-#       서술 → "추적·커밋되는 커밋 로그")과 **LF 개행 정규화 371줄**도 흡수한다. 내용 변경분만
-#       보려면 git diff -w 를 쓸 것(3+/1-). 개행 정규화는 Commit 137 의 *.md 규칙과 짝이다.
-#       이 커밋이 git-commit.md 를 포함하므로 아래 Commit 136 섹션도 함께 커밋된다 — 정상이다.
-#       배치의 마지막 커밋은 이제 136 이다.
 git add CLAUDE.md TRADING.md src/main/java/me/singingsandhill/calendar/trading/CLAUDE.md src/main/java/me/singingsandhill/calendar/trading/application/CLAUDE.md docs/trading/bot.md docs/guides/git-commit.md
 git commit -m "docs(trading): 분석 페이지·결정 입력 영속화 문서 동기화" -m "CLAUDE.md 동기화 규칙상 이번 배치는 결정 변경에 해당하므로 사실 문서 네 곳을 코드에 맞춘다. 루트 CLAUDE.md 의 Background Schedulers 절에 캔들 보관 기간이 trading.bot.candle-retention-days(기본 90일)이며 삭제 구간은 복구 불가라는 사실을 추가했다(가드 부재 서술은 여전히 사실이라 유지). trading/CLAUDE.md 에는 데이터 기록 & 분석 절을 신설해 보관 키, signal_id 의 채움／null 의미론, order_ratio, trading_signals 의 새 컬럼 4개, ATR 을 재조회 없이 계산한다는 점과 주문 사이징용 calculateATRPercent 는 변경하지 않았다는 점, 청산 틱 신호 기록과 순서 역전 금지 불변식, 인덱스 목록과 분당 쓰기 비용을 적었다. Presentation 표의 TradingDashboardController 행에 ／analytics 를 추가했다. trading/application/CLAUDE.md 에는 TradingAnalyticsService 항목을 지원 서비스 절에 넣고 읽을 때 주의할 네 가지(전방수익 원천이 캔들이 아니라 신호의 current_price 라는 점, n 이 아니라 effectiveN 을 본다는 점, 매수 게이트가 복제본이며 파리티 테스트가 깨지면 리팩터링 중이라도 넘어가면 안 된다는 점, 신호 읽기만 투영을 쓰는 이유)를 적었다. TRADING.md 에는 대시보드 줄 아래에 분석 페이지 URL 과 온디맨드 계산이라는 사실을 추가했다. docs/trading/bot.md 는 편집 전에 줄바꿈을 LF 로 되돌렸다 — 워킹트리 사본이 통째로 CRLF 로 바뀌어 있어 내용 변경이 0인데도 raw diff 가 504+504 로 잡히던 상태였고(.gitattributes 에 *.md 규칙이 없다), 그대로 두면 이 커밋에 1,008줄 잡음이 섞인다. 정규화 후 HEAD 와 완전 동일함을 git diff 로 확인한 뒤 편집했으므로 이 파일의 diff 는 실제 추가분만 남는다. 내용으로는 캔들 정리를 7일이라고 적은 두 곳(데이터 흐름도, 스케줄 타이밍)을 이번 변경이 사실과 어긋나게 만들었으므로 고쳤고, 설정값 절에 candle-retention-days 를 넣었으며, 13절 신호 품질 분석 페이지를 신설해 각 섹션이 답하는 질문과 읽는 법 세 가지 함정(독립창·net·잔차점수), 그리고 임계 반사실의 판정 범위 한계를 적었다. 이 파일에는 이번 범위 밖의 선재 드리프트가 여럿 남아 있다 — 5절의 합산 범위 ±135(실제 ±128), 6절의 쿨다운 10분·최소보유 15분(실제 30／30), 8절의 손절 -3%·익절 +15%·추적손절 -3%(실제 -1.5%／+3%／-0.8%), 11절 설정값 블록의 같은 수치들. 이번 변경이 유발한 것이 아니고 각각 다른 커밋의 관심사라 최소 범위 원칙에 따라 손대지 않았으며 결과 보고에 따로 적었다. 같은 이유로 docs/stock/bot.md 등 CRLF 잡음만 있는 문서 6개도 이 배치에서 제외했다."
 
 # =====================================================================
 # 코인 봇 — 캔들 수집 실패가 손절·익절을 막지 않게 (2026-08-08)
 # =====================================================================
-# 배경: docs/ 128개 파일의 계획·백로그·감사를 전수 조사해 "아직 안 끝난 것"을 가려내는
-# 작업에서 나왔다. 245개 항목을 코드로 대조한 결과 절반 이상이 이미 구현된 채 문서만 낡은
-# 것이었고, 실제로 남은 것 중 위험 대비 diff 가 가장 작은 한 건이 이것이다.
-# ADR trading/observability/0003 이 스스로 발견해 "관측성이 아니라 자본 보호 사안이라 별도
-# 결정으로 다뤄야 한다" 며 범위 밖으로 남긴 후속 ② 를 닫는다.
-# 검증: RED 3건 선확인(WantedButNotInvoked 2 + ArgumentsAreDifferent 1) → GREEN.
-#       전체 스위트 100 클래스 ／ 590 테스트 ／ failures 0 ／ errors 0 을
-#       build/test-results/test/*.xml 로 확인 (기준선 99 ／ 585).
-# 주의: 이 커밋은 Commit 128~135 를 먼저 실행한 뒤 마지막에 실행한다. 워킹트리 일괄 보유
-#       환경이라 TradingBotService.java(→130) ／ docs/adr/trading/observability/0003(→131) ／
-#       docs/adr/README.md(→133) ／ trading/CLAUDE.md(→135) 는 각각 먼저 등장하는 커밋이
-#       소유하므로, 이 커밋의 add 목록에는 신규 파일 2개만 남는다. 각 흡수처의 "주의:" 에
-#       무엇이 함께 들어가는지 적어 뒀다.
 
 # Commit 136 — fix(trading): 캔들 수집 실패가 손절·익절을 막지 않는다 (ADR risk/0006) — 마지막 커밋(git-commit.md 포함)
 git add src/test/java/me/singingsandhill/calendar/trading/application/service/TradingBotServiceCandleFailureGuardTest.java docs/adr/trading/risk/0006-candle-sync-failure-does-not-gate-risk-check.md docs/guides/git-commit.md
@@ -346,27 +276,6 @@ git commit -m "fix(trading): 캔들 동기화 실패는 리스크 체크를 게�
 # =====================================================================
 # 문서 정리 — 코드는 끝났는데 낡아 있던 문서 149건 (2026-08-09)
 # =====================================================================
-# 배경: docs/ 245개 항목 전수 조사에서 DONE_DOC_STALE 54건 / NOT_A_PLAN 23건이 나왔다.
-# 즉 "미완료로 보이던 것"의 절반 이상이 이미 끝난 일이었다. 이 배치가 그 문서들을 코드
-# 사실에 맞춘다. 코드 변경은 0 이다.
-# 방법: 6개 클러스터로 수정 명세를 뽑은 뒤, 각 명세의 모든 수치·심볼·경로를 코드에서
-#       재확인하는 적대적 감사를 붙였다(151건 중 CONFIRMED 124 / CORRECTED 25 / DROPPED 2).
-#       감사가 실제로 막은 것들: ① P0-3 을 "해결" 로 적으려던 것 — test-order 우회가 남아
-#       있어 "부분 해결" 로 정정 ② currentText 가 말줄임표라 Edit 이 100% 실패할 명세 다수
-#       ③ architecture.md 보안표의 선언 순서 서술이 거짓(/recap/share/** 는 보호 규칙보다
-#       먼저 온다) ④ mksc_shrn_iscd 확인 단정 — 파서에 폴백이 있어 로그로 구분 불가.
-# 검증: 코드 미변경 확인 겸 전체 스위트 100 클래스 ／ 590 테스트 ／ failures 0 ／ errors 0
-#       (직전 배치와 동일 — 문서만 바뀌었으므로 불변이 정상).
-#       파일마다 git diff --numstat 과 git diff -w --numstat 이 같은지, CRLF 줄이 0 인지 확인.
-# 주의: Commit 129~136 이 아직 미실행이다. 그 배치가 소유하는 파일에 이번 수정이 얹혀 있다 —
-#       CLAUDE.md 는 Commit 135 가, docs/adr/README.md 는 Commit 133 이 가져간다. 각 섹션의
-#       "주의:" 에 적어 뒀다. 순서는 129~136 → 137~143 이다.
-# 개행: 편집 전에 워킹트리에서 개행만 CRLF 로 뒤집혀 있던 md 6개(docs/stock/bot.md,
-#       docs/datedate/architecture-review.md, docs/prompts/*.md 4)를 git checkout 으로 LF 복원했다
-#       (git diff -w 가 0줄인 것을 먼저 확인). 복원만 한 파일은 diff 가 0 이라 add 대상이 아니다.
-#       docs/architecture.md 와 CLAUDE.md 는 HEAD 부터 전 줄 CRLF 였어서 LF 로 정규화했다 —
-#       각각 669줄 / 371줄의 개행 전용 diff 가 내용 diff 와 같은 커밋에 섞인다. git diff -w 로
-#       내용 변경분만 분리해 볼 수 있다.
 
 # Commit 137 — chore(docs): .gitattributes 에 *.md LF 규칙
 git add .gitattributes
@@ -403,25 +312,6 @@ git commit -m "docs: 프롬프트 문서의 낡은 전제 정정 + 커밋 로그
 # =====================================================================
 # 코드 주석의 낡은 수치 정정 — 38건 (2026-08-09, 동작 불변)
 # =====================================================================
-# 배경: 직전 배치(137~143)가 docs/ 문서 149건의 드리프트를 잡으면서, 같은 드리프트가 코드
-# 주석에도 남아 있다는 것이 드러났다. 주석 드리프트는 문서보다 위험하다 — 코드를 고치러 온
-# 사람이 바로 옆 줄에서 읽는 값이기 때문이다. 실제로 RiskManagementService:125 의 "(+10% 도달
-# 시)" 바로 아래 줄이 getTrailingActivation()(0.015 = +1.5%)을 읽고 있었다.
-# 방법: 4개 클러스터로 후보 211줄을 훑고 각 정정안을 코드로 반증하는 감사를 붙였다
-#       (41건 중 CONFIRMED 38 / CORRECTED 3 / DROPPED 0, 중복 3건 제거 후 38건).
-# 검증: ① 코드 무접촉을 기계로 확인 — 선재 미커밋 변경이 없던 12개 파일의 diff 에서
-#       주석(//, *, #)이 아닌 +/- 줄이 0 임을 확인했다. 나머지 4개(SignalService·
-#       IndicatorService·TradingBotService·application.yaml)의 코드 줄 변경은 전부 Commit
-#       129/130/136 의 선재 변경이다. ② 전체 스위트 100 클래스 ／ 590 테스트 ／ failures 0
-#       (주석 변경이므로 직전과 동일한 것이 정상). ③ 심는 값을 yaml·Properties·리터럴에서 재확인.
-# 원칙: 이력 주석은 손대지 않았다. "return 5;  // P2-7: ±10→±5" 처럼 화살표나 이슈번호가
-#       붙은 주석은 변경 기록이라 옛 값이 있어야 뜻이 산다. 정정한 것은 현재 값을 서술하는데
-#       값이 다른 주석뿐이고, 반례로 RiskManagementService:147 "왕복 수수료(0.5%)" 는
-#       takerFeeRate 0.0025x2 라 정확해서 그대로 뒀다.
-# 주의: Commit 129~136 이 미실행이라 SignalService·IndicatorService·TradingBotService 는
-#       Commit 130 이, application.yaml 은 Commit 129 가 이 정정을 흡수한다. 각 섹션에 적어 뒀고
-#       아래 두 커밋의 add 목록에서는 뺐다.
-
 # Commit 144 — docs(trading): 주석 수치 정정 (동작 불변)
 # 주의: SignalService(2건)·IndicatorService(1건)·TradingBotService(3건, P2-12 javadoc 재부착 포함)는
 #       Commit 130 이 소유하므로 여기 add 목록에 없다.
@@ -432,3 +322,162 @@ git commit -m "docs(trading): 코드 주석의 낡은 리스크 임계 정정 (�
 # 주의: application.yaml 의 stock.universe 주석 2줄은 Commit 129 가 소유하므로 여기 없다.
 git add src/main/java/me/singingsandhill/calendar/stock/application/service/GapPullbackBotService.java src/main/java/me/singingsandhill/calendar/stock/application/service/StockRiskService.java src/main/java/me/singingsandhill/calendar/stock/application/service/UniverseBuilder.java src/main/java/me/singingsandhill/calendar/stock/domain/position/StockCloseReason.java src/main/java/me/singingsandhill/calendar/stock/domain/position/StockPosition.java src/main/java/me/singingsandhill/calendar/stock/domain/stock/Stock.java src/main/java/me/singingsandhill/calendar/stock/domain/stock/StockState.java src/main/java/me/singingsandhill/calendar/stock/infrastructure/api/KisRestClient.java src/main/java/me/singingsandhill/calendar/stock/infrastructure/config/StockProperties.java docs/guides/git-commit.md
 git commit -m "docs(stock): 코드 주석을 현재 진입·청산·유니버스 동작에 맞춰 정정 (동작 불변)" -m "stock 모듈 주석의 드리프트는 두 갈래였다. 하나는 ADR algorithm/0007·0009 의 청산 구조 재보정을 따라가지 못한 것이다 — StockCloseReason 의 enum javadoc 이 TP1 을 (+1.5%), TP3 를 (고점 +1%), 손절을 (-1.5%), 트레일링을 (고점 대비 -0.8%) 로 적고 있었는데 실제는 tp1-percent 5.0, tp3-percent 10.0(앵커도 당일고가가 아니라 진입가 고정), 풀백저가 앵커 손절, trailing-stop-percent 2.0 이다. 여기는 숫자를 새로 박는 대신 설정 키를 가리키게 했다 — TP3 앵커처럼 계산 구조 자체가 바뀐 자리는 숫자 하나로 요약하면 또 틀리기 때문이다. StockPosition·Stock·StockState 의 javadoc 도 같은 계열이라 눌림목 범위 -3.0% 를 -5.0% 로, 반등 +0.3% 를 +0.2% 로, FILTERED_OUT 임계를 pullback-max-percent 기준으로 맞췄다. Stock 의 갭 필터 (2.0% ~ 7.0%) 는 감사가 숫자 표기를 기각하고 설정 키로 바꿨다 — 그 메서드가 참조하는 min-gap/max-gap 은 legacy 경로 전용 키라 scoring.enabled=true 인 운영에서는 실효값이 아니고, 숫자를 적으면 그 사실이 가려진다. 다른 하나는 ADR algorithm/0010(유니버스 열화 판정을 top-N 미달로) 이후의 동작 변화다. UniverseBuilder·StockProperties·KisRestClient·application.yaml 이 정적 폴백을 rank 가 비었을 때만 쓰는 안전망 이라고 적고 있었는데, 지금은 거래량순위가 요청한 top-N 에 미달하면 합집합으로 보강한다 — 1건 응답이 정적 안전망을 통째로 무력화했던 2026-08-03 사고가 그 변경의 계기였으므로 주석이 옛 조건을 말하면 사고 원인이 지워진다. 호출 시각도 바뀌었다. GapPullbackBotService 의 클래스 javadoc 타임라인이 09:00~09:10 스크리닝 / 09:10~11:20 매매 로 적혀 있었으나 실제 cron 은 09:20 이고, 프리마켓은 전일 데이터 수집 이 아니라 refreshStaticOnly 로 정적 유니버스만 담는다(거래량순위는 당일 거래량이 없어 호출하지 않는다). UniverseBuilder 와 KisRestClient 의 거래일 1회(pre-market) 호출 서술도 스크리닝 09:20 으로 고쳤다. StockRiskService 는 두 곳이다 — 손절 체크 (-1.5%) 는 현재 손절이 풀백저가 앵커와 진입가 대비 캡의 max 라 그 산식을 가리키게 했고, 시간감쇠 javadoc 의 그 사이 선형 감소 는 구현을 읽어보면 선형 구간이 0 이 아니라 minProfitThresholdLate(0.1%)를 향하고 종점에서만 0 으로 떨어지므로 그렇게 적었다. 이 파일은 최근 커밋 e2a2cf4 로 종점이 설정 유도로 바뀐 참이라 주변 javadoc 은 이미 정확했고 그 부분은 건드리지 않았다. 아홉 파일 모두 선재 미커밋 변경이 없어 diff 전체가 이번 변경이며, 주석이 아닌 +/- 줄이 0 인 것을 기계로 확인했다. 작업 중 실수 하나를 잡아 되돌린 기록을 남긴다 — 일괄 치환 스크립트가 텍스트 모드로 읽고 쓰면서 CRLF 파일 14개를 LF 로 바꿔 약 5,800줄의 개행 잡음을 만들었다. HEAD 가 균일 CRLF 인 것을 확인한 뒤 복원했고, 복원 후 raw diff 와 -w diff 가 일치하는 것으로 잡음이 사라졌음을 확인했다."
+
+# =====================================================================
+# datedate 랜덤 owner ID — 미사용 보장 + 공간 1000배 (2026-08-13)
+# =====================================================================
+# 배경: 사용자 질문 "지금 랜덤 생성이 미사용 아이디 생성을 보장하나요?" 에서 출발.
+# 답은 아니오였다 — 홈의 랜덤 버튼은 순수 클라이언트 함수로 12x12x100 = 14,400 조합을
+# 뽑을 뿐 중복을 확인하지 않았고, POST /start 는 get-or-create 라 충돌해도 통과했다.
+# 사용자 결정: 미사용 보장과 가짓수 확대를 병행, 실패 시 1회 클릭 안에서 내부 재시도.
+# 전 항목 TDD(RED 선확인 -> GREEN), 전체 스위트 102 클래스 / 606 테스트 / failures 0.
+
+# Commit 146 — feat(datedate): 랜덤 owner ID 미사용 보장 + 공간 1000배 (ADR datedate/domain/0007)
+git add src/main/java/me/singingsandhill/calendar/datedate/domain/owner/OwnerIdGenerator.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/OwnerIdTakenException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/OwnerService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/config/DatedateConfig.java src/main/java/me/singingsandhill/calendar/datedate/presentation/api/OwnerIdApiController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/dto/response/OwnerIdSuggestionResponse.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/HomeController.java src/main/resources/templates/index.html src/main/resources/messages.properties src/main/resources/messages_en.properties src/test/java/me/singingsandhill/calendar/datedate/domain/owner/OwnerIdGeneratorTest.java src/test/java/me/singingsandhill/calendar/datedate/application/service/OwnerServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/api/OwnerIdApiControllerTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/HomeControllerTest.java src/main/java/me/singingsandhill/calendar/datedate/application/CLAUDE.md docs/adr/datedate/domain/0007-collision-free-random-owner-id.md
+git commit -m "feat(datedate): 랜덤 owner ID 를 미사용 보장으로 + 조합 14,400 → 14,400,000 (ADR datedate/domain/0007)" -m "홈의 랜덤 생성 버튼은 형용사 12 x 명사 12 x 숫자 100 = 14,400 조합을 클라이언트에서 뽑기만 했고 그 ID 가 이미 쓰이는지 확인하지 않았다. index.html 전체에 fetch 가 0건이었고 서버에도 가용성 확인 엔드포인트가 없었다. POST /start 는 getOrCreateOwner 라 이미 존재하는 ID 여도 예외 없이 통과하므로, 충돌하면 남의 대시보드로 착지하고 로그인 상태라면 미연결 owner 를 linkUser 로 선점해 원 생성자가 영구히 연결 불가가 된다(ADR 0005 가 수동 DB 구제라고 적어 둔 그 상태). 생일 문제로 랜덤 생성 누적 141건이면 충돌 확률 50%, 300건이면 96% — 충돌은 예외가 아니라 기대값이었다. 보장을 세 층으로 나눴다. 1층은 공간이다. OwnerIdGenerator 를 도메인에 두고 형용사 40 x 명사 40 x 1000~9999 = 14,400,000 조합을 만든다. 단어를 각 2~7자로 제한해 최장 조합도 owner ID 상한 20자를 넘지 않으며, 이 제약 자체를 테스트가 지킨다. RandomGenerator 를 주입받는 것은 stock 모듈이 Clock 을 주입해 시간 의존 코드를 결정적으로 테스트하는 것과 같은 이유고, 기본값을 SecureRandom 으로 둔 것은 예측 가능한 시퀀스면 다음 사용자에게 제안될 ID 를 미리 선점해 방해할 수 있기 때문이다. 2층은 제안 시점 확인이다. GET /api/owner-ids/random 이 existsById 를 통과한 후보만 반환한다(최대 10회 재추첨, 소진 시 IllegalStateException). DB 쓰기가 없어 ADR 0004 의 GET 무변형 원칙은 그대로다 — 제안 시점에 row 를 선점하는 안은 그 원칙 위반이고 미제출 쓰레기 row 를 남겨 기각했다. 3층이 실제 보장이다. 폼의 hidden generated 플래그가 켜져 있으면 /start 가 getOrCreateOwner 대신 createOwner 를 타고, 이미 존재하면 OwnerIdTakenException(409) 로 홈에 돌려보낸다. 2층만으로는 제안과 제출 사이 창이 남고 그 창의 실패 모드가 바로 선점이다. 사용자가 입력칸을 한 글자라도 고치면 input 핸들러가 플래그를 내려 기존 재진입 경로로 돌아가므로 직접 입력의 동작은 불변이다. 플래그는 위조 가능하지만 위조하면 자기 요청이 에러 날 뿐이라 신뢰 경계가 아니다. 엔드포인트가 /api/owners 아래에 없는 이유는 구현 중에 실측으로 드러났다 — 처음 /api/owners/random 으로 만들었더니 테스트가 400 을 냈고, 원인은 OwnerPathInterceptor 가 /api/owners/** 의 첫 세그먼트를 ownerId 로 검증하면서 예약어를 거부하는데 random 이 바로 ReservedOwnerIds 의 예약어라는 것이었다. 보안 인터셉터에 경로 예외를 뚫는 대신 자원을 분리했다. 반환값이 owner 가 아니라 아직 owner 가 아닌 ID 후보이므로 /api/owner-ids 가 의미상으로도 맞다. 클라이언트는 단어 목록을 버리고 1회 클릭 안에서 3회(300ms 다음 900ms 백오프) 재시도하며, 진행 중 버튼을 disabled + aria-busy 로 잠근다. 로컬 생성 폴백은 두지 않았다 — 보장이 깨지고 단어 목록이 서버와 JS 양쪽에 이중 관리된다. 남는 위험은 하나다. 완전 동시에 두 요청이 같은 ID 를 뽑으면 둘 다 existsById 를 통과한 뒤 INSERT 하므로 PK 제약에서 한쪽이 실패해 errors.startFailed 로 떨어진다 — 남의 페이지로 들어가는 실패 모드는 없다. 다만 이는 Hibernate merge->INSERT 의미론에 근거한 추론이며 동시성 테스트로 측정하지는 않았고 ADR 에 그렇게 적었다. TDD 로 진행해 네 테스트 클래스 모두 RED 를 먼저 확인했다. OwnerIdGeneratorTest 5케이스(시드 결정성, 라우트/도메인 제약 500표본, 단어 목록 20자 예산, 조합 수, 세 구성요소 분산), OwnerServiceTest +6(재추첨, 소진 실패, strict-create 3분기), OwnerIdApiControllerTest 2(무인증 200, 인터셉터 회피), HomeControllerTest +3(generated 분기 양쪽 + 직접 입력 재진입 회귀 가드). 전체 스위트 102 클래스 606 테스트 failures 0."
+
+# =====================================================================
+# 페이지별 SEO 점검 보고서 — 전 모듈 공개 페이지 전수 (2026-08-16)
+# =====================================================================
+# 배경: 사용자 요청 "페이지별 seo 점검". 사용자 결정: 점검 보고서만(코드 수정 없음),
+# 범위는 공개 페이지 전체(어드민·trading·stock·error 는 noindex/차단 여부 확인).
+# 코드 변경 0 — 산출물은 감사 보고서 1건 + 이 로그 파일뿐이므로 테스트 실행 없음.
+
+# Commit 147 — docs(seo): 페이지별 SEO 점검 보고서 (2026-08-16) — 마지막 커밋(git-commit.md 포함)
+git add docs/audit/seo-page-audit-2026-08-16.md docs/guides/git-commit.md
+git commit -m "docs(seo): 전 모듈 공개 페이지 전수 SEO 점검 보고서 (2026-08-16)" -m "뷰를 렌더링하는 44개 라우트 전부의 head 메타데이터를 코드 정적 분석 + 배포본 실측(19:01 KST)으로 점검했다. 결론: 색인 표면(13경로 x ko/en = 26 URL)은 건강 — 전부 200, index,follow, self-canonical, hreflang 정합이고 sitemap 26 loc / 78 xhtml:link 로 2026-08-02 감사 이후 회귀 없음. 비색인 표면도 전부 의도대로다. 이번에 remediation §7 에 미완으로 남아 있던 실서비스 /trading robots 실측을 수행해 해소했다(302 -> 어드민 로그인). 신규 발견 13건은 전부 中 이하, 색인을 해치는 결함 0건: 中 5건은 runners 11페이지 og:image 치수 거짓 선언(head.html 이 1490x780 무조건 출력 vs crew_logo.png 실물 1280x720 — file 실측), 소비자 0인 고아 head(seo) fragment(runners/fragments/header.html:4-59, verification 토큰·ko_KR 하드코딩 잔존), head(seo) 의 seo null 무가드(누락 시 500 — 현 27개 소비 템플릿은 바인딩 에러 재렌더 경로까지 전부 설정 확인), 로케일 유실 원시 redirect 4곳(RecapController:45,64 / AuthController:23 / RunnerController:253), 에러 페이지 인라인 head 의 GTM·비동기 폰트 공백. 低 8건은 baseUrl 기본값 드리프트(RunnerAdminController 만 datedate.me), runners lang=ko 하드코딩 vs 로케일 메타 혼합 신호, GTM noscript 16/27 부분 커버리지, schedule/create 의 view SEO 공유, noindex 6종의 빈 keywords 메타, admin canonical 6페이지 공통, 데드코드 잔재(무인자 getInsightsTrendsSeo·og-image.svg 엔드포인트·favicon.ico 의 SVG 서빙), 공유 카드 소항목(og-image.png 586KB, og:image:alt·twitter:site 부재). 기지 이슈 11건은 기존 문서 크로스레퍼런스로만 정리해 중복 서술을 피했다. 보고서의 신규 발견은 탐색 에이전트 보고를 그대로 싣지 않고 전 항목 file:line 재확인을 거쳤고(keywords 호출 8곳 grep, 고아 fragment 소비자 grep, 이미지 치수 file 실측), 실측 명령과 결과는 §6 에 재현 가능한 형태로 남겼다. 권고는 §7 우선순위 표(P1: 고아 fragment 삭제·og:image 치수 SeoMetadata 이동)로만 적고 수정은 하지 않았다 — 사용자 결정이 보고서까지였다."
+
+# =====================================================================
+# GSC 데스크톱 CLS 0.15 진단 + 홈 adsEnabled(false) 정합화 (2026-08-17)
+# =====================================================================
+# 배경: GSC Core Web Vitals "CLS 0.1 초과(데스크톱)" — 영향 URL 12개, 예시 https://datedate.site/.
+# 진단 결과 그룹핑 아티팩트로 판명(홈 URL CrUX CLS p75 = 0.00, 상세는 ADR common/seo/0010).
+# 사용자 결정: AdSense 미승인·게재 이력 없음 확인 / 수정 범위는 "adsEnabled(false)만 + 관찰" —
+# 폰트 폴백 메트릭 보정은 93개 폭 전수 스위프에서 효과 없음이 실측돼 제외, RUM·대시보드 수정 보류.
+# TDD (RED 선확인 → GREEN), 전체 스위트 102 클래스 / 607 테스트 / failures 0.
+
+# Commit 148 — fix(datedate): 홈 adsEnabled(false) — 문서화된 광고 정책과 코드 정합 (ADR common/seo/0010) — 마지막 커밋(git-commit.md 포함)
+# 주의: docs/adr/README.md 의 0010 색인 행은 Commit 133 이 소유하므로 여기 없다.
+#       docs/audit/adsense-low-value-content-policy-mapping.md 와 docs/seo/adsense-low-value-content-remediation.md 의
+#       정합화 노트 각 1건도 Commit 142 가 소유한다.
+#       templates/fragments/CLAUDE.md 는 내용 변경 1줄 + .gitattributes(eol=lf) 정규화로 raw diff 가 파일 전체(104줄)로 잡힌다 —
+#       --ignore-cr-at-eol 로 내용 1줄임을 확인했고, 문서 LF 고정은 .gitattributes 머리말이 명시한 저장소 정책이다.
+git add src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/test/java/me/singingsandhill/calendar/datedate/application/service/SeoServiceI18nTest.java docs/adr/common/seo/0010-home-ads-script-off-and-cls-diagnosis.md src/main/resources/templates/fragments/CLAUDE.md docs/guides/git-commit.md
+git commit -m "fix(datedate): 홈 adsEnabled(false) — 문서화된 광고 정책과 코드 정합 (ADR common/seo/0010)" -m "GSC 가 데스크톱 CLS 0.15(기준 0.1 초과, URL 12개, 예시 홈)를 보고해 진단했다. 결론부터: 색인 페이지들은 무죄다. CrUX URL 레벨에서 홈의 실사용자 CLS p75 는 데이터가 존재하는 전 기간(2026-05-30~08-15) 매주 0.00 이고, 오리진 전체는 0.07~0.09 다. 12개 URL 은 SitemapService 인덱싱 대상과 정확히 일치하는데 홈 URL 데스크톱 단독 CrUX 는 표본 부족으로 아예 없다(PSI 데이터 없음, 오리진×데스크톱도 공개 API 404) — GSC 는 URL 표본이 부족하면 오리진/유사 그룹 값을 씌우므로, 12개가 상속받아 표시한 0.15 의 발생원은 색인 페이지 밖이다. 랩 재현으로 교차 확인했다 — 운영 사이트를 Windows Chrome 헤드리스+CDP 로 열어 폰트 오리진(jsdelivr·googleapis·gstatic)만 1.5~3초 지연 주입하고 스크롤 시나리오까지 돌려도 9개 URL 에서 CLS 최대 0.004 였고, 1000~1920px 를 10px 간격 93개 폭으로 전수 스위프해 폴백 렌더(폰트 차단)와 웹폰트 렌더의 줄 수·문서 높이를 비교하면 홈·guide·use-case 모두 플립 0건이다. 명시적 line-height 와 짧은 헤드라인 덕에 폰트 스왑이 레이아웃을 못 바꾼다 — 애초 계획의 본체였던 폴백 메트릭 보정(size-adjust)은 개선할 시프트 자체가 없어 사용자 결정으로 제외했다. hover 패딩(date-diff 프리셋)·FAQ 아코디언(0.3s, 입력 예외창 내)·GTM 광고 주입(전환 추적 URL 테이블 오탐)도 각각 측정·분석으로 기각했고, AdSense 는 사용자 확인으로 미승인·게재 이력 없음이 확정돼 광고 잔상 가설도 닫혔다. 오리진 CLS 의 유력 발생원은 코드로 메커니즘만 확인해 뒀다 — trading-dashboard.js 가 15~30초 폴링마다 포지션 목록·테이블을 innerHTML 로 전체 재구축해 높이가 변하면 아래가 통째로 밀린다. 다만 RUM 없이는 확정 불가라 실거래 봇 제어 UI 를 추측 수정하지 않고 관찰만 하기로 했다(ADR Consequences 에 후속 경로 기록). 이번 코드 변경은 진단 중 발견한 코드·문서 불일치 한 건이다: 홈은 광고 슬롯이 0개이고 문서 세 곳(fragments/CLAUDE.md 광고 전략 표, adsense 감사·개선 문서)이 전부 홈 광고 없음이라 서술하는데 getHomeSeo() 만 adsEnabled(true) 라, ADSENSE_CLIENT 가 주입되는 순간 홈에 스크립트가 로드되고 콘솔 자동광고가 켜져 있으면 예약 공간 없는 DOM 주입으로 CLS 가 실제로 발생할 경로였다. true→false 한 줄로 닫고, 페이지별 광고 게재 정책 전체(금지: 홈·about·privacy·terms / 게재: guide·faq·date-diff·use-cases / insights 데이터 가드)를 SeoServiceI18nTest.adsPolicy_perPage 로 고정했다. RED 를 먼저 확인했고(홈 false 단언이 263행에서 실패), GREEN 후 전체 스위트 102 클래스 607 테스트 failures 0. 진단 수치와 기각 대안 전체는 ADR common/seo/0010 에 남겼다 — 랩 CLS 0.001(lighthouse 감사)과 필드 0.15 의 괴리를 다음 세션이 다시 추적하지 않게 하는 것이 목적이다. 후속은 코드 밖이다: GSC 에서 수정 검증 시작(CrUX 28일 롤링이라 판정까지 최대 28일+α), 오리진 CLS 가 0.1 을 넘거나 실패가 지속되면 RUM 계측(layout-shift source → dataLayer)이 다음 수단이다."
+
+# =====================================================================
+# SEO 점검 P1 반영 — og:image 치수 SSOT + 고아 head fragment 삭제 (2026-08-17)
+# =====================================================================
+# 배경: docs/audit/seo-page-audit-2026-08-16.md §7 P1 두 건 실행 (사용자 지시 "P1 두 개 수정 진행").
+# TDD: RunnerSeoRenderingTest 4케이스 중 치수 2케이스 RED 선확인 후 GREEN.
+# 전체 스위트 103 클래스 / 611 테스트 / failures 0.
+
+# Commit 149 — fix(seo): og:image 치수를 SeoMetadata 로 이동 + 고아 head fragment 삭제 — 마지막 커밋(git-commit.md 포함)
+# 주의: RunnerController.java·docs/audit/seo-page-audit-2026-08-16.md·docs/guides/git-commit.md 는 이 커밋이 소유.
+#       Commit 150 의 변경(RunnerController 로케일 redirect 1줄, 보고서 P2 반영 마커, 149 로그 섹션)이 여기 흡수된다.
+git add src/main/java/me/singingsandhill/calendar/common/presentation/dto/SeoMetadata.java src/main/resources/templates/fragments/head.html src/main/java/me/singingsandhill/calendar/runner/presentation/controller/RunnerController.java src/main/java/me/singingsandhill/calendar/runner/presentation/controller/RunnerAdminController.java src/main/resources/templates/runners/fragments/header.html src/test/java/me/singingsandhill/calendar/runner/presentation/controller/RunnerSeoRenderingTest.java docs/audit/seo-page-audit-2026-08-16.md docs/guides/git-commit.md
+git commit -m "fix(seo): og:image 치수를 SeoMetadata 로 이동 + 고아 runners head fragment 삭제 (점검 §4-1·4-2)" -m "2026-08-16 SEO 점검의 P1 두 건. ① head.html:52-53 이 og:image:width 1490 / height 780 을 무조건 출력해 crew_logo.png(실측 1280x720)를 쓰는 runners·admin 11페이지가 거짓 치수를 광고했다 — 치수를 신뢰하는 카카오·페이스북 스크래퍼는 크롭/레터박스 위험. SeoMetadata 에 ogImageWidth/ogImageHeight(int, 빌더 기본 1490x780 = og-image.png 실측)를 추가하고 head.html 을 th:content 로 전환, RunnerController 8곳 + RunnerAdminController.createAdminSeo 1곳에 1280x720 오버라이드. 기본값 덕에 SeoService 16개 메서드와 datedate 페이지 출력은 불변이고, 직접 record 생성처는 빌더 내부 1곳뿐이라 컴파일 파급 없음(빌더 사용처 grep 으로 확인). ADR 은 새로 쓰지 않았다 — 하드코딩 2값을 SSOT 로 옮기는 것은 ADR common/seo/0001(SeoMetadata as SSOT)의 정합 회복이지 결정 변경이 아니다. ② runners/fragments/header.html:4-59 의 head(seo) fragment 는 소비자 0(전 템플릿이 공용 head 사용, :: navbar 만 참조 — grep 확인)인데 google-site-verification 토큰·ko_KR·자체 치수가 하드코딩된 채 남아 재참조 시 낡은 메타가 살아나는 드리프트 함정이라 head 부분만 삭제하고 navbar 는 유지, 삭제 사유 한 줄 주석을 남겼다. TDD: RunnerSeoRenderingTest 신설(runner 첫 테스트 디렉토리) — /runners·/runners/admin/login 치수 2케이스가 1490 출력 상태에서 AssertionError 로 RED 임을 결과 XML 로 확인 후 구현, / 의 기본 1490x780 유지 가드와 navbar 렌더링 가드(fragment 삭제 안전망)는 선후 모두 GREEN. 전체 스위트 103 클래스 611 테스트 failures 0, diff 는 5개 소스 파일 42(+)/59(-) 로 CRLF 잡음 없음을 git diff --stat 으로 확인. 점검 보고서 §4-1·4-2·§7 에 반영 마커를 달았다."
+
+# =====================================================================
+# SEO 점검 P2 반영 — 로케일 유실 redirect 통일 + seo 누락 500 스모크 가드 (2026-08-17)
+# =====================================================================
+# 배경: docs/audit/seo-page-audit-2026-08-16.md §7 P2 두 건 실행 (사용자 지시 "P2 두 개도 진행").
+# TDD: LocalePersistenceIntegrationTest 신규 4케이스 RED 선확인 후 GREEN.
+# HeadSeoSmokeTest 는 가드 유효성을 사보타주로 검증(HomeController#guide seo 임시 제거 → 22중 1 실패 → md5 일치 복원).
+# 전체 스위트 104 클래스 / 637 테스트 / failures 0.
+# 주의: RunnerController.java(로케일 redirect 1줄)·점검 보고서·이 로그 파일은 Commit 149 가 소유 — add 목록에서 제외.
+
+# Commit 150 — fix(i18n): 로케일 유실 redirect 4곳 localeLinks 통일 + head(seo) 렌더링 스모크 가드 (점검 §4-3·4-4)
+git add src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/AuthController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/RecapController.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/LocalePersistenceIntegrationTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/AuthControllerTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/RecapControllerTest.java src/test/java/me/singingsandhill/calendar/common/presentation/HeadSeoSmokeTest.java
+git commit -m "fix(i18n): 로케일 유실 redirect 4곳 localeLinks.redirect() 통일 + head(seo) 스모크 가드 (점검 §4-4·4-3)" -m "2026-08-16 SEO 점검의 P2 두 건. ① RecapController:45(올해 recap)·:64(공유 후 복귀), AuthController:23(/login→/me), RunnerController(런 생성→상세) 네 곳이 원시 redirect: 문자열을 반환해 ?lang=en 세션이 쿠키 저장 전이면 해당 홉에서 영어가 풀렸다 — 나머지 datedate 컨트롤러 4곳이 이미 쓰는 localeLinks.redirect() 로 통일했고 ko 기본 로케일 출력은 불변(기존 슬라이스 테스트의 /me·/recap/2026 단언이 그대로 GREEN 인 것이 증거). 테스트는 실빈이 도는 LocalePersistenceIntegrationTest 에 4케이스를 추가해 RED(…/me vs /me?lang=en 등 정확한 단언 실패)를 결과 XML 로 확인 후 구현했다. 슬라이스 AuthControllerTest·RecapControllerTest 는 localeLinks 목을 실빈 @Import 로 교체 — 컨트롤러가 redirect 경로에 이 빈을 쓰게 되면서 목(기본 null 반환)으로는 기존 리다이렉트 단언이 깨지고, 스텁으로 맞추면 목 동작을 검증하는 테스트가 되기 때문. WebConfig 의 localeResolver 빈이 @WebMvcTest 슬라이스에도 포함돼 ko 폴백이 머신 로케일과 무관하게 보장됨을 확인했다. ② head.html 의 \${seo.*()} 무가드 호출은 컨트롤러가 seo 모델 속성을 빠뜨리면 500 이 나는 함정(점검 §4-3) — 방어 코드 대신 회귀 테스트를 택해 HeadSeoSmokeTest 를 신설했다. head(seo) 를 쓰는 무인증 도달 가능 22개 라우트(인덱서블 13 + /login + 미존재 owner 404 렌더 + 미존재 일정 create 렌더 + runners 공개 5 + admin 로그인)를 실제 렌더링해 5xx 미만과 og:site_name 마커(에러 페이지 인라인 head 에는 없음)를 단언한다 — 상태 단언이 seo 누락 500 을, 마커 단언이 조용한 에러 뷰 낙하(4xx 포함)를 잡는다. 인증·데이터 필요 라우트는 각자의 컨트롤러 테스트가 커버함을 javadoc 에 명시. 가드 유효성은 사보타주로 증명 — HomeController#guide 의 seo 설정을 임시 제거하자 22중 /guide 만 실패했고, 복원 후 md5 가 원본과 일치함을 확인했다. 전체 스위트 104 클래스 637 테스트 failures 0. ADR 없음 — 기존 localeLinks 관례로의 수렴과 테스트 추가라 결정 변경이 아니다."
+
+# =====================================================================
+# SEO 점검 P3 반영 — 에러 페이지 head 공용화 + 잔재 정리 (2026-08-17)
+# =====================================================================
+# 배경: docs/audit/seo-page-audit-2026-08-16.md §7 P3 두 건 실행 (사용자 지시 "남은 작업 진행").
+# TDD: ErrorPageRenderingTest 2케이스 + HeadSeoSmokeTest keywords 케이스 RED 선확인 후 GREEN.
+# 전체 스위트 107 클래스 / 650 테스트 / failures 0.
+# 주의(소유권): fragments/head.html(keywords 가드)·RunnerAdminController.java(baseUrl 통일)는 Commit 149 가,
+#   HeadSeoSmokeTest.java(keywords 케이스)·점검 보고서·이 로그 파일은 Commit 149~150 계열이,
+#   SeoService.java(무인자 오버로드 삭제)·SeoServiceI18nTest.java(호출부 4곳 (true) 전환)·
+#   fragments/CLAUDE.md(error-head 행 추가)는 Commit 148(홈 adsEnabled)이 소유 — 각 add 목록에서 제외, 여기 흡수 내용 명시.
+# 주의(보류): SecurityConfig:53 의 "/og-image.svg" 화이트리스트 항목은 데드 엔트리로 남긴다 —
+#   같은 파일에 선재 미커밋 actuator 헬스 게이트 변경(ADR common/security/0006 예정)이 있어
+#   이번 정리 커밋이 그 보안 변경을 휩쓸게 되기 때문. 무해(대상 리소스·엔드포인트 모두 삭제됨).
+
+# Commit 151 — fix(seo): 에러 페이지 head 공용화(error-head fragment) + og-image.svg 잔재 삭제 (점검 §4-5·4-12)
+git add src/main/resources/templates/fragments/error-head.html src/main/resources/templates/error/4xx.html src/main/resources/templates/error/5xx.html src/main/java/me/singingsandhill/calendar/common/presentation/controller/StaticResourceController.java src/main/resources/static/og-image.svg src/test/java/me/singingsandhill/calendar/common/presentation/ErrorPageRenderingTest.java
+git commit -m "fix(seo): 에러 페이지 head 를 전용 error-head fragment 로 공용화 + og-image.svg 잔재 삭제 (점검 §4-5·4-12)" -m "2026-08-16 SEO 점검의 P3 두 건. ① 에러 페이지(error/4xx·5xx)는 인라인 head 를 각자 복제해 GTM 이 없어 에러 유입이 계측되지 않았고 Pretendard 를 동기 로드해 본선의 preload/onload 패턴과 어긋났다. 점검 보고서는 head(seo) 재사용을 수렴점으로 적었으나 구현 시점에 기각했다 — 에러 템플릿은 MvcExceptionHandler 외에 Spring Boot 컨테이너 에러 경로(BasicErrorController 의 status 계열 뷰 해석, 실서비스 /insights/nonexistent 404 실측이 이 경로)로도 렌더링되는데 그 경로엔 seo 모델 속성이 없어 무가드 \${seo.*()} 는 에러 렌더링 자체를 실패시킨다. 대신 모델 불요의 전용 fragments/error-head.html(title 인자만)로 두 템플릿의 중복을 걷어내고 GTM 로더+gtm-noscript 폴백·비동기 폰트 패턴·파비콘 3종·theme-color 를 본선과 동기화했다. canonical/OG 는 에러 URL 에 무의미해 의도적으로 제외 — 이 근거는 fragment 주석과 보고서 정정에 남겼다. TDD: ErrorPageRenderingTest 신설 — 목 RecapShareService 로 4xx(RecapShareNotFoundException)·5xx(RuntimeException) 두 경로를 MvcExceptionHandler 로 실제 렌더링해 GTM 로더·ns.html noscript·as=style onload 패턴·noindex 4단언이 구 head 에서 RED 임을 확인 후 GREEN. 컨테이너 경로는 MockMvc 가 /error 포워딩을 따라가지 않아 직접 검증 불가지만 같은 템플릿을 공유한다는 사실을 테스트 javadoc 에 남겼다. ② 잔재 정리 중 이 커밋 몫: StaticResourceController 의 /og-image.svg 엔드포인트와 static/og-image.svg 를 삭제 — OG 스크래퍼는 SVG 를 지원하지 않아 어떤 og:image 도 참조한 적 없는 죽은 자산이었다(마크업·테스트 참조 0건 grep 확인). 나머지 잔재 3건은 소유권 규칙에 따라 앞선 커밋에 흡수된다: head.html keywords 무가드에 th:if 추가(노인덱스 6종의 빈 keywords 메타 제거, HeadSeoSmokeTest 에 /login 부재·/ 존재 회귀 케이스, RED 선확인) 및 RunnerAdminController baseUrl 기본값 datedate.me→datedate.site 통일은 Commit 149 로, SeoService 무인자 getInsightsTrendsSeo() 오버로드 삭제(프로덕션 호출 0, SeoServiceI18nTest 4곳을 (true) 로 전환)와 fragments/CLAUDE.md 의 error-head 행 추가는 Commit 148 로 들어간다. SecurityConfig 의 og-image.svg 화이트리스트 항목은 선재 미커밋 actuator 게이트 변경과 같은 파일이라 보류(무해한 데드 엔트리, 보고서 §4-12 에 기록). 전체 스위트 107 클래스 650 테스트 failures 0."
+
+# =====================================================================
+# CI/CD 구축 — 재시작 배포 파이프라인 + 코인 봇 보호전용 자동재개 (2026-08-17)
+# =====================================================================
+# 배경: 사용자 확정 결정 4건 — ① 재시작 배포(1~3분 계획 중단 수용; blue-green 은 H2 파일 배타락·
+#   @Scheduled 11개 분산락 부재·RAM 958MiB 로 불가 판정) ② CI 자동 + 서버 반영은 workflow_dispatch
+#   수동 버튼 ③ nginx compose 편입 + certbot webroot 전환 ④ 코인 봇 보호전용 자동재개(stock ADR
+#   stock/modes/0003 미러). 설계는 보안·봇안전·운영 3관점 적대적 검증을 거쳐 블로커 9건(compose
+#   상대경로→H2 소실, mail 헬스인디케이터→게이트 상시실패, ssh 커맨드 인젝션, nginx DNS 캐싱→영구
+#   502, bash 8진수 가드, latest 태그 롤백 무효 등) 반영 후 구현.
+# 검증: TDD RED 선확인(결과 XML) → GREEN. 전체 스위트 107 클래스 / 650 테스트 / failures 0.
+#   .env 제거 상태(CI 클린 체크아웃 재현)로도 650 전부 통과 실측. deploy.sh 는 bash -n + 가드산술·
+#   env 병합·태그 정규식 격리 테스트 통과(shellcheck 는 ci.yml 이 수행 — 로컬 미설치). compose·
+#   워크플로우는 YAML 파서 검증. 로컬 docker/nginx 실행 검증은 불가(WSL docker 없음, Docker Desktop
+#   기동 액세스 거부) — docs/operations/server-migration-runbook.md 6·7·9단계(서버 검증)로 이월.
+# 주의(소유권): 루트 CLAUDE.md(보안표 actuator 2행+재번호·CI 문구·Deployment 소절·H2 콘솔 항목)와
+#   trading/CLAUDE.md·trading/application/CLAUDE.md(재시작 복구·recovery 게이트 서술)는 Commit 135 가,
+#   docs/trading/remaining-work.md(P1-3 해소 표기)는 Commit 139 가, 이 로그 파일은 Commit 149~150
+#   계열이 소유 — 각 add 목록에서 제외, 흡수 내용은 각 커밋 본문에 명시.
+# 주의(선행 참조): Commit 139 가 이 배치보다 먼저 커밋되면 remaining-work.md 의 ADR
+#   trading/modes/0003 링크가 한 커밋 동안 선행 참조가 된다 — 문서 링크라 무해.
+
+# Commit 152 — feat(trading): 재시작 시 보호 전용 자동재개 (ADR trading/modes/0003)
+git add src/main/java/me/singingsandhill/calendar/trading/application/service/TradingBotService.java src/test/java/me/singingsandhill/calendar/trading/application/service/TradingBotRecoveryTest.java src/main/java/me/singingsandhill/calendar/trading/presentation/api/BotControlApiController.java src/main/resources/static/js/trading-dashboard.js src/main/resources/static/js/trading-globals.js docs/adr/trading/modes/0003-protection-only-recovery-on-restart.md
+git commit -m "feat(trading): 재시작 시 보호 전용 자동재개 (ADR trading/modes/0003)" -m "running 이 인메모리 AtomicBoolean 이라 재시작 후 관리자가 start 를 호출하기 전까지 OPEN 포지션의 손절·익절·트레일링 감시가 전면 중단됐다(remaining-work P1-3, 문서화된 미해결 — 리스크 관리는 executeTradeLoop 안에서만 돈다). CI/CD 도입으로 재시작이 배포마다 일어나는 일이 되어 선행 해소했다. stock ADR 0003 미러: ApplicationReadyEvent 에서 오픈 포지션이 있으면 running+recoveryMode 로 자동 재개하고, 스윕·캔들 동기화·리스크 체크·신호 기록은 돌리되 매매 단계(강신호·리밸런싱·일반 신호)만 차단한다 — 게이트 위치는 신호 기록 직후라 리스크 체크 우선 불변식(riskCheckRunsBeforeSignalGeneration 가드)과 청산 틱 신호 기록(ADR observability/0003)을 둘 다 보존한다. 리밸런싱도 차단 — 상승장 70 퍼센트 목표는 신규 매수를 낼 수 있고 보호가 아니다. start 는 CAS(false→true)뿐이라 자동 재개 상태(running=true)에서는 영원히 해제 불가 — CAS 앞에 recovery 해제 분기를 두어 Start 1회로 완전 재개하고(stop→start 2단계 강요는 그 사이 보호가 끊긴다), stop 경유 경로의 잔존도 CAS 블록에서 해제한다. 상태 노출은 컨트롤러가 BotStatus 를 수동 매핑하므로 BotStatusDto 와 대시보드 JS 2곳(trading-dashboard·trading-globals)도 함께 고쳤다 — PROTECTION-ONLY(warn) 표시 + 토글 버튼이 recovery 중엔 Stop 대신 Start(완전 재개)를 제안한다(여기서 Stop 하면 리스크 감시까지 끊긴다). 캔들 초기화는 리스너에서 호출하지 않는다 — ApplicationReadyEvent 리스너는 동기 실행이라 느린 빗썸 백필이 stock 봇의 자동 재개까지 지연시키고, 리스크 판정은 캔들이 아니라 실시간 현재가를 쓴다. TDD: TradingBotRecoveryTest 7케이스 전부 RED 선확인 — 특히 게이트 케이스는 happy-path 전체 스텁(잔고·현재가·서킷브레이커·SUBMITTED 빈 목록·ATR 폴백)으로 게이트 부재 시 placeMarketBuyOrder 실호출까지 도달함을 NeverWantedButInvoked 실패로 증명했고(얕은 스텁이면 잔고 null 조기 return 으로 게이트 없이도 never 가 성립하는 공허한 테스트가 된다), start 해제는 stop 없이/경유 2경로에 더해 해제 후 같은 스텁에서 주문이 실제로 나가는 대조 케이스로 게이트가 원인임을 고정했다. 부정: 재시작마다 서킷브레이커 연속손실 카운터(인메모리)가 리셋된다 — RECOVERY_RESUMED 이벤트 메시지에 명기했고 영속화는 P1-7(자동재개 도입으로 우선순위 상승). 운영자의 의도적 stop 도 재시작을 넘어 보존되지 않는다(포지션 존재 시 보호 전용 재무장 — 안전 방향) — ADR Consequences 에 기록."
+
+# Commit 153 — feat(common): actuator 배포 헬스 게이트 + 종료 계약 명시 + h2-console 기본 비활성 (ADR common/security/0006)
+git add build.gradle src/main/resources/application.yaml src/main/java/me/singingsandhill/calendar/common/infrastructure/config/SecurityConfig.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/ActuatorHealthSecurityTest.java .env.example docs/adr/common/security/0006-actuator-health-and-h2-console-lockdown.md src/main/java/me/singingsandhill/calendar/common/CLAUDE.md
+git commit -m "feat(common): actuator 배포 헬스 게이트 + 종료 계약 명시 + h2-console 기본 비활성 (ADR common/security/0006)" -m "배포 게이트용 /actuator/health/deploy(db·ping·diskSpace 그룹)를 신설했다. mail 인디케이터는 명시 차단 — starter-mail 과 spring.mail.host 조합으로 자동 등록돼 헬스 조회마다 smtp.gmail.com 에 실접속하고, 자격증명 미설정이나 지연 한 번에 집계가 DOWN 이 되어 모든 배포가 게이트에서 실패하며 healthcheck 주기마다 Gmail AUTH 를 때린다(계정 차단 위험). 인디케이터는 defaults.enabled false 화이트리스트 방식으로 고정했다. SecurityConfig 는 health 2경로 permitAll 직후 /actuator/** denyAll — 기존 3세그먼트 포괄 permitAll 이 /actuator/health/db 같은 경로를 이미 무인증으로 삼키고 있었다(2세그먼트는 잠기고 3세그먼트는 열리는 뒤집힌 방어선). 종료 계약: spring.task.scheduling.shutdown.await-termination 25s(기본 false 면 컨텍스트 종료가 shutdownNow 로 실행 중 틱을 인터럽트 — 주문 HTTP 후 DB 커밋 전 kill 이 무기록 체결을 만든다) < lifecycle 30s < compose stop_grace_period 60s 를 application.yaml 에 명시했다(graceful shutdown 은 웹 요청만 보호한다). h2-console 은 기본 비활성으로 전환 — 운영에서 무인증 SQL 콘솔이 permitAll+CSRF 예외로 공개돼 있었다. 로컬은 .env 에 H2_CONSOLE_ENABLED=true 한 줄(.env.example 반영), 운영 접근은 ssh 터널, nginx 404 가 2겹째 방어다. SecurityConfig 의 og-image.svg 데드 화이트리스트 항목도 여기서 제거 — Commit 151 이 이 파일의 선재 actuator 변경 때문에 보류했던 정리로, 대상 리소스·엔드포인트 삭제를 확인했고 og-image.png 는 존치라 매처에 남긴다. 테스트: ActuatorHealthSecurityTest 3케이스 — @WebMvcTest 슬라이스에는 actuator 가 등록되지 않아 @SpringBootTest+MockMvc 전체 컨텍스트로 검증했고(RED 는 의존성·매처 추가 전 404/302 로 확인), 집계 /actuator/health 의 UP 단언이 mail.enabled=false 를 고정한다(재활성 시 테스트 환경 SMTP 실패로 즉시 RED). 검증: .env 를 제거한 상태로 전체 빌드 650 테스트 통과 — CI 클린 체크아웃 조건을 로컬에서 실측했다(test 프로파일 자격증명 오버라이드 불요 판정). 루트 CLAUDE.md 의 보안 표 2행 추가·재번호(11~14)·Deployment 소절·CI 문구·H2 콘솔 항목은 Commit 135 로 흡수된다."
+
+# Commit 154 — feat(infra): Docker·compose·nginx 배포 스택 + 운영 문서 (ADR common/infrastructure/0001·0002)
+git add Dockerfile .dockerignore deploy/compose.yaml deploy/deploy.sh deploy/nginx/datedate.conf deploy/nginx/maintenance.html deploy/server/calendar-deploy-gate.sh docs/adr/common/infrastructure/0001-container-restart-deploy-pipeline.md docs/adr/common/infrastructure/0002-nginx-in-compose-and-certbot-webroot.md docs/operations/deployment.md docs/operations/server-migration-runbook.md docs/README.md
+git commit -m "feat(infra): Docker·compose·nginx 배포 스택 + 운영 문서 (ADR common/infrastructure/0001·0002)" -m "적대적 검증에서 잡힌 결함의 회피가 곧 설계다. Dockerfile 은 Boot 4 공식 jarmode=tools 레이어 추출이고 ENTRYPOINT 는 java -jar application.jar 다(구 layertools 의 JarLauncher 를 쓰면 기동 즉시 죽는다 — 공식 4.0 문서로 확인). 비root uid 10001, TZ 와 JVM 플래그는 compose 주입 — TZ 를 이미지에 굽지 않는 이유는 trading 스케줄러 3개가 zone 미지정이라 자정 캔들 정리와 00:01 요약 시각이 컨테이너 TZ 를 따라 움직이기 때문(HOST_TZ 는 기본값 없는 필수 변수, 런북이 timedatectl 실측값을 넣는다). compose.yaml 은 서버에서 상태 디렉터리와 같은 층위(~/apps/calendar/compose.yaml)로 동기화한다 — 상대 볼륨 경로가 compose 파일 위치 기준이라 deploy/ 하위에 두면 컨테이너가 빈 data 디렉터리를 잡고 ddl-auto 로 새 DB 를 만드는 조용한 유실이 나며 헬스는 UP 이라 롤백도 안 걸린다. deploy.sh 의 preflight 가 이 해석을 docker compose config 로 매 배포 기계 검증하고 .env 와 H2 파일 존재도 확인한다(빈 DB 기동 차단). 시간창 가드는 10진수 강제 — 0915 리터럴이 8진수로 파싱돼 KST 오전 배포가 전부 정체불명 에러로 죽고 정작 거래창 차단은 한 번도 검증되지 않는 결함이 있었다. 롤백은 태그가 아니라 다이제스트 — latest 는 pull 순간 로컬 캐시가 새 이미지로 덮여 태그 롤백이 같은 불량 이미지의 재기동이 된다. 헬스 게이트는 컨테이너 사망(exited·재시작 증가) 즉시 실패 후 UP 폴링이고, 엣지 게이트가 nginx 경유 200 과 X-Forwarded-Proto 계약(카카오 KOE006)을 확인한다 — nginx 의 변수 없는 proxy_pass 는 기동 시 1회만 DNS 를 해석해 app 재생성 후 죽은 IP 로 영구 502 를 내는데 헬스 게이트는 localhost 직결이라 이를 성공으로 오보한다(resolver+변수화가 1차 방어, 엣지 게이트가 2차). 유지보수 페이지는 error_page 에 503 명시 — 미지정이면 정적 파일의 200 이 그대로 나가 크롤러가 점검 페이지를 정상 콘텐츠로 색인한다. 이미지 GC 는 current/previous 보존 목록 기반 rmi — prune 은 태그 이미지를 회수하지 못하고 -a 는 롤백본까지 지운다. 정지 상태 data 백업 5세대가 ddl-auto 스키마 롤백의 안전망(스키마 릴리스는 additive-only 규칙, deployment.md 명문화). 게이트 스크립트는 authorized_keys forced-command 로 deploy 태그 인자만 허용 — docker 그룹(root 동등) 유저 키 탈취의 보상 통제이며 잔여 위험(rsync 키까지 탈취 시 deploy.sh 교체)은 ADR Consequences 에 기록했다. certbot 은 webroot 전환 시 installer 제거가 필수(잔존 시 호스트 nginx 비활성 후 갱신이 installer 단계에서 실패해 만료 시 전면 장애)이고 훅은 root 실행이라 절대경로만 — 전환·검증 절차는 런북 8단계. 검증: bash -n, 가드 산술·env 병합·태그 정규식 격리 테스트 전부 통과, YAML 파서 검증. 로컬 docker 실행 검증은 환경 제약(WSL docker 부재, Docker Desktop 기동 액세스 거부)으로 불가 — 런북 6·7·9단계가 서버에서 수행하며 기존 데이터 가시성 스모크(헬스 UP 은 빈 DB 도 통과)·유지보수 503 단언·자동 롤백 리허설을 포함한다. 서버 이관은 별도 세션에서 런북의 파괴적 단계마다 사용자 확인 하에 진행한다."
+
+# Commit 155 — ci: GitHub Actions ci/deploy 워크플로우 + 죽은 Cloud Run 템플릿 삭제 — 마지막 커밋
+# 주의: google-cloudrun-source.yml 은 삭제다 — git add 가 삭제를 스테이지한다. docs/adr/README.md 에는
+#   기존 미소유 변경 1줄(common/seo/0010 시간순 행)이 동반된다. 이 로그 파일(이 배치 4개 섹션 포함)은
+#   Commit 149~150 계열이 소유 — add 목록에서 제외.
+git add .github/workflows/ci.yml .github/workflows/deploy.yml .github/workflows/google-cloudrun-source.yml docs/adr/README.md
+git commit -m "ci: GitHub Actions ci/deploy 워크플로우 + 죽은 Cloud Run 템플릿 삭제 (ADR common/infrastructure/0001)" -m "ci.yml 은 main 푸시·PR 마다 전체 빌드+테스트와 deploy 스크립트 shellcheck 를 돌리고, 잡별 최소 권한을 명시한다 — PR 코드가 Gradle 빌드 스크립트로 임의 실행되는 build-test 잡에는 contents read 만 주고 packages write 는 main 푸시의 push-image 잡에만 준다. deploy.yml 은 workflow_dispatch 수동 전용이며 입력과 시크릿을 셸 문자열에 직접 보간하지 않는다 — image_tag 를 env 매핑+정규식(40자 sha 또는 latest)으로 검증하지 않으면 러너와 운영 서버(docker 그룹 유저) 양쪽에서 임의 명령이 실행되는 인젝션 경로가 된다. GHCR manifest 선검증으로 오타 태그가 서버까지 가서 실패하는 것을 막고, rsync --delete 는 deploy/ 하위 한정(같은 층위의 data·logs·.env 보호 — deployment.md 불변식), 원격 명령은 트레일링 스페이스 없이 조립해 서버 게이트 정규식과 정확히 일치시킨다. google-cloudrun-source.yml 은 PROJECT_ID 등 전부 플레이스홀더에 트리거 브랜치가 따옴표 오타라 동작 이력이 0 인 죽은 파일이고, Cloud Run 자체가 상시 스케줄러·H2 파일 DB·단일 인스턴스 요구와 구조적으로 불일치라 살리지 않는다(기각 근거는 ADR common/infrastructure/0001 대안표). docs/adr/README.md 는 두 뷰에 신규 4행을 추가하고 수치를 디스크 재산정으로 정정했다 — 매트릭스가 seo/0010 을 반영하지 않은 81 로 낡아 있어 실제 82 에서 86 으로 맞췄고 common 행에 인프라/외부 열이 처음 생겼다. CI 첫 실행 리스크는 .env 제거 상태 로컬 전체 빌드 650 통과로 선검증했다 — 그린 확인은 push 후 Actions 에서."
+
+# =====================================================================
+# AdSense "낮은 가치 콘텐츠" 3차 통지 — 진단 + 기술 수정 (2026-08-18)
+# =====================================================================
+# 배경: 2026-08-17 재검토 요청 결과로 같은 사유 재통지 (승인됨 + 주의 필요).
+# 진단 결론: 기술 SEO 아님 — 콘텐츠 믹스(editorial) + 준비된 escalation(/guides) 미실행.
+# 사용자 결정: 이번 세션은 진단 문서 + 기술 수정만, 콘텐츠 집필(/guides)은 별도 세션.
+#   선행 미실행 배치(Commit 135~155)와의 파일 겹침은 "커밋 시점에 사용자가 판단" 으로 확정.
+# 전 항목 TDD (RED 선확인 → GREEN), 전체 스위트 109 클래스 / 661 테스트 / failures 0.
+# 주의(선행 배치 겹침): 아래 add 목록 중 SeoService.java·SeoServiceI18nTest.java(148),
+#   HomeController.java·HomeControllerTest.java·messages*.properties(146), CLAUDE.md(135),
+#   docs/adr/README.md(155), adsense 문서 2건(142) 은 미실행 선행 배치도 소유한다 —
+#   선행 배치를 먼저 실행하면 아래가 그대로 동작하고, 순서를 바꾸면 이 배치가 해당 파일을 흡수한다.
+
+# Commit 156 — docs(seo): AdSense 3차 통지 진단 보고서 (2026-08-17)
+git add docs/audit/adsense-low-value-content-diagnosis-2026-08-17.md docs/seo/adsense-low-value-content-remediation.md docs/prompts/adsense-approval.md
+git commit -m "docs(seo): AdSense 3차 통지(2026-08-17) 진단 보고서 — 원인은 콘텐츠 믹스, 해법은 /guides 레이어" -m "라이브 실측(사이트맵 26 URL·페이지별 분량·head 메타)·저장소 이력 전수·코드 인벤토리(메시지 카탈로그 866키) 3원 조사로 3차 통지의 원인을 확정했다. 기술 SEO(canonical/hreflang/robots/사이트맵)는 실측 정상이고 광고는 client 공란이라 로드된 적도 없다 — 남는 원인은 2026-06-20 설계 문서의 진단 그대로 editorial 이다: 색인 13페이지 중 11페이지가 서비스 자기서술이고 한 템플릿이 5 URL 을 생산한다. 결정적으로 스펙이 '재거절 시 /guides 허브로 escalate' 라고 준비해 둔 대응을 실행하지 않은 채 재검토를 요청해 같은 판정을 받았다. 보고서는 3라운드 타임라인, 부수 신호 4건(insights 부분 데이터 창·소프트 404·허브 404·Vary 누락), 후속 /guides 로드맵(구현 함정 2건 선기록: SecurityConfig 2-세그먼트 매처 부재, ReservedOwnerIds guides 미등록), 재검토 요청 규칙(콘텐츠 배포+색인 확인 전 재요청 금지 — 반복 거절 시 요청 쿨다운 증가)을 담는다. 선행 문서 2건에는 3차 통지 포인터를 추가했다."
+
+# Commit 157 — fix(seo): 공개 SEO 페이지 Vary 커버리지 — /about·/faq·/tools/date-diff
+git add src/main/java/me/singingsandhill/calendar/common/infrastructure/config/WebConfig.java src/test/java/me/singingsandhill/calendar/common/infrastructure/config/PublicSeoCacheHeadersTest.java
+git commit -m "fix(seo): /about·/faq·/tools/date-diff 에 Vary: Cookie, Accept-Language 적용" -m "cacheControlInterceptor 의 경로 집합(PUBLIC_SEO_PATHS/PREFIXES)에서 로케일 적응형 공개 페이지 3개가 누락돼 public 캐시 헤더도 Vary 도 받지 못했다 — 같은 URL 이 쿠키/Accept-Language 로 ko/en 본문을 가르므로 공유 캐시가 잘못된 언어 본문을 서빙할 수 있는 상태(AdSense 3차 진단 §3-3). PATHS 에 /about·/faq, PREFIXES 에 /tools 를 추가했다. PublicSeoCacheHeadersTest 신설 — 5경로 파라미터라이즈로 Vary + Cache-Control 을 고정하며, RED 선확인에서 /·/guide 는 통과(양성 대조군)하고 신규 3경로만 실패함을 확인 후 GREEN."
+
+# Commit 158 — fix(datedate): 미지 use-case 슬러그 302→404 (ADR datedate/domain/0008)
+git add src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/UseCaseController.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/UseCaseNotFoundException.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/UseCaseLocaleRenderingTest.java docs/adr/datedate/domain/0008-unknown-content-slug-404.md docs/adr/README.md
+git commit -m "fix(datedate): 미지 use-case 슬러그를 홈 302 대신 HTTP 404 로 (ADR datedate/domain/0008)" -m "UseCaseSlugs.ALL 미포함 슬러그가 localeLinks.redirect 로 홈에 302 되던 것을 UseCaseNotFoundException(BusinessException, 404) throw 로 바꿨다 — 존재하지 않는 콘텐츠 URL 공간 전체가 200(홈)으로 수렴하는 소프트 404 는 3차 진단의 부수 신호이자 ADR datedate/domain/0004(owner 404)와의 비대칭이었다. MvcExceptionHandler 가 error/4xx 를 렌더하므로 추가 템플릿은 없다. 컨트롤러의 localeLinks 는 이 변경으로 미사용이 되어 필드·생성자 인자와 함께 제거했다. UseCaseLocaleRenderingTest 의 302 고정 테스트를 404 + error/4xx 기대로 전환(RED: 302 실측 → GREEN). 이후 콘텐츠 슬러그 계열(/guides 등)도 동일 규칙."
+
+# Commit 159 — fix(datedate): insights 부분 데이터 창 봉합 — 색인·광고 조건을 사이트맵과 일치화
+git add src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/InsightsController.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/InsightsPartialDataIndexingTest.java
+git commit -m "fix(datedate): insights hasData 에서 totalSchedules 팔 제거 — 사이트맵 등재 조건과 일치화" -m "InsightsController 의 hasData 가 totalSchedules > 0 만으로도 참이 되어, 일정만 있고 인기 장소/메뉴가 없는 부분 데이터 상태에서 본문이 0 값 통계 카드 6개 + 빈 상태 메시지 2개뿐인 페이지가 index, follow + 광고(infeed 슬롯 게이트 통과) 대상이었다 — PP-Full 의 '콘텐츠가 거의 없는 화면' 그 자체(3차 진단 §3-3). 사이트맵은 computeInsightsLastmodIfPresent 가 장소/메뉴 활동만 인정해 이 상태를 이미 제외하므로 코드 내부 불일치이기도 했다. hasData 를 popularLocations/popularMenus 비어있지 않음만으로 좁혀 페이지 판정을 사이트맵 조건과 동일하게 만들었다. InsightsPartialDataIndexingTest 신설 — Owner+Schedule 실 fixture 로 부분 데이터 → noindex, follow 를 고정(RED: index, follow 실측 → GREEN), 완전 빈 데이터 가드는 양성 대조군으로 유지."
+
+# Commit 160 — feat(datedate): /use-cases 허브 + /tools 리다이렉트 + 홈 FAQPage 발행 중단 — 마지막 커밋(git-commit.md 포함)
+git add src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/UseCaseController.java src/main/resources/templates/use-cases/index.html src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/main/java/me/singingsandhill/calendar/common/application/service/SitemapService.java src/main/resources/static/robots.txt src/main/resources/messages.properties src/main/resources/messages_en.properties src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/HomeController.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/HomeControllerTest.java src/test/java/me/singingsandhill/calendar/datedate/application/service/SeoServiceI18nTest.java src/test/java/me/singingsandhill/calendar/common/application/service/SitemapServiceWhitelistTest.java src/test/java/me/singingsandhill/calendar/common/application/service/SitemapServiceHreflangTest.java CLAUDE.md docs/guides/git-commit.md
+git commit -m "feat(datedate): /use-cases 허브 인덱스 + /tools 영구 리다이렉트 + 홈 FAQPage 발행 중단" -m "셋 다 3차 진단 §3-3·§4 의 항목이다. ① /use-cases 는 SecurityConfig permitAll 인데 컨트롤러가 없어 404 — 5개 슬러그가 허브 없이 평면으로 나열된 doorway 형 구조였다. UseCaseController 에 인덱스 매핑을 추가하고 use-cases/index.html(히어로+인트로+UseCaseSlugs.ALL 카드 그리드+CTA, detail.html 셸 미러)을 신설했다. SeoService.getUseCasesIndexSeo() 는 CollectionPage+ItemList+BreadcrumbList JSON-LD 를 emit 하고 내비게이션 페이지라 adsEnabled(false) — SeoServiceI18nTest 의 광고 정책·hreflang·설명 길이(120~160자)·JSON 유효성·BreadcrumbList 5개 가드에 허브를 편입했다. 사이트맵 정적 엔트리(0.6, bilingual)와 robots.txt Allow: /use-cases(기존 /use-cases/ 는 bare path 미매치)를 추가했고 SitemapServiceWhitelistTest 정확 집합·SitemapServiceHreflangTest 카운트(12→13페이지, 72→78)를 갱신했다(RED 선확인 → GREEN). ② /tools 도 permitAll+무매핑 404 였는데 도구가 date-diff 하나라 인덱스 페이지는 그 자체가 thin — /insights 루트와 같은 패턴으로 HomeController 에서 308 영구 리다이렉트한다(사이트맵 미등재). ③ 홈 JSON-LD 의 FAQPage 블록을 제거해 FAQPage 를 /faq 단독 발행으로 만들었다 — 홈 FAQ(6문항)와 /faq(8문항)가 주제 5개를 공유하는 상태에서 FAQPage 스키마까지 이중 발행되던 중복 구조화 데이터 신호 해소(가시 본문은 불변). 이 변경으로 미사용이 된 seo.home.faq.q1~a6 키 12쌍을 양 로케일에서 정리했고 MessageCatalogParityTest 가 패리티를 확인한다(신규 허브 키 8쌍 추가 포함, RED: homeSeo_noFaqPage → GREEN). CLAUDE.md 는 UseCaseController·Template Structure 사실 갱신. 전체 스위트 109 클래스 661 테스트 failures 0."

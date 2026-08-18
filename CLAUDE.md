@@ -87,7 +87,9 @@ ADR 누락 사고 방지: PR 에서 `CLAUDE.md` 가 수정됐는데 `docs/adr/` 
 - 기능 추가는 정상 동작과 주요 실패 조건의 확인 기준을 세운다. 리팩터링은 외부 동작이 같음을 확인한다.
 - 여러 단계 작업은 단계마다 검증 방법을 포함한 짧은 계획을 세운다.
 - **돌릴 수 있으면 실제로 돌린다** — §Build Commands 의 `./gradlew test`, 좁히려면 `--tests`.
-  이 저장소에는 린터·정적분석·CI 가 없다. 검증 수단은 테스트와 실행뿐이다.
+  CI(`.github/workflows/ci.yml`)가 main 푸시·PR 마다 전체 빌드+테스트(+deploy 스크립트
+  shellcheck)를 돌리지만 로컬 검증을 대체하지 않는다. 서버 반영은 CI 와 별개의 수동 배포다
+  (§Deployment). 그 외 린터·정적분석은 없다.
 - 필터로 좁혀 돌렸으면 실제 실행된 테스트 수를 확인한다 (`build/test-results/test/*.xml`).
 - 돌리지 못했으면 돌린 것처럼 쓰지 않는다. 이유와 남은 위험을 적는다.
 - 검증이 실패하면 임시 우회로 결과를 감추지 않고 원인을 조사한다.
@@ -96,7 +98,7 @@ ADR 누락 사고 방지: PR 에서 `CLAUDE.md` 가 수정됐는데 `docs/adr/` 
 
 ### 커밋·되돌리기 어려운 작업
 
-- **커밋·푸시를 직접 실행하지 않는다.** 변경 후 `docs/guides/git-commit.md`(gitignore 대상 — 작성용 스크래치)에
+- **커밋·푸시를 직접 실행하지 않는다.** 변경 후 `docs/guides/git-commit.md`(추적·커밋되는 커밋 로그)에
   규약에 맞는 섹션을 덧붙인다.
 - 형식 규약은 `docs/guides/git-commit.md` 헤더 — cmd.exe 호환(큰따옴표만), `git add` 한 줄, 같은 파일이
   여러 커밋에 걸리면 처음 등장하는 커밋이 소유, 배치의 마지막 커밋이 로그 파일 자신을 포함.
@@ -141,6 +143,20 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 > Java 21 (Temurin): `/usr/lib/jvm/jdk-21.0.5+11`  
 > `.env` 파일 위치: `/home/gim/calendar/.env` (H2 file DB, dummy API keys 설정됨)
+
+### Deployment
+
+- CI: `.github/workflows/ci.yml` — main 푸시·PR 빌드+테스트, main 푸시 시 GHCR
+  (`ghcr.io/singingsandhill/calendar:<git-sha>`, `:latest`) 이미지 푸시.
+- 서버 반영: `.github/workflows/deploy.yml` **workflow_dispatch 수동 버튼 전용** —
+  재시작 배포(1~3분 계획 중단, nginx 503 유지보수 페이지), 헬스/엣지 게이트 실패 시
+  직전 **다이제스트**로 자동 롤백. 평일 09:15~11:25 KST(주식 LIVE 창) 배포 거부 가드.
+- 런타임: 서버 `~/apps/calendar/` 의 docker compose (app + nginx). 배포 산출물은
+  `Dockerfile`·`deploy/`. 절차·시크릿·불변식: [`docs/operations/deployment.md`](docs/operations/deployment.md),
+  1회성 이관: [`docs/operations/server-migration-runbook.md`](docs/operations/server-migration-runbook.md).
+  결정 근거: [ADR common/infrastructure/](docs/adr/common/infrastructure/).
+- 배포는 봇 재시작을 뜻한다 — 코인 봇은 오픈 포지션 존재 시 **보호 전용 자동재개**
+  (신규 매매는 대시보드 Start 1회로 재개, [ADR trading/modes/0003](docs/adr/trading/modes/0003-protection-only-recovery-on-restart.md)).
 
 ## Architecture
 
@@ -236,8 +252,10 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 | 8 | `/insights(/**)`, `/use-cases(/**)`, `/tools(/**)` | permitAll |
 | 9 | `/runners/admin`, `/runners/admin/**` | `ROLE_ADMIN` |
 | 10 | `/stock`, `/stock/**`, `/api/stock/**` | permitAll |
-| 11 | `/*`, `/*/*/*` | permitAll (owner 페이지 등 동적 경로 — `/**` 전역 와일드카드는 **없다**) |
-| 12 | 그 외 | `authenticated()` |
+| 11 | `/actuator/health`, `/actuator/health/deploy` | permitAll (배포 헬스 게이트 — nginx 가 외부 `/actuator` 를 404 로 가려 실질 노출은 localhost, [ADR 0006](docs/adr/common/security/0006-actuator-health-and-h2-console-lockdown.md)) |
+| 12 | `/actuator/**` | **denyAll** (13번 `/*/*/*` permitAll 이 3세그먼트 actuator 경로를 삼키므로 명시 deny 가 필수 — 이 행이 13번보다 먼저) |
+| 13 | `/*`, `/*/*/*` | permitAll (owner 페이지 등 동적 경로 — `/**` 전역 와일드카드는 **없다**) |
+| 14 | 그 외 | `authenticated()` |
 
 > 순서상 두 가지가 핵심이다. ① 트레이딩·주식 ADMIN 규칙(1·2)은 포괄 `permitAll`(`/api/**`, `/*`)보다
 > **먼저** 와야 보호가 유지된다. ② `/runners/admin/login`(7)은 `/runners/admin/**` ADMIN(9)보다
@@ -256,7 +274,7 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 ## DateDate Module (추가 기능)
 
 - `InsightsService` + `InsightsController` → `/insights/trends.html` (집계 인기 통계)
-- `UseCaseController` → `/use-cases/detail.html` (콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹, 동호회). 슬러그 단일 진실원 `UseCaseSlugs.ALL` (라우팅·사이트맵·푸터 자동 반영). 슬러그별 워크드 예시(`sample.*`)로 템플릿 차별화.
+- `UseCaseController` → `/use-cases` 허브 인덱스(`index.html`, 광고 없음) + `/use-cases/{slug}` 상세(`detail.html` — 콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹, 동호회). 슬러그 단일 진실원 `UseCaseSlugs.ALL` (라우팅·사이트맵·푸터 자동 반영). 슬러그별 워크드 예시(`sample.*`)로 템플릿 차별화. 미지 슬러그는 HTTP 404 ([ADR datedate/domain/0008](docs/adr/datedate/domain/0008-unknown-content-slug-404.md)). `GET /tools` 는 `/tools/date-diff` 로 영구 리다이렉트.
 - `SeoService` — 페이지별 JSON-LD 스키마 포함 SEO 메타데이터 생성
 - `PopularityService` — 시간 가중 점수 기반 장소/메뉴 인기 순위 (노출 기준: 최소 2표 + 비속어 블록리스트 — [ADR 0006](docs/adr/datedate/domain/0006-popularity-exposure-criteria.md))
 - 카카오 로그인 (선택적): `KakaoOAuth2UserService` → `AppUser` upsert, 오너 연결(first-claim), `UserActivity` 이벤트 기록
@@ -264,6 +282,13 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
   `POST /recap/{year}/share` 공유 토큰 발급, `/recap/share/{token}` 공개 공유 (ADR datedate/domain/0005)
 - `AuthController` → `GET /login` → `auth/login` (카카오 로그인 랜딩)
 - `MyPageController` → `GET /me` → `me/mypage` (로그인 사용자 내 기록)
+- 랜덤 owner ID: `OwnerIdGenerator`(40×40 단어 × 1000~9999 = **14,400,000** 조합) →
+  `GET /api/owner-ids/random` 이 `existsById` 를 통과한 후보만 반환 (DB 쓰기 없음).
+  홈 폼의 hidden `generated=true` 면 `POST /start` 가 `getOrCreateOwner` 대신
+  `createOwner`(존재 시 409) 를 타 제출 시점에도 미사용을 보장한다. 경로가
+  `/api/owners/**` 밖인 이유는 `OwnerPathInterceptor` 가 그 아래 첫 세그먼트를 ownerId 로
+  검증하며 예약어 `random` 을 400 으로 막기 때문
+  ([ADR datedate/domain/0007](docs/adr/datedate/domain/0007-collision-free-random-owner-id.md))
 
 ## Background Schedulers
 
@@ -276,6 +301,8 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 
 `trading.bot.enabled=false`이면 트레이딩 루프·캔들 동기화·계좌 스냅샷·일일 요약이 스킵된다.
 단 **`CandleScheduler.cleanupOldCandles()`(자정 캔들 정리)는 가드가 없어 항상 실행**된다.
+보관 기간은 `trading.bot.candle-retention-days`(기본 **90일**) — 지표 재계산·파라미터 리플레이
+지평이며 삭제 구간은 복구 불가 ([ADR trading/infrastructure/0005](docs/adr/trading/infrastructure/0005-candle-retention-for-analysis.md)).
 
 **Stock** (`StockSchedulerConfig` → `@EnableScheduling`):
 
@@ -355,14 +382,16 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 | `tools/` | `date-diff.html` — 날짜 계산기 |
 | `error/` | `4xx.html`, `5xx.html` |
 | `insights/` | `trends.html` |
-| `use-cases/` | `detail.html` (슬러그 기반 콘텐츠 페이지) |
+| `use-cases/` | `index.html` (허브 인덱스), `detail.html` (슬러그 기반 콘텐츠 페이지) |
 | (루트) | `index.html`, `guide.html`, `privacy.html`, `terms.html`, `about.html`, `faq.html` |
 
 ## Database
 
 - **Dev:** H2 file-based (`./data/scheduledb`), MySQL compatibility mode
 - **Test:** H2 in-memory, create-drop DDL
-- **Console:** http://localhost:8081/h2-console (user: sa, no password)
+- **Console:** http://localhost:8081/h2-console (user: sa, no password) — **기본 비활성.**
+  로컬은 `.env` 에 `H2_CONSOLE_ENABLED=true` 필요, 운영은 nginx `/h2-console` 404 로 이중 차단
+  ([ADR common/security/0006](docs/adr/common/security/0006-actuator-health-and-h2-console-lockdown.md))
 
 ## Testing
 

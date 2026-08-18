@@ -60,6 +60,13 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 - **서킷브레이커 (`TradingCircuitBreaker`)** — 연속 손실 `maxConsecutiveLosses`(기본 3)
   또는 당일 실현손익 ≤ `maxDailyLossPct`(기본 -5%) 시 신규 BUY 차단(리스크 청산은 허용).
   `circuitBreakerEnabled` 로 on/off.
+- **재시작 복구 (보호 전용 자동재개)** ([ADR modes/0003](../../../../../../../docs/adr/trading/modes/0003-protection-only-recovery-on-restart.md), stock/modes/0003 미러) —
+  기동 시 오픈 포지션이 있으면 `recoveryMode` 로 자동 재개: 스윕·캔들 동기화·리스크 체크·
+  신호 기록은 돌고 **신규 매매(강신호·리밸런싱·일반 신호)는 차단**. `manualBuy`/`manualSell`/
+  `emergencyClose` 는 불변. 대시보드 **Start 1회**로 완전 재개(stop 불요 — `start()` 가 CAS 앞
+  해제 분기를 가진다). `BotStatusDto.recoveryMode` → 대시보드 `PROTECTION-ONLY` 표시.
+  ⚠️ 재시작은 서킷브레이커 연속손실 카운터(인메모리)를 리셋한다 — `RECOVERY_RESUMED`
+  이벤트에 명기. 회귀 가드: `TradingBotRecoveryTest`(7).
 - **스케줄러 풀** — `spring.task.scheduling.pool.size=4` 로 트레이딩 루프와 캔들 동기화/
   요약 잡 병렬화(느린 루프가 다른 잡을 굶기지 않도록).
   ⚠️ `trading.bot.enabled=false` 는 `executeTradeLoop`·`syncCandles`·계좌 스냅샷·일일 요약만
@@ -103,6 +110,35 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
   다이버전스 피벗 강화 ([0007](../../../../../../../docs/adr/trading/strategy/0007-divergence-pivot-strengthening.md)),
   Slow Stoch·RSI 추세 잡음 감소 ([0008](../../../../../../../docs/adr/trading/strategy/0008-indicator-noise-reduction.md)).
 
+## 데이터 기록 & 분석 (ADR observability/0001·0002·0003, infrastructure/0005)
+
+- **캔들 보관 `trading.bot.candle-retention-days`(기본 90일)** — `CandleService.cleanupOldCandles()`
+  가 읽는다. 이 값이 곧 지표 재계산·파라미터 리플레이 지평이며, 삭제 구간은 복구 불가
+  ([ADR infrastructure/0005](../../../../../../../docs/adr/trading/infrastructure/0005-candle-retention-for-analysis.md)).
+  ⚠️ `CandleScheduler.cleanupOldCandles()` 는 여전히 `bot.enabled` 가드가 없다.
+- **`trading_trades.signal_id`** — 신호 기반 매수·매도에서만 채워진다. 리스크 청산·리밸런싱·
+  수동 매매·`test-order` 는 **의도적으로 null** 이며, null 자체가 "신호로 난 체결이 아니다" 라는
+  정보다. 청산 틱의 동시각 신호를 여기에 붙이지 않는다 — 인과가 거짓이 된다.
+  `trading_trades.order_ratio` 는 그 매수에 실제 적용된 ATR 기반 비중(매수에만, 4자리 반올림).
+- **`trading_signals` 의 `atr`·`atr_percent`·`volume_ma`·`current_volume`** — 결정 시점 입력.
+  ATR 은 `IndicatorService.calculate()` 가 이미 로드한 80봉으로 계산한다(캔들 재조회 없음).
+  주문 사이징이 쓰는 `calculateATRPercent(market)` 는 **변경하지 않았다** — 자체 재조회 +
+  `excludeFormingCandle` 미적용이라 값이 갈릴 수 있어, 재유도 대신 적용 비중을 기록한다.
+- **청산 틱 신호 기록** — `executeTradeLoop` 은 리스크 체크를 **먼저** 하고, 청산이 일어나도
+  신호를 기록한 뒤 return 한다(단계 4~6 억제는 그대로). 신호 생성은 try/catch 로 감싸 없던
+  `LOOP_ERROR` 경보를 만들지 않는다. **순서 역전 금지** — 가드는
+  `TradingBotServiceLoopSignalRecordingTest.riskCheckRunsBeforeSignalGeneration` (`InOrder`).
+- **캔들 실패 틱** — 1단계 `fetchAndSaveCandles()` 도 try/catch 다. 실패하면 `candlesFresh=false`
+  로 내리고 **리스크 체크(2)·신호 기록(3)은 그대로 실행**한 뒤 4~6 을 억제한다 —
+  리스크 판정은 캔들이 아니라 실시간 현재가를 쓰므로 안전하고, stale 캔들로 신규 진입을
+  태우는 것은 막아야 한다 (ADR `trading/risk/0006`). 경보는 `lastError` + `CANDLE_SYNC_FAILED`
+  이벤트(`LOOP_ERROR` 아님 — 루프는 계속 돌았다). 가드는 `TradingBotServiceCandleFailureGuardTest`.
+- **인덱스** (`ddl-auto: update` 가 생성): `trading_signals(market, signal_time)`,
+  `trading_positions(market, status, closed_at)`·`(market, opened_at)`,
+  `trading_trades(position_id)`·`(market, created_at)`. `trading_signals` 는 매 분 insert 가
+  들어오므로 인덱스 1개만큼 쓰기 비용이 늘지만, 무인덱스 범위 스캔이 더 나쁘다.
+- **`TradingAnalyticsService`** — 신호 품질 분석. 상세는 `application/CLAUDE.md`.
+
 ## Presentation (`/api/trading/**` · `/trading*`)
 
 전부 `ROLE_ADMIN` (ADR common/security/0003) 이지만 표면이 넓다 — 봇을 정지시켜도 막히지
@@ -116,7 +152,7 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 | `TradeApiController` | `/api/trading` — trades·profit/summary·today·profit/daily·positions | |
 | `RebalanceApiController` | `/api/trading/rebalance` — status·execute | |
 | `TradingEventApiController` | `/api/trading/events` | |
-| `TradingDashboardController` | `/trading`, `/trades`, `/settings`, `/portfolio`, `/verify` (Thymeleaf) | |
+| `TradingDashboardController` | `/trading`, `/trades`, `/settings`, `/portfolio`, `/verify`, **`/analytics`** (Thymeleaf) | `/analytics?days=` 는 온디맨드 계산 (스케줄러·JSON 엔드포인트 없음) |
 
 ⚠️ **`POST /api/trading/verify/test-order`** — API 검증용으로 시장가 매수를 1회 전송한다
 (기본 5,500원, 최소 5,000원, `immediatelySell=true` 면 즉시 반대매매로 원상복구).

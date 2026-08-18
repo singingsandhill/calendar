@@ -65,6 +65,8 @@ MA 수렴 시 (|MA5−MA20|/MA20 < 0.2%) MA 크로스 점수는 0 으로 억제 
 | `GET /api/trading/profit/{summary,daily}` | 손익 |
 
 대시보드: <http://localhost:8081/trading>.
+신호 품질 분석: <http://localhost:8081/trading/analytics> (`?days=7|14|30|60|90`, 온디맨드 계산 —
+스케줄러·JSON 엔드포인트 없음. [ADR observability/0001](docs/adr/trading/observability/0001-signal-quality-analytics-page.md)).
 
 ### 환경변수
 
