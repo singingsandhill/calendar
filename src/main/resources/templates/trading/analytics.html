@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{trading/fragments/header :: header}"></head>
+<body class="tr-dark min-h-screen">
+
+<nav th:replace="~{trading/fragments/header :: navbar}"></nav>
+
+<main class="container mx-auto px-4 py-5">
+    <h1 class="tr-page-title mb-4">Signal Quality · 신호 품질 분석</h1>
+
+    <!-- 구간 선택. JS 없이 GET 폼 하나 — 새 JS 파일도, 새 Tailwind 클래스도 필요 없다. -->
+    <form method="get" action="/trading/analytics" class="card mb-3">
+        <div class="flex items-center gap-2 flex-wrap text-sm">
+            <span class="tr-muted">분석 구간</span>
+            <select name="days" class="text-sm" style="background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:0.375rem;padding:0.25rem 0.5rem;">
+                <option th:each="opt : ${windowOptions}" th:value="${opt}" th:text="${opt} + '일'"
+                        th:selected="${opt == selectedDays}"></option>
+            </select>
+            <button type="submit" class="btn-secondary text-xs">적용</button>
+            <span class="tr-muted" th:text="'| ' + ${market}"></span>
+            <span class="tr-muted" th:text="'| 계산 ' + ${report.computeMillis()} + 'ms'"></span>
+        </div>
+    </form>
+
+    <!-- ① 데이터 충분성 — 반드시 먼저 읽는다. 이게 없으면 아래 표가 전부 오독된다. -->
+    <div class="card mb-3" th:classappend="${report.coverage().tooThinToConclude()} ? 'card-warning' : 'card-ok'">
+        <h2 class="text-base font-semibold mb-3">① 데이터 충분성</h2>
+
+        <div th:if="${report.coverage().tooThinToConclude()}" class="mb-3">
+            <p class="negative font-semibold mb-1">표본이 얇다 — 아래 표로 파라미터를 바꾸지 말 것.</p>
+            <ul class="text-sm tr-muted">
+                <li th:each="reason : ${report.coverage().thinReasons()}" th:text="'· ' + ${reason}"></li>
+            </ul>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="tr-stat">
+                <div class="tr-stat-label">신호 행 수</div>
+                <div class="tr-stat-value" th:text="${report.coverage().signalRows()}">-</div>
+                <div class="tr-stat-sub" th:text="'기대 ' + ${report.coverage().expectedMinutes()} + '분'"></div>
+            </div>
+            <div class="tr-stat">
+                <div class="tr-stat-label">커버리지</div>
+                <div class="tr-stat-value" th:text="${report.coverage().coveragePct()} + '%'">-</div>
+                <div class="tr-stat-sub" th:text="'공백 ' + ${report.coverage().gapCount()} + '구간 (최대 ' + ${report.coverage().longestGapMinutes()} + '분)'"></div>
+            </div>
+            <div class="tr-stat">
+                <div class="tr-stat-label">거래일</div>
+                <div class="tr-stat-value" th:text="${report.coverage().distinctDays()}">-</div>
+                <div class="tr-stat-sub" th:text="'BUY ' + ${report.coverage().buySignals()} + ' / SELL ' + ${report.coverage().sellSignals()} + ' / HOLD ' + ${report.coverage().holdSignals()}"></div>
+            </div>
+            <div class="tr-stat">
+                <div class="tr-stat-label">청산 포지션</div>
+                <div class="tr-stat-value" th:text="${report.coverage().closedPositions()}">-</div>
+                <div class="tr-stat-sub" th:text="'거래량 맥락 ' + ${report.coverage().rowsWithVolumeContext()} + '행 / ATR ' + ${report.coverage().rowsWithAtr()} + '행'"></div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${report.isEmpty()}" class="card mb-3">
+        <p class="tr-muted">이 구간에 신호 데이터가 없다. 봇이 돌지 않았거나 구간이 기록 시작 이전이다.</p>
+    </div>
+
+    <div th:unless="${report.isEmpty()}">
+
+        <!-- ② 점수 구간별 전방수익 -->
+        <div class="card mb-3">
+            <h2 class="text-base font-semibold mb-1">② 점수 구간별 전방수익</h2>
+            <p class="tr-muted text-xs mb-3">
+                ±40 임계가 타당한지 직접 보는 표다. <b>net</b> 은 왕복 수수료를 뺀 값이고,
+                <b>독립창</b> 은 겹치는 창을 보정한 표본 수다 — n 이 아니라 이쪽을 보고 판단한다.
+            </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                    <tr>
+                        <th class="text-left">점수 구간</th>
+                        <th class="text-right">n</th>
+                        <th class="text-right">국면</th>
+                        <th class="text-right" th:each="h : ${report.window().horizonsMinutes()}" th:text="'+' + ${h} + '분 평균'"></th>
+                        <th class="text-right" th:each="h : ${report.window().horizonsMinutes()}" th:text="'+' + ${h} + '분 net'"></th>
+                        <th class="text-right">독립창(+60)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${report.forwardReturnByScore()}">
+                        <td>
+                            <span th:text="${row.bucketLabel()}"></span>
+                            <span th:if="${row.containsCurrentBuyThreshold()}" class="badge badge-notice">현 매수임계</span>
+                            <span th:if="${row.containsCurrentSellThreshold()}" class="badge badge-notice">현 매도임계</span>
+                        </td>
+                        <td class="text-right tr-num" th:text="${row.n()}"></td>
+                        <td class="text-right tr-num" th:text="${row.episodes()}"></td>
+                        <td class="text-right tr-num" th:each="h : ${report.window().horizonsMinutes()}"
+                            th:classappend="${row.byHorizon().get(h).reliable()} ? '' : 'tr-muted'"
+                            th:text="${row.byHorizon().get(h).meanPct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:each="h : ${report.window().horizonsMinutes()}"
+                            th:classappend="${row.byHorizon().get(h).netOfRoundTripFeePct()} == null ? 'tr-muted'
+                                            : (${row.byHorizon().get(h).netOfRoundTripFeePct().signum()} > 0 ? 'positive' : 'negative')"
+                            th:text="${row.byHorizon().get(h).netOfRoundTripFeePct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.byHorizon().get(60).effectiveN()}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ③ 구성요소별 조건부 엣지 -->
+        <div class="card mb-3">
+            <h2 class="text-base font-semibold mb-1">③ 구성요소별 조건부 엣지</h2>
+            <p class="tr-muted text-xs mb-3">
+                각 구성요소가 켜졌을 때의 전방수익을 전체 평균과 비교한다. <b>잔차점수</b> 는
+                총점에서 그 구성요소 몫을 뺀 평균 — 전체 평균보다 크면 그 부분집합은 해당 요소가 아니라
+                "원래 점수가 높은 구간" 을 보고 있는 것이다.
+            </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                    <tr>
+                        <th class="text-left">구성요소</th>
+                        <th class="text-right">가중</th>
+                        <th class="text-right">양수 n</th>
+                        <th class="text-right">양수 +60분</th>
+                        <th class="text-right">양수 잔차점수</th>
+                        <th class="text-right">전체 +60분</th>
+                        <th class="text-right">전체 잔차점수</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${report.componentEdge()}">
+                        <td th:text="${row.displayName()}"></td>
+                        <td class="text-right tr-num" th:text="'±' + ${row.maxAbsWeight()}"></td>
+                        <td class="text-right tr-num" th:text="${row.positive().n()}"></td>
+                        <td class="text-right tr-num"
+                            th:classappend="${row.positive().byHorizon().get(60).reliable()} ? '' : 'tr-muted'"
+                            th:text="${row.positive().byHorizon().get(60).meanPct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.positive().meanResidualScore()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.baseline().byHorizon().get(60).meanPct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.baseline().meanResidualScore()} ?: '—'"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ④ 임계 반사실 -->
+        <div class="card mb-3">
+            <h2 class="text-base font-semibold mb-1">④ 임계 반사실</h2>
+            <p class="tr-muted text-xs mb-3">
+                각 후보 임계에서 <b>전체 매수 게이트</b>(점수 + RSI + StochK + 동의지표 + MA60 확인)를
+                통과했을 신호 수. 거래량 맥락이 없는 과거 행은 MA60 확인 게이트를 판정할 수 없어
+                <b>범위</b>(하한~상한)로 표기한다.
+            </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                    <tr>
+                        <th class="text-left">후보 임계</th>
+                        <th class="text-right">점수만</th>
+                        <th class="text-right">전체 게이트</th>
+                        <th class="text-right">판정불가</th>
+                        <th class="text-right">국면</th>
+                        <th class="text-right">+60분 평균</th>
+                        <th class="text-right">RSI 차단</th>
+                        <th class="text-right">MA60 차단</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${report.thresholdScenarios()}">
+                        <td>
+                            <span th:text="${row.candidateBuyThreshold()}"></span>
+                            <span th:if="${row.isCurrentThreshold()}" class="badge badge-notice">현재</span>
+                        </td>
+                        <td class="text-right tr-num" th:text="${row.passesScoreOnly()}"></td>
+                        <td class="text-right tr-num"
+                            th:text="${row.passesFullGateLow() == row.passesFullGateHigh()}
+                                     ? ${row.passesFullGateLow()}
+                                     : ${row.passesFullGateLow()} + ' ~ ' + ${row.passesFullGateHigh()}"></td>
+                        <td class="text-right tr-num" th:text="${row.indeterminate()}"></td>
+                        <td class="text-right tr-num" th:text="${row.episodesFullGateLow()}"></td>
+                        <td class="text-right tr-num"
+                            th:classappend="${row.byHorizonFullGateLow().get(60).reliable()} ? '' : 'tr-muted'"
+                            th:text="${row.byHorizonFullGateLow().get(60).meanPct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.blockedByRsi()}"></td>
+                        <td class="text-right tr-num" th:text="${row.blockedByMa60Gate()}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ⑤ 청산사유별 실현 성과 -->
+        <div class="card mb-3">
+            <h2 class="text-base font-semibold mb-1">⑤ 청산사유별 실현 성과</h2>
+            <p class="tr-muted text-xs mb-3">
+                재보정한 손절 −1.5% / TP +3% / 트레일링 −0.8% 이 실제로 작동하는지 보는 표다.
+            </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                    <tr>
+                        <th class="text-left">청산 사유</th>
+                        <th class="text-right">건수</th>
+                        <th class="text-right">승</th>
+                        <th class="text-right">승률</th>
+                        <th class="text-right">평균 손익%</th>
+                        <th class="text-right">중앙값 손익%</th>
+                        <th class="text-right">실현손익</th>
+                        <th class="text-right">수수료</th>
+                        <th class="text-right">평균 보유(분)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(report.outcomeByCloseReason())}">
+                        <td colspan="9" class="tr-muted">이 구간에 청산된 포지션이 없다.</td>
+                    </tr>
+                    <tr th:each="row : ${report.outcomeByCloseReason()}">
+                        <td th:text="${row.closeReason()}"></td>
+                        <td class="text-right tr-num" th:text="${row.n()}"></td>
+                        <td class="text-right tr-num" th:text="${row.wins()}"></td>
+                        <td class="text-right tr-num" th:text="${row.winRatePct()} ?: '—'"></td>
+                        <td class="text-right tr-num"
+                            th:classappend="${row.meanPnlPct()} == null ? '' : (${row.meanPnlPct().signum()} > 0 ? 'positive' : 'negative')"
+                            th:text="${row.meanPnlPct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.medianPnlPct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.totalRealizedPnl()}"></td>
+                        <td class="text-right tr-num" th:text="${row.totalFees()}"></td>
+                        <td class="text-right tr-num" th:text="${row.meanHoldMinutes()} ?: '—'"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ⑥ 진입 맥락 → 결과 -->
+        <div class="card mb-3">
+            <h2 class="text-base font-semibold mb-1">⑥ 진입 맥락 → 결과</h2>
+            <p class="tr-muted text-xs mb-3">
+                신호 기반 진입만 대상이다 — 리밸런싱·수동 매수는 신호와 무관하므로 섞으면 예측력이 희석된다.
+                원인 신호는 반드시 체결보다 앞선 것으로 매칭한다.
+            </p>
+            <div class="text-xs tr-muted mb-3">
+                <span th:text="'청산 ' + ${report.entryContext().closedPositions()} + '건'"></span>
+                · <span th:text="'신호 기반 ' + ${report.entryContext().signalDrivenPositions()} + '건'"></span>
+                · <span th:text="'제외(리밸런싱·수동) ' + ${report.entryContext().excludedNonSignalPositions()} + '건'"></span>
+                · <span th:text="'signal_id 매칭 ' + ${report.entryContext().matchedBySignalId()}"></span>
+                · <span th:text="'타임스탬프 매칭 ' + ${report.entryContext().matchedByTimestamp()}"></span>
+                · <span th:text="'점수 교차확인 ' + ${report.entryContext().scoreConfirmedMatches()}"></span>
+                · <span th:text="'미매칭 ' + ${report.entryContext().unmatched()}"></span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                    <tr>
+                        <th class="text-left">진입 점수대</th>
+                        <th class="text-right">건수</th>
+                        <th class="text-right">승률</th>
+                        <th class="text-right">평균 손익%</th>
+                        <th class="text-right">평균 보유(분)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(report.entryContext().byEntryScore())}">
+                        <td colspan="5" class="tr-muted">매칭된 신호 기반 진입이 없다.</td>
+                    </tr>
+                    <tr th:each="row : ${report.entryContext().byEntryScore()}">
+                        <td th:text="${row.bucketLabel()}"></td>
+                        <td class="text-right tr-num" th:text="${row.n()}"></td>
+                        <td class="text-right tr-num" th:text="${row.winRatePct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.meanPnlPct()} ?: '—'"></td>
+                        <td class="text-right tr-num" th:text="${row.meanHoldMinutes()} ?: '—'"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ⑦ 비용 현실 -->
+        <div class="card mb-3">
+            <h2 class="text-base font-semibold mb-1">⑦ 비용 현실</h2>
+            <p class="tr-muted text-xs mb-3">
+                주 지표는 <b>수수료 / 진입 명목금액</b> 이다. 수수료/gross 는 gross ≤ 0 이면 정의되지 않아
+                비워 둔다 — 적자 장부에서 그 비율은 부호가 뒤집힌다.
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="tr-stat">
+                    <div class="tr-stat-label">손익분기 이동폭</div>
+                    <div class="tr-stat-value" th:text="${report.cost().breakEvenMovePct()} + '%'">-</div>
+                    <div class="tr-stat-sub">왕복 taker 수수료</div>
+                </div>
+                <div class="tr-stat">
+                    <div class="tr-stat-label">수수료 / 명목금액</div>
+                    <div class="tr-stat-value" th:text="${report.cost().feesAsPctOfNotional()} ?: '—'">-</div>
+                </div>
+                <div class="tr-stat tr-stat--pnl">
+                    <div class="tr-stat-label">실현손익 (net)</div>
+                    <div class="tr-stat-value" th:text="${report.cost().netRealizedPnl()}">-</div>
+                    <div class="tr-stat-sub" th:text="'gross ' + ${report.cost().grossRealizedPnl()}"></div>
+                </div>
+                <div class="tr-stat">
+                    <div class="tr-stat-label">총 수수료</div>
+                    <div class="tr-stat-value" th:text="${report.cost().totalFees()}">-</div>
+                    <div class="tr-stat-sub" th:text="'수수료/gross ' + (${report.cost().feesAsPctOfGross()} ?: '정의 불가')"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 데이터 한계 고지 — 숨기지 않는다. -->
+    <div class="card mb-3">
+        <h2 class="text-base font-semibold mb-2">데이터 한계</h2>
+        <ul class="text-xs tr-muted">
+            <li th:each="c : ${report.caveats()}" th:text="'· ' + ${c}"></li>
+        </ul>
+    </div>
+</main>
+
+</body>
+</html>
