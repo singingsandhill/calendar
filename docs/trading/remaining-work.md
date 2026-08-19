@@ -19,6 +19,7 @@
 | **P1-8** 운영 모드 기본값 LIVE | 기본 PAPER 전환 — LIVE 는 `TRADING_BOT_MODE=LIVE` opt-in (2026-07-25, ADR modes/0002). **주의: env 미설정 LIVE 운영 배포는 자동 PAPER 화** |
 | **P1-9** 자바 기본값 ↔ yaml 불일치 | §8-C executed_volume 실측화 + Risk/Bot/Rebalancing 기본값 yaml 정합 (2026-07-25) |
 | **P2-1** 지정가 모드게이트 우회 | §8-A 모드게이트를 지정가·취소·미결조회까지 확장 |
+| **P1-3** 재시작 시 손절 보호 공백 | 보호 전용 자동재개 — stock ADR 0003 미러, Start 1회 완전 재개 (2026-08-17, ADR trading/modes/0003, `TradingBotRecoveryTest`). CI/CD 도입(ADR common/infrastructure/0001)으로 재시작이 상시화되며 선행 해소 |
 
 ---
 
@@ -44,10 +45,10 @@ P0-2 코드는 완료됐으나 **기본 구성(order-api-version=v1 + clientOrde
 
 | ID | 문제 | 담당 | 난이도 | 상태 | 개선 방향 (상세: 운영리뷰 §3) |
 |---|---|---|---|---|---|
-| **P0-3** | `enabled=false` 킬스위치가 수동 매수/매도 API를 못 막음 | [dev] | 하 | **구현됨·미검증** (2026-07-09, interop 다운으로 테스트 미실행) — manualBuy/manualSell 을 `bot.enabled` 로 게이트(emergencyClose 는 안전청산이라 예외) | — |
+| **P0-3** | `enabled=false` 킬스위치가 수동 매수/매도 API를 못 막음 | [dev] | 하 | **해결(수동 매매 API)** — manualBuy/manualSell 을 `bot.enabled` 로 게이트(emergencyClose 는 안전청산이라 예외). 회귀 테스트 `TradingBotServiceManualGuardTest`. **잔여:** `test-order`(TradingVerificationApiController)에는 아직 `bot.enabled` 게이트가 없다 → P1-4 행에서 함께 추적 | — |
 | **P1-2** | 캔들 동결 — 미완성 봉이 확정봉으로 영구 고정 가능 | [dev] | 중 | 미해결 | 최신 1~2봉 upsert 갱신 또는 직전 확정봉까지만 저장. 형성봉 여부 로그 검증 선행 |
-| **P1-3** | 재시작 시 봇 정지 복귀 → OPEN 포지션 손절 보호 공백 | [dev] | 중 | **부분** (§8-G 기동 스윕은 in-flight SUBMITTED만 수습) | `running` 상태 영속화+부팅 복원, 또는 OPEN 포지션 있으면 리스크 루프 항상 실행 |
-| **P1-4** | 수동/검증(test-order) 주문이 서킷브레이커·노출상한·물타기 가드 우회 | [dev] | 중 | **부분 구현됨·미검증** (2026-07-09) — `manualBuy` 에 `entryRiskGuardsBlock`(서킷·물타기·노출) 적용. **`test-order`(TradingVerificationApiController)는 별개 컨트롤러라 아직 미적용** | test-order 는 운영 프로파일 비활성 or 동일 가드 추가 (후속) |
+| **P1-3** | 재시작 시 봇 정지 복귀 → OPEN 포지션 손절 보호 공백 | [dev] | 중 | **해결** (2026-08-17) — 보호 전용 자동재개: 기동 시 OPEN 포지션 있으면 `recoveryMode` 로 리스크 루프·스윕 자동 재개, 신규 매매만 차단 (ADR trading/modes/0003, `TradingBotRecoveryTest` 7건). **잔여:** cid=OFF 구성의 "주문 HTTP 후 커밋 전 kill" 무기록 체결 갭은 A-3(선영속화 활성화)이 근본 해소 | — |
+| **P1-4** | 수동/검증(test-order) 주문이 서킷브레이커·노출상한·물타기 가드 우회 | [dev] | 중 | **부분 해결** — `manualBuy` 에 `entryRiskGuardsBlock`(서킷·물타기·노출) 적용 + 회귀 테스트 `TradingBotServiceManualGuardTest`. **`test-order`(TradingVerificationApiController)는 별개 컨트롤러라 아직 미적용** | test-order 는 운영 프로파일 비활성 or 동일 가드 추가 (후속) |
 | **P1-5** | 손절/익절/트레일링 트리거(`checkPositionRisk`) 테스트 0건 + Clock 미주입 | [dev] | 중 | **트리거 테스트 완료** (2026-07-25, `RiskManagementServiceTriggerTest`) — Clock 주입은 잔여 | 잔여: `Clock` 빈 주입(stock 모듈 선례)으로 시간 의존 경계 결정성 확보 |
 | **P1-6** | 리밸런스 쿨다운 check-then-act 비원자 → 이중 리밸런스 | [dev] | 하 | 미해결 | 종목별 `ReentrantLock`/CAS 로 진입 직렬화 |
 | **P1-7** | 서킷브레이커 연속손실 스트릭 인메모리 유실(일일손실 가드는 DB 유지) | [dev] | 중 | 미해결 | 부팅 시 당일 CLOSED 포지션으로 스트릭 재계산 |
@@ -95,7 +96,9 @@ P0-2 코드는 완료됐으나 **기본 구성(order-api-version=v1 + clientOrde
 2. **P1-9 잔여** — TradingProperties 자바 기본값 정합(또는 필수키 미설정 부팅 실패). 난이도 하, 설정 누락 사고 예방.
 3. **P1-5** — `Clock` 주입 + 손절/익절/트레일링 트리거 테스트. 자본 보호 핵심 로직 회귀 안전망.
 4. **P2-4 / P2-7 / P2-8 / P2-6** — 작고 안전한 안정성 수리 묶음(백오프 중 손절정지, 비원자 카운터, 캔들 race, tx 내 HTTP).
-5. **P1-2 / P1-3** — 캔들 동결 + 재시작 보호(중간 규모).
+5. **P1-2** — 캔들 동결(중간 규모). ~~P1-3 재시작 보호~~ 는 2026-08-17 해결(§0).
+   **P1-7 스트릭 영속화**는 자동재개 도입으로 우선순위 상승 — 배포마다 카운터가 리셋된다
+   (ADR trading/modes/0003 Consequences).
 6. **P2-5 알림 채널** — CRITICAL 이벤트 푸시(stock `StockMailService` 패턴 재사용).
 7. 나머지 P2(전략·구조)·P3는 라이브 전환(A) 이후 데이터 기반으로.
 

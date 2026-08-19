@@ -60,8 +60,9 @@
 - **P0-3b 완료:** `RiskManagementService.closePosition`/`checkAndExecuteRiskRules` 와
   `RebalanceService.checkAndExecute`/`buyAndOpenPosition` 에서도 `@Transactional` 제거 +
   주문 HTTP 를 트랜잭션 밖으로 — 모든 주문 경로에서 HTTP-in-tx 제거.
-- **남은 한계:** 수동 매매(`manualBuy`/`manualSell`)는 Position 미생성/미청산 → 계좌-포지션
-  정합성 밖(별도 후속 #3).
+- **남은 한계(후속 #3 — 닫힘):** 수동 매매(`manualBuy`/`manualSell`)의 Position 미생성/미청산은
+  [risk/0004](../risk/0004-manual-trade-position-consistency-and-engine-coordination.md) 에서
+  닫혔다 — `manualBuy` 가 추적 Position 을 생성하고, `manualSell` 은 OPEN 포지션을 FIFO 청산한다.
 - **테스트:** tx 의미론은 통합 테스트 영역이라, 특성화 테스트
   (`TradingBotServicePersistenceTest`)로 "주문 성공 → 원자 저장 / 주문 null → 미저장"
   불변식만 가드. 어댑터 패턴이 위험을 낮춘다.

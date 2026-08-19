@@ -199,10 +199,10 @@ executed_volume 실측화로 이미 상당 부분 방어됨. → 아래 §5 Phas
 
 ## 9. 결정 필요 사항 (사용자)
 
-1. **MockWebServer(okhttp3) 테스트 의존성 추가** — 타임아웃→재조회 경로를 결정적으로 재현할 유일 수단. **권고: 추가**(Phase 0b 전제).
+1. **MockWebServer(okhttp3) 테스트 의존성 추가** — ✅ **결정·반영됨.** `build.gradle` 의 `testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'`.
 2. **타임라인 공격성** — (a) 보수: Phase 0~3만 이번 분기, WS는 다음. (b) 표준: Phase 0~4, 8~10주. (c) 공격: 일괄. REST v1 종료일 미공지라 외부 강제 시한 없음. **권고: (a) 또는 (b).**
-3. **`post_only` 채택** — Phase 0a `orders/chance` 실측에서 `maker_bid_fee < bid_fee` 차등 확인 시에만 리밸런스 매도 한정 재검토. 차등 없으면 영구 불채택.
-4. **Phase 5(best+ioc)** — 본 문서 제외, 4주 슬리피지 실측 후 별도 제안. 진입만 적용 권고(손절은 시장가 유지).
+3. **`post_only` 채택** — ✅ **결정됨: 채택 보류.** maker=taker 0.25% 라 수수료 레버가 아니다 ([v2-migration-handoff.md](v2-migration-handoff.md) §4 "결정(수정 금지)"). Phase 0a `orders/chance` 실측에서 `maker_bid_fee < bid_fee` 차등이 확인될 때만 리밸런스 매도 한정으로 재검토한다.
+4. **Phase 5(best+ioc)** — ✅ **결정됨: 확정 제외.** 이 봇 규모엔 과잉이라 마이그레이션에서 빼고 별도 제안으로 분리했다 ([v2-migration-handoff.md](v2-migration-handoff.md) §4 "결정(수정 금지)"). 재론은 4주 슬리피지 실측 이후, 진입만 적용(손절은 시장가 유지).
 5. **P1-5(상주 손절) 대체 우선순위** — v2로 불가. systemd/컨테이너 자동재기동 / 프로세스 워치독 / 사전 지정가 매도 상주(트레일링 포기 트레이드오프) 중 무엇을 먼저.
 6. **P0-1(무인증 API)은 이미 수정 완료** — 이 마이그레이션의 라이브 게이트(수동 트리거)는 관리자 인증 하에서만 접근 가능해야 하므로 P0-1이 선행 조건. (완료됨: [ADR 0003](../adr/common/security/0003-admin-only-trading-control-api.md).)
 
