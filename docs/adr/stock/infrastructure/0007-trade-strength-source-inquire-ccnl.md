@@ -54,9 +54,11 @@
   코드 제거로 동일 사고 재발 경로 차단. 미집계(null)와 강도 0 이 구분됨.
 - **부정:** 스크리닝 시 갭 통과 종목당 KIS GET +1 (Semaphore 8 내, 09:20 1회성이라 무해).
   진입 검증은 기존에도 getQuote 1콜이었으므로 콜 수 불변(소스만 교체).
-- **후속:** `tday_rltv` 필드명은 실API 응답으로 최종 확인 필요 — 부재 시 null → 안전 탈락 +
-  WARN 계측이 남아 있어 다음 거래일 로그로 판별한다. 실검증 전까지 LIVE 전환 금지는
-  기존 PAPER 기본 정책([modes/0002](../modes/0002-paper-default-mode.md))이 커버.
+- **후속(해소):** `tday_rltv` 필드명은 2026-08-03 운영 로그로 확인됐다. 그날 유일한 유니버스
+  종목이 Floor 를 통과해 `str=164.61` 로 스코어링됐는데, `skip-zero-strength=true` 에서는
+  체결강도가 없거나 0 이면 그 자리에서 탈락하므로 실API 가 실제 값을 반환했다는 뜻이다.
+  LIVE 전환 금지는 이 검증과 별개로 PAPER 실측(리뷰 P2-5)이 전제이며, 기본 PAPER 정책
+  ([modes/0002](../modes/0002-paper-default-mode.md))이 그대로 유지된다.
 
 ## References
 
