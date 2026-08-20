@@ -26,13 +26,16 @@
 
 `Schedule` 애그리거트가 모든 불변식을 *직접* 담는다.
 
-- **`Schedule.addParticipant(name, color, ...)`** — 한도 / 중복 검증을 애그리거트
-  내부에서. 위반 시 `BusinessException` (`ScheduleException` 서브클래스) 발생.
-- **`Schedule.changeWeek(weekStart)`** — 주차 변경 시 *기존 selections 무효화* 정책을
-  애그리거트가 책임.
+- **`Schedule.addParticipant(Participant participant)`** — 한도 / 중복(대소문자 무시)
+  검증을 애그리거트 내부에서. 위반 시 `ParticipantLimitExceededException` /
+  `DuplicateParticipantException` (둘 다 `BusinessException` 직접 상속, HTTP 409) 발생.
+- **`Schedule.changeWeeks(int newWeeks)`** — 주차 변경 진입점을 애그리거트가 소유하고
+  4~7 범위 불변식을 검증한다. 기존 selections 를 무효화하지는 않으며, day 범위 검증은
+  저장 시점에 `Participant.updateSelections(newSelections, totalDays)` 가 담당한다.
 - **서비스 레이어** — 트랜잭션 경계 / 리포지토리 호출 / 도메인 메서드 위임만.
 - 도메인 메서드가 던지는 예외는 ADR 0001 (common/error-handling) 의
-  `BusinessException` 베이스 상속.
+  `BusinessException` 베이스 상속. 단 `changeWeeks` 의 범위 위반만 현재
+  `IllegalArgumentException` 으로 남아 있어 이 규칙의 예외다.
 
 ## Rationale — 왜 이 선택인가
 

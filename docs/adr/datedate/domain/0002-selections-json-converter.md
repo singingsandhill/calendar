@@ -26,7 +26,7 @@
 
 `AttributeConverter` 로 JSON 직렬화 — `Participant.selections` 단일 칼럼.
 
-- **`SelectionConverter`** (`AttributeConverter<List<Integer>, String>`) — Jackson
+- **`SelectionListConverter`** (`AttributeConverter<List<Integer>, String>`) — Jackson
   으로 직렬화/역직렬화.
 - **`Participant.selections`** 필드 → DB 컬럼 1개.
 - 별도 `participant_selection` 테이블 제거.
@@ -56,7 +56,7 @@
 ## References
 
 - 관련 코드:
-  - `src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/converter/SelectionConverter.java`
+  - `src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/converter/SelectionListConverter.java`
   - `src/main/java/me/singingsandhill/calendar/datedate/domain/participant/Participant.java`
 - 관련 docs: `docs/datedate/architecture-review.md` (E-2-a)
 - 관련 커밋: `git log -1 7012cc0`

@@ -1,5 +1,30 @@
 # DateDate 코드 아키텍처 분석 보고서
 
+> **갱신 이력 / 이 문서 읽는 법** (2026-08-09 갱신)
+>
+> - 본문 A~G 절은 **2026-04 시점 스냅샷**이다. 인용된 파일·라인·LOC 는 당시 코드 기준이라
+>   현재와 다를 수 있다. **현재 상태는 아래 표와 각 항목 제목의 마커가 정본이다.**
+> - E/F 절의 항목 기호(E-1-a … E-3-c)는 ADR 4건이 참조하므로 번호를 바꾸지 않는다
+>   (`datedate/domain/0001`·`0002`·`0003`, `datedate/frontend/0001`).
+> - 결정의 "왜"는 ADR 에 있다. 이 문서는 리스크 목록의 이력만 유지한다.
+>
+> | Top10 | 2026-08-09 상태 | 근거 |
+> |---|---|---|
+> | 1. selections 컬럼 오버플로우 | ✅ 해결 | `ParticipantJpaEntity.java:38-39` 이 `@Convert(SelectionListConverter)` + `@Column(length = 500)`. 회귀 테스트 `SelectionListConverterTest.java:41-51` |
+> | 2. 권한 검증 부재 | 🔶 부분 | `OwnerPathInterceptor.java:39-57` 이 `/api/owners/**` 의 ID 형식·예약어를 사전 검증하고, PUT/PATCH/DELETE 에 한해 owner 존재까지 검증한다(`WebConfig.java:82-83` 에 `/api/owners/**` 로 등록). `DELETE /api/participants/{id}` 처럼 ownerId 가 경로에 없는 flat API 는 여전히 소유권 미검증, `SecurityConfig.java:81-82` 의 `/*`·`/*/*/*` permitAll 유지 → E-2-d 미완 |
+> | 3. GET 이 상태 변경 | ✅ 해결 | `ScheduleController.java:64-67` (`needsCreation` + `schedule/create`, 생성 없음), `OwnerController.java:40-45` (`setStatus(404)`). ADR `datedate/domain/0003`·`0004` |
+> | 4. 도메인 공동화 | ✅ 해결 | `Schedule.addParticipant` 이 한도·중복 불변식을 직접 보유(`Schedule.java:112-120`), `ParticipantService.java:44` 가 위임. `MAX_PARTICIPANTS` 는 `Schedule.java:14` 단일 정의. ADR `datedate/domain/0001` |
+> | 5. selections 정규화 불가 | ⛔ 기각 | ADR `datedate/domain/0002` 가 정규화 테이블(`participant_selection`)을 **기각**하고 JSON `AttributeConverter` 단일 컬럼을 채택. 미해결이 아니라 의도된 설계다 |
+> | 6. 공유 토큰 부재 | ❌ 미해결 | `publicToken`/`shareToken` 류 심볼 전 소스 0건. recap 전용 공유 링크(`SecurityConfig.java:46` `/recap/share/**`, `RecapShare.token`)만 별도로 존재 → E-3-b 미착수 |
+> | 7. `get`/`find` 이중 인터페이스 | 🔶 부분 | `ScheduleService.java:36` 이 null 대신 `Optional<Schedule>` 을 반환하고 `L31-34` 는 그 위에서 `orElseThrow` 만 한다 — E-1-d 의 "Optional 반환으로 통일" 안이 채택됨(두 메서드 공존 자체는 유지). `ensureOwnerExists` 중복은 제거되어 `L46` 이 `ownerService.getOrCreateOwner` 로 일원화 |
+> | 8. 프런트 IIFE + 전역 | ✅ 해결 (인젝션 방식은 기각) | `schedule-view.js` 제거, `static/js/schedule/` 6모듈 + `view.html:276` `<script type="module">`. 단 `window.SCHEDULE_DATA` 제거 권고는 **기각** — ADR `datedate/frontend/0001` 이 Thymeleaf 인젝션(`view.html:202`, `state.js:1`)을 채택 설계로 확정했다 |
+> | 9. `updateSchedule` 재생성 | ✅ 해결 | `Schedule.changeWeeks(int)` 도입(`Schedule.java:131-136`), `ScheduleService.java:69` 가 호출 |
+> | 10. 컨버터 손수 파싱 | 🔶 부분 | `SelectionListConverter.java:13-17` 이 `@Converter` + Jackson 으로 교체 완료. 다만 파싱 실패 시 `IllegalStateException`(`L39`) 이라 `BusinessException` 이 아니고 여전히 500 이다 — 테스트가 이 동작을 고정(`SelectionListConverterTest.java:53-59`). E-2-a 의 400 변환 부분은 미완 |
+>
+> **잔여 작업:** E-2-d(flat API 소유권 가드) / E-3-b(공유 토큰) / F-2(저장·참여자 추가 후
+> 전체 재렌더: `static/js/schedule/calendar.js:177`, `static/js/schedule/participants.js:45`) /
+> D-8 중 Location·Menu 서비스 단위 테스트와 어댑터 레이어 테스트 부재.
+
 ## Context
 
 DateDate는 Spring Boot 4 / Java 21 / Thymeleaf SSR 기반 그룹 일정 조율 서비스로, 현재는 동작 수준에서 안정적이지만 도메인 복잡도가 늘어날 때 **어디가 먼저 구조적으로 깨질 것인가**를 식별하는 것이 이번 분석의 목적이다. 본 보고서는 실제 소스(도메인 11파일 / 애플리케이션 26파일 / 인프라 17파일 / 프레젠테이션 21파일, 약 4,351 LOC + 프론트 1,163 LOC)를 직접 읽고 도출한 결과이며, 일반론이 아니라 **파일/라인 기준의 실행 가능한 권고**를 담는다.
@@ -41,7 +66,7 @@ datedate/
 4. null이면 `scheduleService.createSchedule(...)` — **GET 요청이 쓰기** ⚠️
 5. `LocationService.getLocationsByScheduleId()`, `MenuService.getMenusByScheduleId()` 추가 조회
 6. `ScheduleDetailResponse.from(...)`으로 조합 → `schedule/view.html` 렌더
-7. 프론트는 `window.SCHEDULE_DATA`에 전체 payload 주입 → `schedule-view.js`가 DOM 렌더
+7. 프론트는 `window.SCHEDULE_DATA`에 전체 payload 주입 → `static/js/schedule/` ES 모듈 6종이 DOM 렌더 (2026-08 기준. 2026-04 당시에는 단일 `schedule-view.js`)
 
 ---
 
@@ -61,14 +86,14 @@ datedate/
 
 ## C. 핵심 위험 지점 Top 10
 
-### 1. 🔴 [상] VARCHAR(100) 선택 저장 오버플로우
+### 1. 🔴 [상] VARCHAR(100) 선택 저장 오버플로우 — ✅ 해결 (2026-08)
 **문제:** `ParticipantJpaEntity.selections` 가 `@Column(length = 100)` (L33). `SelectionConverter.toJson([1,2,...,49])`는 `"[1,2,...,49]"` 문자열 → 실제 길이 **139자** (`2+9+80+48=139`).
 **현재 버티는 이유:** 사용자가 49일 중 많아야 절반 선택 → 100자 미만으로 맞음.
 **터지는 시점:** 7주 확장 모드(`EXTENDED_WEEKS=7`, `FIXED_TOTAL_DAYS=49`) 사용자가 전체를 선택하거나, **25일 이상(~100자) 선택 시 SQL 데이터 절삭** → `fromJson` 파싱 실패로 `NumberFormatException` → 500 에러.
 **검증:** `[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]` = 76자. 26번째부터는 27자 추가로 100자 초과.
 **우선순위: 상 (실제 데이터 손상 가능)**
 
-### 2. 🔴 [상] 권한 검증 완전 부재
+### 2. 🔴 [상] 권한 검증 완전 부재 — 🔶 부분 해결 (2026-08)
 **문제:** `SecurityConfig` L21, L47, L48에서 `/api/**`, `/*`, `/*/*/*` 모두 `permitAll`. Service/Controller 어디에도 "이 participantId가 이 ownerId 소유냐" 검증 없음.
 **현재 버티는 이유:** 링크를 아는 사람만 접근 → security-by-obscurity.
 **터지는 시점:**
@@ -78,7 +103,7 @@ datedate/
 - **GDPR/개인정보 관점에서도 문제** — SEO 공개 여부와 무관하게 참여자 이름이 유출됨.
 **우선순위: 상 (하지만 현재 규모에서는 당장 치명적이지 않음)**
 
-### 3. 🔴 [상] GET 요청이 상태를 변경
+### 3. 🔴 [상] GET 요청이 상태를 변경 — ✅ 해결 (2026-08, ADR datedate/domain/0003·0004)
 **문제:** `ScheduleController.viewSchedule` (L58-60): URL 방문만으로 Owner + Schedule을 DB에 생성.
 ```java
 if (schedule == null) {
@@ -92,7 +117,7 @@ if (schedule == null) {
 - `@Transactional(readOnly=true)` 서비스를 호출하고 내부에서 `@Transactional` 쓰기 메서드가 호출되는 **트랜잭션 전파 혼란**.
 **우선순위: 상**
 
-### 4. 🟠 [중] 도메인 규칙이 Service에서 재구현됨 (도메인 공동화)
+### 4. 🟠 [중] 도메인 규칙이 Service에서 재구현됨 (도메인 공동화) — ✅ 해결 (2026-08, ADR datedate/domain/0001)
 **문제:** Schedule의 도메인 메서드가 대부분 **미사용**:
 - `Schedule.canAddParticipant()` (L106) ← 서비스는 `participantRepository.countByScheduleId()` 재조회
 - `Schedule.hasParticipantWithName()` (L117) ← 서비스는 `participantRepository.existsByScheduleIdAndName()` 사용
@@ -105,13 +130,13 @@ if (schedule == null) {
 - 참여자 초과 체크가 race condition일 때 도메인 invariant가 보장되지 않음 (count 쿼리 ↔ insert 사이에 누가 끼어들면 9명).
 **우선순위: 중**
 
-### 5. 🟠 [중] 선택 데이터 구조가 시간 확장 불가
+### 5. 🟠 [중] 선택 데이터 구조가 시간 확장 불가 — ⛔ 기각 (ADR datedate/domain/0002 가 정규화 테이블을 기각하고 JSON 컬럼을 채택)
 **문제:** `Participant.selections: List<Integer>` → DB에는 `"[1,2,3]"` JSON 문자열. 시간대/응답상태 확장 시 **스키마·DTO·컨버터·검증 전부 재작성** 필요.
 **현재 버티는 이유:** 현재는 "해당 날짜 가능/불가" 이진 상태만 필요.
 **터지는 시점:** 요구사항 "오전/오후 분리", "가능/불가/미정" 삼중 상태, "이 날짜에 누가 답했는지 검색"(= 날짜별 집계 쿼리) 추가 시 근본 재설계.
 **우선순위: 중**
 
-### 6. 🟠 [중] 공유 링크 토큰 레이어 부재
+### 6. 🟠 [중] 공유 링크 토큰 레이어 부재 — ❌ 미해결 (2026-08)
 **문제:** `ownerId`가 URL에 평문. 누구나 `/jane` 추측으로 다른 사람 대시보드 접근 가능. "소유자 관리" vs "참여자 보기" 구분이 **URL 깊이만 다를 뿐 기술적 구분 없음**.
 **현재 버티는 이유:** `ownerId` 네이밍 관례상 추측 어려움 + 개인 사용.
 **터지는 시점:**
@@ -119,13 +144,13 @@ if (schedule == null) {
 - "이 링크는 참여자만 볼 수 있게" → 인증 토큰 개념 자체가 없어 전면 재설계.
 **우선순위: 중 (권한 모델 요구사항 나오기 전까지는 대기 가능)**
 
-### 7. 🟠 [중] ScheduleService 이중 인터페이스 (`get` vs `find`)
+### 7. 🟠 [중] ScheduleService 이중 인터페이스 (`get` vs `find`) — 🔶 부분 해결 (2026-08: null → `Optional` 통일, 두 메서드 공존은 유지)
 **문제:** `getScheduleByOwnerAndYearMonth` (예외 throw) + `findScheduleByOwnerAndYearMonth` (null 반환) 두 메서드가 공존 (`ScheduleService.java` L32-39). 호출자가 어느 것을 쓸지 매번 판단.
 **현재 버티는 이유:** MVC 컨트롤러만 null 버전을 쓰고, 나머지는 예외 버전 사용.
 **터지는 시점:** 신규 개발자가 예외 버전 써야 할 곳에 null 버전을 써서 NPE 분산. `ensureOwnerExists`가 `createSchedule` 내부에 있고 `OwnerService.getOrCreateOwner`와 **동일한 로직 중복**.
 **우선순위: 중**
 
-### 8. 🟡 [하] Frontend 전역 상태 + IIFE 혼합
+### 8. 🟡 [하] Frontend 전역 상태 + IIFE 혼합 — ✅ 해결 (2026-08, ADR datedate/frontend/0001. 단 `window.SCHEDULE_DATA` 제거 권고는 기각)
 **문제:** `schedule-view.js` (465 LOC, 단일 파일):
 - IIFE로 감싼 뒤 `window.onParticipantChange`, `window.saveSelections` 등 **14개 함수를 window에 직접 할당**
 - `currentParticipantId`, `selectedDays`가 클로저 안에 갇혀 테스트/공유 불가
@@ -137,13 +162,13 @@ if (schedule == null) {
 **터지는 시점:** 기능 추가(반복 일정, 알림, 댓글 등) 시 각각 전역 함수 하나씩 추가 → window 네임스페이스 오염 급증.
 **우선순위: 하 (기능 추가 전까지는 감내 가능)**
 
-### 9. 🟡 [하] `updateSchedule`의 anemic 재생성 패턴
+### 9. 🟡 [하] `updateSchedule`의 anemic 재생성 패턴 — ✅ 해결 (2026-08)
 **문제:** `ScheduleService.updateSchedule` (L65-83): `weeks`만 바꾸는데 **새 Schedule 객체 전체를 생성**(7 인자 생성자)하고 save. Domain에 `schedule.changeWeeks(int)` 같은 메서드가 없어 service가 불변성을 우회.
 **현재 버티는 이유:** 동작은 맞음.
 **터지는 시점:** "메모 / 제목 / 확정일" 필드 추가 시 생성자 인자가 10개로 늘면서 매번 7줄 복붙이 발생. 변경 invariant가 도메인에 없음.
 **우선순위: 하**
 
-### 10. 🟡 [하] SelectionConverter 손수 파싱
+### 10. 🟡 [하] SelectionConverter 손수 파싱 — 🔶 부분 해결 (2026-08: `@Converter` + Jackson 완료, 파싱 실패 400 변환은 미완)
 **문제:** `SelectionConverter.java` L22-34: `replace("[","").replace("]","").split(",").map(Integer::parseInt)` — DB가 오염되면(수동 수정, 마이그레이션 실수) **`NumberFormatException`이 터지고 이는 `BusinessException`이 아니므로 500 + 스택트레이스 노출**.
 **현재 버티는 이유:** 쓰기도 같은 컨버터가 담당하므로 데이터가 깨끗함.
 **터지는 시점:** 스키마 migration / CSV 일괄 수정 / H2 콘솔 수기 수정 → 복구 불가능한 500 에러.
@@ -199,7 +224,7 @@ if (schedule == null) {
 
 ### D-7. 템플릿/JS/CSS 구조
 - **템플릿:** fragments 재사용률 높음(103회 `th:replace/insert`). `schedule/view.html` 228줄, 범위 적절.
-- **JS:** `schedule-view.js` 단일 파일 465 LOC. IIFE + `window.*` 혼합 안티패턴. 모듈 분리(달력/참여자/투표) 여지 있음.
+- **JS:** (2026-04) `schedule-view.js` 단일 파일 465 LOC, IIFE + `window.*` 혼합 안티패턴. → **2026-08 기준 해소.** `static/js/schedule/` 6모듈(`main` 77 / `state` 26 / `calendar` 183 / `voting` 218 / `participants` 61 / `utils` 47, 합계 612 LOC) + `view.html:276` `<script type="module">`.
 - **CSS:** `style.css` 3,990줄 단일 파일. 달력/대시보드/투표 섹션 구분 없음. 하지만 우선순위 낮음.
 - **SSR↔JS 경계:** 초기 payload만 SSR, 이후 전체 AJAX. 부분 SSR(fragments 응답)은 사용 안 함 → 현재는 이게 단순해서 OK.
 
@@ -302,7 +327,7 @@ if (schedule == null) {
 - **영향:** 대규모. SecurityConfig, 새 컨트롤러, 스키마 변경, 전체 프론트 URL 재구성.
 
 #### E-3-c. 프론트엔드 모듈화
-- **무엇:** `schedule-view.js`를 ES6 module로 쪼갬. `calendar.js` / `participants.js` / `voting.js` / `api.js`. `window.SCHEDULE_DATA` 대신 `data-*` attr + `fetch('/api/schedules/.../detail')`.
+- **무엇:** `schedule-view.js`를 ES6 module로 쪼갬 → **완료.** `static/js/schedule/{main,state,calendar,voting,participants,utils}.js` 6모듈. 단 "`window.SCHEDULE_DATA` 대신 `data-*` attr + fetch" 부분은 ADR `datedate/frontend/0001` 이 **기각**하고 인젝션 유지를 확정했다.
 - **왜:** Top10 #8.
 - **기대효과:** 기능 추가 시 파일 격리. 부분 렌더링 가능.
 - **영향:** 모든 datedate 템플릿 `<script>` 태그, `schedule-view.js` 전체.
@@ -327,10 +352,10 @@ if (schedule == null) {
 ### F-2. Frontend (JS/Template)
 | 파일 | 수정 포인트 |
 |--|--|
-| `static/js/schedule-view.js:226` | `renderCalendar()` 전체 호출 → `updateDotsForDay(currentParticipantId, day)` 부분 갱신 |
-| `static/js/schedule-view.js:250` | `window.location.reload()` → `fetch('/api/.../participants').then(updateUI)` |
-| `static/js/schedule-view.js` | IIFE 해체 → ES6 module import/export. `window.*` 함수 대신 이벤트 위임(`addEventListener`) |
-| `templates/schedule/view.html` | `window.SCHEDULE_DATA` 인라인 주입 → `<main data-schedule-id="..." data-initial-payload-url="/api/...">` + fetch |
+| `static/js/schedule/calendar.js:177` (구 `schedule-view.js:226`) | **미해결.** `saveSelections()` 성공 후 `renderCalendar()` 로 49셀 전체 재생성 → 부분 갱신 여지 |
+| `static/js/schedule/participants.js:45` (구 `schedule-view.js:250`) | **미해결.** 참여자 추가 후 `window.location.reload()` 유지 |
+| `static/js/schedule/` 6모듈 | **완료.** IIFE 해체 → ES 모듈 + `addEventListener` 위임 (ADR `datedate/frontend/0001`) |
+| `templates/schedule/view.html:202` | **기각.** ADR `datedate/frontend/0001` 이 `window.SCHEDULE_DATA` Thymeleaf 인젝션을 채택 설계로 확정 — `data-*` + fetch 전환은 하지 않는다 |
 
 ### F-3. 테스트 추가
 | 파일 | 추가 테스트 |

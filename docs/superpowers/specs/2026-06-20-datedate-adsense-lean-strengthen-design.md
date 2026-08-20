@@ -1,9 +1,24 @@
 # DateDate — AdSense "Low Value Content" Remediation (Lean Strengthen) — Design
 
 - **Date:** 2026-06-20
-- **Status:** Draft (awaiting user review)
+- **Status:** Implemented — Component A~E 반영 완료 (2026-08-09 코드 확인)
 - **Module:** `datedate` (+ small `common` touch)
 - **Goal:** Clear Google AdSense **"가치가 별로 없는 콘텐츠 (Low value content)"** on `datedate.site` (flagged 2026-06-11) by strengthening the editorial content layer — without re-architecting anything.
+
+> **구현 노트 (2026-08-09 확인):** Component A~E 모두 반영됨. 계획 대비 차이 2건만 아래에 남긴다.
+>
+> - **A:** 스펙이 제안한 별도 `fragments/usecase-sample.html` (`th:fragment="sample(slug)"`) 은
+>   만들지 않았다. `use-cases/detail.html:23-37` 안에 인라인 `<section class="use-case-sample">`
+>   + `th:switch` 아이콘 + `seo.useCase.<slug>.sample.{title,body}` 메시지 키로 구현했다.
+>   스펙에서 nice-to-have 로 표시한 **슬러그별 OG 이미지는 미적용** — `SeoService.java:491`
+>   (`getUseCaseSeo`, L449~) 이 여전히 `DEFAULT_OG_IMAGE`(`/og-image.png`) 를 쓴다.
+> - **B:** `UseCaseSlugs.java:14-20` 에 `club-activity` 추가, 양 로케일 메시지 키 각 50줄.
+> - **C:** `UseCaseNavAdvice.java` (`datedate.presentation.controller`) + `footer.html:53-56`
+>   `th:each`, `index.html:228-237` study-group 카드 노출.
+> - **D:** `index.html:251-300` 의 `index.why.*` (문제 / 동작 방식 / 솔직한 한계) 프로즈 섹션.
+> - **E:** `detail.html:118-125` 관련 페이지 + 키 완결성 테스트
+>   `UseCaseContentCompletenessTest.java:41-45,85-95` (`navLabel`·`sample.title`·`sample.body` 포함).
+> - §6 의 CLAUDE.md 동기화도 반영됨 (`CLAUDE.md:259` 에 동호회 추가).
 
 ---
 

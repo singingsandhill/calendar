@@ -10,6 +10,26 @@
 
 **Spec:** [`docs/superpowers/specs/2026-05-24-datedate-event-tracking-design.md`](../specs/2026-05-24-datedate-event-tracking-design.md)
 
+> **구현 완료 노트 (2026-08-09 확인):** Task 1~8 전부 구현 완료 — 체크박스는 실행 당시
+> TDD 추적용이라 미체크 상태 그대로 둔다 (2026-07-11 카카오 플랜과 동일 관례). 5개
+> 이벤트 실제 발화 지점: `link_shared` `static/js/schedule/utils.js:41-43`,
+> `location_added` `static/js/schedule/voting.js:48-50`, `menu_added`
+> `static/js/schedule/voting.js:129-131`, `schedule_viewed`
+> `templates/schedule/view.html:261-263`, `owner_dashboard_viewed`
+> `templates/owner/dashboard.html:95-97`. owner 마커는
+> `static/js/create-schedule-modal.js:74` 와 `templates/schedule/create.html:52`.
+> Task 7 문서 갱신도 반영됨 (`docs/data-analysis/01-current-state.md:129-133`).
+>
+> **계획 대비 변경 1건:** Task 1 의 `analytics.js` 는 계획(L44-91)의 ES module `export`
+> + `globalThis.DDAnalytics` 병행 방식이 아니라, classic script IIFE 단일 방식으로
+> 구현되어 `window.DDAnalytics` 로만 노출된다 (`static/js/analytics.js:6,46-51`).
+> 이유는 파일 주석에 있다 — "classic script (non-module) — 인라인/defer 양 환경에서
+> 동일하게 접근" (`analytics.js:4`). 세 페이지가 `<script defer th:src="@{/js/analytics.js}">`
+> 로 로드한다 (`schedule/view.html:198`, `owner/dashboard.html:84`,
+> `schedule/create.html:30`). 따라서 Task 1 Step 1 의 `export` 코드 블록과 Step 2 의
+> `await import('/js/analytics.js')` 검증 절차는 정본이 아니다 — 최종 코드가 정본.
+> (Task 2·3 의 `import`/`export` 블록은 `schedule/` ES 모듈 대상이라 실제 코드와 일치한다.)
+
 ---
 
 ## 파일 변경 맵
