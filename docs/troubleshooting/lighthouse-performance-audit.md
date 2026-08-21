@@ -112,11 +112,11 @@ SecurityConfig 의 `permitAll` 매처는 컨트롤러 경로에도 동일하게 
 
 #### A. AdSense lazy load (IntersectionObserver)
 
-**현재.** `templates/fragments/head.html:90-92`
+**현재.** `templates/fragments/head.html:92-94`
 
 ```html
-<script th:if="${seo.adsEnabled()}" async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7334667748813914"
+<script th:if="${seo.adsEnabled() and adsense.enabled}" async
+        th:src="|https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsense.client}|"
         crossorigin="anonymous"></script>
 ```
 
@@ -167,18 +167,19 @@ Google Tag 부트스트랩 스크립트가 그 ID 로 `gtag/js` 를 로드하기
 
 ### P3 — 선택적 (큰 변경)
 
-#### E. AdSense 슬롯 ID 검증
+#### E. AdSense 슬롯 ID 주입 — placeholder 는 제거 완료
 
-`templates/fragments/ad-slot.html` 의 placeholder
+`ad-slot.html` 의 `data-ad-client` / `data-ad-slot` 은 `th:attr` 로 `${adsense.client}` /
+`${adsense.slotLeaderboard|slotInfeed|slotRectangle}` 를 읽는다. 과거의
+`ca-pub-XXXXXXXXXX` / `XXXXXXXXXX` placeholder 는 저장소에 남아 있지 않다.
 
-```html
-data-ad-client="ca-pub-XXXXXXXXXX"
-data-ad-slot="XXXXXXXXXX"
-```
+현재는 `adsense.client`(`application.yaml:26`)와 `ADSENSE_SLOT_*` 이 모두 공란이라
+`adsbygoogle.js` 도, ad-slot fragment 도 렌더되지 않는다
+(`AdsenseProperties.isEnabled()` / `hasLeaderboardSlot()` 등이 false).
 
-가 head 의 실제 client `ca-pub-7334667748813914` 와 불일치. 광고가 실제로 뜨는
-페이지(`/insights`, `/use-cases`, `/guide`)에서 어떻게 슬롯이 주입되는지 확인 후
-실값 채우거나 슬롯을 폐기.
+남은 작업은 AdSense 승인 후 실값을 환경변수로 주입하고, ad-slot 을 호출하는 5개 페이지
+(`/guide`, `/faq`, `/insights/trends`, `/use-cases/{slug}`, `/tools/date-diff`) 에서
+실제 게재를 확인하는 것이다.
 
 #### F. Server-side GTM (first-party 프록시)
 

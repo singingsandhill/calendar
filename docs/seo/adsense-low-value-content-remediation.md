@@ -12,6 +12,10 @@
 > **승인을 보장하지 않습니다.** 본 문서는 정책 신호를 체계적으로 제거한 기록이며,
 > 최종 판정은 Google 리뷰어/봇의 재량입니다.
 
+> **2026-08-17 3차 통지.** 재검토 요청 결과로 같은 사유가 재통지됐다. 후속 진단·대응은
+> [`docs/audit/adsense-low-value-content-diagnosis-2026-08-17.md`](../audit/adsense-low-value-content-diagnosis-2026-08-17.md) 참조
+> — 결론: 기술 신호가 아니라 콘텐츠 믹스(editorial), 해법은 /guides 콘텐츠 레이어.
+
 ---
 
 ## 1. 요약 (Executive Summary)
@@ -19,13 +23,13 @@
 **1차 대응(2026-05, Section J/K/M)이 대부분의 구조 문제를 이미 해소했습니다.**
 감사 결과 사이트는 다음 상태로 확인됨:
 
-- sitemap = 공개 콘텐츠 페이지 12개 × ko/en 만 포함 (UGC/runner/봇 대시보드 완전 제외)
+- sitemap = 고정 12 엔트리 + `/insights/trends` 1 엔트리(인기 데이터 존재 시) 를 각각 ko/en 으로 발행 → 최대 13 엔트리 = 26 URL (UGC/runner/봇 대시보드 완전 제외)
 - robots.txt: /api, /h2-console, /runners/admin, /trading, /stock, UGC 연도 경로 차단
 - noindex 메타: owner 대시보드, 스케줄 뷰, runners 전체, trading/stock, 데이터 없는 insights
 - 광고 코드: `seo.adsEnabled() and adsense.enabled` + 슬롯 ID 존재 시에만 DOM 생성
   (placeholder 광고 DOM 없음), 콘텐츠 페이지 5종에만 게재
-- 본문: use-case 4종 ~1,000단어/페이지, 홈/가이드/FAQ/소개/계산기 모두 실질 본문 보유,
-  i18n 756키 100% ko/en 패리티
+- 본문: use-case 5종 ~1,000단어/페이지, 홈/가이드/FAQ/소개/계산기 모두 실질 본문 보유,
+  i18n 865키 100% ko/en 패리티
 
 **본 세션(Section P)이 메운 잔여 갭 3개:**
 
@@ -35,8 +39,9 @@
 | 2 | `GET /{ownerId}` 가 `getOrCreateOwner` 호출 — 임의 URL 이 **HTTP 200 + Owner row 영속화** (소프트 404 + 봇 발 DB 오염, 라이브 확인) | GET 무생성 + 미존재 owner 는 동일한 빈 대시보드를 **404** 로 렌더 (ADR datedate/domain/0004) |
 | 3 | 가이드에 트러블슈팅 부재 | 실제 제품 동작 기반 6문항 아코디언 FAQ (ko/en) |
 
-**배포 블로커 1개:** 라이브 배포가 repo 보다 구버전 — 라이브 `/trading` 에 커밋된
-noindex 메타가 없음 (Section M, Commit 32). **재심사 요청 전 반드시 배포** (§7).
+**배포 블로커 1개 → 해소:** 2026-06-11 시점의 구버전 배포 문제는 2026-08-02 라이브 감사에서
+해소가 확인됐다 — 같은 커밋의 `/stock*` noindex 와 Section P 수정이 라이브에 반영돼 있다.
+라이브 `/trading` 자체는 그 감사가 직접 측정하지 않았으므로 재심사 직전 스폿 체크 첫 줄만 확인 (§7).
 
 ---
 
@@ -52,12 +57,12 @@ noindex 메타가 없음 (Section M, Commit 32). **재심사 요청 전 반드�
 | `/terms` | HomeController | sitemap ✓ | ✗ (정책 페이지) | ko+en (**본 세션 EN 추가**) | 리뷰 안전 콘텐츠 |
 | `/insights/trends` | InsightsController | sitemap 조건부 (데이터 有 시) / 데이터 無 시 noindex | leaderboard+infeed (데이터 有 시만) | ko+en | 리뷰 안전 콘텐츠 |
 | `/tools/date-diff` | HomeController | sitemap ✓ | infeed 1 | ko+en | 리뷰 안전 콘텐츠 (도구 + ~600단어 본문) |
-| `/use-cases/{slug}` ×4 | UseCaseController | sitemap ✓ | infeed 1 | ko+en | 리뷰 안전 콘텐츠 (슬러그별 5섹션 고유 본문) |
+| `/use-cases/{slug}` ×5 | UseCaseController | sitemap ✓ | infeed 1 | ko+en | 리뷰 안전 콘텐츠 (슬러그별 5섹션 고유 본문) |
 | `/{ownerId}` | OwnerController | noindex,nofollow + **미존재 시 404** (본 세션) | ✗ | — | UGC — 비수익화 |
 | `/{ownerId}/{y}/{m}` | ScheduleController | noindex,nofollow + robots 연도 차단 | ✗ | — | UGC — 비수익화 |
 | `/runners/**` | RunnerController | noindex,follow (sitemap 제외) | ✗ | ko | 별도 제품 — 색인/광고 격리 |
 | `/runners/admin/**` | — | robots 차단 + ROLE_ADMIN | ✗ | — | 내부 |
-| `/trading/**`, `/stock/**` | 봇 대시보드 | noindex,nofollow,noarchive + robots 차단 (**라이브 미반영 — §7**) | ✗ | — | 내부 — 색인/광고 격리 |
+| `/trading/**`, `/stock/**` | 봇 대시보드 | noindex,nofollow,noarchive + robots 차단 (**라이브 반영 — `/stock*` 실측 확인, §7**) | ✗ | — | 내부 — 색인/광고 격리 |
 | `/api/**` | REST | robots 차단 | ✗ | — | API |
 | 오류 페이지 (4xx/5xx) | MvcExceptionHandler | noindex | ✗ | ko+en | 알림 화면 — 비수익화 |
 | `/sitemap.xml`, `/robots.txt`, `/ads.txt` | StaticResourceController | — | — | — | 인프라 |
@@ -69,11 +74,11 @@ noindex 메타가 없음 (Section M, Commit 32). **재심사 요청 전 반드�
 | `/privacy`, `/terms` | ~~HIGH~~ → **LOW** | (수정 전) hreflang 이 광고한 EN 페이지가 한국어 법적 문서로 응답 — 정합성 위반. (수정 후) 양 로케일 완전 렌더 + 회귀 테스트 고정 |
 | `/{ownerId}` (임의 URL) | ~~MED~~ → **LOW** | (수정 전) 무한 200 URL 공간 + GET mutation. (수정 후) 미존재 owner 404 + 무생성 |
 | `/insights/trends` | **LOW** | 데이터 없으면 noindex + sitemap 제외 + 광고 미호출 (3중 가드). 트렌드 산정 방식 본문 설명 존재 |
-| `/tools/date-diff` | **LOW** | 1차 대응에서 본문 ~600단어 확장 (사용 사례, 영업일 계산 설명, FAQ 5종) |
-| `/use-cases/{slug}` ×4 | **LOW** | 슬러그별 intro/시나리오3/실수3/팁4/FAQ5 고유 본문 ~1,000단어, 키 완결성 테스트 고정 |
+| `/tools/date-diff` | **LOW** | 1차 대응에서 본문 확장 (활용 사례 4불릿, 언제 필요한가 3케이스, 영업일 계산 설명, FAQ 3문항, 관련 페이지) |
+| `/use-cases/{slug}` ×5 | **LOW** | 슬러그별 intro/시나리오3/실수3/팁4/FAQ5 고유 본문 ~1,000단어, 키 완결성 테스트 고정 |
 | `/`, `/guide`, `/faq`, `/about` | **LOW** | 실질 본문 + 서버 렌더 FAQ + 신뢰 페이지(운영 원칙/연락처/최종수정일). 가이드에 트러블슈팅 6문항 추가 |
 | `/runners/**` | **LOW** | noindex + sitemap 제외 — 리뷰어가 nav 로 도달 불가 (datedate nav/footer 에 링크 없음) |
-| `/trading`, `/stock` | **LOW** (배포 후) | noindex,nofollow,noarchive + robots 차단. 단 **라이브 미배포 상태 — §7 블로커** |
+| `/trading`, `/stock` | **LOW** | noindex,nofollow,noarchive + robots 차단. 2026-08-02 감사에서 `/stock*` 라이브 실측 확인 (§7) |
 
 ## 4. 광고 게재 가드 요약
 
@@ -86,11 +91,12 @@ noindex 메타가 없음 (Section M, Commit 32). **재심사 요청 전 반드�
   `/use-cases/{slug}`, `/tools/date-diff` — 모두 본문 소비 후·CTA 직전 1~2개.
 - **광고 금지 페이지:** `/`(홈), `/about`, `/privacy`, `/terms`, UGC 대시보드/스케줄,
   runners 전체, trading/stock, 오류 페이지 — `adsEnabled=false` 로 스크립트 자체 미로드.
+  (홈은 2026-08-17 까지 코드가 `adsEnabled(true)` 로 이 서술과 불일치했다 — ADR common/seo/0010 에서 정합화.)
 - **밀도:** 페이지당 광고 ≤ 2, 본문 대비 항상 소수. sticky/interstitial/overlay 없음.
 
 ## 5. 리뷰 안전 URL (sitemap 화이트리스트 = 재심사 제출 대상)
 
-ko 12개 + en 12개 = 24 URL (insights 는 데이터 존재 시):
+**엔트리 13개 × ko/en = 26 URL.** 단위 주의 — *엔트리*(sitemap `<url>` 쌍의 원본 경로) 13개, *URL*(`<loc>`) 26개, *hreflang 링크*(ko·en·x-default) 78개다. `/insights/trends` 는 인기 데이터가 있을 때만 실리므로 데이터 0 이면 12 엔트리 / 24 URL 로 줄어든다. 2026-08-02 라이브 감사에서 26 URL 전부 HTTP 200 으로 실측됐다 ([`docs/audit/sitemap-audit-2026-08-02.md`](../audit/sitemap-audit-2026-08-02.md)).
 
 ```
 https://datedate.site/            (+?lang=en)
@@ -105,6 +111,7 @@ https://datedate.site/use-cases/friend-meetup  (+?lang=en)
 https://datedate.site/use-cases/team-meeting   (+?lang=en)
 https://datedate.site/use-cases/travel-planning (+?lang=en)
 https://datedate.site/use-cases/study-group    (+?lang=en)
+https://datedate.site/use-cases/club-activity  (+?lang=en)
 ```
 
 `SitemapServiceWhitelistTest` 가 이 목록과의 **정확 집합 일치** 를 빌드에서 강제.
@@ -122,15 +129,24 @@ https://datedate.site/use-cases/study-group    (+?lang=en)
 | `/api/**`, `/h2-console/**` | robots 차단 | API/개발 도구 |
 | 오류 페이지 | noindex | 알림 화면 |
 
-## 7. 라이브 ↔ repo 불일치 (CRITICAL — 배포 블로커)
+## 7. 라이브 ↔ repo 불일치 — 2026-08-02 해소 확인
 
-라이브 감사 (2026-06-11) 에서 **라이브 배포가 repo HEAD 보다 구버전** 으로 확인:
+라이브 감사 (2026-06-11) 시점에는 **라이브 배포가 repo HEAD 보다 구버전** 이었다.
 
 - 라이브 `/trading` HTML 에 robots 메타 자체가 없음 (repo 는 Section M Commit 32 에서
   noindex,nofollow,noarchive 추가 완료) — `<title>ADA Trading Bot</title>` 이 그대로 노출.
 - 본 세션의 수정 3종 (privacy/terms EN, owner 404, 가이드 트러블슈팅) 도 당연히 미반영.
 
-**재심사 요청 전 배포 필수.** 배포 후 스폿 체크 (PowerShell/cmd):
+2026-08-02 라이브 감사 ([`docs/audit/sitemap-audit-2026-08-02.md`](../audit/sitemap-audit-2026-08-02.md)) 가 배포 반영을 실측했다.
+
+| 실측 항목 | 결과 |
+|---|---|
+| 사이트맵 수록 13개 경로 전부 ko/en 의 `<title>`·`<html lang>` 이 다름 | privacy/terms 영문 렌더 라이브 반영 |
+| `/runners*` `noindex,follow` · `/stock*` `noindex,nofollow,noarchive` | Section M 커밋 라이브 반영 |
+| 수록 26 URL 전부 HTTP 200, 죽은 URL 0건 | 라우트 정합 |
+
+**배포 블로커 해소.** 다만 라이브 `/trading` 의 robots 메타는 그 감사에서 직접 측정하지 않았으므로,
+재심사 직전 아래 스폿 체크의 첫 줄만 한 번 더 확인한다 (PowerShell/cmd):
 
 ```
 curl.exe -s https://datedate.site/trading | findstr /C:"name=\"robots\""        # noindex 1줄
@@ -144,7 +160,7 @@ curl.exe -s https://datedate.site/ | findstr /C:"adsbygoogle.js"                
 
 ## 8. 재심사 전 수동 체크리스트
 
-1. **배포** — Section P 커밋 실행 (`docs/guides/git-commit.md` Section P) 후 운영 반영. §7 스폿 체크 통과 확인.
+1. **배포** — 반영 확인됨 (2026-08-02 라이브 감사, §7). 재심사 직전 §7 스폿 체크 첫 줄(`/trading` robots) 만 재확인.
 2. **GSC** — sitemap.xml 재제출. `/privacy?lang=en`, `/terms?lang=en` URL 검사로 영문 렌더 확인.
    "발견됨 - 현재 색인되지 않음" 상태의 임의 ownerId URL 들이 404 로 전환되는지 수 주 관찰.
 3. **AdSense** — 사이트 대시보드에서 재심사 요청. 광고 단위는 승인 후 슬롯 ID 환경변수

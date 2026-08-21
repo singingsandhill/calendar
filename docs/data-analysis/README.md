@@ -23,14 +23,14 @@ SEO 자체 결정은 [`docs/seo/evolution-playbook.md`](../seo/evolution-playboo
 | 영역 | 상태 |
 |---|---|
 | GA4 속성 (`G-9QTMK4CDDF`, ID 516824378) | ✅ 활성 |
-| GTM 컨테이너 (`GTM-PFPKQT7W`) | ✅ 활성, 모든 공개·UGC 페이지 적용 (private `/trading/` 의도적 제외) |
+| GTM 컨테이너 (`GTM-PFPKQT7W`) | ✅ 활성, 모든 공개·UGC·runner 페이지 적용 (private `/trading/`·`/stock/` 의도적 제외) |
 | Search Console ↔ GA4 | ✅ 2026-01-16 연결 (URL 접두사 `https://datedate.site/`) |
 | AdSense ↔ GA4 | ⏸ AdSense 사이트 미승인 대기 (`pub-7334667748813914`) |
 | BigQuery export | ✅ 활성 |
 | Looker Studio 파이프라인 | ✅ 활성 |
 | IndexNow (Bing/Yandex/Naver) | 🟡 코드 활성, 운영 환경 `INDEXNOW_ENABLED` 확인 필요 |
 | Naver Search Advisor | ✅ 검증 파일 배포 (`naver52cf63f6fb22d9c9f017934c5d0b7d5c.html`) |
-| dataLayer 비즈니스 이벤트 (코드) | ✅ 6종 / 7개 사이트 푸시 |
+| dataLayer 비즈니스 이벤트 (코드) | ✅ 11종 / 13개 푸시 지점 |
 | GTM 트리거·태그 (이벤트 → GA4) | ⏳ 사용자 콘솔 작업 대기 |
 | GA4 맞춤 측정기준 등록 | ⏳ 대기 |
 | DB 미러링 to BigQuery | ⏳ 미설정 |

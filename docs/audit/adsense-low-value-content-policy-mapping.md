@@ -7,6 +7,7 @@
 | 사이트 | datedate.site (Spring Boot 4 / Thymeleaf, `datedate` 모듈) |
 | 기존 후속 문서 | `docs/prompts/adsense_approval.md`, `docs/adr/common/seo/0007-content-pages-for-adsense.md` |
 | 본 문서 목적 | Google 정책 4개 문서의 **구체 조항** ↔ **코드/콘텐츠 증거** 1:1 매핑. 기존 실행 계획의 미반영 항목 보완. |
+| 반영 상태 | §1·§2 는 2026-05-05 시점 스냅샷이다(코드 라인번호 포함). 이후 코드 반영 여부는 §3 표의 *반영 상태* 열 참조 — 2026-08-09 확인 기준 권고 6건 중 5건 반영, 6번의 `founder`/`sameAs` 만 미해결. |
 
 이 문서는 다음 4개 Google 자료를 직접 읽고 인용한 위에 작성됐습니다.
 
@@ -31,6 +32,8 @@
 
 1. **인벤토리 미완성 신호** — `templates/fragments/ad-slot.html` 의 `data-ad-client/data-ad-slot` 이 `XXXXXXXXXX` placeholder. 봇 입장에선 "광고 코드는 있는데 슬롯에 단위가 매핑 안 됨" → *미완성 화면* 으로 간주됨. ([PP-Full] 인벤토리 가치)
 2. **콘텐츠 빈약 신호** — `/use-cases/*` 4개 페이지 본문이 각 80~120 단어, 사이트의 인덱스 가능 페이지 총 ≈14개. ([MA-Thin] 빈약한 페이지, [AS-Content] 고유 콘텐츠 충분 제공, [PP-Spam] *자체 콘텐츠가 거의 또는 전혀 없는 제휴 프로그램 등의 다른 '쿠키 커터' 접근 방식*)
+
+> 위 1번(placeholder)은 2026-05-02 거절 시점의 상태다. 현재 `templates/fragments/ad-slot.html` 에 `XXXXXXXXXX` 는 0건이며, client/slot ID 를 `${adsense.*}` 모델 속성에서 읽고 슬롯 ID 미설정 시 fragment 자체가 렌더되지 않아 광고 DOM 이 나오지 않는다.
 
 기존 `adsense_approval.md` 의 진단과 동일한 결론입니다. 본 감사는 같은 결론을 4개 정책 조항에 1:1 매핑해 *증거 강화* 하고, 기존 plan 이 명시적으로 다루지 않은 부수 위반 위험을 추가합니다.
 
@@ -61,7 +64,7 @@
 | `/faq` | 8 Q&A, 답변 평균 1~2문장 | leaderboard 1개 (107) | LOW~MED | 답변이 짧아 본문 ≈ 250단어. 광고 1개와 비율은 OK 이나 *얇음* 신호. plan Phase E 에서 25개로 확장 명시. |
 | `/guide` | 5 step + use case 4 카드 ≈ 600단어 | leaderboard 1개 (85) | LOW | 비율 OK. plan Phase E 에서 1,300단어로 확장. |
 | `/privacy`, `/terms` | 350~400단어 | leaderboard 1개 | MED | 본문 OK 이나 *광고 게재 정당성 의심* 페이지. AdSense 검토 시 *법적 페이지에 광고가 박혀있다* 는 자체로 신호. 본 감사 **권고: privacy/terms 는 `adsEnabled(false)` 로 변경** (PP-Full 의 *행동 목적으로 사용되는 화면* 해석 보수). (기존 plan 의 Phase E 는 단어수만 늘리고 광고는 그대로 유지하는데, **본 감사는 광고 OFF 를 권고**.) |
-| `/` (index) | 1,300~1,800단어 | 광고 호출 없음 | OK | index 에 광고 없음 — 좋은 결정. |
+| `/` (index) | 1,300~1,800단어 | 광고 호출 없음 | OK | index 에 광고 없음 — 좋은 결정. (단 감사 당시 `adsEnabled(true)` 라 슬롯 없이 스크립트는 로드될 경로였음 — 2026-08-17 `false` 로 정합화, ADR common/seo/0010.) |
 
 ### 2.3 [PP-Full / 인벤토리 가치] 복제된 콘텐츠가 있는 화면
 
@@ -133,14 +136,14 @@ datedate 는 **제휴(affiliate) 페이지 없음**, **다른 출처 스크랩 �
 
 기존 plan 은 매우 상세합니다. 다음 6개는 plan 에 명시적으로 없거나 약하게만 다뤄진 항목으로, 4개 정책 문서를 직접 읽고 *반드시 같이 처리* 해야 한다고 판단한 보강안입니다.
 
-| # | 항목 | 근거 정책 | 권고 |
-|---|---|---|---|
-| 1 | `robots.txt` 의 `/runners` 인덱스 차단 | AS-Content 사이트 테마 일관성, PP-Full 인벤토리 가치 | `Allow: /runners*` 라인을 `Disallow: /runners` 로 변경. SeoService 도 RunnerController 가 사용 시 `noindex`. (광고는 이미 OFF.) |
-| 2 | `/tools/date-diff` 광고 OFF 또는 본문 확장 | PP-Full 인벤토리 가치 (행동 목적 화면) | 둘 중 택1: (a) `SeoService.getDateDiffSeo` 의 `.adsEnabled(true)` 를 `false` 로, (b) 페이지에 600단어 이상의 *언제 D-Day 계산이 유용한가, 평일 계산이 다른 이유, 사례 5가지* 등을 추가. |
-| 3 | `/privacy`, `/terms` 광고 OFF | PP-Full 인벤토리 가치 (행동 목적 화면 보수 해석) | `SeoService.buildSimpleWebPageSeo()` 에서 prefix가 privacy/terms 인 경우 `.adsEnabled(false)` 로 분기. plan 의 단어 확장은 그대로 유지. |
-| 4 | `/insights/trends` 광고 가드를 *본문 0* 기준으로 강화 | PP-Full 인벤토리 가치 (콘텐츠 없는 화면) | plan Phase E 의 `${stats.totalSchedules > 0}` 가드를 `${stats.totalSchedules > 0 and (!popularLocations.isEmpty() or !popularMenus.isEmpty())}` 로 강화. |
-| 5 | `<a th:href>` CTA 와 `ad-slot` 의 시각적 거리 | PP-Full 광고 방해 | 모든 ad-slot 호출 직후의 CTA 섹션에 `margin-top: 3rem` 보장. CSS 에 `.ad-slot + section { margin-top: 3rem }` 또는 명시 마진. |
-| 6 | E-E-A-T (저자/조직 정보) | AS-Content 고유 콘텐츠 + JSON-LD `Organization`/`Person` | `/about` 페이지 추가 (운영 조직, 연락처, 데이터 정책 요약). JSON-LD 의 `Organization` 에 `founder` / `sameAs` (GitHub, X 등) 채우기. plan Phase D 의 author 보강과 함께. |
+| # | 항목 | 근거 정책 | 권고 | 반영 상태 (2026-08-09 코드 확인) |
+|---|---|---|---|---|
+| 1 | `robots.txt` 의 `/runners` 인덱스 차단 | AS-Content 사이트 테마 일관성, PP-Full 인벤토리 가치 | `Allow: /runners*` 라인을 `Disallow: /runners` 로 변경. SeoService 도 RunnerController 가 사용 시 `noindex`. (광고는 이미 OFF.) | ✅ 반영 — `static/robots.txt` 에 `Allow: /runners*` 없음(10~11줄 주석이 제거 경위 기록). `RunnerController` 공개 뷰 6개가 `noindex, follow`, `/runners/runs/new` 와 `/runners/runs/create` 오류 경로는 `noindex, nofollow`. `SitemapService` 도 runners 미수록 |
+| 2 | `/tools/date-diff` 광고 OFF 또는 본문 확장 | PP-Full 인벤토리 가치 (행동 목적 화면) | 둘 중 택1: (a) `SeoService.getDateDiffSeo` 의 `.adsEnabled(true)` 를 `false` 로, (b) 페이지에 600단어 이상의 *언제 D-Day 계산이 유용한가, 평일 계산이 다른 이유, 사례 5가지* 등을 추가. | ✅ 반영 — (b) 본문 확장 채택. `tools/date-diff.html` 에 when(사례 3)·workdays·FAQ 3문항·related 섹션 추가(`tool.datediff.*` 키 48개). 광고는 `adsEnabled(true)` 유지 |
+| 3 | `/privacy`, `/terms` 광고 OFF | PP-Full 인벤토리 가치 (행동 목적 화면 보수 해석) | `SeoService.buildSimpleWebPageSeo()` 에서 prefix가 privacy/terms 인 경우 `.adsEnabled(false)` 로 분기. plan 의 단어 확장은 그대로 유지. | ✅ 반영 — 분기 대신 `buildSimpleWebPageSeo()` 공통 경로가 `.adsEnabled(false)` (privacy/terms 만 이 빌더 사용) |
+| 4 | `/insights/trends` 광고 가드를 *본문 0* 기준으로 강화 | PP-Full 인벤토리 가치 (콘텐츠 없는 화면) | plan Phase E 의 `${stats.totalSchedules > 0}` 가드를 `${stats.totalSchedules > 0 and (!popularLocations.isEmpty() or !popularMenus.isEmpty())}` 로 강화. | ✅ 반영 — 2중. 템플릿에서 leaderboard 는 `th:if="${!popularLocations.isEmpty() or !popularMenus.isEmpty()}"`(`insights/trends.html:128`), infeed 는 `th:if="${stats.totalSchedules > 0}"`(`:260`) 로 감싼다. 더해 `InsightsController:56-58` 이 `hasData` 를 만들어 `getInsightsTrendsSeo(hasData)` 가 robots·adsEnabled·hreflangEnabled 를 동시에 강등 |
+| 5 | `<a th:href>` CTA 와 `ad-slot` 의 시각적 거리 | PP-Full 광고 방해 | 모든 ad-slot 호출 직후의 CTA 섹션에 `margin-top: 3rem` 보장. CSS 에 `.ad-slot + section { margin-top: 3rem }` 또는 명시 마진. | ✅ 반영 — `static/css/style.css:4153-4156` 에 `.ad-slot + section`, `.ad-slot + [class*="-cta"]`, `.ad-slot + .insights-cta-section { margin-top: var(--space-12) }`. `--space-12: 48px`(`:46`) = 3rem |
+| 6 | E-E-A-T (저자/조직 정보) | AS-Content 고유 콘텐츠 + JSON-LD `Organization`/`Person` | `/about` 페이지 추가 (운영 조직, 연락처, 데이터 정책 요약). JSON-LD 의 `Organization` 에 `founder` / `sameAs` (GitHub, X 등) 채우기. plan Phase D 의 author 보강과 함께. | ⚠️ **부분** — `/about` 페이지와 `AboutPage`+`Organization`+`BreadcrumbList` JSON-LD 는 반영(`contactPoint` 포함). 그러나 `founder`·`sameAs` 는 **미기입** (저장소 전체 0건). 6건 중 유일한 미해결 항목 |
 
 ---
 

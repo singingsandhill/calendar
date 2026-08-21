@@ -1,6 +1,6 @@
 # 01. Current State — 활성 자산 인벤토리
 
-스냅샷 일자: 2026-05. 모든 ID·경로·연결 상태를 한 곳에 정리.
+스냅샷 일자: 2026-08-09 (직전 2026-05). 모든 ID·경로·연결 상태를 한 곳에 정리.
 
 ---
 
@@ -37,12 +37,16 @@
 
 | 페이지군 | 헤더 fragment | GTM 적용 |
 |---|---|---|
-| 공개 SEO 페이지 (`/`, `/guide`, `/insights/trends`, `/use-cases/*`, `/privacy`, `/terms`, `/faq`, `/tools/date-diff`) | `fragments/head.html` | ✅ |
+| 공개 SEO 페이지 (`/`, `/guide`, `/about`, `/insights/trends`, `/use-cases/*`, `/privacy`, `/terms`, `/faq`, `/tools/date-diff`) | `fragments/head.html` | ✅ |
 | UGC 일정 페이지 (`/{ownerId}`, `/{ownerId}/{y}/{m}`) | `fragments/head.html` | ✅ |
 | Runner 공개 페이지 (`/runners`, `/runners/runs`, `/runners/members`, `/runners/announce`) | `fragments/head.html` | ✅ |
-| Runner Admin (`/runners/admin/**`) | `runners/fragments/header.html` | ✅ |
+| Runner Admin (`/runners/admin/**`) | `fragments/head.html` | ✅ |
 | **Trading 모듈** (`/trading/**`) | (별도 헤더, GTM 없음) | ❌ 의도적 제외 |
 | **Stock 모듈** (`/stock/**`) | (별도 헤더, GTM 없음) | ❌ 의도적 제외 |
+
+> runner 템플릿 11개(공개 7 + admin 4)는 전부 `fragments/head :: head(seo)` 를 참조한다.
+> `templates/runners/fragments/header.html` 의 `head(seo)` fragment 는 어느 템플릿도 참조하지
+> 않는 dead code 이고, 실제 참조되는 것은 같은 파일의 `navbar` fragment 뿐이다.
 
 > Trading/Stock 은 private 봇 페이지로 robots.txt + SecurityConfig 에서 차단되며 추적·광고 제외가 맞다.
 
@@ -53,7 +57,7 @@
 | 속성 형태 | URL 접두사 |
 | 속성 URL | `https://datedate.site/` (non-www) |
 | 검증 메타 | `YVK_KclWiLH24rqy7kAI9iNYSA5No9ljXbnSOvsQB4k` |
-| 검증 위치 | `templates/fragments/head.html:23`, `templates/runners/fragments/header.html:19` |
+| 검증 위치 | `templates/fragments/head.html:23-25` — env `seo.google-site-verification` 기반(`application.yaml:18` 기본값이 운영 토큰). `templates/runners/fragments/header.html:19` 에도 하드코딩돼 있으나 그 `head` fragment 는 미참조 dead code |
 | GA4 연결 일자 | 2026-01-16 |
 | 연결한 계정 | cheongyakplanet@gmail.com |
 
@@ -85,11 +89,12 @@
 
 | 항목 | 값 |
 |---|---|
-| 클라이언트 ID | `ca-pub-7334667748813914` |
-| ads.txt | `static/ads.txt` 배포 완료 |
+| 게시자 ID (`ads.txt`) | `pub-7334667748813914` — `static/ads.txt` 배포 완료 |
+| `adsense.client` 설정값 | ⏸ **공란** (`application.yaml:26`). 비면 `AdsenseProperties.isEnabled()` 가 false → `adsbygoogle.js` 자체를 로드하지 않음 |
 | 사이트 승인 상태 | ⏸ 미승인 (대기 중) |
-| 코드 위치 | `templates/fragments/head.html:90-92` (`adsEnabled=true` 페이지만) |
-| 광고 슬롯 ID | ⚠️ 미설정 — `templates/fragments/ad-slot.html` 의 placeholder `XXXXXXXXXX` 그대로 |
+| 코드 위치 | `templates/fragments/head.html:92-94` — `seo.adsEnabled() and adsense.enabled` 동시 충족 시에만 스크립트 삽입 |
+| 광고 슬롯 ID | ⏸ 미설정 — `ADSENSE_SLOT_LEADERBOARD` / `_INFEED` / `_RECTANGLE` 환경변수 공란 (`application.yaml:27-29`). 슬롯 ID 가 없으면 `ad-slot.html` fragment 가 렌더되지 않아 광고 DOM 이 아예 없다. **placeholder `XXXXXXXXXX` 는 저장소에 0건** |
+| ad-slot 호출 페이지 (5종) | `/guide`, `/faq`, `/insights/trends`, `/use-cases/{slug}`, `/tools/date-diff` |
 | GA4 연결 | ⏸ 사이트 승인 후 가능 |
 
 ## 7. BigQuery Export
@@ -114,8 +119,9 @@
 
 ## 9. dataLayer 비즈니스 이벤트 (코드 적용 완료)
 
-`G-9QTMK4CDDF` 로 송신할 6개 이벤트가 코드에 푸시 구현됨. **GTM 측 트리거·태그 매핑은
-대기 중**.
+`G-9QTMK4CDDF` 로 송신할 이벤트 **11종** 이 코드 **13개 지점** 에서 푸시된다. 아래 표는 12행이며,
+`vote_cast` 행 하나가 장소·메뉴 2개 지점을 겸한다 (`schedule_created` 는 2행으로 분리 표기).
+**GTM 측 트리거·태그 매핑은 대기 중**.
 
 | 이벤트 이름 | 코드 위치 | 발화 시점 | 파라미터 |
 |---|---|---|---|
@@ -139,8 +145,11 @@
 | 항목 | 값 |
 |---|---|
 | Dev | H2 file (`./data/scheduledb`), MySQL 호환 모드 |
-| Test | H2 in-memory, create-drop |
-| 운영 | (사용자 확인 — 운영 DB 형태에 따라 BQ 미러링 전략 달라짐) |
+| Test | H2 in-memory, create-drop (`application.yaml:377-386`, `on-profile: test`) |
+| 운영 | **H2 file** — `.env` 의 `DB_URL=jdbc:h2:file:./data/scheduledb;DB_CLOSE_DELAY=-1;MODE=MySQL`, `application.yaml:47` 이 `driver-class-name: org.h2.Driver` 로 고정, `build.gradle:49` 의 DB 드라이버는 `com.h2database:h2` 단독. 운영 전용 프로파일 없음 |
+
+> H2 file 이므로 Datastream 등 CDC 기반 BigQuery 미러링은 불가하다. 애플리케이션이 직접 덤프를
+> 내보내는 경로(GCS JSONL → BQ 외부 테이블, [04-todo P1-1](04-todo.md)) 가 사실상 유일한 선택지다.
 
 테이블 인벤토리는 [02-data-inventory.md](02-data-inventory.md) 의 §2.
 

@@ -9,7 +9,7 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 
 ### P0-1. GTM 트리거·태그 매핑 (이벤트 → GA4 송신 활성화)
 
-**왜**: dataLayer 푸시 6종이 이미 코드에 들어갔지만 GTM 측 매핑 없으면 GA4 로 송신 안 됨.
+**왜**: dataLayer 푸시 11종(코드 13개 지점)이 이미 들어갔지만 GTM 측 매핑 없으면 GA4 로 송신 안 됨.
 
 **작업** (`tagmanager.google.com → GTM-PFPKQT7W → 작업공간`):
 
@@ -67,11 +67,11 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 
 **검증**: 등록 24~48시간 후 Explorations 에서 측정기준 사용 가능.
 
-### P0-3. troubleshooting 문서 정정 PR 머지
+### P0-3. troubleshooting 문서 정정 — ✅ 완료
 
-**왜**: 이미 코드 작업으로 정정 완료됨. 단계 5 dataLayer PR과 묶어서 머지.
+**왜**: `G-ERBDZ6V6VN` 을 stale GA4 측정 ID 로 본 오진을 바로잡아야 했음.
 
-**작업**: `docs/troubleshooting/lighthouse-performance-audit.md` B 항목 정정 (이미 적용).
+**작업**: `docs/troubleshooting/lighthouse-performance-audit.md` B 항목 정정 — 문서에 반영 완료. 남은 작업 없음.
 
 ---
 
@@ -99,7 +99,7 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 **차단 요건**:
 - GCP 프로젝트 결제 활성 (BQ export 활성 시 이미 충족)
 - GCS 버킷 + 서비스 계정 권한
-- 운영 DB 접근 (현재 H2 file 인지, 운영 DB 가 다른 형태인지 확인)
+- ~~운영 DB 형태 확인~~ → **H2 file 로 확정** (`.env` `DB_URL=jdbc:h2:file:./data/scheduledb`, `application.yaml:47` `driver-class-name: org.h2.Driver`, `build.gradle:49` 드라이버 `com.h2database:h2` 단독). CDC/Datastream 경로는 불가하므로 본 항목의 GCS JSONL 덤프 방식이 유일한 경로다
 
 **검증**: BQ 에서 `SELECT COUNT(*) FROM warehouse.schedules` 가 도메인 DB count 와 일치.
 
@@ -110,7 +110,7 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 **작업**:
 1. AdSense 콘솔에서 사이트 검토 신청 + 통과 대기 (보통 며칠~수주)
 2. 통과 후 GA4 → 관리 → 제품 링크 → AdSense → 연결 (이미 절차 정리됨)
-3. `templates/fragments/ad-slot.html` 의 placeholder `XXXXXXXXXX` → 실 슬롯 ID 채우기 또는 슬롯 폐기
+3. 발급받은 슬롯 ID 를 `ADSENSE_SLOT_LEADERBOARD` / `ADSENSE_SLOT_INFEED` / `ADSENSE_SLOT_RECTANGLE` 로 주입하고 `adsense.client`(`application.yaml:26`, 현재 공란) 도 채운다. 둘 다 비어 있는 동안은 스크립트도 ad-slot DOM 도 렌더되지 않는다 (템플릿 하드코딩 placeholder 는 없음)
 
 **차단 요건**: AdSense 측 사이트 승인 (외부 의존)
 
@@ -171,14 +171,20 @@ async function hashOwnerId(ownerId) {
 
 **검증**: BQ events 의 `event_params.value.string_value` 가 64자 hex 문자열인지.
 
-### P2-2. AdSense 슬롯 placeholder 정리
+### P2-2. AdSense 슬롯 ID 주입 + 실제 게재 검증
 
-**왜**: `templates/fragments/ad-slot.html` 의 `data-ad-slot="XXXXXXXXXX"` 가 헤드의 실 client `ca-pub-7334667748813914` 와 불일치. 광고가 실제로 어떻게 뜨는지 검증 필요.
+**왜**: 슬롯 ID 가 비어 있는 동안은 `ad-slot.html` 의 3개 fragment(`leaderboard`/`infeed`/`rectangle`)가
+`hasLeaderboardSlot()` 등의 가드에 걸려 렌더되지 않아 광고 DOM 자체가 없다. 승인 후 실값을 넣고
+게재를 눈으로 확인해야 한다.
+
+> 2026-05 문서가 지적한 `data-ad-client="ca-pub-XXXXXXXXXX"` / `data-ad-slot="XXXXXXXXXX"`
+> placeholder 는 이미 제거됐다. 현재는 `th:attr` 로 `${adsense.client}` / `${adsense.slot*}` 를 읽는다.
 
 **작업**:
 1. AdSense 콘솔에서 슬롯 ID 발급 (Display ad / In-feed ad)
-2. `templates/fragments/ad-slot.html` 의 placeholder 교체
+2. `adsense.client`(`application.yaml:26`, 현재 공란) + `ADSENSE_SLOT_*` 환경변수 주입
 3. 또는 슬롯 폐기 (AdSense Auto Ads 만 사용)
+4. ad-slot 호출 페이지 5종(`/guide`, `/faq`, `/insights/trends`, `/use-cases/{slug}`, `/tools/date-diff`)에서 게재 확인
 
 **차단 요건**: P1-2 (AdSense 승인) 완료
 
@@ -290,6 +296,6 @@ P0-1 → 행동 데이터 누적 → P3-3 (A/B 테스트 가능)
 | 작업 | 차단 요인 |
 |---|---|
 | P1-2 | AdSense 사이트 승인 (Google 측) |
-| P1-1 | 운영 DB 형태 (H2 file vs 다른 RDB) |
+| P1-1 | (해소) 운영 DB = H2 file 확정. 남은 차단은 GCS 버킷 + 서비스 계정 권한뿐 |
 | P3-2 | LLM API 비용 + 카테고리 정의 합의 |
 | P3-3 | UX 변경 의사결정 |

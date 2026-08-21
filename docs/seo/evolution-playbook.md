@@ -455,6 +455,9 @@ L0→L1 전환은 비교적 쉽다. L3→L4 가 가장 어렵다 — `LocalDate.
 
 ## 9. 다음 프로젝트 출시 전 SEO 체크리스트
 
+> 성격: **다음 프로젝트용 재사용 체크리스트.** 이 저장소의 백로그가 아니다 —
+> 미체크 항목이 DateDate 의 미완료 작업을 뜻하지 않는다.
+
 ### 코드 단계 (D-30)
 - [ ] `SeoMetadata` record/class 도입, `canonical`/`canonicalKo`/`canonicalEn` 분리
 - [ ] `SeoService` (또는 동등 abstraction) 로 SEO 텍스트 단일 진실 공급
