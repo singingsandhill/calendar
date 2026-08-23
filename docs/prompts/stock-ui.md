@@ -17,8 +17,9 @@
 - stock 전용 템플릿 존재
   - `templates/stock/dashboard.html`
   - `templates/stock/history.html`
+  - `templates/stock/settings.html`
   - `templates/stock/fragments/header.html`
-- Tailwind CSS CDN 기반의 비교적 단순한 관리자형 UI
+- Tailwind CSS 로컬 빌드본(`static/css/trading-tw.css`) 기반의 비교적 단순한 관리자형 UI
 - 봇 상태 갱신을 위해 JS fetch + polling 사용
 - 5초 단위 상태 업데이트, 30초 전체 페이지 reload 구조
 - 화면의 핵심 목적은 종목 감시 / 포지션 상태 확인 / 봇 제어 / 손익 모니터링
@@ -133,5 +134,5 @@ I. Thymeleaf + Tailwind 기준 구현 우선순위 제안
 - 호가창, 캔들차트, 주문패널을 핵심으로 두는 제안 금지
 - 이 프로젝트의 실제 목적은 “자동매매 봇 운영 대시보드”라는 점을 유지할 것
 - 구현 현실성을 고려해 “빠르게 가능한 개선”과 “구조 개편이 필요한 개선”을 분리할 것
-- Spring Boot + Thymeleaf + Tailwind CDN 수준에서도 적용 가능한 개선안을 우선 제안할 것
+- Spring Boot + Thymeleaf + Tailwind 로컬 빌드본 수준에서도 적용 가능한 개선안을 우선 제안할 것
 ```

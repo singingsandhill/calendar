@@ -61,6 +61,8 @@
 - **CMP / Funding Choices** — 광고 켜는 시점에 활성화.
 - **`/tools/date-diff` 광고 OFF 또는 본문 600+ 단어 확장** — 별도 결정.
 
+> **이후 진행 (2026-08 코드 재확인)** — 위 목록은 *2026-05-10 세션 1 시점* 의 기록이다. Phase B(use-case 5섹션 본문)·`/about`·`/tools/date-diff` 본문 확장은 아래 세션 2 에서 실행됐다. 이후 Phase C 는 `club-activity` 한 개만 `UseCaseSlugs.ALL` 에 추가됐고(`family-gathering`·`birthday-party`·`wedding-events`·`company-dinner` 는 미실행), `/guides/*` · privacy/terms 분량 확장 · CMP 는 여전히 미실행이다. date-diff 는 *본문 확장* 쪽으로 종결됐고 광고 플래그는 `getDateDiffSeo()` 가 `adsEnabled(true)` 로 유지한다.
+
 ---
 
 ## ✅ 2026-05-10 세션 2 — Low Value Content 대응 (Tier 1 + Tier 2 일괄)
@@ -226,14 +228,14 @@ datedate.site (Spring Boot 4 / Thymeleaf, `datedate` 모듈) 가 2026-05-02 Goog
 - 템플릿/컨트롤러/sitemap 변경 없음 (Phase A 의 동적화 덕분에 자동 반영)
 - `templates/index.html` 의 `scenarios-grid` 에 새 카드 노출 (선택, 내부 링크 강화)
 
-**Phase A 동적화의 누락 보강 — `footer-minimal` 의 use-cases 4개 하드코딩 제거**
-- `templates/fragments/footer.html` 49~55줄의 `<a th:href="${@localeLinks.href('/use-cases/friend-meetup')}">...` 4개 카드는 신규 슬러그가 추가돼도 자동 반영되지 않음.
-- **수정**: `<th:block th:each="slug : ${T(me.singingsandhill.calendar.datedate.domain.usecase.UseCaseSlugs).ALL}">` 루프로 전환, 각 카드 라벨은 `#{'seo.useCase.' + ${slug} + '.title'}`. 또는 footer 도 `@ModelAttribute` 로 `useCaseSlugs` 주입.
-- 미수정 시 신규 5 슬러그가 footer 에서 누락되어 *내부 링크 부족* 으로 인덱싱 지연.
+**Phase A 동적화의 누락 보강 — `footer-minimal` 의 use-cases 하드코딩 제거** — ✅ 실행됨.
+- `templates/fragments/footer.html:53` 이 `th:each="slug : ${useCaseSlugs}"` 로 `UseCaseSlugs.ALL`
+  을 순회한다 — `T(...).ALL` SpEL 대신 `UseCaseNavAdvice` 의 `@ModelAttribute("useCaseSlugs")`
+  주입 방식을 채택했다. 신규 슬러그는 footer 에 자동 반영된다.
 
 **내부 링크 권장 (Phase B/C 공통)**
 - 각 use-case 본문에 *관련 use-case 2~3개* `<a>` 링크 (이미 detail.html 의 `use-case-others` 섹션이 비슷하지만 본문 내부 링크는 SEO 가중치가 더 큼).
-- index.html `scenarios-grid` 에 신규 5 슬러그도 추가 (현재 3개만 노출됨).
+- index.html `scenarios-grid` 에 Phase C 신규 슬러그도 추가 (현재 `UseCaseSlugs.ALL` 5개는 모두 노출 중 — 단 카드가 하드코딩이라 신규 슬러그는 수동 추가해야 한다).
 
 ### Phase D — `/guides/` 카테고리 도입 (5~7일)
 
@@ -281,16 +283,16 @@ AS-Content 의 *고유 콘텐츠 ... 전문 지식이나 개인적인 의견 등
 
 ### Phase E — privacy/terms/insights/guide/faq/tools 강화 (2~3일)
 
-**`privacy.html` (350 → 700~900 단어, 광고 OFF)** — AdSense 정책상 필수 항목:
+**`privacy.html` (350 → 700~900 단어)** — 분량 확장은 미실행. 광고 OFF 는 아래 노트대로 이미 반영됨. AdSense 정책상 필수 항목:
 - Google AdSense 및 제3자 광고 파트너의 쿠키 사용
 - DoubleClick DART 쿠키
 - 사용자가 광고 개인화를 거부하는 방법 (`adssettings.google.com` 링크)
 - EEA/UK 사용자 GDPR 동의 안내
 - 키: `seo.privacy.section.{collection,cookies,thirdParty,gdpr,rights,contact}.{title,body}`
 
-**`terms.html` (350 → 700~900 단어, 광고 OFF)** — 면책, 데이터 보관 기간, 서비스 변경/종료, 분쟁 해결 (대한민국 법, 서울중앙지법 1심 관할)
+**`terms.html` (350 → 700~900 단어)** — 분량 확장은 미실행(광고 OFF 는 반영됨). 면책, 데이터 보관 기간, 서비스 변경/종료, 분쟁 해결 (대한민국 법, 서울중앙지법 1심 관할)
 
-> **광고 OFF 변경**: PP-Full 의 *행동 목적으로 사용되는 화면* 조항을 보수적으로 해석하면, 법적 안내 페이지에 광고를 박는 것은 *광고 적합성 의심 신호* 가 될 수 있다. `SeoService.buildSimpleWebPageSeo()` (528~579줄) 의 `.adsEnabled(true)` 를 prefix 가 `seo.privacy` / `seo.terms` 인 경우 `false` 로 분기. 두 페이지의 `<head>` 의 `adsbygoogle.js` 와 본문 ad-slot 모두 미로드.
+> **광고 OFF 변경 — ✅ 실행됨**: PP-Full 의 *행동 목적으로 사용되는 화면* 조항을 보수적으로 해석해 법적 안내 페이지의 광고를 내렸다. `SeoService.buildSimpleWebPageSeo()` 가 `.adsEnabled(false)` 를 무조건 적용한다 — 호출처가 `getPrivacySeo()` / `getTermsSeo()` 둘뿐이라 계획했던 prefix 분기는 불필요했다. 두 페이지의 `<head>` 의 `adsbygoogle.js` 와 본문 ad-slot 모두 미로드.
 
 **`templates/insights/trends.html`** — 표 위에 `commentary.intro` (이 페이지의 의미), 표 아래 `commentary.whyPopular` (상위 항목 해석), `commentary.howToUse` (실용 팁 4~5개) 섹션 추가.  
 **ad-slot 가드 강화 — 페이지에 광고가 2개임에 주의** (130줄 leaderboard, 259줄 infeed). 두 자리 모두 *문맥에 맞는 콘텐츠* 가드를 따로 걸어야 함:
@@ -501,3 +503,4 @@ AS-Content 의 *고유 콘텐츠 ... 전문 지식이나 개인적인 의견 등
 | 2026-05-10 (세션 2) | Tier 1 + Tier 2 일괄 실행 | 사용자가 "Tier 1 + 4개 슬러그 모두" 가장 적극 옵션 선택. 한 세션에 /about + Runner sitemap 제거 + insights noindex 가드 + date-diff 본문 확장 + index travel scenario 복원 + footer /about 링크 + use-case 5섹션 템플릿 + 조건부 FAQPage JSON-LD + 4개 슬러그 KO+EN ~7,660 단어 콘텐츠 작성 완료. |
 | 2026-05-10 (세션 2) | 콘텐츠 톤 완화 | 검수 후 사용자 지적으로 3건 완화: team-meeting 의 "대신 진행자" → "회의 목적에 따라 판단", travel-planning 의 "불참 처리" → "확정 제외 + 대기 상태 관리", study-group 의 "준비 부담 미재배정" → "본인 범위 보완 또는 자료 공유 책임". |
 | 2026-05-10 (세션 2) | `application.yaml adsense.client` 빈 값 | 사용자/린터가 `client:` 를 빈 값으로 변경. 결과적으로 어떤 페이지에도 `adsbygoogle.js` 가 로드되지 않음 → 재심사가 *콘텐츠만* 평가받는 깨끗한 상태로 진행. 통과 후 `ADSENSE_CLIENT` 환경변수 재설정 + 슬롯 ID 발급 → `ADSENSE_SLOT_*` 주입. |
+| 2026-08-18 | 3차 통지 (2026-08-17, 재검토 요청 결과) | Phase C/D/E 미실행 상태의 재검토가 같은 사유로 재통지됨 — 진단·대응은 [`docs/audit/adsense-low-value-content-diagnosis-2026-08-17.md`](../audit/adsense-low-value-content-diagnosis-2026-08-17.md). 이번 세션은 기술 수정만(Vary 커버리지, 미지 슬러그 404 = ADR datedate/domain/0008, insights 부분데이터 noindex, `/use-cases` 허브, `/tools` 리다이렉트, 홈 FAQPage 발행 중단). **Phase D(/guides 허브)가 다음 재검토 요청의 전제 조건** — 콘텐츠 배포 + GSC 색인 확인 전 재요청 금지(반복 거절 시 요청 쿨다운 증가). |
