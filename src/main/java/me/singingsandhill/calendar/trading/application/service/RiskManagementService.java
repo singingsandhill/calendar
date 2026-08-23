@@ -122,12 +122,12 @@ public class RiskManagementService {
         // 2. High Water Mark 업데이트
         position.updateHighWaterMark(currentPrice);
 
-        // 3. 트레일링 스탑 활성화 체크 (+10% 도달 시)
+        // 3. 트레일링 스탑 활성화 체크 (trailing-activation, 기본 +1.5% 도달 시 — P1-2)
         double trailingActivation = tradingProperties.getRisk().getTrailingActivation();
         if (!position.isTrailingStopActive() &&
             pnlPct.compareTo(BigDecimal.valueOf(trailingActivation * 100)) >= 0) {
 
-            // 트레일링 스탑 가격 설정 (-3% 추적)
+            // 트레일링 스탑 가격 설정 (trailing-stop, 기본 -0.8% 추적 — P1-2)
             double trailingPct = tradingProperties.getRisk().getTrailingStop();
             BigDecimal trailingStopPrice = currentPrice.multiply(
                     BigDecimal.ONE.subtract(BigDecimal.valueOf(trailingPct)))
@@ -168,7 +168,7 @@ public class RiskManagementService {
             }
         }
 
-        // 6. 익절 체크 (+15%)
+        // 6. 익절 체크 (take-profit, 기본 +3% — P1-2)
         double takeProfit = tradingProperties.getRisk().getTakeProfit();
         if (pnlPct.compareTo(BigDecimal.valueOf(takeProfit * 100)) >= 0) {
             log.info("Take-profit triggered for position {}! PnL: {}%", position.getId(), pnlPct);

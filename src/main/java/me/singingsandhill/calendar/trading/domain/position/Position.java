@@ -157,8 +157,9 @@ public class Position {
 
     /**
      * 재시도 가능 여부 확인
-     * - 시도 횟수가 3회 미만이고
-     * - 마지막 시도가 5분 이전이거나 시도한 적이 없을 때
+     * - 시도한 적이 없으면 즉시 가능
+     * - 시도 횟수 3회 미만: 마지막 시도로부터 5분 경과 시
+     * - 시도 횟수 3회 이상: 마지막 시도로부터 30분 백오프 후 (포기하지 않고 계속 재시도)
      */
     public boolean shouldRetryClose() {
         if (lastCloseAttemptAt == null) {

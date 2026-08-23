@@ -189,7 +189,7 @@ public class TradingVerificationApiController {
 
     /**
      * Step 4: 테스트 주문 실행 (실제 돈 사용!)
-     * 최소 금액(5,000원)으로 매수 테스트 후 DB 저장 확인
+     * 기본 5,500원(최소 5,000원 이상)으로 매수 테스트 후 DB 저장 확인
      *
      * @param amount 주문 금액 (최소 5000)
      * @param immediatelySell true이면 매수 후 즉시 매도하여 원상복구
