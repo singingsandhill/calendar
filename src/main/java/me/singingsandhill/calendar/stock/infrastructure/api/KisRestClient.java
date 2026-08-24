@@ -394,7 +394,7 @@ public class KisRestClient {
     /**
      * 거래량 순위 상위 종목코드 조회 (국내주식 순위분석 &gt; 거래량순위, FHPST01710000).
      *
-     * Gap &amp; Pullback 유니버스의 동적 소스. 거래일 1회(pre-market) 호출되어 스냅샷 캐시되며,
+     * Gap &amp; Pullback 유니버스의 동적 소스. 거래일 1회(스크리닝 09:20) 호출되어 스냅샷 캐시되며,
      * 어떤 사유로든 실패하면 빈 리스트를 반환해 호출측이 정적 fallback-codes 로 폴백한다(무회귀).
      *
      * @param count 상위 N 종목코드 (응답 순위 상위부터)

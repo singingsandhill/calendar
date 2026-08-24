@@ -215,7 +215,7 @@ public class StockPosition {
     // ========== 손절/익절 체크 ==========
 
     /**
-     * 손절 조건 체크 (-1.5% from entry)
+     * 손절 조건 체크 (현재가가 resolveStopLossPrice 로 산정된 손절가 이하)
      */
     public boolean shouldStopLoss(BigDecimal currentPrice) {
         if (stopLossPrice == null) {
@@ -225,7 +225,7 @@ public class StockPosition {
     }
 
     /**
-     * 1차 익절 조건 체크 (+1.5% from entry)
+     * 1차 익절 조건 체크 (진입가 + tp1Percent — exit.tp1-percent)
      */
     public boolean shouldTp1(BigDecimal currentPrice, BigDecimal tp1Percent) {
         if (tp1Executed) {

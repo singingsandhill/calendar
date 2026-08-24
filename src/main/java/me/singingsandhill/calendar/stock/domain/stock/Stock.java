@@ -81,7 +81,7 @@ public class Stock {
     }
 
     /**
-     * 갭 필터 통과 여부 (2.0% ~ 7.0%)
+     * 갭 필터 통과 여부 (screening.min-gap-percent ~ max-gap-percent)
      */
     public boolean passesGapFilter(BigDecimal minGap, BigDecimal maxGap) {
         if (gapPercent == null) {
@@ -165,7 +165,7 @@ public class Stock {
     }
 
     /**
-     * 눌림목 범위 내 여부 (고점 대비 -1.5% ~ -3.0%)
+     * 눌림목 범위 내 여부 (고점 대비 -1.5% ~ -5.0%)
      */
     public boolean isInPullbackRange(BigDecimal minPullback, BigDecimal maxPullback) {
         BigDecimal dropFromHigh = calculateDropFromHigh();
@@ -174,7 +174,7 @@ public class Stock {
     }
 
     /**
-     * 눌림목 과도 여부 (고점 대비 -3.0% 초과 하락)
+     * 눌림목 과도 여부 (고점 대비 -5.0% 초과 하락)
      */
     public boolean isPullbackTooDeep(BigDecimal maxPullback) {
         BigDecimal dropFromHigh = calculateDropFromHigh();
@@ -182,7 +182,7 @@ public class Stock {
     }
 
     /**
-     * 반등 확인 (저점 대비 +0.3%)
+     * 반등 확인 (저점 대비 +0.2%)
      */
     public boolean isBounceConfirmed(BigDecimal threshold) {
         BigDecimal bounceFromLow = calculateBounceFromLow();

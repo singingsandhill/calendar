@@ -321,7 +321,7 @@ public class StockProperties {
          */
         private List<String> pinned = Collections.emptyList();
         /**
-         * 정적 안전망 풀 (대형주 + 변동성 종목). 거래량순위 API 실패/0건 시에만 사용.
+         * 정적 안전망 풀 (대형주 + 변동성 종목). 거래량순위가 요청한 top-N 에 미달하면 합집합으로 보강.
          */
         private List<String> fallbackCodes = Collections.emptyList();
         /**

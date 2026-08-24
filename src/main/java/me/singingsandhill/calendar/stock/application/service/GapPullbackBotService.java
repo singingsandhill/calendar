@@ -27,9 +27,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 갭 상승 눌림목 매매 봇 서비스 (Main Orchestrator)
  *
  * 거래 타임라인:
- * 08:30~09:00  사전 스크리닝 (전일 데이터 수집)
- * 09:00~09:10  갭 상승 종목 스크리닝
- * 09:10~11:20  눌림목 감지 및 진입/청산
+ * 08:30~09:00  사전 준비 (정적 유니버스 스냅샷 — 거래량순위 미호출)
+ * 09:00~09:20  갭 상승 종목 스크리닝 (cron 09:20)
+ * 09:20~11:20  눌림목 감지 및 진입/청산
  * 11:20~11:30  최종 청산
  */
 @Service
@@ -249,7 +249,7 @@ public class GapPullbackBotService {
 
     /**
      * 사전 준비 루프 (08:30~09:00)
-     * - 전일 데이터 수집
+     * - 정적 유니버스 스냅샷 (refreshStaticOnly — 거래량순위 미호출)
      * - 관심종목 풀 준비
      */
     @Transactional
@@ -269,7 +269,7 @@ public class GapPullbackBotService {
     }
 
     /**
-     * 스크리닝 루프 (09:00~09:10)
+     * 스크리닝 루프 (cron 09:20)
      * - 갭 상승 종목 스크리닝
      */
     @Transactional
@@ -281,7 +281,7 @@ public class GapPullbackBotService {
         try (Closeable ignored = TradeEvents.tradingDate(currentTradingDate)) {
             log.info("Executing screening loop");
 
-            // 08:30 스냅샷이 폴백 전용(rank=0)이면 장중 거래량이 쌓인 지금 거래량순위를 재시도.
+            // 08:30 스냅샷의 rank 가 요청한 top-N 에 미달하면 장중 거래량이 쌓인 지금 거래량순위를 재시도.
             UniverseBuilder.Snapshot universe = universeBuilder.refreshIfDegraded(currentTradingDate);
             List<String> stockCodes = universe.codes();
             if (stockCodes.isEmpty()) {

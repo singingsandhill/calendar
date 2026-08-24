@@ -6,7 +6,7 @@ package me.singingsandhill.calendar.stock.domain.position;
 public enum StockCloseReason {
 
     /**
-     * 1차 익절 (+1.5%)
+     * 1차 익절 (진입가 + exit.tp1-percent)
      */
     TP1("1차익절"),
 
@@ -16,17 +16,17 @@ public enum StockCloseReason {
     TP2("2차익절"),
 
     /**
-     * 3차 익절 (고점 +1%)
+     * 3차 익절 (진입가 + exit.tp3-percent)
      */
     TP3("3차익절"),
 
     /**
-     * 손절 (-1.5%)
+     * 손절 (풀백저가 앵커, 진입가 대비 risk.max-stop-loss-percent 캡)
      */
     STOP_LOSS("손절"),
 
     /**
-     * 트레일링 스탑 (고점 대비 -0.8%)
+     * 트레일링 스탑 (고점 대비 -risk.trailing-stop-percent)
      */
     TRAILING_STOP("트레일링"),
 

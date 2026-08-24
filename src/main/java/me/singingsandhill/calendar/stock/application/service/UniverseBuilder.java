@@ -20,10 +20,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * 우선순위:
  *   1) yml 의 pinned 종목 (항상 포함)
  *   2) KIS 거래량순위 API 상위 N (stock.universe.rank-api-top &gt; 0 일 때)
- *   3) yml 의 fallback 종목 — rank 가 비었을 때만 쓰는 정적 안전망
+ *   3) yml 의 fallback 종목 — rank 가 요청한 top-N 에 미달하면 합집합으로 보강하는 정적 안전망
  *
- * 동적 소스(2)는 거래일 1회(pre-market) 호출되어 스냅샷으로 캐시된다(ADR-0002 의 "거래일 1회
- * 스냅샷" 정합성 유지). executePreMarketLoop 에서 refresh() 가 호출되며 ScreeningService 는
+ * 동적 소스(2)는 거래일 1회(스크리닝 09:20) 호출되어 스냅샷으로 캐시된다(ADR-0002 의 "거래일 1회
+ * 스냅샷" 정합성 유지). executePreMarketLoop 은 refreshStaticOnly() 로 정적 소스만 담고,
+ * 거래량순위는 executeScreeningLoop 의 refreshIfDegraded() 가 호출하며 ScreeningService 는
  * currentUniverse() 로 동기 조회한다.
  */
 @Service
