@@ -9,6 +9,11 @@
   owner 를 생성하지 않음 — 미존재 owner 는 dashboard 빈 상태 + HTTP 404
   ([ADR](../../../../../../../../docs/adr/datedate/domain/0004-no-owner-auto-create-on-get-dashboard.md)).
   생성 경로는 POST /start 와 schedule 생성뿐.
+  랜덤 생성 경로는 예외 — `generateAvailableOwnerId()` 가 `OwnerIdGenerator`(40×40 단어 ×
+  1000~9999 = 14,400,000 조합) 후보 중 `existsById` 를 통과한 것만 내고, `createOwner()` 는
+  이미 존재하면 `OwnerIdTakenException`(409). 재진입이 정상인 직접 입력과 달리 랜덤 ID 의
+  중복은 충돌이라 남의 페이지로 흘려보내지 않는다
+  ([ADR](../../../../../../../../docs/adr/datedate/domain/0007-collision-free-random-owner-id.md)).
 - **ScheduleService** - (ownerId, year, month) 기준 CRUD. 일정 미존재 시 자동 생성 X →
   create 페이지 분기 ([ADR](../../../../../../../../docs/adr/datedate/domain/0003-no-auto-create-on-missing-schedule.md)).
 - **ParticipantService** - 스케줄당 최대 8명 / 중복 이름 검증.
@@ -20,6 +25,9 @@
 - **SeoService** - 페이지 타입별 SEO 메타데이터 (i18n + JSON-LD 포함). BreadcrumbList 는
   `breadcrumbJsonLd()` 한 곳에서만 생성 — 홈 → 현재 페이지 2단계, **모든 `ListItem` 에 `item` 필수**
   ([ADR](../../../../../../../../docs/adr/common/seo/0008-breadcrumb-item-on-every-listitem.md)).
+  guides 계열: `getGuidesIndexSeo()`(CollectionPage, 광고 없음) + `getGuideArticleSeo(slug)`
+  (Article JSON-LD — datePublished/dateModified 는 `GuideSlugs` SSOT, 저자 Organization,
+  [ADR](../../../../../../../../docs/adr/common/seo/0011-guides-editorial-hub.md)).
 - **InsightsService** - 집계 인기 통계 (`/insights/trends`).
 - **AppUserService** - 카카오 프로필 upsert (`kakaoId` unique, 재로그인 시 닉네임·프로필·lastLoginAt 갱신).
 - **UserActivityService** - 로그인 사용자 활동 이벤트(참여·투표·일정생성) append-only 기록,

@@ -2,6 +2,9 @@ package me.singingsandhill.calendar.datedate.presentation.controller;
 
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -89,14 +92,33 @@ public class HomeController {
         return "tools/date-diff";
     }
 
+    /** 도구가 하나뿐이라 /tools 인덱스 페이지는 그 자체가 thin — 영구 리다이렉트로 대체 (사이트맵 미등재). */
+    @GetMapping("/tools")
+    public ResponseEntity<Void> toolsRoot() {
+        return ResponseEntity.status(HttpStatus.PERMANENT_REDIRECT)
+                .header(HttpHeaders.LOCATION, localeLinks.href("/tools/date-diff"))
+                .build();
+    }
+
+    /**
+     * @param generated 값이 "랜덤 생성" 버튼이 준 것인지. 사용자가 직접 입력한 ID 는 이미 있는
+     *                  페이지로 돌아오는 재진입이 정상이지만(get-or-create), 방금 뽑은 랜덤 ID 가
+     *                  이미 존재한다면 그건 충돌이다 — 남의 페이지로 흘려보내지 않고 실패시킨다.
+     *                  위조해도 자기 요청이 에러 날 뿐이라 신뢰 경계는 아니다.
+     */
     @PostMapping("/start")
     public String start(@RequestParam String ownerId,
+                        @RequestParam(defaultValue = "false") boolean generated,
                         Authentication authentication,
                         RedirectAttributes redirectAttributes) {
         try {
             String normalizedId = ownerId.toLowerCase();
             Long userId = AuthenticatedUsers.currentUserId(authentication).orElse(null);
-            ownerService.getOrCreateOwner(normalizedId, userId);
+            if (generated) {
+                ownerService.createOwner(normalizedId, userId);
+            } else {
+                ownerService.getOrCreateOwner(normalizedId, userId);
+            }
             return localeLinks.redirect("/" + normalizedId);
         } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("errorMessage", resolveBusinessMessage(e));

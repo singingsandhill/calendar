@@ -20,10 +20,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import me.singingsandhill.calendar.datedate.application.exception.OwnerAlreadyLinkedException;
+import me.singingsandhill.calendar.datedate.application.exception.OwnerIdTakenException;
 import me.singingsandhill.calendar.datedate.application.exception.OwnerNotFoundException;
 import me.singingsandhill.calendar.datedate.application.exception.ReservedOwnerIdException;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
+import me.singingsandhill.calendar.datedate.domain.owner.OwnerIdGenerator;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
@@ -37,11 +39,14 @@ class OwnerServiceTest {
     @Mock
     private ScheduleRepository scheduleRepository;
 
+    @Mock
+    private OwnerIdGenerator ownerIdGenerator;
+
     private OwnerService ownerService;
 
     @BeforeEach
     void setUp() {
-        ownerService = new OwnerService(ownerRepository, scheduleRepository);
+        ownerService = new OwnerService(ownerRepository, scheduleRepository, ownerIdGenerator);
     }
 
     @Test
@@ -171,5 +176,69 @@ class OwnerServiceTest {
 
         assertThatThrownBy(() -> ownerService.linkOwnerToUser("my-crew", 42L))
                 .isInstanceOf(OwnerAlreadyLinkedException.class);
+    }
+
+    @Test
+    @DisplayName("generateAvailableOwnerId: 이미 사용 중인 후보는 건너뛰고 미사용 후보를 낸다")
+    void generateAvailableOwnerIdSkipsTakenCandidates() {
+        when(ownerIdGenerator.next()).thenReturn("brave-otter-4821", "sunny-pine-1057");
+        when(ownerRepository.existsById("brave-otter-4821")).thenReturn(true);
+        when(ownerRepository.existsById("sunny-pine-1057")).thenReturn(false);
+
+        assertThat(ownerService.generateAvailableOwnerId()).isEqualTo("sunny-pine-1057");
+    }
+
+    @Test
+    @DisplayName("generateAvailableOwnerId: 후보가 전부 사용 중이면 조용히 중복을 내놓지 않고 실패한다")
+    void generateAvailableOwnerIdFailsWhenEveryCandidateIsTaken() {
+        when(ownerIdGenerator.next()).thenReturn("brave-otter-4821");
+        when(ownerRepository.existsById("brave-otter-4821")).thenReturn(true);
+
+        assertThatThrownBy(() -> ownerService.generateAvailableOwnerId())
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("createOwner: 이미 존재하는 ID 는 OwnerIdTakenException — getOrCreate 로 흘러가지 않는다")
+    void createOwnerRejectsTakenId() {
+        when(ownerRepository.existsById("brave-otter-4821")).thenReturn(true);
+
+        assertThatThrownBy(() -> ownerService.createOwner("brave-otter-4821", 42L))
+                .isInstanceOf(OwnerIdTakenException.class)
+                .hasMessageContaining("brave-otter-4821");
+
+        verify(ownerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createOwner: 예약어는 저장소를 건드리지 않고 ReservedOwnerIdException")
+    void createOwnerRejectsReservedId() {
+        assertThatThrownBy(() -> ownerService.createOwner("insights", 42L))
+                .isInstanceOf(ReservedOwnerIdException.class);
+
+        verifyNoInteractions(ownerRepository);
+    }
+
+    @Test
+    @DisplayName("createOwner: 미사용 ID 는 생성하고 로그인 유저에 연결한다")
+    void createOwnerCreatesAndLinks() {
+        when(ownerRepository.existsById("brave-otter-4821")).thenReturn(false);
+        when(ownerRepository.save(any(Owner.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Owner owner = ownerService.createOwner("brave-otter-4821", 42L);
+
+        assertThat(owner.getOwnerId()).isEqualTo("brave-otter-4821");
+        assertThat(owner.getUserId()).isEqualTo(42L);
+    }
+
+    @Test
+    @DisplayName("createOwner: 비로그인(userId null) 은 생성만 하고 연결하지 않는다")
+    void createOwnerWithoutUserKeepsUnlinked() {
+        when(ownerRepository.existsById("brave-otter-4821")).thenReturn(false);
+        when(ownerRepository.save(any(Owner.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Owner owner = ownerService.createOwner("brave-otter-4821", null);
+
+        assertThat(owner.getUserId()).isNull();
     }
 }

@@ -3,10 +3,18 @@ package me.singingsandhill.calendar.datedate.presentation.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -29,6 +37,7 @@ import me.singingsandhill.calendar.common.infrastructure.config.SecurityConfig;
 import me.singingsandhill.calendar.common.presentation.LocaleLinks;
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
 import me.singingsandhill.calendar.datedate.application.dto.InsightsOverviewDto;
+import me.singingsandhill.calendar.datedate.application.exception.OwnerIdTakenException;
 import me.singingsandhill.calendar.datedate.application.dto.PopularItemDto;
 import me.singingsandhill.calendar.datedate.application.service.InsightsService;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
@@ -114,6 +123,14 @@ class HomeControllerTest {
     }
 
     @Test
+    @DisplayName("GET /tools → /tools/date-diff 영구 리다이렉트 (단일 도구 — 인덱스 페이지는 그 자체가 thin)")
+    void toolsRootPermanentRedirect() throws Exception {
+        mockMvc.perform(get("/tools"))
+                .andExpect(status().isPermanentRedirect())
+                .andExpect(header().string("Location", "/tools/date-diff"));
+    }
+
+    @Test
     @DisplayName("통계 스트립 숫자는 천단위 구분자로 렌더된다")
     void formatsStatsWithThousandsSeparator() throws Exception {
         when(insightsService.getInsightsOverview())
@@ -143,5 +160,47 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("popular-section")))
                 .andExpect(content().string(containsString("강남역")));
+    }
+
+    @Test
+    @DisplayName("직접 입력한 ID 는 기존대로 get-or-create — 재진입이 정상 (회귀 가드)")
+    void typedIdKeepsGetOrCreateReentry() throws Exception {
+        when(localeLinks.redirect(anyString())).thenAnswer(inv -> "redirect:" + inv.getArgument(0));
+
+        mockMvc.perform(post("/start").param("ownerId", "my-crew").with(csrf()))
+                .andExpect(redirectedUrl("/my-crew"));
+
+        verify(ownerService).getOrCreateOwner("my-crew", null);
+        verify(ownerService, never()).createOwner(anyString(), any());
+    }
+
+    @Test
+    @DisplayName("랜덤 생성 ID 는 strict-create — 미사용이면 그대로 생성한다")
+    void generatedIdIsCreatedStrictly() throws Exception {
+        when(localeLinks.redirect(anyString())).thenAnswer(inv -> "redirect:" + inv.getArgument(0));
+
+        mockMvc.perform(post("/start")
+                        .param("ownerId", "brave-otter-4821")
+                        .param("generated", "true")
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/brave-otter-4821"));
+
+        verify(ownerService).createOwner("brave-otter-4821", null);
+        verify(ownerService, never()).getOrCreateOwner(anyString(), any());
+    }
+
+    @Test
+    @DisplayName("랜덤 생성 ID 가 그 사이 점유됐으면 남의 페이지로 보내지 않고 홈에서 알린다")
+    void generatedIdCollisionGoesHomeWithError() throws Exception {
+        when(localeLinks.redirect(anyString())).thenAnswer(inv -> "redirect:" + inv.getArgument(0));
+        when(ownerService.createOwner("brave-otter-4821", null))
+                .thenThrow(new OwnerIdTakenException("brave-otter-4821"));
+
+        mockMvc.perform(post("/start")
+                        .param("ownerId", "brave-otter-4821")
+                        .param("generated", "true")
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/"))
+                .andExpect(flash().attribute("errorMessage", containsString("brave-otter-4821")));
     }
 }
