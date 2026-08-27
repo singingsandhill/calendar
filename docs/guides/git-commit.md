@@ -327,10 +327,9 @@ git commit -m "feat(datedate): 랜덤 owner ID 를 미사용 보장으로 + 조�
 # 페이지별 SEO 점검 보고서 — 전 모듈 공개 페이지 전수 (2026-08-16)
 # =====================================================================
 # 배경: 사용자 요청 "페이지별 seo 점검". 사용자 결정: 점검 보고서만(코드 수정 없음),
-# 범위는 공개 페이지 전체(어드민·trading·stock·error 는 noindex/차단 여부 확인).
-# 코드 변경 0 — 산출물은 감사 보고서 1건 + 이 로그 파일뿐이므로 테스트 실행 없음.
+# 범위는 공개 페이지 전체(어드민·trading·stock·error 는 noindex/차단 여부 확인)
 
-# Commit 147 — docs(seo): 페이지별 SEO 점검 보고서 (2026-08-16) — 마지막 커밋(git-commit.md 포함)
+# Commit 147 — ✅ DONE() docs(seo): 페이지별 SEO 점검 보고서 (2026-08-16) — 마지막 커밋(git-commit.md 포함)
 git add docs/audit/seo-page-audit-2026-08-16.md docs/guides/git-commit.md
 git commit -m "docs(seo): 전 모듈 공개 페이지 전수 SEO 점검 보고서 (2026-08-16)" -m "뷰를 렌더링하는 44개 라우트 전부의 head 메타데이터를 코드 정적 분석 + 배포본 실측(19:01 KST)으로 점검했다. 결론: 색인 표면(13경로 x ko/en = 26 URL)은 건강 — 전부 200, index,follow, self-canonical, hreflang 정합이고 sitemap 26 loc / 78 xhtml:link 로 2026-08-02 감사 이후 회귀 없음. 비색인 표면도 전부 의도대로다. 이번에 remediation §7 에 미완으로 남아 있던 실서비스 /trading robots 실측을 수행해 해소했다(302 -> 어드민 로그인). 신규 발견 13건은 전부 中 이하, 색인을 해치는 결함 0건: 中 5건은 runners 11페이지 og:image 치수 거짓 선언(head.html 이 1490x780 무조건 출력 vs crew_logo.png 실물 1280x720 — file 실측), 소비자 0인 고아 head(seo) fragment(runners/fragments/header.html:4-59, verification 토큰·ko_KR 하드코딩 잔존), head(seo) 의 seo null 무가드(누락 시 500 — 현 27개 소비 템플릿은 바인딩 에러 재렌더 경로까지 전부 설정 확인), 로케일 유실 원시 redirect 4곳(RecapController:45,64 / AuthController:23 / RunnerController:253), 에러 페이지 인라인 head 의 GTM·비동기 폰트 공백. 低 8건은 baseUrl 기본값 드리프트(RunnerAdminController 만 datedate.me), runners lang=ko 하드코딩 vs 로케일 메타 혼합 신호, GTM noscript 16/27 부분 커버리지, schedule/create 의 view SEO 공유, noindex 6종의 빈 keywords 메타, admin canonical 6페이지 공통, 데드코드 잔재(무인자 getInsightsTrendsSeo·og-image.svg 엔드포인트·favicon.ico 의 SVG 서빙), 공유 카드 소항목(og-image.png 586KB, og:image:alt·twitter:site 부재). 기지 이슈 11건은 기존 문서 크로스레퍼런스로만 정리해 중복 서술을 피했다. 보고서의 신규 발견은 탐색 에이전트 보고를 그대로 싣지 않고 전 항목 file:line 재확인을 거쳤고(keywords 호출 8곳 grep, 고아 fragment 소비자 grep, 이미지 치수 file 실측), 실측 명령과 결과는 §6 에 재현 가능한 형태로 남겼다. 권고는 §7 우선순위 표(P1: 고아 fragment 삭제·og:image 치수 SeoMetadata 이동)로만 적고 수정은 하지 않았다 — 사용자 결정이 보고서까지였다."
 
@@ -342,13 +341,8 @@ git commit -m "docs(seo): 전 모듈 공개 페이지 전수 SEO 점검 보고�
 # 사용자 결정: AdSense 미승인·게재 이력 없음 확인 / 수정 범위는 "adsEnabled(false)만 + 관찰" —
 # 폰트 폴백 메트릭 보정은 93개 폭 전수 스위프에서 효과 없음이 실측돼 제외, RUM·대시보드 수정 보류.
 # TDD (RED 선확인 → GREEN), 전체 스위트 102 클래스 / 607 테스트 / failures 0.
-
+✅ DONE()
 # Commit 148 — fix(datedate): 홈 adsEnabled(false) — 문서화된 광고 정책과 코드 정합 (ADR common/seo/0010) — 마지막 커밋(git-commit.md 포함)
-# 주의: docs/adr/README.md 의 0010 색인 행은 Commit 133 이 소유하므로 여기 없다.
-#       docs/audit/adsense-low-value-content-policy-mapping.md 와 docs/seo/adsense-low-value-content-remediation.md 의
-#       정합화 노트 각 1건도 Commit 142 가 소유한다.
-#       templates/fragments/CLAUDE.md 는 내용 변경 1줄 + .gitattributes(eol=lf) 정규화로 raw diff 가 파일 전체(104줄)로 잡힌다 —
-#       --ignore-cr-at-eol 로 내용 1줄임을 확인했고, 문서 LF 고정은 .gitattributes 머리말이 명시한 저장소 정책이다.
 git add src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/test/java/me/singingsandhill/calendar/datedate/application/service/SeoServiceI18nTest.java docs/adr/common/seo/0010-home-ads-script-off-and-cls-diagnosis.md src/main/resources/templates/fragments/CLAUDE.md docs/guides/git-commit.md
 git commit -m "fix(datedate): 홈 adsEnabled(false) — 문서화된 광고 정책과 코드 정합 (ADR common/seo/0010)" -m "GSC 가 데스크톱 CLS 0.15(기준 0.1 초과, URL 12개, 예시 홈)를 보고해 진단했다. 결론부터: 색인 페이지들은 무죄다. CrUX URL 레벨에서 홈의 실사용자 CLS p75 는 데이터가 존재하는 전 기간(2026-05-30~08-15) 매주 0.00 이고, 오리진 전체는 0.07~0.09 다. 12개 URL 은 SitemapService 인덱싱 대상과 정확히 일치하는데 홈 URL 데스크톱 단독 CrUX 는 표본 부족으로 아예 없다(PSI 데이터 없음, 오리진×데스크톱도 공개 API 404) — GSC 는 URL 표본이 부족하면 오리진/유사 그룹 값을 씌우므로, 12개가 상속받아 표시한 0.15 의 발생원은 색인 페이지 밖이다. 랩 재현으로 교차 확인했다 — 운영 사이트를 Windows Chrome 헤드리스+CDP 로 열어 폰트 오리진(jsdelivr·googleapis·gstatic)만 1.5~3초 지연 주입하고 스크롤 시나리오까지 돌려도 9개 URL 에서 CLS 최대 0.004 였고, 1000~1920px 를 10px 간격 93개 폭으로 전수 스위프해 폴백 렌더(폰트 차단)와 웹폰트 렌더의 줄 수·문서 높이를 비교하면 홈·guide·use-case 모두 플립 0건이다. 명시적 line-height 와 짧은 헤드라인 덕에 폰트 스왑이 레이아웃을 못 바꾼다 — 애초 계획의 본체였던 폴백 메트릭 보정(size-adjust)은 개선할 시프트 자체가 없어 사용자 결정으로 제외했다. hover 패딩(date-diff 프리셋)·FAQ 아코디언(0.3s, 입력 예외창 내)·GTM 광고 주입(전환 추적 URL 테이블 오탐)도 각각 측정·분석으로 기각했고, AdSense 는 사용자 확인으로 미승인·게재 이력 없음이 확정돼 광고 잔상 가설도 닫혔다. 오리진 CLS 의 유력 발생원은 코드로 메커니즘만 확인해 뒀다 — trading-dashboard.js 가 15~30초 폴링마다 포지션 목록·테이블을 innerHTML 로 전체 재구축해 높이가 변하면 아래가 통째로 밀린다. 다만 RUM 없이는 확정 불가라 실거래 봇 제어 UI 를 추측 수정하지 않고 관찰만 하기로 했다(ADR Consequences 에 후속 경로 기록). 이번 코드 변경은 진단 중 발견한 코드·문서 불일치 한 건이다: 홈은 광고 슬롯이 0개이고 문서 세 곳(fragments/CLAUDE.md 광고 전략 표, adsense 감사·개선 문서)이 전부 홈 광고 없음이라 서술하는데 getHomeSeo() 만 adsEnabled(true) 라, ADSENSE_CLIENT 가 주입되는 순간 홈에 스크립트가 로드되고 콘솔 자동광고가 켜져 있으면 예약 공간 없는 DOM 주입으로 CLS 가 실제로 발생할 경로였다. true→false 한 줄로 닫고, 페이지별 광고 게재 정책 전체(금지: 홈·about·privacy·terms / 게재: guide·faq·date-diff·use-cases / insights 데이터 가드)를 SeoServiceI18nTest.adsPolicy_perPage 로 고정했다. RED 를 먼저 확인했고(홈 false 단언이 263행에서 실패), GREEN 후 전체 스위트 102 클래스 607 테스트 failures 0. 진단 수치와 기각 대안 전체는 ADR common/seo/0010 에 남겼다 — 랩 CLS 0.001(lighthouse 감사)과 필드 0.15 의 괴리를 다음 세션이 다시 추적하지 않게 하는 것이 목적이다. 후속은 코드 밖이다: GSC 에서 수정 검증 시작(CrUX 28일 롤링이라 판정까지 최대 28일+α), 오리진 CLS 가 0.1 을 넘거나 실패가 지속되면 RUM 계측(layout-shift source → dataLayer)이 다음 수단이다."
 

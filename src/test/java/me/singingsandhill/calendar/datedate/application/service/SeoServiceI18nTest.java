@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
+import me.singingsandhill.calendar.datedate.domain.guide.GuideSlug;
+import me.singingsandhill.calendar.datedate.domain.guide.GuideSlugs;
 import me.singingsandhill.calendar.datedate.domain.usecase.UseCaseSlugs;
 
 /**
@@ -83,6 +85,14 @@ class SeoServiceI18nTest {
         assertThat(ko.canonicalEn()).isEqualTo(BASE_URL + "/?lang=en");
         assertThat(en.canonicalKo()).isEqualTo(BASE_URL + "/");
         assertThat(en.canonicalEn()).isEqualTo(BASE_URL + "/?lang=en");
+    }
+
+    @Test
+    @DisplayName("홈 JSON-LD 는 FAQPage 를 발행하지 않는다 — FAQPage 는 /faq 단독 (중복 구조화 데이터 해소)")
+    void homeSeo_noFaqPage() {
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+        assertThat(service.getHomeSeo().jsonLd()).doesNotContain("FAQPage");
+        assertThat(service.getFaqSeo().jsonLd()).contains("FAQPage");
     }
 
     @Test
@@ -233,23 +243,61 @@ class SeoServiceI18nTest {
         SeoMetadata[] publicPages = new SeoMetadata[] {
             service.getHomeSeo(),
             service.getGuideSeo(),
-            service.getInsightsTrendsSeo(),
+            service.getInsightsTrendsSeo(true),
             service.getPrivacySeo(),
             service.getTermsSeo(),
             service.getFaqSeo(),
             service.getDateDiffSeo(),
+            service.getUseCasesIndexSeo(),
+            service.getGuidesIndexSeo(),
             service.getUseCaseSeo("friend-meetup"),
             service.getUseCaseSeo("team-meeting"),
             service.getUseCaseSeo("travel-planning"),
             service.getUseCaseSeo("study-group")
         };
+        List<SeoMetadata> allPublicPages = new ArrayList<>(List.of(publicPages));
+        for (GuideSlug g : GuideSlugs.ALL) {
+            allPublicPages.add(service.getGuideArticleSeo(g.slug()));
+        }
 
-        for (SeoMetadata seo : publicPages) {
+        for (SeoMetadata seo : allPublicPages) {
             assertThat(seo.hreflangEnabled()).isTrue();
             assertThat(seo.canonicalKo()).isNotNull().doesNotContain("lang=en");
             assertThat(seo.canonicalEn()).isNotNull().endsWith("?lang=en");
             assertThat(seo.robots()).isEqualTo("index, follow");
         }
+    }
+
+    // ===== 광고 게재 정책 =====
+
+    @Test
+    @DisplayName("광고 게재 정책 — 콘텐츠 페이지만 adsEnabled=true, 홈·about·privacy·terms 는 false 다 (ADR common/seo/0010)")
+    void adsPolicy_perPage() {
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+
+        // 광고 금지 페이지 — 문서화된 정책(홈 CTA 우선, privacy/terms 행동 목적 화면)과 코드 고정
+        assertThat(service.getHomeSeo().adsEnabled()).isFalse();
+        assertThat(service.getAboutSeo().adsEnabled()).isFalse();
+        assertThat(service.getPrivacySeo().adsEnabled()).isFalse();
+        assertThat(service.getTermsSeo().adsEnabled()).isFalse();
+        // 허브(내비게이션 페이지)도 광고 없음 — 콘텐츠 없는 화면에 광고 금지
+        assertThat(service.getUseCasesIndexSeo().adsEnabled()).isFalse();
+        assertThat(service.getGuidesIndexSeo().adsEnabled()).isFalse();
+
+        // 광고 게재 페이지 — 콘텐츠 페이지 한정
+        assertThat(service.getGuideSeo().adsEnabled()).isTrue();
+        assertThat(service.getFaqSeo().adsEnabled()).isTrue();
+        assertThat(service.getDateDiffSeo().adsEnabled()).isTrue();
+        for (String slug : UseCaseSlugs.ALL) {
+            assertThat(service.getUseCaseSeo(slug).adsEnabled()).isTrue();
+        }
+        for (GuideSlug g : GuideSlugs.ALL) {
+            assertThat(service.getGuideArticleSeo(g.slug()).adsEnabled()).isTrue();
+        }
+
+        // insights 는 데이터 유무 3중 가드
+        assertThat(service.getInsightsTrendsSeo(true).adsEnabled()).isTrue();
+        assertThat(service.getInsightsTrendsSeo(false).adsEnabled()).isFalse();
     }
 
     // ===== 메타 디스크립션 길이 =====
@@ -264,14 +312,19 @@ class SeoServiceI18nTest {
             List<SeoMetadata> pages = new ArrayList<>(List.of(
                 service.getHomeSeo(),
                 service.getGuideSeo(),
-                service.getInsightsTrendsSeo(),
+                service.getInsightsTrendsSeo(true),
                 service.getAboutSeo(),
                 service.getPrivacySeo(),
                 service.getTermsSeo(),
                 service.getFaqSeo(),
-                service.getDateDiffSeo()));
+                service.getDateDiffSeo(),
+                service.getUseCasesIndexSeo(),
+                service.getGuidesIndexSeo()));
             for (String slug : UseCaseSlugs.ALL) {
                 pages.add(service.getUseCaseSeo(slug));
+            }
+            for (GuideSlug g : GuideSlugs.ALL) {
+                pages.add(service.getGuideArticleSeo(g.slug()));
             }
 
             for (SeoMetadata seo : pages) {
@@ -279,6 +332,29 @@ class SeoServiceI18nTest {
                     .as("[%s] %s description: %s", locale, seo.canonical(), seo.description())
                     .hasSizeBetween(120, 160);
             }
+        }
+    }
+
+    // ===== Guide Article JSON-LD 날짜 SSOT =====
+
+    @Test
+    @DisplayName("Guide Article JSON-LD — datePublished/dateModified 가 GuideSlugs SSOT 와 일치한다")
+    void guideArticleSeo_articleJsonLdDatesFromSsot() throws Exception {
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+        for (GuideSlug g : GuideSlugs.ALL) {
+            JsonNode root = json.readTree(service.getGuideArticleSeo(g.slug()).jsonLd());
+            JsonNode article = null;
+            for (JsonNode node : root) {
+                if ("Article".equals(node.path("@type").asText())) {
+                    article = node;
+                }
+            }
+            assertThat(article).as(g.slug() + " 의 Article 노드").isNotNull();
+            assertThat(article.path("datePublished").asText()).isEqualTo(g.published().toString());
+            assertThat(article.path("dateModified").asText()).isEqualTo(g.modified().toString());
+            assertThat(article.path("mainEntityOfPage").path("@id").asText())
+                    .isEqualTo(BASE_URL + "/guides/" + g.slug());
+            assertThat(article.path("author").path("@type").asText()).isEqualTo("Organization");
         }
     }
 
@@ -292,11 +368,16 @@ class SeoServiceI18nTest {
             LocaleContextHolder.setLocale(locale);
             json.readTree(service.getHomeSeo().jsonLd());
             json.readTree(service.getGuideSeo().jsonLd());
-            json.readTree(service.getInsightsTrendsSeo().jsonLd());
+            json.readTree(service.getInsightsTrendsSeo(true).jsonLd());
             json.readTree(service.getPrivacySeo().jsonLd());
             json.readTree(service.getTermsSeo().jsonLd());
             json.readTree(service.getFaqSeo().jsonLd());
             json.readTree(service.getDateDiffSeo().jsonLd());
+            json.readTree(service.getUseCasesIndexSeo().jsonLd());
+            json.readTree(service.getGuidesIndexSeo().jsonLd());
+            for (GuideSlug g : GuideSlugs.ALL) {
+                json.readTree(service.getGuideArticleSeo(g.slug()).jsonLd());
+            }
             json.readTree(service.getUseCaseSeo("friend-meetup").jsonLd());
             json.readTree(service.getUseCaseSeo("team-meeting").jsonLd());
             json.readTree(service.getUseCaseSeo("travel-planning").jsonLd());
@@ -316,14 +397,19 @@ class SeoServiceI18nTest {
             List<SeoMetadata> pages = new ArrayList<>(List.of(
                 service.getHomeSeo(),
                 service.getGuideSeo(),
-                service.getInsightsTrendsSeo(),
+                service.getInsightsTrendsSeo(true),
                 service.getAboutSeo(),
                 service.getPrivacySeo(),
                 service.getTermsSeo(),
                 service.getFaqSeo(),
-                service.getDateDiffSeo()));
+                service.getDateDiffSeo(),
+                service.getUseCasesIndexSeo(),
+                service.getGuidesIndexSeo()));
             for (String slug : UseCaseSlugs.ALL) {
                 pages.add(service.getUseCaseSeo(slug));
+            }
+            for (GuideSlug g : GuideSlugs.ALL) {
+                pages.add(service.getGuideArticleSeo(g.slug()));
             }
 
             for (SeoMetadata seo : pages) {

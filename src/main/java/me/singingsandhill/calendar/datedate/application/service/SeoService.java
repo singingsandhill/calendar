@@ -9,6 +9,10 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
+import me.singingsandhill.calendar.datedate.application.exception.GuideNotFoundException;
+import me.singingsandhill.calendar.datedate.domain.guide.GuideSlug;
+import me.singingsandhill.calendar.datedate.domain.guide.GuideSlugs;
+import me.singingsandhill.calendar.datedate.domain.usecase.UseCaseSlugs;
 
 /**
  * 페이지별 SEO 메타데이터를 로케일에 맞춰 빌드한다.
@@ -208,13 +212,6 @@ public class SeoService {
                         "item": "%s/"
                     }
                 ]
-            },
-            {
-                "@context": "https://schema.org",
-                "@type": "FAQPage",
-                "mainEntity": [
-                    %s
-                ]
             }]
             """.formatted(
                 mJson("seo.home.appName"),
@@ -232,8 +229,7 @@ public class SeoService {
                 baseUrl,
                 mJson("seo.home.orgDescription"),
                 mJson("seo.breadcrumb.home"),
-                baseUrl,
-                buildFaqMainEntity(6, "seo.home.faq")
+                baseUrl
             );
 
         return SeoMetadata.builder()
@@ -250,7 +246,8 @@ public class SeoService {
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .ogLocale(ogLocale())
             .jsonLd(jsonLd)
-            .adsEnabled(true)
+            // 홈은 광고 슬롯 0개 — 스크립트 로드도 차단해 자동광고 CLS 재발 경로 제거 (ADR common/seo/0010)
+            .adsEnabled(false)
             .hreflangEnabled(true)
             .build();
     }
@@ -445,6 +442,201 @@ public class SeoService {
             .build();
     }
 
+    /** 활용 사례 허브 (/use-cases) — 슬러그 상세로 안내하는 CollectionPage. 내비게이션 페이지라 광고 없음. */
+    public SeoMetadata getUseCasesIndexSeo() {
+        String path = "/use-cases";
+
+        StringBuilder itemsJson = new StringBuilder();
+        List<String> slugs = UseCaseSlugs.ALL;
+        for (int i = 0; i < slugs.size(); i++) {
+            String slug = slugs.get(i);
+            itemsJson.append("""
+                {
+                    "@type": "ListItem",
+                    "position": %d,
+                    "name": "%s",
+                    "item": "%s/use-cases/%s"
+                }""".formatted(i + 1, mJson("seo.useCase." + slug + ".title"), baseUrl, slug));
+            if (i < slugs.size() - 1) itemsJson.append(",\n            ");
+        }
+
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "name": "%s",
+                "description": "%s",
+                "url": "%s/use-cases",
+                "mainEntity": {
+                    "@type": "ItemList",
+                    "itemListElement": [
+                        %s
+                    ]
+                }
+            },
+            %s]
+            """.formatted(
+                mJson("seo.breadcrumb.useCases"),
+                mJson("seo.useCases.description"),
+                baseUrl,
+                itemsJson,
+                breadcrumbJsonLd(m("seo.breadcrumb.useCases"), path)
+            );
+
+        return SeoMetadata.builder()
+            .title(m("seo.useCases.title"))
+            .description(m("seo.useCases.description"))
+            .keywords(m("seo.useCases.keywords"))
+            .robots("index, follow")
+            .canonical(currentCanonical(path))
+            .canonicalKo(canonicalKo(path))
+            .canonicalEn(canonicalEn(path))
+            .ogType("website")
+            .ogTitle(m("seo.useCases.title"))
+            .ogDescription(m("seo.useCases.description"))
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .ogLocale(ogLocale())
+            .jsonLd(jsonLd)
+            .adsEnabled(false)
+            .hreflangEnabled(true)
+            .build();
+    }
+
+    /** 모임 노하우 허브 (/guides) — 기사 목록 CollectionPage. 내비게이션 페이지라 광고 없음. */
+    public SeoMetadata getGuidesIndexSeo() {
+        String path = "/guides";
+
+        StringBuilder itemsJson = new StringBuilder();
+        List<GuideSlug> articles = GuideSlugs.ALL;
+        for (int i = 0; i < articles.size(); i++) {
+            String slug = articles.get(i).slug();
+            itemsJson.append("""
+                {
+                    "@type": "ListItem",
+                    "position": %d,
+                    "name": "%s",
+                    "item": "%s/guides/%s"
+                }""".formatted(i + 1, mJson("guides.article." + slug + ".title"), baseUrl, slug));
+            if (i < articles.size() - 1) itemsJson.append(",\n            ");
+        }
+
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "name": "%s",
+                "description": "%s",
+                "url": "%s/guides",
+                "mainEntity": {
+                    "@type": "ItemList",
+                    "itemListElement": [
+                        %s
+                    ]
+                }
+            },
+            %s]
+            """.formatted(
+                mJson("seo.breadcrumb.guides"),
+                mJson("seo.guides.description"),
+                baseUrl,
+                itemsJson,
+                breadcrumbJsonLd(m("seo.breadcrumb.guides"), path)
+            );
+
+        return SeoMetadata.builder()
+            .title(m("seo.guides.title"))
+            .description(m("seo.guides.description"))
+            .keywords(m("seo.guides.keywords"))
+            .robots("index, follow")
+            .canonical(currentCanonical(path))
+            .canonicalKo(canonicalKo(path))
+            .canonicalEn(canonicalEn(path))
+            .ogType("website")
+            .ogTitle(m("seo.guides.title"))
+            .ogDescription(m("seo.guides.description"))
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .ogLocale(ogLocale())
+            .jsonLd(jsonLd)
+            .adsEnabled(false)
+            .hreflangEnabled(true)
+            .build();
+    }
+
+    /**
+     * 모임 노하우 기사 (슬러그별) — Article JSON-LD.
+     *
+     * <p>datePublished/dateModified 는 {@link GuideSlugs} SSOT 에서 온다 — 사이트맵
+     * lastmod·화면 바이라인과 같은 원천 (ADR common/seo/0003). 저자는 실존 개인 프로필
+     * 없이 Organization(DateDate)으로만 표기한다 — 허위 신원은 그 자체가 정책 위반.
+     */
+    public SeoMetadata getGuideArticleSeo(String slug) {
+        GuideSlug article = GuideSlugs.find(slug)
+                .orElseThrow(() -> new GuideNotFoundException(slug));
+        String path = "/guides/" + slug;
+        String title = m("guides.article." + slug + ".title");
+        String summary = m("guides.article." + slug + ".summary");
+
+        String jsonLd = """
+            [{
+                "@context": "https://schema.org",
+                "@type": "Article",
+                "headline": "%s",
+                "description": "%s",
+                "datePublished": "%s",
+                "dateModified": "%s",
+                "author": {
+                    "@type": "Organization",
+                    "name": "%s",
+                    "url": "%s"
+                },
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "%s",
+                    "logo": {
+                        "@type": "ImageObject",
+                        "url": "%s/og-image.png"
+                    }
+                },
+                "mainEntityOfPage": {
+                    "@type": "WebPage",
+                    "@id": "%s/guides/%s"
+                },
+                "image": "%s/og-image.png",
+                "inLanguage": "%s"
+            },
+            %s]
+            """.formatted(
+                jsonEscape(title),
+                jsonEscape(summary),
+                article.published().toString(),
+                article.modified().toString(),
+                BRAND_NAME, baseUrl,
+                BRAND_NAME, baseUrl,
+                baseUrl, slug,
+                baseUrl,
+                ogLocale().replace('_', '-'),
+                breadcrumbJsonLd(title, path)
+            );
+
+        return SeoMetadata.builder()
+            .title(title + " | " + BRAND_NAME)
+            .description(summary)
+            .keywords(m("guides.article." + slug + ".keywords"))
+            .robots("index, follow")
+            .canonical(currentCanonical(path))
+            .canonicalKo(canonicalKo(path))
+            .canonicalEn(canonicalEn(path))
+            .ogType("article")
+            .ogTitle(title + " | " + BRAND_NAME)
+            .ogDescription(summary)
+            .ogImage(baseUrl + DEFAULT_OG_IMAGE)
+            .ogLocale(ogLocale())
+            .jsonLd(jsonLd)
+            .adsEnabled(true)
+            .hreflangEnabled(true)
+            .build();
+    }
+
     /** 활용 사례 (슬러그별). */
     public SeoMetadata getUseCaseSeo(String slug) {
         String path = "/use-cases/" + slug;
@@ -550,16 +742,6 @@ public class SeoService {
                 jsonEscape(description),
                 stepsJson
             );
-    }
-
-    /**
-     * 인기 트렌드 & 이용 현황 — 데이터가 있는 일반 케이스.
-     *
-     * <p>레거시 호출자 호환을 위한 무인자 버전. 새 코드는 {@link #getInsightsTrendsSeo(boolean)} 를 써서
-     * 빈 데이터 시 noindex 로 강등할 것.
-     */
-    public SeoMetadata getInsightsTrendsSeo() {
-        return getInsightsTrendsSeo(true);
     }
 
     /**
