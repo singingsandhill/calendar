@@ -14,7 +14,7 @@
 
     <!-- Basic Meta Tags -->
     <meta name="description" th:content="${seo.description()}">
-    <meta name="keywords" th:content="${seo.keywords()}">
+    <meta name="keywords" th:if="${seo.keywords() != null}" th:content="${seo.keywords()}">
     <meta name="author" content="DateDate">
     <meta name="language" th:content="${#locale.toLanguageTag()}">
     <meta http-equiv="content-language" th:content="${#locale.toLanguageTag()}">
@@ -49,8 +49,8 @@
     <meta property="og:description" th:content="${seo.ogDescription()}">
     <meta property="og:url" th:content="${seo.canonical()}">
     <meta property="og:image" th:content="${seo.ogImage()}">
-    <meta property="og:image:width" content="1490">
-    <meta property="og:image:height" content="780">
+    <meta property="og:image:width" th:content="${seo.ogImageWidth()}">
+    <meta property="og:image:height" th:content="${seo.ogImageHeight()}">
     <meta property="og:image:type" content="image/png">
     <meta property="og:locale" th:content="${seo.ogLocale() != null} ? ${seo.ogLocale()} : (${#locale.language == 'en'} ? 'en_US' : 'ko_KR')">
     <!-- og:locale:alternate — 양방향(hreflang) 페이지에서만 다른 언어 알림 (canonicalKo/En 둘 다 채워졌을 때) -->

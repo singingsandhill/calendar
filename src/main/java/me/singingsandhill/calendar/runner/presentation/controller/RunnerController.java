@@ -9,6 +9,7 @@ import me.singingsandhill.calendar.runner.domain.DistanceRankingDto;
 import me.singingsandhill.calendar.runner.domain.MemberAttendanceStatsDto;
 import me.singingsandhill.calendar.runner.domain.Run;
 import me.singingsandhill.calendar.runner.domain.RunCategory;
+import me.singingsandhill.calendar.common.presentation.LocaleLinks;
 import me.singingsandhill.calendar.common.presentation.dto.SeoMetadata;
 import me.singingsandhill.calendar.runner.presentation.dto.request.RunCreateRequest;
 import me.singingsandhill.calendar.runner.presentation.dto.response.AttendanceResponse;
@@ -39,15 +40,18 @@ public class RunnerController {
     private final String ogImage;
     private final RunService runService;
     private final AttendanceService attendanceService;
+    private final LocaleLinks localeLinks;
 
     public RunnerController(
             @Value("${app.base-url:https://datedate.site}") String baseUrl,
             RunService runService,
-            AttendanceService attendanceService) {
+            AttendanceService attendanceService,
+            LocaleLinks localeLinks) {
         this.baseUrl = baseUrl;
         this.ogImage = baseUrl + "/image/crew_logo.png";
         this.runService = runService;
         this.attendanceService = attendanceService;
+        this.localeLinks = localeLinks;
     }
 
     @GetMapping
@@ -65,6 +69,8 @@ public class RunnerController {
                 .canonical(baseUrl + "/runners")
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .jsonLd("""
                     [{
                         "@context": "https://schema.org",
@@ -110,6 +116,8 @@ public class RunnerController {
                 .canonical(baseUrl + "/runners/runs")
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .build());
         return "runners/run-list";
     }
@@ -132,6 +140,8 @@ public class RunnerController {
                 .canonical(baseUrl + "/runners/runs/" + id)
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .build());
 
         return "runners/run-detail";
@@ -153,6 +163,8 @@ public class RunnerController {
                 .canonical(baseUrl + "/runners/members")
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .build());
         return "runners/member-list";
     }
@@ -188,6 +200,8 @@ public class RunnerController {
                 .canonical(baseUrl + "/runners/members/" + name)
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .build());
 
         return "runners/member-detail";
@@ -203,6 +217,8 @@ public class RunnerController {
                 .canonical(baseUrl + "/runners/announce")
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .build());
         return "runners/announce";
     }
@@ -218,6 +234,8 @@ public class RunnerController {
                 .canonical(baseUrl + "/runners/runs/new")
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .build());
         return "runners/run-form";
     }
@@ -238,6 +256,8 @@ public class RunnerController {
                     .canonical(baseUrl + "/runners/runs/new")
                     .hreflangEnabled(false)
                     .ogImage(ogImage)
+                    .ogImageWidth(1280)
+                    .ogImageHeight(720)
                     .build());
             return "runners/run-form";
         }
@@ -250,6 +270,6 @@ public class RunnerController {
         );
 
         redirectAttributes.addFlashAttribute("message", "런이 생성되었습니다.");
-        return "redirect:/runners/runs/" + run.getId();
+        return localeLinks.redirect("/runners/runs/" + run.getId());
     }
 }

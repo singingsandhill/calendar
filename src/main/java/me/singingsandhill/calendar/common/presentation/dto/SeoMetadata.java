@@ -8,6 +8,11 @@ package me.singingsandhill.calendar.common.presentation.dto;
  * - {@code canonical} 은 현재 요청 로케일에 맞춰 빌더에서 canonicalKo 또는 canonicalEn 으로 설정됨
  * - {@code canonicalKo}/{@code canonicalEn} 은 hreflang 태그 렌더링에 사용됨 (양쪽 항상 채움)
  * - {@code hreflangEnabled} 는 인덱싱 가능한 공개 페이지에만 true; noindex 페이지에선 false
+ *
+ * og:image 치수:
+ * - {@code ogImageWidth}/{@code ogImageHeight} 는 ogImage 실물과 일치해야 함 (스크래퍼가 선언을 신뢰).
+ *   빌더 기본값 1490×780 은 기본 이미지 og-image.png 의 실측 치수 — 다른 이미지를 쓰는 페이지는
+ *   반드시 함께 오버라이드 (runner 페이지의 crew_logo.png 는 1280×720)
  */
 public record SeoMetadata(
     String title,
@@ -21,6 +26,8 @@ public record SeoMetadata(
     String ogTitle,
     String ogDescription,
     String ogImage,
+    int ogImageWidth,
+    int ogImageHeight,
     String ogLocale,
     String jsonLd,
     boolean adsEnabled,
@@ -42,6 +49,8 @@ public record SeoMetadata(
         private String ogTitle;
         private String ogDescription;
         private String ogImage;
+        private int ogImageWidth = 1490;
+        private int ogImageHeight = 780;
         private String ogLocale;
         private String jsonLd;
         private boolean adsEnabled = false;
@@ -102,6 +111,16 @@ public record SeoMetadata(
             return this;
         }
 
+        public Builder ogImageWidth(int ogImageWidth) {
+            this.ogImageWidth = ogImageWidth;
+            return this;
+        }
+
+        public Builder ogImageHeight(int ogImageHeight) {
+            this.ogImageHeight = ogImageHeight;
+            return this;
+        }
+
         public Builder ogLocale(String ogLocale) {
             this.ogLocale = ogLocale;
             return this;
@@ -135,6 +154,8 @@ public record SeoMetadata(
                 ogTitle != null ? ogTitle : title,
                 ogDescription != null ? ogDescription : description,
                 ogImage,
+                ogImageWidth,
+                ogImageHeight,
                 ogLocale,
                 jsonLd,
                 adsEnabled,

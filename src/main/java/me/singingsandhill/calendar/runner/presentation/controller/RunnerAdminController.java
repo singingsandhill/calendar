@@ -32,7 +32,7 @@ public class RunnerAdminController {
     private final AttendanceService attendanceService;
 
     public RunnerAdminController(
-            @Value("${app.base-url:https://datedate.me}") String baseUrl,
+            @Value("${app.base-url:https://datedate.site}") String baseUrl,
             RunService runService,
             AttendanceService attendanceService) {
         this.baseUrl = baseUrl;
@@ -50,6 +50,8 @@ public class RunnerAdminController {
                 .canonical(baseUrl + "/runners/admin")
                 .hreflangEnabled(false)
                 .ogImage(ogImage)
+                .ogImageWidth(1280)
+                .ogImageHeight(720)
                 .build();
     }
 
