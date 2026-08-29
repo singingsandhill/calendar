@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import me.singingsandhill.calendar.common.presentation.LocaleLinks;
 import me.singingsandhill.calendar.datedate.application.dto.RecapDto;
 import me.singingsandhill.calendar.datedate.application.service.RecapService;
 import me.singingsandhill.calendar.datedate.application.service.RecapShareService;
@@ -27,22 +28,25 @@ public class RecapController {
     private final SeoService seoService;
     private final Clock clock;
     private final String baseUrl;
+    private final LocaleLinks localeLinks;
 
     public RecapController(RecapService recapService,
                            RecapShareService recapShareService,
                            SeoService seoService,
                            Clock clock,
-                           @Value("${app.base-url}") String baseUrl) {
+                           @Value("${app.base-url}") String baseUrl,
+                           LocaleLinks localeLinks) {
         this.recapService = recapService;
         this.recapShareService = recapShareService;
         this.seoService = seoService;
         this.clock = clock;
         this.baseUrl = baseUrl;
+        this.localeLinks = localeLinks;
     }
 
     @GetMapping("/recap")
     public String currentYearRecap() {
-        return "redirect:/recap/" + Year.now(clock).getValue();
+        return localeLinks.redirect("/recap/" + Year.now(clock).getValue());
     }
 
     @GetMapping("/recap/{year:\\d{4}}")
@@ -61,7 +65,7 @@ public class RecapController {
         RecapShare share = recapShareService.getOrCreateShare(userId, year);
         redirectAttributes.addFlashAttribute("shareUrl",
                 baseUrl + "/recap/share/" + share.getToken());
-        return "redirect:/recap/" + year;
+        return localeLinks.redirect("/recap/" + year);
     }
 
     @GetMapping("/recap/share/{token}")

@@ -4,24 +4,35 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.Year;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import jakarta.servlet.http.Cookie;
 import me.singingsandhill.calendar.datedate.application.service.OwnerService;
+import me.singingsandhill.calendar.datedate.application.service.RecapShareService;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
+import me.singingsandhill.calendar.datedate.domain.recap.RecapShare;
+import me.singingsandhill.calendar.datedate.infrastructure.security.KakaoOAuth2UserService;
 
 /**
  * Verifies that after a user enters with `?lang=en`, internal navigation and
@@ -38,8 +49,20 @@ class LocalePersistenceIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private Clock clock;
+
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     private OwnerService ownerService;
+
+    @MockitoBean
+    private RecapShareService recapShareService;
+
+    private static RequestPostProcessor kakaoUser() {
+        return oauth2Login()
+                .authorities(new SimpleGrantedAuthority("ROLE_USER"))
+                .attributes(attrs -> attrs.put(KakaoOAuth2UserService.ATTR_APP_USER_ID, 42L));
+    }
 
     @Test
     @DisplayName("?lang=en 진입 후 /start POST → 리다이렉트 URL 에 ?lang=en 유지")
@@ -128,6 +151,55 @@ class LocalePersistenceIntegrationTest {
         assertThat(bodyContent).doesNotContain("href=\"/guide?lang=");
         assertThat(bodyContent).doesNotContain("href=\"/insights/trends?lang=");
         // 단, 언어 토글 버튼만 예외적으로 ?lang=ko/en 포함 — 사용자가 명시적으로 전환할 때 사용
+    }
+
+    @Test
+    @DisplayName("?lang=en 진입 로그인 사용자 /login → /me 리다이렉트에 lang=en 유지")
+    void loginRedirect_preservesLang() throws Exception {
+        mockMvc.perform(get("/login").param("lang", "en").with(kakaoUser()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/me?lang=en"));
+    }
+
+    @Test
+    @DisplayName("?lang=en 으로 /recap → 올해 recap 리다이렉트에 lang=en 유지")
+    void recapRootRedirect_preservesLang() throws Exception {
+        int year = Year.now(clock).getValue();
+        mockMvc.perform(get("/recap").param("lang", "en").with(kakaoUser()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/recap/" + year + "?lang=en"));
+    }
+
+    @Test
+    @DisplayName("?lang=en 으로 recap 공유 생성 POST → 복귀 리다이렉트에 lang=en 유지")
+    void recapShareRedirect_preservesLang() throws Exception {
+        when(recapShareService.getOrCreateShare(42L, 2026)).thenReturn(
+                new RecapShare(1L, 42L, 2026, "tkn", LocalDateTime.now()));
+
+        mockMvc.perform(post("/recap/2026/share")
+                        .with(kakaoUser())
+                        .with(csrf())
+                        .param("lang", "en"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/recap/2026?lang=en"));
+    }
+
+    @Test
+    @DisplayName("?lang=en 으로 러너 런 생성 POST → 상세 리다이렉트에 lang=en 유지")
+    void runCreateRedirect_preservesLang() throws Exception {
+        MvcResult result = mockMvc.perform(post("/runners/runs/create")
+                        .with(csrf())
+                        .param("date", "2026-08-20")
+                        .param("time", "07:00")
+                        .param("location", "성수")
+                        .param("category", "REGULAR")
+                        .param("lang", "en"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(result.getResponse().getRedirectedUrl())
+                .startsWith("/runners/runs/")
+                .endsWith("?lang=en");
     }
 
     private static String extractBody(String html) {

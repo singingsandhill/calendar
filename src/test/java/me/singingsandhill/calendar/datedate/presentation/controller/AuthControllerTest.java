@@ -28,7 +28,7 @@ import me.singingsandhill.calendar.datedate.infrastructure.security.KakaoOAuth2U
 import me.singingsandhill.calendar.runner.domain.AdminRepository;
 
 @WebMvcTest(AuthController.class)
-@Import({CorsConfig.class, SecurityConfig.class})
+@Import({CorsConfig.class, SecurityConfig.class, LocaleLinks.class})
 class AuthControllerTest {
 
     @Autowired
@@ -36,9 +36,6 @@ class AuthControllerTest {
 
     @MockitoBean
     private SeoService seoService;
-
-    @MockitoBean(name = "localeLinks")
-    private LocaleLinks localeLinks;
 
     @MockitoBean
     private AdminRepository adminRepository;

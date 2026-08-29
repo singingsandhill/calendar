@@ -53,7 +53,7 @@ import me.singingsandhill.calendar.runner.domain.AdminRepository;
  * {@code @TestConfiguration} 으로 고정 Clock 을 하나만 공급한다.
  */
 @WebMvcTest(RecapController.class)
-@Import({CorsConfig.class, SecurityConfig.class, RecapControllerTest.FixedClockConfig.class})
+@Import({CorsConfig.class, SecurityConfig.class, LocaleLinks.class, RecapControllerTest.FixedClockConfig.class})
 class RecapControllerTest {
 
     @TestConfiguration
@@ -75,9 +75,6 @@ class RecapControllerTest {
 
     @MockitoBean
     private SeoService seoService;
-
-    @MockitoBean(name = "localeLinks")
-    private LocaleLinks localeLinks;
 
     @MockitoBean
     private AdminRepository adminRepository;
