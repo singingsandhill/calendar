@@ -104,15 +104,6 @@ public class StaticResourceController {
                 .body(resource);
     }
 
-    @GetMapping(value = "/og-image.svg")
-    public ResponseEntity<Resource> ogImageSvg() {
-        Resource resource = new ClassPathResource("static/og-image.svg");
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("image/svg+xml"))
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(7)))
-                .body(resource);
-    }
-
     @GetMapping(value = "/apple-touch-icon.png", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<Resource> appleTouchIcon() {
         return ResponseEntity.ok()
