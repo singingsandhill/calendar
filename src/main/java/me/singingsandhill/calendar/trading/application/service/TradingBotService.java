@@ -18,6 +18,8 @@ import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbOrderRe
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -50,6 +52,12 @@ public class TradingBotService {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean paused = new AtomicBoolean(false);
+    /**
+     * 보호 전용 복구 모드 — 재시작 시 오픈 포지션이 있어 자동 재개된 상태.
+     * 리스크 체크·스윕은 돌지만 신규 매매(강신호·리밸런싱·일반 신호)는 차단한다
+     * (ADR trading/modes/0003, stock/modes/0003 미러).
+     */
+    private final AtomicBoolean recoveryMode = new AtomicBoolean(false);
     private volatile Instant lastTradeTime = null;
     private volatile Instant lastLoopAt = null;
     private volatile String lastError = null;
@@ -98,11 +106,59 @@ public class TradingBotService {
     }
 
     /**
+     * 기동 시 보호 전용 자동 재개 — 오픈 포지션이 있는데 봇이 멈춰 있으면 손절·익절·트레일링
+     * 감시가 전부 죽는다. 리스크 루프·스윕만 살리고 신규 매매는 차단한다 (ADR trading/modes/0003).
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void resumeProtectionOnStartup() {
+        if (!tradingProperties.getBot().isEnabled() || running.get()) {
+            return;
+        }
+        String market = tradingProperties.getBot().getMarket();
+        long openPositions = positionRepository.countByMarketAndStatus(market, PositionStatus.OPEN);
+        if (openPositions == 0) {
+            return;
+        }
+
+        // 플래그를 먼저 세운다 — 아래 best-effort 스윕이 실패해도 보호 재개 자체는 무산되면 안 된다.
+        running.set(true);
+        paused.set(false);
+        recoveryMode.set(true);
+
+        log.warn("오픈 포지션 {}건 발견 — 보호 전용 모드로 자동 재개 (리스크 관리·스윕만, "
+                + "신규 매매는 관리자 start() 필요). 서킷브레이커 연속손실 카운터는 재시작으로 리셋됨", openPositions);
+        tradingEventService.record(TradingEventLevel.WARNING, "RECOVERY_RESUMED", market,
+                String.format("재시작 복구 — 보호 전용 자동 재개 (오픈 포지션 %d건). "
+                        + "신규 매매는 start() 필요. 서킷브레이커 연속손실 카운터 리셋됨", openPositions));
+
+        // §8-G 기동 스윕 미러 — 재시작 공백 동안 발생한 미결(SUBMITTED) 갭 복구.
+        // 캔들 초기화는 여기서 하지 않는다: ApplicationReadyEvent 리스너는 동기 실행이라 느린
+        // 빗썸 백필이 stock 봇의 자동 재개까지 지연시키고, 리스크 판정은 캔들이 아니라
+        // 실시간 현재가를 쓴다. 캔들은 다음 :05 틱의 fetchAndSaveCandles 가 채운다.
+        try {
+            reconcileSubmittedOrders(market);
+        } catch (Exception e) {
+            log.error("Recovery submitted-order sweep failed", e);
+        }
+    }
+
+    /**
      * 봇 시작
      */
     public boolean start() {
+        // 보호 전용 자동 재개 상태에서의 Start — running 은 이미 true 이므로 아래 CAS 로는
+        // 영원히 해제할 수 없다. stop→start 2단계를 강요하면 그 사이 리스크 보호가 끊기므로
+        // Start 한 번으로 완전 재개한다 (ADR trading/modes/0003).
+        if (running.get() && recoveryMode.compareAndSet(true, false)) {
+            paused.set(false);
+            log.info("Trading bot recovery cleared - full trading resumed");
+            tradingEventService.record(TradingEventLevel.NOTICE, "RECOVERY_CLEARED",
+                    tradingProperties.getBot().getMarket(), "보호 전용 복구 해제 — 신규 매매 재개");
+            return true;
+        }
         if (running.compareAndSet(false, true)) {
             paused.set(false);
+            recoveryMode.set(false); // 관리자 명시 시작 → 완전 재개 (stop 을 거친 경로의 잔존 방지)
             log.info("Trading bot started");
             tradingEventService.record(TradingEventLevel.NOTICE, "BOT_STARTED",
                     tradingProperties.getBot().getMarket(), "트레이딩 봇 시작");
@@ -166,6 +222,7 @@ public class TradingBotService {
         return new BotStatus(
                 running.get(),
                 paused.get(),
+                recoveryMode.get(),
                 tradingProperties.getBot().getMarket(),
                 lastLoopAt,
                 lastTradeTime,
@@ -244,6 +301,15 @@ public class TradingBotService {
 
             if (signal == null) {
                 log.warn("Failed to generate signal");
+                return;
+            }
+
+            // 보호 전용 복구 모드 — 스윕(0)·캔들(1)·리스크 체크(2)·신호 기록(3)까지만 수행하고
+            // 매매 단계(4 강신호·5 리밸런싱·6 일반 신호)는 차단한다. 이 위치가 리스크 체크 우선
+            // 불변식(riskCheckRunsBeforeSignalGeneration)과 청산 틱 신호 기록(ADR observability/0003)을
+            // 둘 다 보존한다 (ADR trading/modes/0003).
+            if (recoveryMode.get()) {
+                log.debug("Recovery mode - suppressing trade steps for {}", market);
                 return;
             }
 
@@ -1235,6 +1301,7 @@ public class TradingBotService {
     public record BotStatus(
             boolean running,
             boolean paused,
+            boolean recoveryMode,
             String market,
             Instant lastLoopAt,
             Instant lastTradeAt,
@@ -1242,7 +1309,7 @@ public class TradingBotService {
     ) {
         // 기존 3파라미터 호환용
         public BotStatus(boolean running, boolean paused, String market) {
-            this(running, paused, market, null, null, null);
+            this(running, paused, false, market, null, null, null);
         }
     }
 }

@@ -98,6 +98,8 @@
                     level = 'warn'; label = 'PAUSED';
                 } else if (loopAge != null && loopAge > 120) {
                     level = 'crit'; label = 'STALLED';
+                } else if (data.recoveryMode) {
+                    level = 'warn'; label = 'PROTECTION-ONLY'; // 재시작 자동재개 — Start 로 완전 재개
                 } else {
                     level = 'ok'; label = 'RUNNING';
                 }
@@ -112,7 +114,9 @@
                 const mainText = document.getElementById('status-text');
                 if (mainDot && mainText) {
                     mainDot.className = 'status-dot ' + ({ ok:'status-dot-ok', warn:'status-dot-warn', crit:'status-dot-crit' }[level] || 'status-dot-unknown');
-                    mainText.textContent = data.running ? (data.paused ? 'Paused' : 'Running') : 'Stopped';
+                    mainText.textContent = data.running
+                        ? (data.paused ? 'Paused' : (data.recoveryMode ? 'Protection-only' : 'Running'))
+                        : 'Stopped';
                 }
 
                 if (data.lastError) {

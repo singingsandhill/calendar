@@ -26,6 +26,7 @@ public class BotControlApiController {
         return ResponseEntity.ok(new BotStatusDto(
                 status.running(),
                 status.paused(),
+                status.recoveryMode(),
                 status.market(),
                 status.lastLoopAt() != null ? status.lastLoopAt().toString() : null,
                 status.lastTradeAt() != null ? status.lastTradeAt().toString() : null,
@@ -121,6 +122,7 @@ public class BotControlApiController {
     public record BotStatusDto(
             boolean running,
             boolean paused,
+            boolean recoveryMode,
             String market,
             String lastLoopAt,
             String lastTradeAt,

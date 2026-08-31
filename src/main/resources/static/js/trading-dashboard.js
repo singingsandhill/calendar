@@ -219,6 +219,7 @@
         if (!s.running) { level='warn'; label='STOPPED'; }
         else if (s.paused) { level='warn'; label='PAUSED'; }
         else if (loopAge != null && loopAge > 120) { level='crit'; label='STALLED'; }
+        else if (s.recoveryMode) { level='warn'; label='PROTECTION-ONLY'; } // 재시작 자동재개 — Start 로 완전 재개
         else { level='ok'; label='RUNNING'; }
 
         dot.className = 'status-dot ' + ({ ok:'status-dot-ok', warn:'status-dot-warn', crit:'status-dot-crit' }[level]);
@@ -226,7 +227,7 @@
         card.className = 'card ' + ({ ok:'card-ok', warn:'card-warning', crit:'card-critical' }[level]);
         sub.textContent = (loopAge != null ? 'loop ' + TradingFreshness.format(loopAge) : '-') +
                           (s.lastError ? ' · err: ' + s.lastError.substring(0, 40) : '');
-        btn.textContent = s.running ? 'Stop' : 'Start';
+        btn.textContent = s.running && !s.recoveryMode ? 'Stop' : 'Start';
     }
 
     // ==================== Active Positions ====================
@@ -378,17 +379,23 @@
     async function toggleBot() {
         const status = await TradingFetch.json('/api/trading/bot/status');
         const running = !!status.running;
-        const action = running ? 'stop' : 'start';
+        const recovery = !!status.recoveryMode;
+        // 보호 전용 복구 상태에서는 토글이 Stop 이 아니라 Start(완전 재개)여야 한다 —
+        // 여기서 Stop 하면 리스크 감시까지 끊긴다 (ADR trading/modes/0003).
+        const action = running && !recovery ? 'stop' : 'start';
+        const stopping = action === 'stop';
         TradingConfirm.show({
-            title: running ? '봇 중지' : '봇 시작',
-            body: running
+            title: stopping ? '봇 중지' : (recovery ? '완전 재개' : '봇 시작'),
+            body: stopping
                 ? '자동매매 루프를 중지합니다. 활성 포지션은 유지됩니다.'
-                : '자동매매 루프를 시작합니다. 신호 점수에 따라 매수/매도가 자동으로 발생합니다.',
-            impact: running ? '신호 평가 중단 / 리스크 감시 중단' : '매분 +5초 트레이딩 루프 활성화',
-            danger: running,
+                : (recovery
+                    ? '보호 전용 복구를 해제하고 신규 매매를 재개합니다. 리스크 감시는 이미 동작 중입니다.'
+                    : '자동매매 루프를 시작합니다. 신호 점수에 따라 매수/매도가 자동으로 발생합니다.'),
+            impact: stopping ? '신호 평가 중단 / 리스크 감시 중단' : '매분 +5초 트레이딩 루프 활성화',
+            danger: stopping,
             confirmText: null,
-            countdownSec: running ? 2 : 0,
-            confirmLabel: running ? 'Stop Bot' : 'Start Bot',
+            countdownSec: stopping ? 2 : 0,
+            confirmLabel: stopping ? 'Stop Bot' : 'Start Bot',
             onConfirm: async () => {
                 const r = await fetch(`/api/trading/bot/${action}`, { method: 'POST' });
                 const data = await r.json();
