@@ -50,7 +50,9 @@ spring:
 
   h2:
     console:
-      enabled: true
+      # 기본 비활성 (ADR common/security/0006) — 운영에서 무인증 공개돼 있던 것을 차단.
+      # 로컬 개발은 .env 에 H2_CONSOLE_ENABLED=true. nginx 의 /h2-console 404 가 2겹째 방어.
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
   jpa:
@@ -81,11 +83,21 @@ spring:
   jackson:
     default-property-inclusion: always
 
+  # 배포 시 SIGTERM 종료 계약 (ADR common/infrastructure/0001):
+  # 스케줄러 종료 대기 25s < lifecycle 30s < compose stop_grace_period 60s.
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
   # P0-4: 스케줄러 스레드 풀 분리 — 느린 트레이딩 루프가 캔들 동기화/요약 잡을 굶기지 않도록.
   task:
     scheduling:
       pool:
         size: 4
+      shutdown:
+        # 기본 false 면 컨텍스트 종료 시 shutdownNow() 가 실행 중 틱을 인터럽트한다 —
+        # 주문 HTTP 후 DB 커밋 전 kill = 무기록 체결 창. 진행 중 틱의 완주를 기다린다.
+        await-termination: true
+        await-termination-period: 25s
 
   mail:
     host: smtp.gmail.com
@@ -103,8 +115,34 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+# 배포 헬스 게이트 (ADR common/security/0006). 게이트는 /actuator/health/deploy 를 폴링한다.
+# mail 인디케이터 금지 — 켜면 헬스 조회마다 smtp.gmail.com 실접속(게이트가 외부 SMTP 에 종속
+# + healthcheck 주기마다 Gmail AUTH). 인디케이터는 화이트리스트 방식으로만 켠다.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      group:
+        deploy:
+          include: db,ping,diskSpace
+  health:
+    defaults:
+      enabled: false
+    db:
+      enabled: true
+    ping:
+      enabled: true
+    diskspace:
+      enabled: true
+
 server:
   port: 8081
+  # Boot 4 기본값이지만 배포 스크립트의 stop_grace_period 계약을 코드에 고정 (ADR common/infrastructure/0001)
+  shutdown: graceful
   forward-headers-strategy: native
   error:
     include-stacktrace: never

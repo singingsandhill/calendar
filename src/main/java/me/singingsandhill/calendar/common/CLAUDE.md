@@ -40,8 +40,9 @@ Abstract base: subclasses implement `getStatus()` (HttpStatus) and `getCode()` (
 | `POST /api/stock/bot/**` | ROLE_ADMIN (주식 봇 제어, [ADR 0005](../../../../../../../docs/adr/common/security/0005-admin-only-stock-bot-control-api.md)) — `GET .../status` 는 공개 대시보드 위젯용 permitAll |
 | `/me`, `/recap`, `/recap/**`, `/api/me/**` | ROLE_USER (카카오 로그인, [ADR 0004](../../../../../../../docs/adr/common/security/0004-kakao-oauth2-login.md)) — 단 `/recap/share/**` 는 permitAll |
 | `/login`, `/oauth2/**`, `/login/oauth2/**` | permitAll |
-| `/`, `/start`, `/index.html`, `/privacy-policy`, `/about`, `/api/**`, `/h2-console/**`, static assets, `/insights`, `/insights/**`, `/use-cases`, `/use-cases/**`, `/tools`, `/tools/**`, `/stock`, `/stock/**`, `/api/stock/**`, `/*`, `/*/*/*` | permitAll |
+| `/`, `/start`, `/index.html`, `/privacy-policy`, `/about`, `/api/**`, `/h2-console/**`, static assets, `/insights`, `/insights/**`, `/use-cases`, `/use-cases/**`, `/guides`, `/guides/**`, `/tools`, `/tools/**`, `/stock`, `/stock/**`, `/api/stock/**`, `/*`, `/*/*/*` | permitAll — `/guides/{slug}` 는 2-세그먼트라 `/*`·`/*/*/*` 에 안 걸려 명시 필수 (회귀 가드 `DatedateAuthSecurityTest.guideArticleIsPubliclyAuthorized`) |
 | 러너 공개 경로 — `/runners`, `/runners/announce`, `/runners/runs(/**)`, `/runners/members(/**)`, `/runners/{css,js,images}/**` | permitAll (`/runners/**` 와일드카드가 아니라 개별 매처 6줄 — `/runners/admin/**` 를 삼키지 않도록) |
+| `/actuator/health`, `/actuator/health/deploy` | permitAll — 배포 헬스 게이트. 직후 `/actuator/**` 는 **denyAll** 이며 반드시 `/*`·`/*/*/*` permitAll 보다 먼저 선언 (`/*/*/*` 가 3세그먼트 actuator 경로를 삼킨다). 외부는 nginx 404, [ADR 0006](../../../../../../../docs/adr/common/security/0006-actuator-health-and-h2-console-lockdown.md). 회귀 가드 `ActuatorHealthSecurityTest` |
 | 그 외 | authenticated |
 
 트레이딩 ROLE_ADMIN·카카오 ROLE_USER 규칙은 포괄 `permitAll`(`/api/**`, `/*`)보다 **먼저** 선언해야 함(첫 매칭 우선).

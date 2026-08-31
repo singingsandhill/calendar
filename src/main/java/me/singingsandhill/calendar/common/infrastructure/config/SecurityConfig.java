@@ -50,7 +50,7 @@ public class SecurityConfig {
                 // 기존 앱 경로 - 모두 허용
                 .requestMatchers("/", "/start", "/index.html", "/privacy-policy", "/about").permitAll()
                 .requestMatchers("/api/**").permitAll()
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/image/**", "/favicon.*", "/manifest.json", "/robots.txt", "/sitemap.xml", "/ads.txt", "/og-image.svg", "/og-image.png", "/1dfcb4404e1d4f6fae3423fd163f97b8.txt").permitAll()
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/image/**", "/favicon.*", "/manifest.json", "/robots.txt", "/sitemap.xml", "/ads.txt", "/og-image.png", "/1dfcb4404e1d4f6fae3423fd163f97b8.txt").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
 
                 // 러너 공개 경로
@@ -64,8 +64,9 @@ public class SecurityConfig {
                 // 인사이트 공개 경로
                 .requestMatchers("/insights", "/insights/**").permitAll()
 
-                // use-cases 공개 경로
-                .requestMatchers("/use-cases", "/use-cases/**").permitAll()
+                // use-cases·guides 공개 경로 — /guides/{slug} 는 2-세그먼트라 아래
+                // /* · /*/*/* catch-all 에 걸리지 않으므로 명시 permitAll 이 필수
+                .requestMatchers("/use-cases", "/use-cases/**", "/guides", "/guides/**").permitAll()
 
                 // 도구 공개 경로 (날짜 계산기 등)
                 .requestMatchers("/tools", "/tools/**").permitAll()
@@ -76,6 +77,13 @@ public class SecurityConfig {
                 // 주식 트레이딩 봇 경로
                 .requestMatchers("/stock", "/stock/**").permitAll()
                 .requestMatchers("/api/stock/**").permitAll()
+
+                // 배포 헬스 게이트 (ADR common/security/0006) — health 화이트리스트 후 전면 차단.
+                // 아래 /*/*/* permitAll 이 3세그먼트 actuator 경로(/actuator/health/db 등)를
+                // 삼키므로 denyAll 이 반드시 그보다 먼저 와야 한다. 외부는 nginx 가 /actuator
+                // 전체를 404 로 가리고, 게이트는 서버 내 localhost:8081 로 호출한다.
+                .requestMatchers("/actuator/health", "/actuator/health/deploy").permitAll()
+                .requestMatchers("/actuator/**").denyAll()
 
                 // 기존 동적 경로 (owner 페이지 등)
                 .requestMatchers("/*").permitAll()
