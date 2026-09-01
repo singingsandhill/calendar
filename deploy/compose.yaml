@@ -1,0 +1,65 @@
+# calendar 서버 스택 (ADR common/infrastructure/0001·0002)
+#
+# ⚠️ 배치 규칙: 이 파일은 서버에서 ~/apps/calendar/compose.yaml 로 동기화된다 (deploy/ 하위 아님).
+# compose 의 상대 볼륨 경로는 "compose 파일이 있는 디렉터리"(project directory) 기준으로 풀리므로,
+# 상태 디렉터리(data/·logs/·.env·.deploy/)와 같은 층위에 있어야 아래 ./data 등이 정확히 걸린다.
+# deploy.sh 의 preflight 가 매 배포마다 `docker compose config` 로 해석 결과를 기계 검증한다.
+#
+# 필수 변수 (--env-file ~/apps/calendar/.deploy/env 로 주입, 기본값 없음 — 실패는 시끄럽게):
+#   APP_REF   배포 이미지 (다이제스트 ref, deploy.sh 가 기록)
+#   HOST_TZ   호스트 timedatectl 실측값 — 무존 trading cron(자정 캔들 정리·00:01 요약) 시각 보존
+#   JAVA_OPTS JVM 플래그 (런북 RSS 실측으로 확정, 예: -XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError)
+#   APP_GID   호스트 배포 유저 gid — data/·logs/ 파일을 sudo 없이 정리·백업 가능하게
+name: calendar
+services:
+  app:
+    image: ${APP_REF:?APP_REF must be set by deploy.sh (digest ref)}
+    user: "10001:${APP_GID:?APP_GID must be set from id -g}"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"        # 헬스 게이트·SSH 터널 진단 전용 (외부 비공개)
+    environment:
+      TZ: ${HOST_TZ:?HOST_TZ must be set from timedatectl}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:?JAVA_OPTS must be set in .deploy/env}
+    # cgroup 상한 — 미설정이면 MaxRAMPercentage 가 호스트 958MiB 기준으로 계산돼 커널 OOM-kill
+    # 사정권에 든다 (graceful shutdown·healthcheck 감지 전부 우회). 런북 실측으로 확정.
+    mem_limit: 700m
+    memswap_limit: 1400m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - ./data:/app/data              # H2 파일 DB — 배타 락 = 단일 인스턴스 불변식
+      - ./logs:/app/logs              # logback 4개 롤링 파일 + StockMailService 첨부 읽기 경로
+      - ./.env:/app/.env:ro           # 비밀값 — 이미지 밖, 읽기전용
+    stop_grace_period: 60s            # > lifecycle 30s > 스케줄러 await-termination 25s (application.yaml 계약)
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/deploy"]
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 120s              # 런북 부팅 3회 실측 p95×2 로 확정
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"               # 272MB app.log 재발 방지 (CONSOLE appender 가 stdout 다량 출력)
+        max-file: "3"
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/datedate.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/maintenance.html:/usr/share/nginx/html/maintenance/maintenance.html:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro   # 호스트 certbot(webroot) 챌린지 — named volume 금지
+    depends_on:
+      - app                           # 기동 순서만 — app 다운 중에도 nginx 는 살아서 503 유지보수 서빙
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

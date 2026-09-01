@@ -12,6 +12,7 @@
 | [`data-analysis/`](data-analysis/README.md) | 데이터 분석 (GA4/GTM 현황, 인벤토리, 플레이북) — 구 `DA/` |
 | [`datedate/`](datedate/) | DateDate 도메인 문서 (아키텍처 리뷰, 카카오 로그인·Recap 체크리스트) |
 | [`guides/`](guides/) | 작업 가이드 (`git-commit.md` 커밋 시퀀스, `ux-validation.md` 입력 검증 UX) |
+| [`operations/`](operations/) | 배포·서버 운영 (`deployment.md` 파이프라인, `server-migration-runbook.md` 1회성 이관) |
 | [`prompts/`](prompts/) | 재사용 프롬프트 모음 — 구 `prompt/` 병합 |
 | [`seo/`](seo/) | SEO·AdSense (진화 플레이북, 회고 시리즈, 저가치 콘텐츠 대응) |
 | [`stock/`](stock/) | 주식 봇 (전략·리스크 상세) |
