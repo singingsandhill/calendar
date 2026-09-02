@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | — | — | 9 | 3 | — | — | — | 6 | 18 |
-| **datedate** | 7 | — | 6 | — | — | — | — | — | — | 13 |
+| **common**   | — | 2 | — | 11 | 3 | — | — | — | 7 | 23 |
+| **datedate** | 8 | — | 6 | — | — | — | — | — | — | 14 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
-| **trading**  | — | 5 | — | — | — | 3 | 16 | 2 | — | 26 |
-| **stock**    | — | 7 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 22 |
-| **합계** | 9 | 12 | 6 | 9 | 3 | 5 | 26 | 5 | 6 | **81** |
+| **trading**  | — | 5 | — | — | — | 3 | 16 | 3 | — | 27 |
+| **stock**    | — | 8 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 23 |
+| **합계** | 10 | 15 | 6 | 11 | 3 | 5 | 26 | 6 | 7 | **89** |
 
-총 **81개 ADR**.
+총 **89개 ADR**.
 
 ---
 
@@ -112,26 +112,35 @@
 | 2026-08-06 | trading/observability | [0003 리스크 청산 틱에도 신호 기록](trading/observability/0003-signal-series-continuity-on-risk-exit.md) | 조기 return 으로 손절·익절 발동 분의 지표 상태가 1분 시계열에서 체계적으로 결측 |
 | 2026-08-08 | trading/risk | [0006 캔들 동기화 실패는 리스크 체크를 게이팅하지 않는다](trading/risk/0006-candle-sync-failure-does-not-gate-risk-check.md) | observability/0003 후속 ② — 캔들 수집 한 줄이 무방비라 조회 실패가 그 틱의 손절·익절을 통째로 스킵 |
 | 2026-08-13 | datedate/domain | [0007 랜덤 owner ID 미사용 보장 + 공간 1000배](datedate/domain/0007-collision-free-random-owner-id.md) | 14,400 조합·중복 무검사 — 누적 141건이면 충돌 확률 50%, 충돌 시 남의 페이지 착지·선점 |
+| 2026-08-17 | common/seo | [0010 홈 adsEnabled(false) + CLS 진단 기록](common/seo/0010-home-ads-script-off-and-cls-diagnosis.md) | GSC 데스크톱 CLS 0.15 — 진단 결과 그룹핑 아티팩트(홈 URL CrUX 0.00), 홈 광고 스크립트 게이트만 정책과 불일치 |
+| 2026-08-17 | trading/modes | [0003 재시작 시 보호 전용 자동 재개](trading/modes/0003-protection-only-recovery-on-restart.md) | CI/CD 설계 — 재시작 후 수동 start 전까지 손절 보호 공백(P1-3)이 "배포마다 일어나는 일"이 됨 |
+| 2026-08-17 | common/security | [0006 actuator health permitAll + denyAll + h2-console 기본 비활성](common/security/0006-actuator-health-and-h2-console-lockdown.md) | 배포 헬스 게이트 필요 + `/*/*/*` permitAll 이 3세그먼트 actuator 를 이미 공개 + 운영 무인증 SQL 콘솔 노출 |
+| 2026-08-17 | common/infrastructure | [0001 GHCR + compose 재시작 배포 파이프라인](common/infrastructure/0001-container-restart-deploy-pipeline.md) | 서버 수동 빌드·272MB stdout 로그·롤백 수단 부재 — blue-green 은 H2 배타락·스케줄러 이중실행·RAM 으로 불가 판정 |
+| 2026-08-17 | common/infrastructure | [0002 nginx compose 편입 + certbot webroot + 503 유지보수](common/infrastructure/0002-nginx-in-compose-and-certbot-webroot.md) | nginx 설정 서버 유일본 + 배포 중 502 노출(SEO) + 컨테이너화 시 certbot nginx 플러그인 파손 |
+| 2026-08-18 | datedate/domain | [0008 미지 콘텐츠 슬러그는 HTTP 404](datedate/domain/0008-unknown-content-slug-404.md) | AdSense 3차 통지 진단 — 미지 use-case 슬러그 302→홈이 소프트 404 신호 (owner 404 와 비대칭) |
+| 2026-08-23 | common/seo | [0011 /guides 에디토리얼 허브 — 기사별 전용 템플릿 + 날짜 SSOT](common/seo/0011-guides-editorial-hub.md) | 3차 통지의 editorial 판정 — 검색의도형 장문 카테고리 부재 + use-case 의 "복제 템플릿" 신호 회피 필요 |
+| 2026-08-31 | stock/infrastructure | [0008 종목명 소스 search-stock-info](stock/infrastructure/0008-stock-name-source-search-stock-info.md) | 09:20 메일·대시보드 종목명 칸에 종목코드 인쇄 — 스크리닝 TR 3종에 종목명 필드 부재, 최초 커밋부터 placeholder |
 
 ---
 
 ## 도메인별 폴더 구조
 
-- [common/seo/](common/seo/) — 9 ADRs
+- [common/seo/](common/seo/) — 10 ADRs
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
-- [common/security/](common/security/) — 5 ADRs
+- [common/security/](common/security/) — 6 ADRs
+- [common/infrastructure/](common/infrastructure/) — 2 ADRs
 - [datedate/domain/](datedate/domain/) — 7 ADRs
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
-- [trading/modes/](trading/modes/) — 2 ADRs
+- [trading/modes/](trading/modes/) — 3 ADRs
 - [trading/risk/](trading/risk/) — 6 ADRs
 - [trading/infrastructure/](trading/infrastructure/) — 5 ADRs
 - [trading/observability/](trading/observability/) — 3 ADRs
 - [stock/algorithm/](stock/algorithm/) — 10 ADRs
-- [stock/infrastructure/](stock/infrastructure/) — 7 ADRs
+- [stock/infrastructure/](stock/infrastructure/) — 8 ADRs
 - [stock/modes/](stock/modes/) — 3 ADRs
 - [stock/observability/](stock/observability/) — 2 ADRs
 
