@@ -34,11 +34,11 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     private static final Set<String> PUBLIC_SEO_PATHS = Set.of(
-            "/", "/guide", "/privacy", "/terms"
+            "/", "/guide", "/privacy", "/terms", "/about", "/faq"
     );
 
     private static final Set<String> PUBLIC_SEO_PREFIXES = Set.of(
-            "/use-cases", "/insights", "/runners"
+            "/use-cases", "/insights", "/runners", "/tools", "/guides"
     );
 
     @Bean
