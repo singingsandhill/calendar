@@ -53,9 +53,10 @@ public class InsightsController {
 
         // 빈 데이터 환경에서는 thin-page 신호 회피를 위해 noindex + 광고 OFF 로 강등.
         // (PP-Full "콘텐츠가 거의 없는 화면" 가드 — SEO 의 hasData 분기가 메타·광고 동시 처리)
+        // 일정 수만으로는 본문이 0 값 카드 + 빈 상태뿐이라 사이트맵 등재 조건
+        // (SitemapService.computeInsightsLastmodIfPresent — 장소/메뉴 활동만)과 동일하게 판정한다.
         boolean hasData = !popularLocations.isEmpty()
-                || !popularMenus.isEmpty()
-                || stats.totalSchedules() > 0;
+                || !popularMenus.isEmpty();
 
         model.addAttribute("seo", seoService.getInsightsTrendsSeo(hasData));
         model.addAttribute("popularLocations", popularLocations);
