@@ -33,6 +33,10 @@ class SitemapServiceWhitelistTest {
     private static final List<String> WHITELIST_PATHS = List.of(
             "/", "/guide", "/about", "/privacy", "/terms", "/faq",
             "/tools/date-diff",
+            "/use-cases",
+            "/guides", "/guides/how-to-pick-a-date",
+            "/guides/scheduling-methods-compared", "/guides/scheduling-etiquette",
+            "/guides/group-poll-best-practices",
             "/use-cases/friend-meetup", "/use-cases/team-meeting",
             "/use-cases/travel-planning", "/use-cases/study-group",
             "/use-cases/club-activity");

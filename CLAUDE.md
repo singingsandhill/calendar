@@ -249,7 +249,7 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 | 5 | `/me`, `/recap`, `/recap/**`, `/api/me/**` | `ROLE_USER` (카카오 로그인, [ADR 0004](docs/adr/common/security/0004-kakao-oauth2-login.md)) |
 | 6 | `/`, `/start`, `/index.html`, `/privacy-policy`, `/about`, `/api/**`, static assets, `/h2-console/**` | permitAll |
 | 7 | `/runners`, `/runners/announce`, `/runners/runs(/**)`, `/runners/members(/**)`, `/runners/{css,js,images}/**`, **`/runners/admin/login`** | permitAll |
-| 8 | `/insights(/**)`, `/use-cases(/**)`, `/tools(/**)` | permitAll |
+| 8 | `/insights(/**)`, `/use-cases(/**)`, `/guides(/**)`, `/tools(/**)` | permitAll — `/guides/{slug}` 는 2-세그먼트라 13번 catch-all(`/*`·`/*/*/*`)에 안 걸려 명시 필수 |
 | 9 | `/runners/admin`, `/runners/admin/**` | `ROLE_ADMIN` |
 | 10 | `/stock`, `/stock/**`, `/api/stock/**` | permitAll |
 | 11 | `/actuator/health`, `/actuator/health/deploy` | permitAll (배포 헬스 게이트 — nginx 가 외부 `/actuator` 를 404 로 가려 실질 노출은 localhost, [ADR 0006](docs/adr/common/security/0006-actuator-health-and-h2-console-lockdown.md)) |
@@ -275,6 +275,7 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 
 - `InsightsService` + `InsightsController` → `/insights/trends.html` (집계 인기 통계)
 - `UseCaseController` → `/use-cases` 허브 인덱스(`index.html`, 광고 없음) + `/use-cases/{slug}` 상세(`detail.html` — 콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹, 동호회). 슬러그 단일 진실원 `UseCaseSlugs.ALL` (라우팅·사이트맵·푸터 자동 반영). 슬러그별 워크드 예시(`sample.*`)로 템플릿 차별화. 미지 슬러그는 HTTP 404 ([ADR datedate/domain/0008](docs/adr/datedate/domain/0008-unknown-content-slug-404.md)). `GET /tools` 는 `/tools/date-diff` 로 영구 리다이렉트.
+- `GuidesController` → `/guides` "모임 노하우" 에디토리얼 허브(`guides/index.html`, 광고 없음) + `/guides/{slug}` 기사 4편 — **기사별 전용 템플릿**(`guides/<slug>.html`), 검색의도형 장문(ko ≈3,900자/en ≈1,200단어). 단일 진실원 `GuideSlugs.ALL`(record: slug·published·modified — 사이트맵 lastmod·Article JSON-LD·바이라인 3곳의 원천, **기사 수정 시 `modified` 필수 갱신**). 미지 슬러그 404. 키 네임스페이스 `guides.*`(기존 `/guide` 페이지의 `guide.*` 와 별개) ([ADR common/seo/0011](docs/adr/common/seo/0011-guides-editorial-hub.md)).
 - `SeoService` — 페이지별 JSON-LD 스키마 포함 SEO 메타데이터 생성
 - `PopularityService` — 시간 가중 점수 기반 장소/메뉴 인기 순위 (노출 기준: 최소 2표 + 비속어 블록리스트 — [ADR 0006](docs/adr/datedate/domain/0006-popularity-exposure-criteria.md))
 - 카카오 로그인 (선택적): `KakaoOAuth2UserService` → `AppUser` upsert, 오너 연결(first-claim), `UserActivity` 이벤트 기록
@@ -383,6 +384,7 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 | `error/` | `4xx.html`, `5xx.html` |
 | `insights/` | `trends.html` |
 | `use-cases/` | `index.html` (허브 인덱스), `detail.html` (슬러그 기반 콘텐츠 페이지) |
+| `guides/` | `index.html` (모임 노하우 허브), 기사별 전용 템플릿 4개 (`how-to-pick-a-date.html` 등 — 루트 `guide.html` 과 별개 네임스페이스) |
 | (루트) | `index.html`, `guide.html`, `privacy.html`, `terms.html`, `about.html`, `faq.html` |
 
 ## Database

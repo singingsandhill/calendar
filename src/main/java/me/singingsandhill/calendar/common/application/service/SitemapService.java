@@ -1,6 +1,8 @@
 package me.singingsandhill.calendar.common.application.service;
 
 import me.singingsandhill.calendar.common.application.dto.SitemapEntry;
+import me.singingsandhill.calendar.datedate.domain.guide.GuideSlug;
+import me.singingsandhill.calendar.datedate.domain.guide.GuideSlugs;
 import me.singingsandhill.calendar.datedate.domain.location.LocationRepository;
 import me.singingsandhill.calendar.datedate.domain.menu.MenuRepository;
 import me.singingsandhill.calendar.datedate.domain.usecase.UseCaseSlugs;
@@ -71,7 +73,9 @@ public class SitemapService {
                 new SitemapEntry(baseUrl + "/privacy",                     buildTime, "yearly",  "0.4", true),
                 new SitemapEntry(baseUrl + "/terms",                       buildTime, "yearly",  "0.4", true),
                 new SitemapEntry(baseUrl + "/faq",                         buildTime, "monthly", "0.8", true),
-                new SitemapEntry(baseUrl + "/tools/date-diff",             buildTime, "monthly", "0.7", true)
+                new SitemapEntry(baseUrl + "/tools/date-diff",             buildTime, "monthly", "0.7", true),
+                new SitemapEntry(baseUrl + "/use-cases",                   buildTime, "monthly", "0.6", true),
+                new SitemapEntry(baseUrl + "/guides",                      buildTime, "monthly", "0.6", true)
         ));
 
         // /insights/trends 는 실제 인기 데이터가 있을 때만 sitemap 에 포함.
@@ -84,6 +88,18 @@ public class SitemapService {
             entries.add(new SitemapEntry(
                     baseUrl + "/use-cases/" + slug,
                     buildTime,
+                    "monthly",
+                    "0.7",
+                    true
+            ));
+        }
+
+        // guides 기사는 빌드 시각이 아니라 SSOT 의 수정일을 lastmod 로 쓴다 —
+        // 기사 단위의 정직한 갱신 신호 (ADR common/seo/0003).
+        for (GuideSlug guide : GuideSlugs.ALL) {
+            entries.add(new SitemapEntry(
+                    baseUrl + "/guides/" + guide.slug(),
+                    guide.modified().atStartOfDay(KST).toOffsetDateTime(),
                     "monthly",
                     "0.7",
                     true

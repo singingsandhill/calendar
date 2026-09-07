@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<main class="container use-case-page">
+    <!-- Hero -->
+    <section class="use-case-hero animate-on-scroll">
+        <h1 th:text="#{usecase.index.heading}">Use Cases</h1>
+        <p class="use-case-subtitle" th:text="#{usecase.index.subtitle}">Subtitle</p>
+    </section>
+
+    <!-- Intro -->
+    <section class="use-case-intro animate-on-scroll">
+        <p class="use-case-intro-body" th:text="#{usecase.index.intro}">Intro</p>
+    </section>
+
+    <!-- Full slug card grid — the canonical listing of every use case -->
+    <section class="use-case-others animate-on-scroll">
+        <div class="use-case-grid">
+            <a th:each="slug : ${allSlugs}"
+               th:href="${@localeLinks.href('/use-cases/' + slug)}"
+               class="use-case-card">
+                <h2 th:text="#{'seo.useCase.' + ${slug} + '.title'}">Title</h2>
+                <p th:text="#{'seo.useCase.' + ${slug} + '.description'}">Description</p>
+            </a>
+        </div>
+    </section>
+
+    <section class="use-case-cta animate-on-scroll">
+        <h2 th:text="#{usecase.cta.title}">Get started right now</h2>
+        <p th:text="#{usecase.cta.description}">No sign-up, no installation, no cost.</p>
+        <div class="use-case-cta-buttons">
+            <a th:href="${@localeLinks.href('/#start-form')}" class="btn-spring" th:text="#{usecase.cta.start}">Create Schedule</a>
+            <a th:href="${@localeLinks.href('/guide')}" class="btn-text" th:text="#{usecase.cta.guide}">View User Guide →</a>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+</body>
+</html>

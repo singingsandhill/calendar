@@ -92,16 +92,32 @@ class SitemapServiceHreflangTest {
     }
 
     @Test
-    @DisplayName("인기 데이터 없을 때 — 공개 페이지 12개 × 2 url × 3 alt = 72개 (insights/trends 제외)")
+    @DisplayName("인기 데이터 없을 때 — 공개 페이지 18개 × 2 url × 3 alt = 108개 (insights/trends 제외)")
     void hreflangEntryCountReasonable() {
         String xml = service.generateSitemapXml();
         int count = xml.split("<xhtml:link", -1).length - 1;
         // setUp 의 null 리포지토리로 인해 /insights/trends 는 제외.
-        // 공개 양방향 엔트리 12개:
-        //   home, guide, about, privacy, terms, faq, date-diff,
-        //   use-cases x 5 (friend, team, travel, study, club-activity)
-        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 12 * 2 * 3 = 72
-        assertThat(count).isEqualTo(12 * 2 * 3);
+        // 공개 양방향 엔트리 18개:
+        //   home, guide, about, privacy, terms, faq, date-diff, use-cases 허브, guides 허브,
+        //   use-cases x 5 (friend, team, travel, study, club-activity),
+        //   guides x 4 (how-to-pick-a-date, scheduling-methods-compared,
+        //               scheduling-etiquette, group-poll-best-practices)
+        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 18 * 2 * 3 = 108
+        assertThat(count).isEqualTo(18 * 2 * 3);
+    }
+
+    @Test
+    @DisplayName("guides 기사 lastmod 는 빌드 시각이 아니라 GuideSlugs.modified 다 (ADR common/seo/0003)")
+    void guideArticleLastmodComesFromSsot() {
+        String xml = service.generateSitemapXml();
+
+        assertThat(xml).contains("<loc>" + BASE_URL + "/guides</loc>");
+        assertThat(xml).contains("<loc>" + BASE_URL + "/guides/how-to-pick-a-date</loc>");
+
+        // 기사 <url> 블록의 lastmod 는 SSOT 의 modified(KST 자정) — buildTime(테스트에선 now)과 달라야 한다
+        int idx = xml.indexOf("<loc>" + BASE_URL + "/guides/how-to-pick-a-date</loc>");
+        String block = xml.substring(idx, xml.indexOf("</url>", idx));
+        assertThat(block).contains("<lastmod>2026-08-23T00:00:00+09:00</lastmod>");
     }
 
     @Test
