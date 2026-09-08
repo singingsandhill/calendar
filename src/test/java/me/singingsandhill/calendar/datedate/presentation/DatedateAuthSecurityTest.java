@@ -101,6 +101,15 @@ class DatedateAuthSecurityTest {
     }
 
     @Test
+    @DisplayName("guides 기사(2-세그먼트)는 무인증으로 인가를 통과한다 (핸들러 미존재 → 404, /login 302 아님)")
+    void guideArticleIsPubliclyAuthorized() throws Exception {
+        // /* 와 /*/*/* catch-all 사이에 2-세그먼트 매처가 없어, 명시 permitAll 누락 시
+        // /guides/{slug} 는 authenticated() 로 떨어져 카카오 로그인으로 리다이렉트된다.
+        mockMvc.perform(get("/guides/how-to-pick-a-date"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("카카오 사용자(ROLE_USER)는 트레이딩 대시보드에 접근할 수 없다 (403)")
     void kakaoUserCannotAccessTrading() throws Exception {
         mockMvc.perform(get("/trading")
