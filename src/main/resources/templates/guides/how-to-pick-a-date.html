@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<main class="container guides-page">
+    <article class="guides-article">
+        <header class="guides-hero animate-on-scroll">
+            <h1 th:text="#{guides.article.how-to-pick-a-date.title}">모임 날짜 정하기</h1>
+            <p class="guides-byline">
+                <span th:text="#{guides.byline.published}">게시</span>
+                <time th:attr="datetime=${article.published()}"
+                      th:text="${#temporals.format(article.published(), #messages.msg('guides.byline.dateFormat'))}">2026</time>
+                <span class="guides-byline-sep">·</span>
+                <span th:text="#{guides.byline.updated}">수정</span>
+                <time th:attr="datetime=${article.modified()}"
+                      th:text="${#temporals.format(article.modified(), #messages.msg('guides.byline.dateFormat'))}">2026</time>
+                <span class="guides-byline-sep">·</span>
+                <span th:text="#{guides.byline.author}">DateDate 팀</span>
+            </p>
+        </header>
+
+        <section class="animate-on-scroll">
+            <p th:text="#{guides.article.how-to-pick-a-date.lead.p1}">Lead p1</p>
+            <p th:text="#{guides.article.how-to-pick-a-date.lead.p2}">Lead p2</p>
+        </section>
+
+        <section class="animate-on-scroll">
+            <h2 th:text="#{guides.article.how-to-pick-a-date.s1.title}">후보 날짜는 몇 개가 적당할까</h2>
+            <p th:text="#{guides.article.how-to-pick-a-date.s1.p1}">p1</p>
+            <p th:text="#{guides.article.how-to-pick-a-date.s1.p2}">p2</p>
+            <ul>
+                <li th:text="#{guides.article.how-to-pick-a-date.s1.li1}">li1</li>
+                <li th:text="#{guides.article.how-to-pick-a-date.s1.li2}">li2</li>
+                <li th:text="#{guides.article.how-to-pick-a-date.s1.li3}">li3</li>
+            </ul>
+            <p>
+                <span th:text="#{guides.article.how-to-pick-a-date.s1.p3}">p3</span>
+                <a th:href="${@localeLinks.href('/insights/trends')}"
+                   th:text="#{guides.article.how-to-pick-a-date.s1.statsLink}">이용 통계</a>
+            </p>
+        </section>
+
+        <section class="animate-on-scroll">
+            <h2 th:text="#{guides.article.how-to-pick-a-date.s2.title}">기간을 먼저 정하고, 날짜는 나중에 좁힌다</h2>
+            <p th:text="#{guides.article.how-to-pick-a-date.s2.p1}">p1</p>
+            <p th:text="#{guides.article.how-to-pick-a-date.s2.p2}">p2</p>
+            <ul>
+                <li th:text="#{guides.article.how-to-pick-a-date.s2.li1}">li1</li>
+                <li th:text="#{guides.article.how-to-pick-a-date.s2.li2}">li2</li>
+                <li th:text="#{guides.article.how-to-pick-a-date.s2.li3}">li3</li>
+            </ul>
+        </section>
+
+        <section class="animate-on-scroll">
+            <h2 th:text="#{guides.article.how-to-pick-a-date.s3.title}">마감 없는 투표는 끝나지 않는다</h2>
+            <p th:text="#{guides.article.how-to-pick-a-date.s3.p1}">p1</p>
+            <p th:text="#{guides.article.how-to-pick-a-date.s3.p2}">p2</p>
+            <p th:text="#{guides.article.how-to-pick-a-date.s3.p3}">p3</p>
+        </section>
+
+        <section class="animate-on-scroll">
+            <h2 th:text="#{guides.article.how-to-pick-a-date.s4.title}">겹치는 날이 하나도 없을 때</h2>
+            <p th:text="#{guides.article.how-to-pick-a-date.s4.p1}">p1</p>
+            <ul>
+                <li th:text="#{guides.article.how-to-pick-a-date.s4.li1}">li1</li>
+                <li th:text="#{guides.article.how-to-pick-a-date.s4.li2}">li2</li>
+                <li th:text="#{guides.article.how-to-pick-a-date.s4.li3}">li3</li>
+            </ul>
+            <p th:text="#{guides.article.how-to-pick-a-date.s4.p2}">p2</p>
+        </section>
+
+        <section class="animate-on-scroll">
+            <h2 th:text="#{guides.article.how-to-pick-a-date.s5.title}">확정한 다음이 절반이다</h2>
+            <p th:text="#{guides.article.how-to-pick-a-date.s5.p1}">p1</p>
+            <p th:text="#{guides.article.how-to-pick-a-date.s5.p2}">p2</p>
+        </section>
+
+        <!-- 특수 블록: 7단계 체크리스트 (기사별 골격 차별화 요소) -->
+        <section class="guides-checklist animate-on-scroll">
+            <h2 th:text="#{guides.article.how-to-pick-a-date.checklist.title}">체크리스트</h2>
+            <ol>
+                <li th:each="i : ${#numbers.sequence(1, 7)}"
+                    th:text="#{'guides.article.how-to-pick-a-date.checklist.item' + ${i}}">item</li>
+            </ol>
+        </section>
+
+        <section class="animate-on-scroll">
+            <h2 th:text="#{guides.faq.title}">자주 묻는 질문</h2>
+            <div class="faq-list">
+                <div class="faq-item" th:each="i : ${#numbers.sequence(1, 3)}">
+                    <button class="faq-question" aria-expanded="false" th:attr="aria-controls='guides-faq-' + ${i}">
+                        <span th:text="#{'guides.article.how-to-pick-a-date.faq.q' + ${i}}">Q</span>
+                        <span class="faq-toggle" aria-hidden="true">+</span>
+                    </button>
+                    <div class="faq-answer" th:attr="id='guides-faq-' + ${i}" role="region">
+                        <p th:text="#{'guides.article.how-to-pick-a-date.faq.a' + ${i}}">A</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="guides-takeaways animate-on-scroll">
+            <h2 th:text="#{guides.article.how-to-pick-a-date.takeaways.title}">핵심 요약</h2>
+            <ul>
+                <li th:each="i : ${#numbers.sequence(1, 4)}"
+                    th:text="#{'guides.article.how-to-pick-a-date.takeaways.item' + ${i}}">item</li>
+            </ul>
+        </section>
+    </article>
+
+    <!-- Ad slot — 본문 뒤, CTA 앞 (use-cases/detail 과 동일 배치) -->
+    <div th:replace="~{fragments/ad-slot :: infeed(${seo.adsEnabled()})}"></div>
+
+    <section class="guides-cta animate-on-scroll">
+        <h2 th:text="#{guides.cta.title}">CTA</h2>
+        <p th:text="#{guides.cta.description}">Description</p>
+        <div class="use-case-cta-buttons">
+            <a th:href="${@localeLinks.href('/#start-form')}" class="btn-spring" th:text="#{guides.cta.start}">일정 만들기</a>
+        </div>
+    </section>
+
+    <section class="guides-related animate-on-scroll" th:if="${allGuides.size() > 1}">
+        <h2 th:text="#{guides.related.title}">다른 모임 노하우</h2>
+        <ul class="guides-related-list">
+            <th:block th:each="g : ${allGuides}">
+                <li th:if="${g.slug() != article.slug()}">
+                    <a th:href="${@localeLinks.href('/guides/' + g.slug())}"
+                       th:text="#{'guides.article.' + ${g.slug()} + '.title'}">Title</a>
+                </li>
+            </th:block>
+        </ul>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+
+<script>
+// FAQ 토글 (guide.html / index.html 과 동일 메커니즘 — 전역 .faq-item.open CSS 사용)
+document.querySelectorAll('.faq-question').forEach(button => {
+    button.addEventListener('click', () => {
+        const faqItem = button.parentElement;
+        const isOpen = faqItem.classList.toggle('open');
+        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+});
+</script>
+</body>
+</html>

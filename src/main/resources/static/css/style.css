@@ -5152,3 +5152,226 @@ footer {
         justify-content: center;
     }
 }
+
+/* ===== Guides editorial hub (/guides) — .guide-* 네임스페이스는 /guide 페이지 소유, 여기는 .guides-* ===== */
+
+.guides-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding-top: 2rem;
+}
+
+.guides-hero {
+    text-align: center;
+    padding: 3rem 0 1rem;
+}
+
+.guides-hero h1 {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.guides-subtitle {
+    color: var(--text-light);
+}
+
+.guides-byline {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+}
+
+.guides-byline-sep {
+    margin: 0 0.35rem;
+}
+
+.guides-intro p {
+    line-height: 1.8;
+    color: var(--text-color);
+    margin-bottom: 0.75rem;
+}
+
+/* 기사 본문 프로즈 — .policy-section 과 같은 독서 밀도 */
+.guides-article section {
+    margin-bottom: 2.5rem;
+}
+
+.guides-article h2 {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    color: var(--text-color);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.guides-article p {
+    line-height: 1.8;
+    color: var(--text-color);
+    margin-bottom: 0.75rem;
+}
+
+.guides-article ul,
+.guides-article ol {
+    padding-left: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.guides-article li {
+    line-height: 1.8;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.guides-article a {
+    color: var(--primary-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.guides-article a:hover {
+    color: var(--primary-dark);
+}
+
+/* 특수 블록: 체크리스트 */
+.guides-checklist {
+    background: var(--bg-alt);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+
+.guides-checklist h2 {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+/* 특수 블록: 핵심 요약 */
+.guides-takeaways {
+    background: var(--primary-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+
+.guides-takeaways h2 {
+    border-bottom: none;
+    padding-bottom: 0;
+    font-size: 1.1rem;
+}
+
+.guides-takeaways li {
+    margin-bottom: 0.35rem;
+}
+
+/* 특수 블록: 비교표 (scheduling-methods-compared) */
+.guides-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 0.75rem;
+}
+
+.guides-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.guides-table th,
+.guides-table td {
+    border: 1px solid var(--border-color);
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    line-height: 1.6;
+    vertical-align: top;
+}
+
+.guides-table th {
+    background: var(--bg-alt);
+    white-space: nowrap;
+}
+
+/* 허브 카드 그리드 */
+.guides-card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+    margin: var(--space-8) 0;
+}
+
+.guides-card {
+    display: block;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.guides-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.guides-card h2 {
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.guides-card p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 0.5rem;
+}
+
+.guides-card-date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* CTA·관련 기사 */
+.guides-cta {
+    text-align: center;
+    padding: 3rem 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.guides-cta h2 {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.guides-cta p {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+}
+
+.guides-related {
+    padding-bottom: 3rem;
+}
+
+.guides-related h2 {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+}
+
+.guides-related-list {
+    padding-left: 1.5rem;
+}
+
+.guides-related-list li {
+    line-height: 2;
+}
+
+.guides-related-list a {
+    color: var(--primary-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head th:replace="~{fragments/head :: head(${seo})}"></head>
+<body>
+<div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+
+<main class="container guides-page">
+    <section class="guides-hero animate-on-scroll">
+        <h1 th:text="#{guides.index.heading}">모임 노하우</h1>
+        <p class="guides-subtitle" th:text="#{guides.index.subtitle}">Subtitle</p>
+    </section>
+
+    <section class="guides-intro animate-on-scroll">
+        <p th:text="#{guides.index.intro.p1}">Intro p1</p>
+        <p th:text="#{guides.index.intro.p2}">Intro p2</p>
+    </section>
+
+    <!-- 기사 카드 — 제목 + summary + 게시일 (제목만 나열하는 thin 허브 방지) -->
+    <section class="guides-card-grid animate-on-scroll">
+        <a th:each="g : ${allGuides}"
+           th:href="${@localeLinks.href('/guides/' + g.slug())}"
+           class="guides-card">
+            <h2 th:text="#{'guides.article.' + ${g.slug()} + '.title'}">Title</h2>
+            <p th:text="#{'guides.article.' + ${g.slug()} + '.summary'}">Summary</p>
+            <span class="guides-card-date"
+                  th:text="${#temporals.format(g.published(), #messages.msg('guides.byline.dateFormat'))}">date</span>
+        </a>
+    </section>
+
+    <section class="guides-cta animate-on-scroll">
+        <h2 th:text="#{guides.cta.title}">CTA</h2>
+        <p th:text="#{guides.cta.description}">Description</p>
+        <div class="use-case-cta-buttons">
+            <a th:href="${@localeLinks.href('/#start-form')}" class="btn-spring" th:text="#{guides.cta.start}">일정 만들기</a>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+</body>
+</html>
