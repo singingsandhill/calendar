@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | 2 | — | 11 | 3 | — | — | — | 7 | 23 |
+| **common**   | — | 3 | — | 11 | 3 | — | — | — | 7 | 24 |
 | **datedate** | 8 | — | 6 | — | — | — | — | — | — | 14 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 5 | — | — | — | 3 | 16 | 3 | — | 27 |
 | **stock**    | — | 8 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 23 |
-| **합계** | 10 | 15 | 6 | 11 | 3 | 5 | 26 | 6 | 7 | **89** |
+| **합계** | 10 | 16 | 6 | 11 | 3 | 5 | 26 | 6 | 7 | **90** |
 
-총 **89개 ADR**.
+총 **90개 ADR**.
 
 ---
 
@@ -120,17 +120,18 @@
 | 2026-08-18 | datedate/domain | [0008 미지 콘텐츠 슬러그는 HTTP 404](datedate/domain/0008-unknown-content-slug-404.md) | AdSense 3차 통지 진단 — 미지 use-case 슬러그 302→홈이 소프트 404 신호 (owner 404 와 비대칭) |
 | 2026-08-23 | common/seo | [0011 /guides 에디토리얼 허브 — 기사별 전용 템플릿 + 날짜 SSOT](common/seo/0011-guides-editorial-hub.md) | 3차 통지의 editorial 판정 — 검색의도형 장문 카테고리 부재 + use-case 의 "복제 템플릿" 신호 회피 필요 |
 | 2026-08-31 | stock/infrastructure | [0008 종목명 소스 search-stock-info](stock/infrastructure/0008-stock-name-source-search-stock-info.md) | 09:20 메일·대시보드 종목명 칸에 종목코드 인쇄 — 스크리닝 TR 3종에 종목명 필드 부재, 최초 커밋부터 placeholder |
+| 2026-09-10 | common/infrastructure | [0003 이미지 발행을 deploy 릴리스 브랜치로 분리](common/infrastructure/0003-image-publish-on-deploy-branch.md) | 발행 브랜치 = 개발 브랜치라 :latest 가 개발 tip 을 따라감 — 서버 반영은 0001 의 수동 버튼 유지 |
 
 ---
 
 ## 도메인별 폴더 구조
 
-- [common/seo/](common/seo/) — 10 ADRs
+- [common/seo/](common/seo/) — 11 ADRs
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 6 ADRs
-- [common/infrastructure/](common/infrastructure/) — 2 ADRs
-- [datedate/domain/](datedate/domain/) — 7 ADRs
+- [common/infrastructure/](common/infrastructure/) — 3 ADRs
+- [datedate/domain/](datedate/domain/) — 8 ADRs
 - [datedate/frontend/](datedate/frontend/) — 3 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs

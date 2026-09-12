@@ -87,7 +87,7 @@ ADR 누락 사고 방지: PR 에서 `CLAUDE.md` 가 수정됐는데 `docs/adr/` 
 - 기능 추가는 정상 동작과 주요 실패 조건의 확인 기준을 세운다. 리팩터링은 외부 동작이 같음을 확인한다.
 - 여러 단계 작업은 단계마다 검증 방법을 포함한 짧은 계획을 세운다.
 - **돌릴 수 있으면 실제로 돌린다** — §Build Commands 의 `./gradlew test`, 좁히려면 `--tests`.
-  CI(`.github/workflows/ci.yml`)가 main 푸시·PR 마다 전체 빌드+테스트(+deploy 스크립트
+  CI(`.github/workflows/ci.yml`)가 main·deploy 푸시·PR 마다 전체 빌드+테스트(+deploy 스크립트
   shellcheck)를 돌리지만 로컬 검증을 대체하지 않는다. 서버 반영은 CI 와 별개의 수동 배포다
   (§Deployment). 그 외 린터·정적분석은 없다.
 - 필터로 좁혀 돌렸으면 실제 실행된 테스트 수를 확인한다 (`build/test-results/test/*.xml`).
@@ -146,8 +146,9 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 ### Deployment
 
-- CI: `.github/workflows/ci.yml` — main 푸시·PR 빌드+테스트, main 푸시 시 GHCR
-  (`ghcr.io/singingsandhill/calendar:<git-sha>`, `:latest`) 이미지 푸시.
+- CI: `.github/workflows/ci.yml` — main·deploy 푸시·PR 빌드+테스트, **`deploy` 브랜치 푸시 시에만**
+  GHCR(`ghcr.io/singingsandhill/calendar:<git-sha>`, `:latest`) 이미지 푸시
+  (릴리스는 `main → deploy` fast-forward 푸시, [ADR common/infrastructure/0003](docs/adr/common/infrastructure/0003-image-publish-on-deploy-branch.md)).
 - 서버 반영: `.github/workflows/deploy.yml` **workflow_dispatch 수동 버튼 전용** —
   재시작 배포(1~3분 계획 중단, nginx 503 유지보수 페이지), 헬스/엣지 게이트 실패 시
   직전 **다이제스트**로 자동 롤백. 평일 09:15~11:25 KST(주식 LIVE 창) 배포 거부 가드.
