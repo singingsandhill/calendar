@@ -45,6 +45,7 @@ class StockRepositoryAdapterTest {
         Stock reloaded = adapter.save(stock);
 
         assertThat(reloaded.getState()).isEqualTo(StockState.ENTERED);
+        assertThat(reloaded.getStockName()).isEqualTo("삼성전자");
         assertThat(reloaded.getHighAfterOpen()).isEqualByComparingTo("71500");
         assertThat(reloaded.getHighFormedAt()).isEqualTo(stock.getHighFormedAt());
         assertThat(reloaded.getPullbackLow()).isEqualByComparingTo("70700");

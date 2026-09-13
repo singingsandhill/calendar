@@ -256,7 +256,7 @@ public class ScreeningService {
             .setScale(1, RoundingMode.HALF_UP);
 
         // Stock 엔티티 생성
-        Stock stock = new Stock(stockCode, stockCode, tradingDate);
+        Stock stock = new Stock(stockCode, resolveStockName(stockCode, stats), tradingDate);
         stock.setPrevClosePrice(quote.prevClosePrice());
         stock.setOpenPrice(quote.openPrice());
         stock.setCurrentPrice(quote.currentPrice());
@@ -283,6 +283,19 @@ public class ScreeningService {
 
         return new StockCandidate(stock, compositeScore, gapScore, strengthScore,
             tradeValueScore, spreadScore, marketCapScore);
+    }
+
+    /**
+     * 종목명 조회 — Floor 통과 종목에만 호출한다(콜 예산, ADR stock/infrastructure/0008).
+     * 실패/부재는 종목코드로 대체(종전 동작)하고 요약 카운터에만 남긴다 — 선정에는 영향 없음.
+     */
+    private String resolveStockName(String stockCode, ScreeningStats stats) {
+        String name = kisApiClient.getStockName(stockCode);
+        if (name == null || name.isBlank()) {
+            stats.nameUnresolved++;
+            return stockCode;
+        }
+        return name;
     }
 
     // ========== Score Normalization Methods ==========
@@ -375,6 +388,10 @@ public class ScreeningService {
         log.info("Floor filtered - Gap: {} (below={}, above={}), Strength: {}, MarketCap: {}, NotTradable: {}",
             stats.gapFiltered(), stats.gapBelowFloor, stats.gapAboveCeiling,
             stats.strengthFiltered, stats.marketCapFiltered, stats.notTradable);
+        if (stats.nameUnresolved > 0) {
+            log.warn("종목명 미확보 {}건 — search-stock-info(CTPF1002R) 실패/필드 부재로 종목코드 대체. "
+                + "KisRestClient WARN 의 outputKeys 확인 필요.", stats.nameUnresolved);
+        }
 
         // 계측: 상태 필드가 전 종목에서 비어 있으면 거래정지 가드가 사실상 무력화된 것.
         if (total > 0 && stats.tradabilityFieldsMissing == total) {
@@ -406,6 +423,7 @@ public class ScreeningService {
             .with("gapAboveCeiling", stats.gapAboveCeiling)
             .with("strengthFiltered", stats.strengthFiltered)
             .with("apiFailures", stats.apiFailures)
+            .with("nameUnresolved", stats.nameUnresolved)
             .log();
 
         if (!candidates.isEmpty()) {
@@ -547,7 +565,7 @@ public class ScreeningService {
             }
         }
 
-        Stock stock = new Stock(stockCode, stockCode, tradingDate);
+        Stock stock = new Stock(stockCode, resolveStockName(stockCode, stats), tradingDate);
         stock.setPrevClosePrice(quote.prevClosePrice());
         stock.setOpenPrice(quote.openPrice());
         stock.setCurrentPrice(quote.currentPrice());
@@ -575,6 +593,10 @@ public class ScreeningService {
         log.info("Filtered - Gap: {}, MarketCap: {}, TradeValue: {}, Strength: {}, Spread: {}",
             stats.gapFiltered(), stats.marketCapFiltered, stats.tradeValueFiltered,
             stats.strengthFiltered, stats.spreadFiltered);
+        if (stats.nameUnresolved > 0) {
+            log.warn("종목명 미확보 {}건 — search-stock-info(CTPF1002R) 실패/필드 부재로 종목코드 대체. "
+                + "KisRestClient WARN 의 outputKeys 확인 필요.", stats.nameUnresolved);
+        }
     }
 
     // ========== Inner types ==========
@@ -607,6 +629,8 @@ public class ScreeningService {
         int spreadFiltered = 0;
         int notTradable = 0;
         int tradabilityFieldsMissing = 0;
+        /** 종목명 미확보(search-stock-info 실패/필드 부재) — 종목코드로 대체된 건수. 선정에는 영향 없음. */
+        int nameUnresolved = 0;
         int floorPassed = 0;
         int passed = 0;
 

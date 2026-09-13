@@ -146,7 +146,7 @@ public class KisRestClient {
      *
      * 주문 POST 는 비멱등 — KIS 가 주문을 접수했는데 응답만 유실(타임아웃/5xx)된 경우
      * 재시도하면 동일 시장가 주문이 중복 전송된다. 실패는 즉시 null 반환하고 처리 여부는
-     * 당일주문조회(TTTC8001R)로 확인하는 것이 안전하다.
+     * 당일주문조회(TTTC0081R)로 확인하는 것이 안전하다.
      */
     private <T> T executePostNoRetry(String operation,
                                       java.util.function.Function<WebClient, Mono<T>> requestBuilder) {
@@ -281,6 +281,56 @@ public class KisRestClient {
             log.warn("[{}] 체결강도(tday_rltv) 파싱 실패 — raw={}", stockCode, raw);
             return null;
         }
+    }
+
+    /**
+     * 종목명 조회 (주식기본조회, CTPF1002R) - 재시도 포함. 실전투자 전용 TR.
+     *
+     * 스크리닝이 쓰는 시세(inquire-price)·체결(inquire-ccnl)·호가 TR 에는 종목명 필드가 없어
+     * {@code Stock.stockName} 에 종목코드가 들어가던 문제의 데이터 소스
+     * (ADR stock/infrastructure/0008). output 은 단일 객체 — {@code prdt_abrv_name}(약칭) 우선,
+     * 없으면 {@code prdt_name}. 실패/rt_cd≠0/필드 부재는 null 을 반환하고 호출측이 종목코드로
+     * 대체한다(종전 동작). 스펙 미검증 필드 매핑 사고 전력(ADR 0007)이 있어 필드 부재 시
+     * output 키 목록을 WARN 으로 남긴다.
+     */
+    public String getStockName(String stockCode) {
+        log.debug("Fetching stock name for {}", stockCode);
+
+        if (!authService.isConfigured()) {
+            log.warn("KIS API not configured, skipping stock name fetch");
+            return null;
+        }
+
+        Map<String, String> headers = authService.buildAuthHeaders("CTPF1002R");
+
+        Map<String, Object> response = executeGetWithRetry("getStockName(" + stockCode + ")",
+            client -> client.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/uapi/domestic-stock/v1/quotations/search-stock-info")
+                    .queryParam("PDNO", stockCode)
+                    .queryParam("PRDT_TYPE_CD", "300")   // 300 = 주식/ETF/ETN/ELW
+                    .build())
+                .headers(h -> headers.forEach(h::set))
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {}));
+
+        if (response == null || !"0".equals(response.get("rt_cd"))
+                || !(response.get("output") instanceof Map<?, ?> output)) {
+            log.warn("[{}] 종목명(search-stock-info) 미확보 — rt_cd={}, msg1={}", stockCode,
+                response != null ? response.get("rt_cd") : "null",
+                response != null ? response.get("msg1") : "n/a");
+            return null;
+        }
+        String name = asString(output.get("prdt_abrv_name"));
+        if (name == null || name.isBlank()) {
+            name = asString(output.get("prdt_name"));
+        }
+        if (name == null || name.isBlank()) {
+            // 필드명 불일치 판별용 계측 (getTradeStrength 의 firstRowKeys 와 같은 목적).
+            log.warn("[{}] 종목명(prdt_abrv_name/prdt_name) 부재 — outputKeys={}", stockCode, output.keySet());
+            return null;
+        }
+        return name;
     }
 
     private String asString(Object value) {
@@ -610,7 +660,7 @@ public class KisRestClient {
     public KisOrderResponse placeBuyOrder(String stockCode, int quantity, BigDecimal price, boolean isMarketOrder) {
         log.info("Placing buy order: {} x {} @ {}", stockCode, quantity, isMarketOrder ? "market" : price);
 
-        String trId = stockProperties.getKis().isProduction() ? "TTTC0802U" : "VTTC0802U";
+        String trId = stockProperties.getKis().isProduction() ? "TTTC0012U" : "VTTC0012U";
         String orderType = isMarketOrder ? "01" : "00";
 
         return executeOrder(trId, stockCode, quantity, price, orderType);
@@ -622,7 +672,7 @@ public class KisRestClient {
     public KisOrderResponse placeSellOrder(String stockCode, int quantity, BigDecimal price, boolean isMarketOrder) {
         log.info("Placing sell order: {} x {} @ {}", stockCode, quantity, isMarketOrder ? "market" : price);
 
-        String trId = stockProperties.getKis().isProduction() ? "TTTC0801U" : "VTTC0801U";
+        String trId = stockProperties.getKis().isProduction() ? "TTTC0011U" : "VTTC0011U";
         String orderType = isMarketOrder ? "01" : "00";
 
         return executeOrder(trId, stockCode, quantity, price, orderType);
@@ -640,7 +690,8 @@ public class KisRestClient {
         requestBody.put("PDNO", stockCode);
         requestBody.put("ORD_DVSN", orderType);
         requestBody.put("ORD_QTY", String.valueOf(quantity));
-        requestBody.put("ORD_UNPR", price != null ? price.toPlainString() : "0");
+        requestBody.put("ORD_UNPR", price != null ? price.toPlainString() : "0");
+        requestBody.put("EXCG_ID_DVSN_CD", "KRX"); // 시세가 KRX 전용(J)이므로 주문 라우팅도 KRX 고정 (미입력 기본값 의존 회피)
 
         String hashkey = authService.generateHashkey(requestBody);
         Map<String, String> headers = authService.buildAuthHeaders(trId);
@@ -697,7 +748,7 @@ public class KisRestClient {
             return null;
         }
 
-        String trId = stockProperties.getKis().isProduction() ? "TTTC8001R" : "VTTC8001R";
+        String trId = stockProperties.getKis().isProduction() ? "TTTC0081R" : "VTTC0081R";
         Map<String, String> headers = authService.buildAuthHeaders(trId);
         String dateStr = date.format(DATE_FORMATTER);
 

@@ -116,6 +116,14 @@ public class KoreaInvestmentApiClient {
     }
 
     /**
+     * 종목명 조회 — 주식기본조회(CTPF1002R, search-stock-info)의 prdt_abrv_name(없으면 prdt_name).
+     * 스크리닝 TR 3종에는 종목명 필드가 없다 (ADR stock/infrastructure/0008). 실패 시 null.
+     */
+    public String getStockName(String stockCode) {
+        return restClient.getStockName(stockCode);
+    }
+
+    /**
      * 스프레드 비율 조회
      */
     public BigDecimal getSpreadPercent(String stockCode) {
