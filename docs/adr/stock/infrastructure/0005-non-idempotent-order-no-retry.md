@@ -37,6 +37,10 @@ KIS 가 주문을 접수했는데 응답만 유실(read timeout·게이트웨이
 - 회귀 가드: `KisRestClientOrderRetryTest` (MockWebServer — 주문 5xx 시 요청 1회,
   시세 5xx 시 재시도로 2회).
 
+- 2026-08-31: 접수 확인용 당일주문조회 TR 은 KIS 신TR 전환에 따라 TTTC8001R → TTTC0081R 로 교체 —
+  공식 문서가 "구TR은 사전고지 없이 막힐 수 있음"을 안내 (git-commit.md Commit 167, 회귀 가드
+  `KisRestClientTrIdTest`).
+
 ## References
 
 - `stock/infrastructure/api/KisRestClient.java` (`executePostNoRetry`)

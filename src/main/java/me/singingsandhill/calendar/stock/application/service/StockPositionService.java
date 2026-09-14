@@ -291,7 +291,7 @@ public class StockPositionService {
     private record Fill(BigDecimal price, int quantity, boolean confirmed) {}
 
     /**
-     * 당일주문체결조회(TTTC8001R)로 실체결가·수량을 확인한다.
+     * 당일주문체결조회(TTTC0081R)로 실체결가·수량을 확인한다.
      * 조회 실패/미발견이면 요청가로 폴백하되 WARN — 장부가 픽션임을 로그로 드러낸다.
      *
      * PAPER/BACKTEST 는 주문이 인메모리 시뮬레이션이라 브로커 원장에 존재하지 않는다.
