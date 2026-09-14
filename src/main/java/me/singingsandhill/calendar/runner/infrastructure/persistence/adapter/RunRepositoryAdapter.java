@@ -8,6 +8,7 @@ import me.singingsandhill.calendar.runner.infrastructure.persistence.entity.RunJ
 import me.singingsandhill.calendar.runner.infrastructure.persistence.repository.RunJpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -37,6 +38,13 @@ public class RunRepositoryAdapter implements RunRepository {
     @Override
     public List<Run> findAllOrderByDateDesc() {
         return runJpaRepository.findAllOrderByDateDescTimeDesc().stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Run> findByDateBetweenOrderByDateDesc(LocalDate from, LocalDate to) {
+        return runJpaRepository.findByDateBetweenOrderByDateDescTimeDesc(from, to).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }

@@ -13,6 +13,23 @@
                 </a>
             </div>
 
+            <form method="get" th:action="@{/runners/runs}" class="runners-filter-form"
+                  th:classappend="${filterFrom != null or filterTo != null} ? 'active'">
+                <div class="runners-form-group">
+                    <label for="from">시작일</label>
+                    <input type="date" id="from" name="from"
+                           class="runners-input runners-filter-input" th:value="${filterFrom}">
+                </div>
+                <div class="runners-form-group">
+                    <label for="to">종료일</label>
+                    <input type="date" id="to" name="to"
+                           class="runners-input runners-filter-input" th:value="${filterTo}">
+                </div>
+                <button type="submit" class="runners-btn runners-btn-primary runners-btn-sm">적용</button>
+                <a th:href="@{/runners/runs}" class="runners-filter-reset"
+                   th:if="${filterFrom != null or filterTo != null}">전체 보기 ✕</a>
+            </form>
+
             <div class="runners-run-grid" th:if="${!runs.isEmpty()}">
                 <article class="runners-run-card" th:each="run : ${runs}">
                     <div class="runners-run-card-header">
@@ -38,7 +55,7 @@
 
             <div class="runners-empty" th:if="${runs.isEmpty()}">
                 <div class="runners-empty-icon">🏃</div>
-                <p>아직 등록된 런이 없습니다</p>
+                <p th:text="${filterFrom != null or filterTo != null} ? '해당 기간에 등록된 런이 없습니다' : '아직 등록된 런이 없습니다'">아직 등록된 런이 없습니다</p>
             </div>
         </section>
     </main>

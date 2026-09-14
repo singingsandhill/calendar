@@ -12,6 +12,7 @@ import me.singingsandhill.calendar.runner.infrastructure.persistence.repository.
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -102,6 +103,18 @@ public class AttendanceRepositoryAdapter implements AttendanceRepository {
     @Override
     public List<MemberAttendanceStatsDto> findAllMemberStats() {
         return attendanceJpaRepository.findAllMemberAttendanceStats().stream()
+                .map(row -> new MemberAttendanceStatsDto(
+                        (String) row[0],
+                        ((Number) row[1]).longValue(),
+                        ((Number) row[2]).longValue(),
+                        ((Number) row[3]).longValue()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MemberAttendanceStatsDto> findMemberStatsByRunDateBetween(LocalDate from, LocalDate to) {
+        return attendanceJpaRepository.findMemberAttendanceStatsByRunDateBetween(from, to).stream()
                 .map(row -> new MemberAttendanceStatsDto(
                         (String) row[0],
                         ((Number) row[1]).longValue(),

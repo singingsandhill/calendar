@@ -19,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -66,13 +68,31 @@ public class RunnerAdminController {
     }
 
     @GetMapping
-    public String dashboard(Model model) {
-        List<Run> runs = runService.getAllRuns();
+    public String dashboard(@RequestParam(required = false) String from,
+                            @RequestParam(required = false) String to,
+                            Model model) {
+        LocalDate fromDate = parseDateOrNull(from);
+        LocalDate toDate = parseDateOrNull(to);
+        List<Run> runs = runService.getAllRuns(fromDate, toDate);
         model.addAttribute("runs", runs.stream()
                 .map(RunResponse::from)
                 .collect(Collectors.toList()));
+        model.addAttribute("filterFrom", fromDate);
+        model.addAttribute("filterTo", toDate);
         model.addAttribute("seo", createAdminSeo("대시보드"));
         return "runners/admin/dashboard";
+    }
+
+    // 잘못된 값은 무시하고 무제한 취급 (RunnerController.parseDateOrNull 과 동일 원칙)
+    private static LocalDate parseDateOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     @GetMapping("/runs/new")

@@ -25,8 +25,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -101,13 +104,19 @@ public class RunnerController {
     }
 
     @GetMapping("/runs")
-    public String runList(Model model) {
-        List<Run> runs = runService.getAllRuns();
+    public String runList(@RequestParam(required = false) String from,
+                          @RequestParam(required = false) String to,
+                          Model model) {
+        LocalDate fromDate = parseDateOrNull(from);
+        LocalDate toDate = parseDateOrNull(to);
+        List<Run> runs = runService.getAllRuns(fromDate, toDate);
         List<RunResponse> runResponses = runs.stream()
                 .map(RunResponse::from)
                 .collect(Collectors.toList());
 
         model.addAttribute("runs", runResponses);
+        model.addAttribute("filterFrom", fromDate);
+        model.addAttribute("filterTo", toDate);
         model.addAttribute("seo", SeoMetadata.builder()
                 .title("런 목록 - 97 Runners")
                 .description("97 Runners 러닝 크루의 정규런, 번개런 일정을 확인하고 출석 체크하세요.")
@@ -148,13 +157,19 @@ public class RunnerController {
     }
 
     @GetMapping("/members")
-    public String memberList(Model model) {
-        List<MemberAttendanceStatsDto> memberStats = attendanceService.getAllMemberStats();
+    public String memberList(@RequestParam(required = false) String from,
+                             @RequestParam(required = false) String to,
+                             Model model) {
+        LocalDate fromDate = parseDateOrNull(from);
+        LocalDate toDate = parseDateOrNull(to);
+        List<MemberAttendanceStatsDto> memberStats = attendanceService.getAllMemberStats(fromDate, toDate);
         List<MemberStatsResponse> memberResponses = memberStats.stream()
                 .map(MemberStatsResponse::from)
                 .collect(Collectors.toList());
 
         model.addAttribute("members", memberResponses);
+        model.addAttribute("filterFrom", fromDate);
+        model.addAttribute("filterTo", toDate);
         model.addAttribute("seo", SeoMetadata.builder()
                 .title("출석 현황 - 97 Runners")
                 .description("97 Runners 러닝 크루 멤버들의 출석 현황과 누적 거리를 확인하세요.")
@@ -271,5 +286,18 @@ public class RunnerController {
 
         redirectAttributes.addFlashAttribute("message", "런이 생성되었습니다.");
         return localeLinks.redirect("/runners/runs/" + run.getId());
+    }
+
+    // 잘못된 값은 무시하고 무제한 취급 — 공개 페이지 봇 스캔이 500 을 유발하지 않도록
+    // (WebConfig 의 ignoreInvalidLocale 과 같은 원칙)
+    private static LocalDate parseDateOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 }
