@@ -6,7 +6,7 @@
 | 날짜 | 2026-08-17 |
 | 도메인 | common |
 | 관심사 | 인프라 / 배포 |
-| 관련 ADR | [common/infrastructure/0002](0002-nginx-in-compose-and-certbot-webroot.md), [common/security/0006](../security/0006-actuator-health-and-h2-console-lockdown.md), [trading/modes/0003](../../trading/modes/0003-protection-only-recovery-on-restart.md) |
+| 관련 ADR | [common/infrastructure/0002](0002-nginx-in-compose-and-certbot-webroot.md), [0003](0003-image-publish-on-deploy-branch.md) (이미지 발행 브랜치 분리), [common/security/0006](../security/0006-actuator-health-and-h2-console-lockdown.md), [trading/modes/0003](../../trading/modes/0003-protection-only-recovery-on-restart.md) |
 | 관련 이슈 | CI/CD 설계 (2026-08-17) |
 
 ## Context — 무엇이 문제였나
@@ -23,9 +23,10 @@
 
 **CI 는 자동, 서버 반영은 수동, 배포는 재시작(1~3분 계획 중단), 롤백은 다이제스트 기준.**
 
-- **빌드**: GitHub Actions `ci.yml` 이 main 푸시·PR 마다 `./gradlew build`(전체 테스트) 실행,
-  main 푸시 시 jar 를 Boot 4 `jarmode=tools` 레이어 추출 Dockerfile 로 이미지화해
+- **빌드**: GitHub Actions `ci.yml` 이 main·deploy 푸시·PR 마다 `./gradlew build`(전체 테스트) 실행,
+  **`deploy` 브랜치 푸시 시** jar 를 Boot 4 `jarmode=tools` 레이어 추출 Dockerfile 로 이미지화해
   `ghcr.io/singingsandhill/calendar:{git-sha, latest}` 로 푸시. 서버 빌드 완전 제거.
+  (발행 브랜치는 최초 main 이었다 — [0003](0003-image-publish-on-deploy-branch.md) 으로 분리.)
 - **반영**: `deploy.yml` 은 `workflow_dispatch` 수동 버튼 전용. 태그 정규식 검증 → GHCR
   manifest 선검증 → 배포 번들 rsync → SSH forced-command 게이트 경유 `deploy.sh` 실행.
 - **deploy.sh 순서**: preflight(상태 경로·compose 볼륨 해석 기계 검증) → 주식 LIVE 시간창
