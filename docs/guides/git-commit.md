@@ -672,24 +672,8 @@ git commit -m "fix(docs): 서버 준비 런북 정정 — 단계 순서·GHCR cl
 #   재계산해 실제 heading 과 전수 대조(불일치 0).
 # 테스트: ./gradlew test 미실행 — 마크다운만 추가·수정.
 # ADR: 없음 — 사후 기록 문서이고 새로 정하는 것이 없다.
-# 주의(소유권): docs/operations/deployment.md·docs/guides/deploy-setup.md 는 Commit 169 가,
-#   docs/guides/git-commit.md 는 165 가 선행 소유 — 상호참조 1줄씩은 먼저 실행되는 배치가
-#   흡수한다. 아래 add 목록에서 앞 둘은 제거했다.
-# 함께 수정(사용자 요청 + 문서 전수 감사): 기존 결함 4건을 이번 배치에 포함했다.
-#   (1) troubleshooting/README.md 의 앵커 2건이 실제 heading 과 불일치 —
-#       spring-boot-4-migration.md#webmvctest-import-error 는 heading 이 'WebMvcTest Import 오류' 라
-#       #webmvctest-import-오류, thymeleaf-javascript-records.md#undefined-property-in-javascript 는
-#       'JavaScript에서 undefined 속성' 이라 #javascript에서-undefined-속성 이 맞다.
-#   (2) docs/adr/README.md 폴더별 구조 목록이 common/seo 10(실제 11)·datedate/domain 7(실제 8)로
-#       낡아 목록 합계가 88 이었다 — 총계·매트릭스는 90 으로 맞아 있었고 목록만 드리프트.
-#       (datedate/domain/0008 은 253a6c8 에서, common/seo/0011 은 pending 165 에서 유입)
-#   (3) 링크 전수 검사에서 드러난 기존 깨진 링크 1건. trading/observability/0002 의
-#   관련 ADR 행이 ../risk/0003-position-risk-guards.md 를 가리키는데 git log 로 확인하니 그 이름의
-#   파일은 존재한 적이 없다 — 처음부터 오타였다. 링크 텍스트가 trading/risk/0003 이고 그 폴더의
-#   ADR 0003 은 0003-entry-and-time-risk-guards.md 하나뿐이며 문맥(적용 주문비중 ↔ 노출 상한)도
-#   맞아 그것으로 정정했다.
 # ✅ DONE()
-# Commit 172 — docs(troubleshooting): 배포 CI/CD 구축 이슈 14건 + 파이프라인 구조 해설 — 마지막 커밋(git-commit.md 포함)
+# Commit 172 — ✅ DONE() docs(troubleshooting): 배포 CI/CD 구축 이슈 14건 + 파이프라인 구조 해설 — 마지막 커밋(git-commit.md 포함)
 git add docs/troubleshooting/deploy-cicd.md docs/troubleshooting/README.md docs/adr/trading/observability/0002-decision-input-persistence.md docs/guides/git-commit.md
 git commit -m "docs(troubleshooting): 배포 CI/CD 구축 이슈 14건 + 파이프라인 구조 해설" -m "사용자 요청으로 이번 배포 파이프라인 구축에서 실제로 부딪힌 문제와 해결을 docs/troubleshooting/deploy-cicd.md 한 문서로 모았다. 기존 troubleshooting 문서의 관용구를 따라 문제마다 증상/원인/진단/해결방법/확인 절을 두고 구분선으로 나눴다. 1부는 파이프라인 해설이다 — H2 파일 DB 배타락, 분산락 없는 스케줄러, RAM 958MiB, 실계좌 LIVE 봇이라는 제약 넷이 각각 무엇을 막는지(앞의 셋이 무중단 배포를, 넷째가 자동 배포를) 보이고, 거기서 나오는 3단 구조(main 푸시는 빌드/테스트만, deploy 푸시가 이미지 발행, 수동 버튼이 서버 반영)와 deploy.yml 의 5단계가 각각 어떤 사고를 막는지, deploy.sh 의 게이트 7개가 무엇을 막는지, 종료코드 5종의 의미를 표로 정리했다. 한 문서로 묶은 이유는 문제 14건 중 다수가 구조를 모르면 증상만으로 원인을 짚을 수 없기 때문이다 — 발행 브랜치 분리, 다이제스트 고정, forced-command 게이트가 그렇다. 2부 14건: shellcheck directive 의 -- 파싱 실패가 빌드 앞단을 막아 GHCR 이미지가 0개였던 것, WSL 에 shellcheck 가 없어 CI 를 재현하지 못하던 것과 npx 래퍼 해법, main 푸시가 배포 트리거라는 오인과 그 오인이 재생산되던 구조, 브랜치명 deploy 와 deploy/ 디렉터리의 git 모호성, 런북의 순서 오류 둘(게이트 설치가 번들 반입보다 앞, nginx 기동이 certbot 디렉터리 생성보다 앞), gcloud 로만 접속되던 서버에 맨 ssh 가 거부되던 것, GCP 게스트 에이전트의 authorized_keys 덮어쓰기와 authorized_keys2 회피, GHCR 이 classic PAT 만 받는다는 문서 오류, ephemeral IP 가 바뀌면 시크릿 둘이 동시에 죽는 문제와 호스트 키는 유지되므로 IP 토큰만 교체하면 된다는 사실, ssh-keyscan 의 TOFU 가 MITM 방어선을 무력화하는 설계 결함, 커밋 로그의 백틱과 달러가 Git Bash 명령치환·PowerShell 이스케이프로 깨지는 것, 문서 file:line 이 편집 한 번에 낡는 드리프트, rrsync 가 PATH 에 없을 때 rsync 키만 조용히 실패하는 것, sudo id -g 가 0 을 돌려주는 함정. 3부에는 이번 범위 밖이라 고치지 않은 항목 7건을 근거와 함께 남겼다 — 특히 Dockerfile 의 JAR_FILE 글롭이 plain jar 까지 잡아 로컬 docker build 가 실패하고 CI 는 artifact 1개만 내려받아 우연히 회피 중이라는 것. 부록은 이 세션에서 실제로 돌린 검증 명령 모음이다. 절차 자체는 재수록하지 않고 deployment.md·server-migration-runbook.md·deploy-setup.md 로 링크했으며, 반대 방향으로 deployment.md 와 deploy-setup.md 머리말에 이 문서 링크를 1줄씩 걸었다. troubleshooting/README.md 는 인덱스 표에 행을 추가하고 Quick Reference 에 Deploy / CI-CD Errors 절을 신설해 증상 문자열로 찾아갈 수 있게 했다(SC1073, ambiguous argument, No such file, Permission denied, exit 5 등 8항목). 검증: 저장소 전체 마크다운 상대링크 440개를 스캔해 신규 문서 기인 깨짐이 0 임을 확인했고, README 가 거는 deploy-cicd.md 앵커 8개는 GitHub 슬러그 규칙으로 재계산해 실제 heading 과 전수 대조했다(불일치 0). gradlew test 는 돌리지 않았다: 마크다운만 추가·수정했다. ADR 없음 — 사후 기록 문서이고 새로 정하는 것이 없다. 함께 수정: 링크 전수 검사에서 드러난 기존 깨진 링크 1건을 사용자 요청으로 이번 배치에 포함했다. trading/observability/0002 의 관련 ADR 행이 ../risk/0003-position-risk-guards.md 를 가리키는데 git log 로 확인하니 그 이름의 파일은 존재한 적이 없어 처음부터 오타였다. 링크 텍스트가 trading/risk/0003 이고 그 폴더의 ADR 0003 은 0003-entry-and-time-risk-guards.md 하나뿐이며, 0002 가 영속화하는 적용 주문비중이 0003 의 노출 상한과 직결되므로 문맥상으로도 그것이 맞다. 정정 후 docs/ 와 src/ 하위 마크다운을 다시 스캔해 깨진 상대링크가 0 임을 확인했다. 이어서 사용자 요청으로 전 문서 감사를 돌려 기존 결함 셋을 더 잡았다. troubleshooting/README.md 의 Quick Reference 앵커 2건이 실제 heading 과 어긋나 있었다 — webmvctest-import-error 는 heading 이 WebMvcTest Import 오류라 webmvctest-import-오류가, undefined-property-in-javascript 는 JavaScript에서 undefined 속성이라 javascript에서-undefined-속성이 맞다(영문으로 쓴 앵커가 한글 heading 을 못 가리킨 것). docs/adr/README.md 의 폴더별 구조 목록은 common/seo 를 10(실제 11), datedate/domain 을 7(실제 8)로 적고 있어 목록 합계가 88 이었다 — 총계와 매트릭스는 90 으로 맞아 있었고 목록만 드리프트한 것이라 둘을 올려 디스크 90 · 총계 90 · 목록 합계 90 · 매트릭스 행열합을 전부 일치시켰다. 그 밖에 deploy-setup.md 의 의존성 그래프가 시크릿 6개로 남아 있어 본문의 5개(PORT 제외)와 어긋난 것을 고쳤고, Commit 170 이 docs/adr/README.md 와 CLAUDE.md 를 add 목록에 넣어 Commit 165 와 중복 소유하던 규약 위반도 정리했다(170 에서 제거 + 흡수 주석). 감사 자체의 검증: 마크다운 543링크와 24앵커 전수 대조(깨짐 0·불일치 0), file:line 참조 47개를 소스 인덱스로 해석해 범위초과 0, deploy-cicd.md 의 사실 주장 15항목(헬스 URL·태그 정규식·백업 5세대·틱 회피 구간·시간창·종료코드·게이트 개수·deploy.yml 스텝 수 등)을 실제 소스와 대조해 불일치 0, 런북 번호 연속성 0, 커밋 로그 9줄의 따옴표·메타문자 검사와 add 목록 파일 존재 전수 확인."
 

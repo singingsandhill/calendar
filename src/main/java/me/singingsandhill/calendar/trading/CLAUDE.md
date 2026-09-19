@@ -51,6 +51,8 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 > 근거: [`docs/adr/trading/modes/0001`](../../../../../../../docs/adr/trading/modes/0001-paper-mode-default-and-order-gate.md),
 > [`docs/adr/trading/risk/0001`](../../../../../../../docs/adr/trading/risk/0001-circuit-breaker-daily-and-consecutive-loss.md).
 > 전체 진단·로드맵: [`docs/audit/coin-trading-profit-audit-2026-05-30.md`](../../../../../../../docs/audit/coin-trading-profit-audit-2026-05-30.md).
+> 수익성 비판 검사(2026-09-15, 리플레이 결과 = 리밸런싱 손절 루프가 손실 주범·신호 엔진 휴면·캔들 동결 확정):
+> [`docs/audit/coin-trading-strategy-review-2026-09-15.md`](../../../../../../../docs/audit/coin-trading-strategy-review-2026-09-15.md).
 
 - **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — **기본 PAPER**, 실주문은 서버 환경변수
   `TRADING_BOT_MODE=LIVE` 로만 opt-in ([ADR modes/0002](../../../../../../../docs/adr/trading/modes/0002-paper-default-mode.md)).

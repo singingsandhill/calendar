@@ -51,3 +51,7 @@ docs/git_commit.md
 
 .claude/*
 /git_commit.md
+
+# 감사 리플레이 스크립트의 로컬 캐시·산출물 (docs/audit/coin-trading-strategy-review-2026-09-15.md 부록 A)
+docs/audit/scripts/ada_1m.json
+docs/audit/scripts/replay_results.json
