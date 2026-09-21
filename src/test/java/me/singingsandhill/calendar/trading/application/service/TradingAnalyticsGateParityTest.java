@@ -35,7 +35,7 @@ class TradingAnalyticsGateParityTest {
     private final TradingProperties properties = new TradingProperties();
     private final SignalService signalService = new SignalService(null, null, null, properties);
     private final TradingAnalyticsService analytics =
-            new TradingAnalyticsService(null, null, null, properties);
+            new TradingAnalyticsService(null, null, null, properties, null);
 
     private static BigDecimal bd(String v) {
         return v == null ? null : new BigDecimal(v);

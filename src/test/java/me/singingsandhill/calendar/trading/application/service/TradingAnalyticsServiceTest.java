@@ -31,7 +31,7 @@ class TradingAnalyticsServiceTest {
 
     private final TradingProperties properties = new TradingProperties();
     private final TradingAnalyticsService service =
-            new TradingAnalyticsService(null, null, null, properties);
+            new TradingAnalyticsService(null, null, null, properties, null);
 
     /** 점수와 가격만 다른 최소 관측치. 게이트를 통과하도록 지표를 중립값으로 채운다. */
     private SignalSample sample(int minuteOffset, int totalScore, String price) {

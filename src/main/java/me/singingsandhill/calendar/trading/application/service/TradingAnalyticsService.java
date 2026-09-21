@@ -15,7 +15,8 @@ import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperti
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -42,7 +43,6 @@ import java.util.function.Predicate;
  * 같은 가격 원천이라 서로 다른 소스를 섞을 때 생기는 기준가 불일치가 없다.
  */
 @Service
-@Transactional(readOnly = true)
 public class TradingAnalyticsService {
 
     private static final Logger log = LoggerFactory.getLogger(TradingAnalyticsService.class);
@@ -76,15 +76,22 @@ public class TradingAnalyticsService {
     private final PositionRepository positionRepository;
     private final TradeRepository tradeRepository;
     private final TradingProperties tradingProperties;
+    // 읽기 3건만 짧은 트랜잭션 — 그 뒤 Java 집계(90일 ≈ 13만 행, BigDecimal 연산)는
+    // 커넥션을 붙잡지 않고 진행한다 (트레이딩·주식 루프와 같은 Hikari 풀을 공유하므로
+    // 대구간 분석 요청 하나가 풀을 오래 점유해 다른 요청까지 막는 것을 방지, ADR observability/0001 보강).
+    private final TransactionTemplate txTemplate;
 
     public TradingAnalyticsService(SignalRepository signalRepository,
                                    PositionRepository positionRepository,
                                    TradeRepository tradeRepository,
-                                   TradingProperties tradingProperties) {
+                                   TradingProperties tradingProperties,
+                                   PlatformTransactionManager transactionManager) {
         this.signalRepository = signalRepository;
         this.positionRepository = positionRepository;
         this.tradeRepository = tradeRepository;
         this.tradingProperties = tradingProperties;
+        this.txTemplate = new TransactionTemplate(transactionManager);
+        this.txTemplate.setReadOnly(true);
     }
 
     /** 요청 구간을 1..{@link #MAX_WINDOW_DAYS} 로 제한한다. 상한은 대구간 조회의 메모리·시간 방어. */
@@ -102,16 +109,19 @@ public class TradingAnalyticsService {
         String market = tradingProperties.getBot().getMarket();
         long startedAt = System.nanoTime();
 
-        List<SignalSample> samples = signalRepository.findSamplesByMarketAndSignalTimeBetween(market, from, to);
-        List<Position> closed = positionRepository.findByMarketAndStatusAndClosedAtBetween(
-                market, PositionStatus.CLOSED, from, to);
-        List<Trade> trades = tradeRepository.findByMarketAndCreatedAtBetween(market, from, to);
+        Loaded loaded = txTemplate.execute(status -> new Loaded(
+                signalRepository.findSamplesByMarketAndSignalTimeBetween(market, from, to),
+                positionRepository.findByMarketAndStatusAndClosedAtBetween(market, PositionStatus.CLOSED, from, to),
+                tradeRepository.findByMarketAndCreatedAtBetween(market, from, to)));
 
-        AnalyticsReport report = buildReport(market, from, to, samples, closed, trades);
+        AnalyticsReport report = buildReport(market, from, to, loaded.samples(), loaded.closed(), loaded.trades());
         log.debug("Analytics for {} [{} ~ {}]: {} signals, {} closed positions",
-                market, from, to, samples.size(), closed.size());
+                market, from, to, loaded.samples().size(), loaded.closed().size());
         return withComputeMillis(report, (System.nanoTime() - startedAt) / 1_000_000);
     }
+
+    /** 읽기 3건의 결과 묶음 — 트랜잭션 안에서만 쓰고 이후 집계는 커넥션 없이 진행한다. */
+    private record Loaded(List<SignalSample> samples, List<Position> closed, List<Trade> trades) {}
 
     // ------------------------------------------------------------------
     // 순수 집계 — 저장소 접근 없음. 테스트는 여기로 들어온다
