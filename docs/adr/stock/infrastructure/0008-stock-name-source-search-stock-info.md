@@ -27,7 +27,7 @@
   `prdt_name` 은 보유/주문 종목만 — 스크리닝 후보에 적용 불가.
 - 이력: 최초 커밋 `91ce7b6` 에 `// 종목명은 추후 업데이트` 주석과 함께 들어왔고 `3906844` 가 리팩터링
   중 주석을 지우며 두 곳으로 복제했다. 어떤 테스트도 `stockName` 을 단언하지 않아 CI 에 보이지 않았고,
-  `docs/stock/bot.md` §9 는 메일 표를 `종목코드 | 종목명 | …` 으로 명세하고 있어 문서와 동작이 어긋났다
+  `docs/stock/bot.md` §10 은 메일 표를 `종목코드 | 종목명 | …` 으로 명세하고 있어 문서와 동작이 어긋났다
   — 결정이 아닌 결함.
 
 ## Decision — 무엇을 골랐나
@@ -85,4 +85,4 @@
 - 관련 ADR: [infrastructure/0007](0007-trade-strength-source-inquire-ccnl.md)(스펙 미검증 필드 사고·fail-soft 계측),
   [infrastructure/0001](0001-kis-rate-limit-semaphore.md)(호출량 게이트),
   [algorithm/0005](../algorithm/0005-dynamic-universe-volume-rank.md)·[algorithm/0010](../algorithm/0010-universe-degradation-threshold.md)(유니버스 소스)
-- 명세 문서: `docs/stock/bot.md` §9 이메일 구성
+- 명세 문서: `docs/stock/bot.md` §10 이메일 구성
