@@ -749,3 +749,155 @@ git commit -m "docs(stock): bot.md 포지션 사이징 섹션 신설 — PAPER �
 git add src/main/resources/static/ads.txt .gitattributes docs/guides/git-commit.md
 git commit -m "fix(seo): ads.txt CRLF->LF 정규화 + .gitattributes 가드" -m "사용자가 3일 전 배포 이후 AdSense 대시보드 ads.txt 상태가 '찾을 수 없음'이라고 제보해 조사했다. curl 로 https/http x www/non-www 4가지 조합을 전부 확인한 결과 지금 이 순간은 전부 200/text-plain/정확한 pub-7334667748813914 로 정상 응답하고 있고 robots.txt 도 /ads.txt 를 막지 않는다 - 즉 엔드포인트 자체는 현재 정상이다. 가장 근거가 강한 설명은 deploy/nginx/datedate.conf 의 의도된 설계다: 재시작 배포 1~3분 창에 모든 경로가 503(유지보수 페이지)으로 응답하는데, Google 공식 ads.txt 트러블슈팅 문서는 크롤 시점에 soft-404/5xx 를 받으면 'not found' 상태가 최대 5일간 유지된다고 명시한다 - 3일 전 배포와 시간축이 맞아 코드 수정 없이 배포일+5일 이내 자연 해소될 가능성이 높다고 판단했다(이 부분은 조치 대상이 아니라고 보고에 명시). 별도로 git show 로 static/ads.txt 의 줄바꿈 이력을 확인하니 2025-12(6994b9e)에는 LF 였던 파일이 ads.txt 와 무관한 트레이딩 커밋 7171a3a(2026-07-12)에서 편집기가 CRLF 로 뒤집어 놓은 채 2개월 넘게 방치돼 있었다 - .gitattributes 에 *.md 가 같은 사고를 겪은 전례(주석)가 있었는데 ads.txt 는 그 가드에서 빠져 있었다. IAB ads.txt 스펙은 파서가 CR/LF/CRLF 를 모두 관대하게 처리해야 한다고 명시(WebSearch 로 확인)하므로 이 CRLF 가 'not found' 의 직접 원인일 가능성은 낮다고 판단했지만, Google 문서가 'invalid whitespace characters' 를 파싱 실패 원인으로 거론하기도 해 원인일 가능성 자체를 배제하진 않았다. 사용자가 보고서의 권장 조치 3번(ads.txt LF 정규화 + .gitattributes 가드)을 실행하라고 명시적으로 지시해, static/ads.txt 를 LF 전용으로 다시 쓰고 .gitattributes 에 '/src/main/resources/static/ads.txt text eol=lf' 한 줄을 추가해 앞으로 편집기가 다시 CRLF 로 뒤집는 것을 git 이 막도록 했다. git check-attr 로 text=set/eol=lf 가 적용됨을 확인했다. StaticResourceController.adsTxt() 의 Content-Type 계약(ADR common/seo/0006)은 건드리지 않았다. ADR 신설 없음 - 정책/임계값/구조 변경이 아니라 실수로 바뀐 줄바꿈 문자를 원복하고 재발 방지 가드를 추가하는 사실 정정이다. gradlew test 는 돌리지 않았다 - 정적 텍스트 리소스 1바이트 변경과 .gitattributes 만 바뀌어 Java 코드·동작 계약과 무관하다."
 
+# =====================================================================
+# 일정 페이지 시간 투표 신설 (2026-09-24)
+# =====================================================================
+# 배경: 사용자 요청 — 장소·메뉴 투표와 같은 양식의 시간 투표, 선택된 날 기반 시간 선택,
+# 겹치는 시간 시각화. 사용자 결정(질문 2개): ① 방식 = 후보 제안 + 투표(When2meet 형 기각),
+# ② 날짜 드롭다운 = 참여자 한 명이라도 저장한 날 전부 + 서버도 강제.
+# 기본값으로 정한 것: 30분 단위·00:00~24:00·자정 넘김 없음, 새 후보 기본 18:00~20:00,
+# 중복 후보 409, 삭제 API/UI 없음, UserActivity 미기록(Recap 미집계).
+# ADR: datedate/domain/0009 신설 — 새 도메인(timeslot) 추가라 동기화 표의 '새 도메인' 행 해당.
+# 검증: 전 단계 TDD(RED 선확인 → GREEN), 전체 스위트 122 클래스 753 테스트 failures 0.
+#   UI 는 bootRun 대신(.env 가 코인·주식 봇 LIVE) 스크래치 하네스 — 실제 style.css·schedule/*.js
+#   + 가짜 SCHEDULE_DATA/api — 를 Windows Chrome 헤드리스 CDP 로 데스크톱·375px 검증.
+# 범위 밖 관찰: 375px 에서 달력 오른쪽 열 .cell-tooltip 이 뷰포트를 10px 넘김(기존 문제, 미수정).
+#   작업 중 저장소 루트에 빈 package-lock.json(87B, packages 없음)이 생김 — 커밋 대상 아님.
+
+# Commit 177 — ✅ DONE() feat(datedate): 일정 페이지 시간 투표 — 날짜+시간대 후보 제안·투표 + 겹치는 시간 차트
+# 주의: messages.properties·messages_en.properties 의 nav.guides 1줄씩(헤더 '모임 노하우'/'Tips')은 SEO 세션 Commit 181(09-26 재번호 전 180)의 변경이 여기 흡수됨 — 181 보다 먼저 커밋돼 있어 헤더 키가 존재한다.
+git add src/main/java/me/singingsandhill/calendar/datedate/domain/timeslot/TimeSlot.java src/main/java/me/singingsandhill/calendar/datedate/domain/timeslot/TimeSlotRepository.java src/main/java/me/singingsandhill/calendar/datedate/domain/schedule/Schedule.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/DuplicateTimeSlotException.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/InvalidTimeSlotException.java src/main/java/me/singingsandhill/calendar/datedate/application/exception/TimeSlotNotFoundException.java src/main/java/me/singingsandhill/calendar/datedate/application/service/TimeSlotService.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/TimeSlotRepositoryAdapter.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/TimeSlotJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/TimeSlotVoteJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/entity/ScheduleJpaEntity.java src/main/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/repository/TimeSlotJpaRepository.java src/main/java/me/singingsandhill/calendar/datedate/presentation/api/TimeSlotApiController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/api/ScheduleApiController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/controller/ScheduleController.java src/main/java/me/singingsandhill/calendar/datedate/presentation/dto/request/TimeSlotCreateRequest.java src/main/java/me/singingsandhill/calendar/datedate/presentation/dto/response/TimeSlotResponse.java src/main/java/me/singingsandhill/calendar/datedate/presentation/dto/response/ScheduleDetailResponse.java src/main/resources/messages.properties src/main/resources/messages_en.properties src/main/resources/static/css/style.css src/main/resources/static/js/api.js src/main/resources/static/js/schedule/main.js src/main/resources/static/js/schedule/state.js src/main/resources/static/js/schedule/utils.js src/main/resources/static/js/schedule/voting.js src/main/resources/static/js/schedule/timeslots.js src/main/resources/templates/schedule/view.html src/test/java/me/singingsandhill/calendar/datedate/domain/timeslot/TimeSlotTest.java src/test/java/me/singingsandhill/calendar/datedate/domain/schedule/ScheduleTest.java src/test/java/me/singingsandhill/calendar/datedate/application/service/TimeSlotServiceTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/api/TimeSlotApiControllerTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/api/ScheduleApiControllerTest.java src/test/java/me/singingsandhill/calendar/datedate/infrastructure/persistence/adapter/TimeSlotPersistenceIntegrationTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/ScheduleTimeSlotRenderingTest.java
+git commit -m "feat(datedate): 일정 페이지 시간 투표 — 날짜+시간대 후보 제안·투표 + 겹치는 시간 차트" -m "사용자 요청으로 일정 페이지(/{ownerId}/{year}/{month})에 장소·메뉴 투표와 같은 양식의 시간 투표를 신설했다. 날짜는 모이지만 몇 시에 만날지 정할 수단이 없어 결정의 마지막 단계가 페이지 밖으로 새던 문제다. 사용자는 두 질문에 답했다: 방식은 후보 제안 + 투표(개인별 가능 시간 칠하기 기각), 날짜 드롭다운은 참여자 한 명이라도 저장한 날 전부. 도메인: TimeSlot(dayIndex, startMinute, endMinute, voters) — dayIndex 는 Participant.selections 와 같은 인덱스(확장 모드 1~49 그리드, 레거시 일자)라 선택된 날과 그대로 비교되고, 시간은 자정 기준 분 int(LocalTime 은 24:00 표현 불가). 생성자가 dayIndex>=1, 30분 단위, 0<=start<end<=1440 을 검증(IllegalArgumentException -> 400). 투표는 Location 과 같은 이름 기반·대소문자 무시 중복 금지. Schedule.hasAvailabilityOn(dayIndex) 신설 — 비즈니스 규칙은 도메인 메서드(ADR datedate/domain/0001). TimeSlotService(클래스 readOnly, 쓰기만 @Transactional)는 아무도 저장 안 한 날이면 InvalidTimeSlotException 400, 같은 날짜·시작·종료면 DuplicateTimeSlotException 409, 없는 후보 투표는 TimeSlotNotFoundException 404 — 모두 BusinessException 상속. 영속성: time_slots + time_slot_votes(LocationRepositoryAdapter 미러), ScheduleJpaEntity 에 timeSlots cascade 컬렉션을 추가 — 없으면 일정 삭제 시 FK 위반(통합 테스트가 JdbcSQLIntegrityConstraintViolationException 으로 RED 를 먼저 보여준 뒤 추가). ScheduleRepositoryAdapter.save 가 관리 엔티티의 weeks 만 갱신해 orphanRemoval 이 후보를 지울 경로가 없음을 확인했다. 스키마는 ddl-auto update 로 자동 생성(추가 전용). API: POST /api/schedules/{id}/time-slots, POST /api/time-slots/{id}/votes, DELETE /api/time-slots/{id}/votes/{voterName} — /api/** permitAll·CSRF 제외에 이미 포함돼 SecurityConfig 무변경. ScheduleDetailResponse 에 timeSlots 를 더해 페이지와 GET 상세 API 양쪽에 싣는다. 프론트: 섹션은 달력 저장 버튼 아래·장소 투표 위, 뼈대만 SSR 하고 목록·겹침 차트는 신규 ES 모듈 schedule/timeslots.js 가 SCHEDULE_DATA.timeSlots 로 렌더(dayIndex->날짜 라벨이 달력 JS 에 이미 있어 Java/JS 이중 포매터 회피). 목록은 .location-item 마크업을 재사용해 장소·메뉴와 같은 모양, 투표 토글은 voting.js 의 getSelectedVoterName·toggleVoteFor 를 export 해 재사용. 날짜 드롭다운은 참여자 selections 합집합을 '12/20 (토) · 3명' 으로 보여주고, 달력 저장 후 main.js 가 refreshDayOptions 로 갱신(calendar.js 무수정). 겹침 차트는 후보가 있는 날짜마다 한 줄, 모든 줄이 공유하는 정시 축, 30분 칸마다 그 칸을 덮는 후보에 투표한 서로 다른 사람 수를 달력 heat 와 같은 초록 스케일로 칠하고, 최대 인원 칸을 같은 사람 집합끼리만 연속 구간으로 묶어 '최다 겹침 19:00–21:00 · 4명 (이름)' 으로 요약(인원 수만 같은 인접 칸 병합은 오표시라 기각). utils.js 에 dayIndexToDate, api.js 에 3개 메서드, dataLayer 에 time_slot_added 와 vote_cast.target='time'. CSS 는 style.css 에 +119줄(혼합 개행 파일이라 삽입 지점의 CRLF 를 따라 바이트 단위로 삽입 — 첫 시도의 전체 CRLF 정규화 diff 는 원복). i18n schedule.time.* 11개 + alert 1개(ko 는 \uXXXX 이스케이프). 검증(전 단계 RED 선확인 -> GREEN): TimeSlotTest 13, ScheduleTest 14(+2), TimeSlotServiceTest 7, TimeSlotApiControllerTest 6, TimeSlotPersistenceIntegrationTest 3(왕복·exists 쿼리·cascade — 단계 사이 flush+clear 로 요청별 영속성 컨텍스트 재현), ScheduleTimeSlotRenderingTest 3(SCHEDULE_DATA 주입·ko/en 키 누락 없음·상세 API) — 전체 스위트 122 클래스 753 테스트 failures 0 errors 0(build/test-results 실측). UI 는 bootRun 을 띄우지 않고(.env 가 코인·주식 봇 LIVE) 실제 style.css·schedule/*.js 를 가짜 SCHEDULE_DATA·api 로 싣는 스크래치 하네스를 Windows Chrome 헤드리스 CDP 로 돌려 확인: 날짜 라벨·인원, 칸 단계·최다 구간(투표 취소 후 18:00–21:00 · 3명 병합), 이름 미선택·종료<=시작·빈 상태 경고, 중복 토스트, 저장 후 드롭다운 갱신, 투표 후 포커스 복귀, 375px 레이아웃. 실서버 E2E(실 API 왕복)는 미실행 — API 계약은 MockMvc 통합 테스트가 보증."
+
+# Commit 178 — docs(datedate): 시간 투표 ADR 0009 + CLAUDE.md·ADR README·데이터 인벤토리 동기화 — 마지막 커밋(git-commit.md 포함)
+# 주의: 다음 SEO 세션 변경이 여기 흡수됨 — docs/adr/README.md 의 common/seo 0012·0013 행과 총계 93·common/seo 13(0012 는 Commit 179, 0013 은 Commit 180 소속 ADR),
+#   datedate/application/CLAUDE.md 의 SeoService 문장(breadcrumb 3단계·ADR 0012 링크, Organization email·sameAs·ADR 0013 링크),
+#   루트 CLAUDE.md 의 guides '기사 12편·템플릿 12개·분량 하한' 사실 정정(09-26 재검증 M4). 링크 대상 ADR 파일은 179·180 에서 커밋된다.
+#   09-26 2차: README 의 0014 행·총계 94·common/seo 14, 루트·datedate CLAUDE.md 의 기사 metaTitle·제목 예산·FAQPage 키 사실(ADR 0014 는 Commit 182).
+git add docs/adr/datedate/domain/0009-time-slot-vote.md docs/adr/README.md CLAUDE.md src/main/java/me/singingsandhill/calendar/datedate/application/CLAUDE.md docs/data-analysis/01-current-state.md docs/data-analysis/02-data-inventory.md docs/data-analysis/04-todo.md docs/guides/git-commit.md
+git commit -m "docs(datedate): 시간 투표 ADR 0009 + CLAUDE.md·ADR README·데이터 인벤토리 동기화" -m "Commit 177 의 결정 기록과 사실 문서 동기화. ADR datedate/domain/0009 신설 — 새 도메인(timeslot) 추가라 CLAUDE.md 동기화 표의 새 도메인 행에 해당. 결정: 후보(dayIndex + 30분 단위 시간대) + 이름 투표 모델, dayIndex 저장(LocalDate 는 selections 인덱스와 이중화), 분 int(LocalTime 24:00 불가), 선택된 날 서버 강제(/api/** 공개라 UI 제약은 우회됨), 겹침 = 칸별 서로 다른 투표자 수·같은 사람 집합끼리 구간 병합, 목록·차트 JS 렌더. 범위 밖으로 뺀 것(삭제 API·UserActivity·인기 순위)과 dayIndex 가 주 수 변경 시 의미가 바뀌는 기존 한계 공유를 Consequences 에 기록. ADR README 두 뷰 갱신(datedate 도메인 모델 8->9, 합계 90->91, 시간순 행, 폴더 목록 9 ADRs). 루트 CLAUDE.md DateDate 절에 시간 투표 항목, datedate/application/CLAUDE.md Services 에 TimeSlotService(작업 트리 CRLF 파일 — attr eol=lf 라 커밋 시 LF 정규화, 실변경 +4). 데이터 문서: 01-current-state §9 이벤트 12종·15지점·14행으로 갱신(vote_cast timeslots.js 행, time_slot_added 행) + 변경 이력 행, 02-data-inventory 의 vote_cast 의미와 time_slots·time_slot_votes 테이블, 04-todo 의 GTM 트리거 정규식·DLV 목록(20개)·웨어하우스 덤프 테이블 목록 — GTM 워크스페이스 자체는 외부라 반영 필요(문서의 P0-1 작업). gradlew test 는 이 커밋 단독으로 영향 없음(마크다운만)."
+
+# =====================================================================
+# SEO 종합 점검 — 고아 허브 해소 + breadcrumb 3단계 복원 (2026-09-24)
+# =====================================================================
+# 배경: 사용자 요청 "sitemap.xml, 페이지별 seo 등 seo 요소 종합 점검" + (질문 응답으로) AdSense 통과에 유리한 방향 검토.
+# 라이브 38 URL(19엔트리 x ko/en) 크롤 결과 기술 SEO 는 정상(200·self-canonical·hreflang·JSON-LD·중복 0).
+# 핵심 발견은 링크 그래프 — /faq·/use-cases·/guides(ko) 로 들어오는 a 링크 0개(N1), 허브 신설 뒤에도 breadcrumb 2단계(N2).
+# 보고서: docs/audit/seo-comprehensive-audit-2026-09-24.md (신규 발견 N1~N10, 기지 이슈 상태, AdSense 관점 §6).
+# 사용자 결정: 수정 = N1·N2 + AdSense 관점 헤더 내비. 소형 정정(N3 게시일·N5 robots·N6·N7)·끝 슬래시(N4)는 권고만.
+#   로케일 적응(ko URL + Accept-Language en -> en 본문/canonical)은 코드 변경 없이 기록·관찰(보고서 §10).
+# 헤더: 시각 확인(bootRun 대신 라이브 HTML + 로컬 style.css 하네스, Windows Chrome 헤드리스)에서 EN 'Tips & Guides'
+#   가 1024px 줄바꿈·800대 KO/EN 토글 밀림을 일으켜, 사용자 결정으로 전용 키 nav.guides(en 'Tips')로 단축.
+#   잔여: EN 769~850px 토글 잘림(769~790 은 변경 전부터) — 보고서 §12 R8 CSS 후속.
+# ADR: common/seo/0012 신설 — 0008 의 '2단계 고정' 결정 변경(동기화 표의 결정 변경 행). 0008 상태를 부분 Superseded 로.
+#   푸터·헤더 링크 추가는 사실 변경이라 ADR 없음.
+# 병행 세션(시간 투표 Commit 177·178)과 파일 공유 — 소유권 규칙(처음 등장 커밋이 소유)에 따라:
+#   messages*.properties 의 nav.guides -> 177 흡수 / docs/adr/README.md·datedate/application/CLAUDE.md -> 178 흡수
+#   (각 커밋에 '주의:' 주석). docs/guides/git-commit.md 는 178 이 먼저 소유 — 관례대로 마지막 커밋에도 포함.
+# 커밋 순서 의존: 181 의 InternalLinkingTest 는 179 의 가시 breadcrumb(/use-cases 유입)와 177 의 nav.guides 키를 전제로 GREEN.
+# 09-26 재검증(보고서 §11): 이 섹션 작성 뒤 guides 기사 8편 확장 + 퍼블리셔 신원(연락처·sameAs) 작업이 같은 작업 트리에 들어왔고
+#   커밋 로그 섹션이 없었다. 그 작업을 Commit 180 으로 179 와 181 사이에 끼우고, 기존 SEO 180·181 을 181·182 로 재번호했다.
+#   이유: 181 의 footer.html 이 180 의 footer.contact 키·.footer-contact CSS 를 참조 — 180 이 먼저여야 중간 커밋이 깨지지 않는다.
+#   중간 커밋별 테스트는 미실행(병행 세션 작업 트리라 stash 분리 불가) — 파일 의존 관계로 판정. 최종 작업 트리 전체 스위트는
+#   123 클래스 785 테스트 failures 0 (09-26).
+# 09-26 2차(보고서 §12·§12-1): 수정 계획 R1 은 사용자 결정으로 제외, R2(기사 metaTitle)·R6(UtilitiesApplication) 권장안 확정 후
+#   R2~R6 구현(전부 RED 선확인 -> GREEN). 소유권 규칙상 SeoService.java·SeoServiceI18nTest 변경(R2 코드·R5·R6) -> 179,
+#   메시지 키(metaTitle·제목 단축·seo.faq 삭제) -> 180, R3(date-diff 링크 + en 누수 가드) -> 181 로 흡수. 새 커밋은 182(R2 가드 + ADR 0014),
+#   183(R4 robots). 보고서 커밋은 184 로 재번호. 중간 상태 판정: 179 는 HEAD 메시지(faq.q1~q8 존재, metaTitle 없음 -> title 폴백)로
+#   GREEN, 180 은 seo.faq 삭제 시점에 SeoService 가 이미 faq.* 사용, 제목 예산 가드는 metaTitle 이 들어온 뒤인 182 에서 등장.
+#   최종 작업 트리 전체 스위트 124 클래스 790 테스트 failures 0 (09-26).
+# 검증: 전 단계 TDD(RED 선확인 -> GREEN). 대상 7클래스 75테스트 GREEN, 전체 스위트 123 클래스 761 테스트 failures 0
+#   (병행 세션 미커밋 변경을 포함한 작업 트리 기준). 헤더 라벨 변경 후 관련 6클래스 71테스트 재실행 GREEN.
+
+# Commit 179 — feat(seo): 활용 사례·기사 BreadcrumbList 3단계(홈 -> 허브 -> 페이지) + 가시 breadcrumb (ADR common/seo/0012)
+# 주의: Commit 180 작업분 흡수 — SeoService.java 의 Organization email·sameAs(홈·about), GuidesLocaleRenderingTest 의 MARKERS 12편 항목.
+#   179 단독 상태에서도 무해: GuideSlugs 가 4편이라 추가 MARKERS 는 쓰이지 않고, email·sameAs 는 JSON-LD 문자열뿐이다.
+# 주의(09-26 2차): 수정 계획 R2·R5·R6 의 SeoService 변경과 테스트도 여기 흡수 — getGuideArticleSeo 의 metaTitle 우선·title 폴백(R2),
+#   getFaqSeo 가 화면 키 faq.q1~q8 로 빌드(R5), 홈 applicationCategory UtilitiesApplication(R6), SeoServiceI18nTest 의
+#   faqSeo_jsonLdMatchesVisibleFaq·webApplicationJsonLd_usesSupportedCategory. 179 시점 메시지(HEAD)로 전부 GREEN.
+git add src/main/java/me/singingsandhill/calendar/datedate/application/service/SeoService.java src/main/resources/templates/use-cases/detail.html src/main/resources/templates/guides/how-to-pick-a-date.html src/main/resources/templates/guides/scheduling-methods-compared.html src/main/resources/templates/guides/scheduling-etiquette.html src/main/resources/templates/guides/group-poll-best-practices.html src/test/java/me/singingsandhill/calendar/datedate/application/service/SeoServiceI18nTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/UseCaseLocaleRenderingTest.java src/test/java/me/singingsandhill/calendar/datedate/presentation/controller/GuidesLocaleRenderingTest.java docs/adr/common/seo/0012-breadcrumb-hub-hierarchy.md docs/adr/common/seo/0008-breadcrumb-item-on-every-listitem.md src/main/java/me/singingsandhill/calendar/common/CLAUDE.md
+git commit -m "feat(seo): 활용 사례·기사 BreadcrumbList 3단계(홈 -> 허브 -> 페이지) + 가시 breadcrumb (ADR common/seo/0012)" -m "ADR common/seo/0008 은 중간 크럼브가 가리킬 허브가 없어 BreadcrumbList 를 홈 -> 페이지 2단계로 고정하고 '허브를 만들면 3단계 복원' 을 후속으로 남겼다. /use-cases(09-08)·/guides(09-10) 허브가 생겼는데도 활용 사례 5편·기사 4편은 2단계였고 화면 breadcrumb 도 없었다(점검 N2). SeoService.breadcrumbJsonLd 를 '홈 + (이름, 경로) 크럼 목록' 루프 직렬화로 일반화해 전 ListItem 에 item 을 채우는 0008 불변식을 한 메서드에 유지했고, 기존 2단계 호출부 8곳은 오버로드로 그대로 두었다. getUseCaseSeo 는 홈 -> 활용 사례(/use-cases) -> 슬러그, getGuideArticleSeo 는 홈 -> 모임 노하우(/guides) -> 기사를 낸다(허브 이름은 기존 seo.breadcrumb.useCases/guides 키). 같은 계층의 가시 breadcrumb 를 use-cases/detail.html 과 기사 전용 템플릿 4개에 faq.html 과 같은 nav.breadcrumb 마크업·기존 CSS 로 넣었다 — 신규 메시지 키 없음, 허브 링크는 localeLinks.href 로 로케일 유지, 현재 항목은 짧은 navLabel. 구조화 데이터와 화면 계층이 일치하고 상세마다 허브로 가는 본문 링크가 생겨 허브 고아(N1)도 함께 풀린다. RED 선확인: SeoServiceI18nTest.breadcrumbList_useCaseAndGuideArticlesIncludeHub(expected 3 but was 2), UseCaseLocaleRenderingTest.detailBreadcrumbLinksHub·GuidesLocaleRenderingTest.articleBreadcrumbLinksHub x4(nav 부재) -> GREEN, 기존 breadcrumbList_everyItemHasUrl 무변경 통과. ADR 0012 신설, 0008 상태를 '2단계 고정 결정은 0012 로 Superseded(전 항목 item 규칙 유효)' 로, common/CLAUDE.md 의 SEO ADR 수를 12 로 정정. docs/adr/README.md·datedate/application/CLAUDE.md 동기화분은 Commit 178 이 흡수(주의 주석). 함께 담긴 흡수분(주의 주석): Commit 180 의 Organization email·sameAs 와 기사 MARKERS 12편, 수정 계획 R2 코드(기사 metaTitle 우선·title 폴백)·R5(/faq FAQPage 를 화면 키 faq.q1~q8 로 — 6문항 의역 -> 8문항 일치, RED expected 8 but was 6)·R6(홈 applicationCategory SchedulingApplication -> Google 지원값 UtilitiesApplication, RED 로 미지원 값 확인)."
+
+# =====================================================================
+# guides 기사 8편 확장 + 퍼블리셔 신원(연락처 이메일·sameAs) (2026-09-24~26)
+# =====================================================================
+# 배경: AdSense '낮은 가치 콘텐츠' 3차 통지 대응의 콘텐츠·신원 보강(작업 기록상 Phase 1·2). 사용자 작업 —
+#   이 섹션은 09-26 재검증 세션이 작업 트리와 작업 요약을 대조해 사후 작성했다(요약의 주장은 코드로 확인, 보고서 §11-2).
+# Phase 1 신원: 연락처 cheongyakplanet@gmail.com 을 푸터·/about 에 표시, Organization JSON-LD 에 email + sameAs
+#   (https://github.com/singingsandhill — 저장소 소유 실계정, HTTP 200 확인, 화면 비노출). 08-17 진단의 'sameAs 보류' 결정을
+#   바꾸는 것이라 ADR common/seo/0013 을 이 커밋에 둔다(ADR-0011 결정 6 의 허위 신원 금지는 준수).
+# Phase 2 기사 8편: timezone-coordination, annual-dinner-scheduling, wedding-invitation-gathering, study-team-project-management,
+#   calendar-vs-poll-comparison, meeting-place-and-budget, weekend-vs-weekday-meetup, last-minute-cancellation-etiquette.
+#   기사별 템플릿·메시지 키 블록(ko/en 각 43~63키) + GuideSlugs SSOT(2026-09-24) + 사이트맵 테스트 26페이지 x 6 = 156.
+# 재검증 발견(보고서 §11·§12): 게시일 2026-09-24 가 배포 전 날짜(N3 재발 — R1 은 사용자 결정으로 제외, 현행 유지), en 제목 90~100자(N10 -> R2 완료),
+#   새 8편 템플릿 골격 유사도 0.96(본문은 고유 — M1 -> R10), 연락처 하드코딩 6곳·로컬파트 브랜드 확인(M2 -> R11).
+# 다른 커밋 소유분: SeoService.java·GuidesLocaleRenderingTest -> 179, footer.html -> 181, CLAUDE.md·README·datedate CLAUDE.md -> 178.
+# 주의(09-26 2차): 메시지 파일에 SEO 수정 계획분 흡수 — 기사 12편 x ko/en metaTitle 24줄(R2), seo.insights.title ko/en·seo.home.title en 단축(R2),
+#   seo.faq.q1~q6/a1~a6 ko/en 삭제(R5 — 179 시점부터 미사용). 새 기사 블록은 CRLF 로 들어와 LF 파일에 혼재(각 436줄, 보고서 M6 — 동작 무영향).
+# 제외: 저장소 루트 package-lock.json (Commit 177 섹션 기록대로 커밋 대상 아님).
+
+# Commit 180 — feat(datedate): guides 기사 8편 확장(4 -> 12편) + 퍼블리셔 연락처·sameAs (ADR common/seo/0013)
+git add src/main/java/me/singingsandhill/calendar/datedate/domain/guide/GuideSlugs.java src/main/resources/templates/guides/timezone-coordination.html src/main/resources/templates/guides/annual-dinner-scheduling.html src/main/resources/templates/guides/wedding-invitation-gathering.html src/main/resources/templates/guides/study-team-project-management.html src/main/resources/templates/guides/calendar-vs-poll-comparison.html src/main/resources/templates/guides/meeting-place-and-budget.html src/main/resources/templates/guides/weekend-vs-weekday-meetup.html src/main/resources/templates/guides/last-minute-cancellation-etiquette.html src/main/resources/messages.properties src/main/resources/messages_en.properties src/main/resources/static/css/style.css src/main/resources/templates/about.html src/test/java/me/singingsandhill/calendar/common/application/service/SitemapServiceHreflangTest.java src/test/java/me/singingsandhill/calendar/common/application/service/SitemapServiceWhitelistTest.java docs/adr/common/seo/0013-publisher-identity-contact-and-sameas.md
+git commit -m "feat(datedate): guides 기사 8편 확장(4 -> 12편) + 퍼블리셔 연락처·sameAs (ADR common/seo/0013)" -m "AdSense 3차 통지 대응의 콘텐츠·신원 보강. ① 기사 8편 신설 — 시차 조율(시차별 회의 시간대 매트릭스 표), 연말·신년 회식(6단계 체크리스트), 청첩장 모임(초대 문구 템플릿 3종), 조모임·스터디(그라운드 룰 체크리스트), 공유 캘린더 vs 링크 투표(6기준 비교표), 장소·예산(인원수별 가이드표), 주말 낮 vs 평일 저녁(의사결정 매트릭스), 당일 취소·재조율(사과·대안 제안 템플릿 3종). 기사별 전용 템플릿 + guides.article.<slug>.* 키 블록(ko/en 각 43~63키) + GuideSlugs SSOT 등록으로 라우팅·사이트맵·푸터가 자동 반영된다. 각 템플릿은 Commit 179 와 같은 가시 breadcrumb(홈 / 모임 노하우 / 기사)를 포함하고 JSON-LD 3단계는 SeoService 가 낸다. 분량 하한(ko 3,800자·en 1,100단어), 로케일 고유 마커, 미해석 키 부재, 설명 120~160자를 기존 가드가 12편 전부에 적용해 GREEN(작업 기록상 ko 4,250~5,152자·en 1,212~1,454단어, 플레이스홀더 0건 확인). 사이트맵 테스트는 26페이지 x 6 = hreflang 156 으로 갱신. ② 퍼블리셔 신원 — /about 연락 섹션에 이메일 줄(about.section.contact.emailLabel)과 문구 갱신, 푸터 문의 키(footer.contact)·.footer-contact 스타일 추가(푸터 마크업은 Commit 181 소유), Organization JSON-LD 의 email·sameAs(운영자 GitHub, 화면 비노출)는 Commit 179 가 흡수. 08-17 진단의 'sameAs 보류' 를 실존 계정 한정으로 바꾸는 결정이라 ADR common/seo/0013 신설. 메시지 파일에 흡수된 SEO 수정분(주의 주석): 기사 12편 metaTitle(SERP 제목 예산 ko 35/en 60 — 가드는 Commit 182), insights ko/en·홈 en 제목 단축, 미사용이 된 seo.faq.q1~q6/a1~a6 삭제. 알려진 후속(보고서 §12): 게시일 2026-09-24 는 배포 전 날짜(N3 — R1 은 사용자 결정으로 제외), 새 8편 골격 유사도 0.96 — 본문은 편 사이 중복 0(R10), 연락처 하드코딩 6곳(R11), 메시지 파일 CRLF 혼재(M6). 최종 작업 트리 전체 스위트 124 클래스 790 테스트 failures 0."
+
+# Commit 181 — fix(seo): 내부 링크 정비 — 고아 허브 해소(헤더 모임 노하우·푸터 FAQ) + en 로케일 누수 가드·date-diff 2곳
+# 주의: Commit 180 작업분 흡수 — footer.html 의 문의 mailto 링크(기본 푸터)와 footer-minimal 하단 문의 줄. 180 이 먼저 커밋돼야
+#   footer.contact 키·.footer-contact 스타일이 존재한다(09-26 재번호 전 번호 180).
+git add src/main/resources/templates/fragments/header.html src/main/resources/templates/fragments/footer.html src/main/resources/templates/tools/date-diff.html src/test/java/me/singingsandhill/calendar/common/presentation/InternalLinkingTest.java
+git commit -m "fix(seo): 내부 링크 정비 — 고아 허브 해소(헤더 모임 노하우·푸터 FAQ) + en 로케일 누수 가드·date-diff 2곳" -m "2026-09-24 점검 N1: 라이브 38 URL 의 a 링크 그래프에서 /faq·/use-cases·/guides(ko) 로 들어오는 링크가 0개였다 — 사이트맵으로만 발견 가능하고 사용자·AdSense 리뷰어는 도달할 경로가 없었다(/faq 는 도입 이후 한 번도 링크된 적 없음, git log -S 확인). 헤더 header·header-minimal 두 내비에 '모임 노하우'(/guides)를 가이드 다음에 추가했다 — 에디토리얼 허브를 1차 내비에 노출하는 AdSense 관점 조치. 라벨은 전용 키 nav.guides(ko '모임 노하우', en 'Tips'): 1차안 'Tips & Guides' 는 시각 확인에서 EN 1024px 줄바꿈과 800대 KO/EN 토글 밀림을 일으켜 사용자 결정으로 단축했다(키 2줄은 Commit 177 흡수, EN 769~850px 잔여 넘침은 보고서 §8 CSS 후속 — 769~790 은 변경 전부터). 푸터 footer-minimal 도움말 섹션에는 /faq 를 기존 키 seo.breadcrumb.faq 로 추가(병행 세션 소유 파일을 피하려 신규 키·CSS 없음). /use-cases 유입은 Commit 179 의 상세 breadcrumb 가 맡는다. 신규 InternalLinkingTest: 사이트맵 XML 의 전 loc(ko+en)을 MockMvc 로 렌더해 a 태그 href 만 모아(head 의 canonical·hreflang link 는 제외 — 첫 작성에서 이를 링크로 세어 RED 가 안 나던 것을 잡아 수정) 각 URL 이 다른 사이트맵 페이지에서 1회 이상 링크되는지 단정, 헤더 두 변형의 /guides 로케일 링크도 단정. RED 선확인: 고아 [/faq, /use-cases, /guides] — 라이브 크롤과 같은 집합 -> GREEN. 09-26 수정 계획 R3(보고서 §12-1): tools/date-diff.html 의 breadcrumb 홈(@{/})과 CTA(href=/#start-form)가 en 페이지에서 ko URL 로 새던 것을 localeLinks.href 로 고치고, InternalLinkingTest.englishPagesLinkEnglishUrls 로 en 사이트맵 전 페이지의 내부 a 링크가 lang=en 을 유지하는지 가드(예외: ?lang=ko 토글·/oauth2/). RED: date-diff?lang=en -> / 1건(두 링크가 같은 URL 로 정규화) -> GREEN."
+
+# Commit 182 — fix(seo): SERP 제목 예산 가드 ko 35 / en 60 (ADR common/seo/0014)
+# 주의: 구현은 흡수됨 — SeoService 의 metaTitle 우선·title 폴백은 Commit 179, 기사 metaTitle 키·insights/홈 제목 단축은 Commit 180.
+#   이 커밋은 가드와 결정 기록만 담는다. 가드가 메시지 반영 뒤인 여기서 처음 등장하므로 179·180 중간 상태를 깨지 않는다.
+git add src/test/java/me/singingsandhill/calendar/datedate/application/service/SerpTitleBudgetTest.java docs/adr/common/seo/0014-serp-title-budget-and-meta-title.md
+git commit -m "fix(seo): SERP 제목 예산 가드 ko 35 / en 60 (ADR common/seo/0014)" -m "점검 N10: 색인 페이지 title 길이 기준이 없어 기사 8편 추가 뒤 예산 초과가 ko 12건·en 12건(26페이지 기준, en 기사 제목 90~100자)이었다. Google 은 제목을 약 600px 에서 자르므로 브랜드 접미 ' | DateDate' 포함 ko 35자 / en 60자(한글 폭 약 2배) 예산을 신규 SerpTitleBudgetTest 로 고정한다 — 색인 26페이지 x ko/en 전수, 초과 목록 전체를 한 번에 보고. 기사는 title 이 h1·Article headline·breadcrumb·허브 카드와 공유되므로 선택 키 guides.article.<slug>.metaTitle 을 두고 title·og:title 만 짧게 쓴다(사용자가 권장안 채택, 대안인 title 자체 단축은 h1 설명력 손실로 기각). RED: 초과 24건 -> GREEN(ko 27~35자, en 45~60자). 구현 흡수 위치는 주의 주석. ADR common/seo/0014 신설 — 제목 예산이라는 새 임계 정책 + 키 분리 구조라 결정 기록(설명 120~160자 가드는 ADR 없이 도입된 전례가 있으나 이번은 구조 변경을 동반)."
+
+# Commit 183 — fix(seo): robots.txt 에 /oauth2/ 크롤 차단
+git add src/main/resources/static/robots.txt src/test/java/me/singingsandhill/calendar/common/presentation/controller/SitemapEndpointTest.java
+git commit -m "fix(seo): robots.txt 에 /oauth2/ 크롤 차단" -m "점검 N5: 전 페이지 헤더의 카카오 로그인 링크(/oauth2/authorization/kakao)가 38 페이지에 80회 크롤 가능 상태였다 — 따라가면 kauth.kakao.com 으로 302 되고 요청마다 세션·state 가 생길 뿐 색인 가치가 없다. robots.txt 에 Disallow: /oauth2/ 를 추가(파일 CRLF 유지). SitemapEndpointTest 에 robotsTxtBlocksOAuthStart 를 추가해 기존 최장 패턴 우선 판정기로 차단을 단정 — RED(차단 안 됨) -> GREEN. 기존 robotsTxtDoesNotBlockSitemapUrls 도 GREEN 유지(사이트맵 URL 과 충돌 없음). ADR 없음 — 크롤 대상이 아닌 인증 경로 한 줄 차단이라 ADR-0005 의 UGC 차단 설계와 무관한 사실 변경."
+
+# Commit 184 — docs(seo): SEO 종합 점검 보고서 2026-09-24 + 09-26 재검증·수정 계획·구현 결과 — 마지막 커밋(git-commit.md 포함)
+git add docs/audit/seo-comprehensive-audit-2026-09-24.md docs/guides/git-commit.md
+git commit -m "docs(seo): SEO 종합 점검 보고서 2026-09-24 + 09-26 재검증·수정 계획·구현 결과 — 사이트맵·페이지별 메타·링크 그래프·구조화 데이터 + AdSense 관점" -m "08-02 사이트맵·08-16 페이지별·08-17 AdSense 진단 이후 추가된 /use-cases·/guides 허브와 기사 4편을 포함해 라이브 38 URL 을 전수 실측했다. 정상: 38/38 200·self-canonical·og:url·hreflang 3종 상호참조·index,follow·html lang·og:locale·h1 1개·유효 JSON-LD, 제목·설명 중복 0, http/www 301, /tools·/insights 308, 미지 슬러그 404+noindex, robots.txt 배포본 일치, AdSense 쿠키 고지 존재. 신규 발견 N1~N10: 中 = 허브·FAQ 고아(N1, 수정 181)·breadcrumb 2단계(N2, 수정 179)·기사 게시일이 계획일 08-23 로 실제 커밋 09-10~12 보다 앞섬(N3); 低 = 끝 슬래시가 /login 302·404(N4, UrlHandlerFilter 권고)·OAuth 시작 링크 80개 크롤 가능(N5)·date-diff en 로케일 누수 2곳(N6)·홈 applicationCategory 미지원값 + 소프트웨어 앱 리치 결과는 평점 필수라 비적격(N7, 가짜 평점 금지)·HowTo/FAQ 가 Google 검색 갤러리에 없음(N8)·FAQPage 답변 의역(N9)·en 제목 60자 초과 4건(N10). 로케일 적응은 08-17 의 '의도된 설계' 판정에 크롤러 관점 위험과 GSC 관찰 절차만 보강(사용자 결정: 관찰). 기지 이슈 상태표 갱신(og-image.svg 데드 화이트리스트는 해소 확인). §6 AdSense 관점: 이번 조치는 탐색성 보강이고 editorial 판정 동인은 아님, 재검토 요청 절차(심사 중이면 판정 후 배포), 다음 권고(N3·홈 FAQ 축소·FAQ 신규 주제·기사 추가 우선), 하지 말 것(가짜 평점·실체 없는 저자), 광고 재개 전 필수(예약 높이·EEA/UK CMP). §11 09-26 재검증: 라이브 미배포라 실측은 유효, 코드 기준 N1·N2 해결 유지(12편 포함), N3 재발·N10 악화(en 제목 60자 초과 12건), 신규 M1(새 8편 골격 유사도 0.96, 본문 중복 0)·M2(sameAs 결정 변경 -> ADR 0013, 연락처 하드코딩 6곳)·M3(기사 10편 초과 fragment 재검토 조건 충족)·M4(CLAUDE.md 드리프트 정정, Commit 178 흡수)·M5(커밋 로그 순서 충돌 -> 180 삽입·재번호). §12 수정 계획: Phase 0(R1 게시일·R2 제목 — 배포 전 필수), Phase 1(R3 date-diff 누수·R4 robots /oauth2/·R5 FAQ 문구·R6 앱 카테고리), Phase 2(R7 끝 슬래시·R8 EN 헤더·R9 기사 공통 크롬 fragment·R10 골격 다양화·R11 연락처), Phase 3(배포 후 실측·색인 확인·재검토 요청). 09-26 2차: R1 은 사용자 결정으로 제외, R2(metaTitle)·R6(UtilitiesApplication) 권장안 확정, §12-1 에 R2~R6 구현 결과(RED/변경/가드)와 신규 M6(메시지 파일 CRLF 혼재) 기록. 이 커밋은 문서만."
+
+# =====================================================================
+# AdSense 심사·게재 준비 상태 재분석 (2026-09-26)
+# =====================================================================
+# 배경: 사용자 요청 "adsense 심사 관점에서 미비점 재분석 — sitemap.xml, ads.txt 등 기술 요인 및 도메인 유효성 종합 검사,
+#   최종 목표는 통과 후 광고 게재". 보고서: docs/audit/adsense-readiness-audit-2026-09-26.md.
+# 결론: 기술·도메인 차단 요인 없음(RDAP·DNS·TLS·Safe Browsing·크롤러 UA 3종·ads.txt 4변형·사이트맵 38 URL·헤더·개인정보 고지 정상).
+#   심사 미비점은 개선분 미배포(G2). 게재 차단 결함 G1 — adsense.client 에 플레이스홀더가 없고 운영 비밀값은 .env 파일
+#   임포트(프로퍼티 소스)라 ADSENSE_CLIENT 설정만으로는 광고가 켜지지 않음. 임시 @SpringBootTest 프로브로 실측
+#   (client=[] slotInfeed=[999]) 후 프로브 파일 삭제.
+# 코드 변경 없음 — G1 수정은 배포 즉시 서버 .env 의 ADSENSE_CLIENT 잔존 여부에 따라 승인 전 광고를 켤 수 있어,
+#   사용자 확인(서버 .env) 뒤로 보류(보고서 §4 G1·§5 로드맵).
+
+# Commit 185 — docs(adsense): 심사·게재 준비 상태 재분석 보고서 — 마지막 커밋(git-commit.md 포함)
+git add docs/audit/adsense-readiness-audit-2026-09-26.md docs/guides/git-commit.md
+git commit -m "docs(adsense): 심사·게재 준비 상태 재분석 — 기술·도메인 정상, 개선분 미배포, ADSENSE_CLIENT 바인딩 결함" -m "AdSense 재검토 통과와 실제 광고 게재를 목표로 미비점을 재분석했다. 라이브 실측(09-26): 도메인 RDAP 등록 2025-12-14·만료 2026-12-14(79일 — 자동 연장 확인 필요), DNS apex·www 동일 A, TLS Let's Encrypt SAN apex+www 만료 11-09(44일 — certbot 타이머 확인 필요), Safe Browsing 위협 플래그 없음, http·www 301 1홉, Mediapartners-Google·AdsBot-Google·Googlebot 으로 주요 경로 전부 200(두 광고 크롤러는 robots 의 * 그룹을 무시 — 공식 문서), ads.txt 는 인증 ID 포함 정상 형식·4변형 200 text/plain 이나 라이브는 아직 CRLF(커밋 176 미배포), 사이트맵 38 URL 에 CSP·COEP·X-Robots-Tag·미완성 문구 0, 개인정보처리방침 AdSense 쿠키·맞춤 광고 해제 고지 존재, 배포 503 에 Retry-After 120. 사이트 소유권 연결은 ads.txt 방식으로 충족(google-adsense-account 메타는 선택). 미비점: G1 게재 차단 — application.yaml 의 adsense.client 가 빈 값 고정이고 운영은 .env 파일 임포트라 ADSENSE_CLIENT 가 바인딩되지 않음(임시 프로브 실측 client 빈 값, 슬롯은 바인딩 — 확인 후 삭제). 문서화된 게재 절차가 조용히 실패하므로 플레이스홀더·.env.example·바인딩 테스트로 고쳐야 하나, 서버 .env 에 ADSENSE_CLIENT 가 남아 있으면 배포 즉시 승인 전 광고가 켜지므로 확인 뒤로 보류. G2 개선분 전부 미배포(재검토는 배포·색인 확인 후). G3 ads.txt CRLF(다음 배포로 해소). G4 도메인·인증서 만료. G5 인피드 예약 높이 200px·자동 광고 결정. G6 EEA/UK/CH 인증 CMP(AdSense 개인 정보 보호 메시지). G7 콘텐츠 잔여 신호(기존 기록). G8 /stock 무로그인 공개(noindex·무링크). G9 저장소 밖 확인 항목. §5 에 게재까지 5단계 로드맵. 코드 변경 없음."
+
+# =====================================================================
+# datedate ERD 다이어그램 (2026-09-26)
+# =====================================================================
+# 배경: 사용자 요청 "draw db erd" (diagram-design 스킬). 사용자 선택 — 범위 datedate 12개 테이블, 기본 스킨, docs/ 에 저장.
+#   ER 예산(장당 8개)에 맞춰 2장으로 분할: Fig. 1 계정·소유·참여 / Fig. 2 후보·투표.
+# 근거: datedate/infrastructure/persistence/entity/*JpaEntity.java + 도메인·서비스 코드 (문서 인용 없음).
+# 코드 변경 없음, 결정 변경 아님(ADR 불필요). 검증: 스킬 self_check 통과, verify-geometry SVG 별 0건
+#   (파일 단위 실행 시 1건은 서로 다른 SVG 좌표를 비교한 오탐), Windows 헤드리스 Chrome 렌더 확인.
+
+# Commit 186 — docs(datedate): ERD 다이어그램 (계정·소유·참여 / 후보·투표) — 마지막 커밋(git-commit.md 포함)
+git add docs/datedate/erd.html docs/README.md docs/guides/git-commit.md
+git commit -m "docs(datedate): ERD 다이어그램 — 계정·소유·참여 / 후보·투표 2장" -m "datedate 12개 테이블을 JPA 엔티티 기준으로 그린 단일 HTML(인라인 SVG, diagram-design 기본 스킨). Fig. 1 은 DB FK 로 묶인 익명 일정 영역(owners -> schedules -> participants, 일정당 참여자 0..8)과 FK 없이 user_id·schedule_id 값만 가지는 카카오 로그인 영역(app_users·user_activities·recap_shares)을 나누고, owners.user_id first-claim 연결을 강조. Fig. 2 는 schedules 아래 후보 3종(locations·menus·time_slots)과 후보별 투표 테이블. 하단 카드에 DB 제약(FK·UQ·IDX), 코드만 보장하는 규칙(참여자 8명·이름 중복, 후보·투표 중복, 활동 중복 억제), 삭제 전파(JPA cascade ALL + orphanRemoval, FK 에 ON DELETE 없음, user_activities·recap_shares 미정리)를 정리. docs/README.md 의 datedate 행에 ERD 추가."
+
+# =====================================================================
+# trading · stock ERD 다이어그램 (2026-09-26)
+# =====================================================================
+# 배경: 사용자 요청 "trading, stock ERD도 그려줘" — Commit 186(datedate ERD)과 같은 방식(기본 스킨, 모듈 폴더의 erd.html).
+#   두 모듈 모두 JPA 연관관계가 없어 DB FK 가 없다 — 모든 참조를 점선(논리 참조)으로 그렸다.
+# 근거: 각 모듈 infrastructure/persistence/entity/*JpaEntity.java + 서비스·스케줄러 코드 (호출처·보관 주기는 grep 으로 확인).
+# 코드 변경 없음, 결정 변경 아님(ADR 불필요). 검증: 스킬 self_check·verify-geometry 각 0건, Windows 헤드리스 Chrome 렌더 확인.
+
+# Commit 187 — docs(trading,stock): ERD 다이어그램 — 마지막 커밋(git-commit.md 포함)
+# 주의: docs/README.md 의 trading·stock 행 ERD 표기는 Commit 186 이 파일을 먼저 소유해 186 에 흡수됨.
+git add docs/trading/erd.html docs/stock/erd.html docs/guides/git-commit.md
+git commit -m "docs(trading,stock): ERD 다이어그램 — 코인 봇 7개·주식 봇 6개 테이블" -m "datedate ERD(Commit 186)와 같은 형식의 단일 HTML(인라인 SVG). trading: 신호 -> 주문 <- 포지션을 FK 없는 signal_id·position_id 로 잇는 매매 영역과, id 참조 없이 시간으로만 이어지는 시계열 4개(캔들 90일 보관·5분 계좌 스냅샷·00:01 일일 요약·이벤트 로그)를 나눠 그림. 주문 레코드(trading_trades)를 강조하고, 매수·신규 포지션 동일 트랜잭션 저장, client_order_id 선영속화 멱등키, 캔들 외 삭제 경로 없음을 카드로 정리. stock: 종목·거래일당 1행인 stock_monitoring 을 중심으로 포지션(stock_id)·주문(position_id)은 논리 id 참조, 신호·진입 시도는 stock_code·날짜 자연키 대응으로 구분하고 stock_candles 는 쓰는 코드가 없는 비활성 스캐폴딩으로 표시. 모든 stock 테이블은 삭제 호출처가 없어 누적됨을 기록."

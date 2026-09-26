@@ -19,15 +19,26 @@
 - **ParticipantService** - 스케줄당 최대 8명 / 중복 이름 검증.
 - **LocationService** - 장소 투표 (add/delete/vote/unvote).
 - **MenuService** - 메뉴 투표 (URL 포함, add/delete/vote/unvote).
+- **TimeSlotService** - 시간 투표 (add/vote/unvote). 후보 날짜는 참여자 누군가 저장한 날만
+  (`Schedule.hasAvailabilityOn`, 아니면 `InvalidTimeSlotException` 400), 같은 날짜·시간대 중복 409.
+  30분 단위·자정 넘김 없음은 `TimeSlot` 생성자가 검증
+  ([ADR](../../../../../../../../docs/adr/datedate/domain/0009-time-slot-vote.md)).
 - **PopularityService** - 시간 가중 점수 기반 장소/메뉴 인기 순위. 노출 기준: 집계 후
   최소 2표 + 비속어 블록리스트, 홈·트렌드·top 전역 적용
   ([ADR](../../../../../../../../docs/adr/datedate/domain/0006-popularity-exposure-criteria.md)).
 - **SeoService** - 페이지 타입별 SEO 메타데이터 (i18n + JSON-LD 포함). BreadcrumbList 는
-  `breadcrumbJsonLd()` 한 곳에서만 생성 — 홈 → 현재 페이지 2단계, **모든 `ListItem` 에 `item` 필수**
-  ([ADR](../../../../../../../../docs/adr/common/seo/0008-breadcrumb-item-on-every-listitem.md)).
+  `breadcrumbJsonLd()` 한 곳에서만 생성 — 기본 홈 → 현재 페이지 2단계, 허브가 있는 use-case·guides
+  상세는 홈 → 허브 → 페이지 3단계(가시 breadcrumb 도 같은 계층), **모든 `ListItem` 에 `item` 필수**
+  ([ADR 0008](../../../../../../../../docs/adr/common/seo/0008-breadcrumb-item-on-every-listitem.md),
+  [ADR 0012](../../../../../../../../docs/adr/common/seo/0012-breadcrumb-hub-hierarchy.md)).
   guides 계열: `getGuidesIndexSeo()`(CollectionPage, 광고 없음) + `getGuideArticleSeo(slug)`
   (Article JSON-LD — datePublished/dateModified 는 `GuideSlugs` SSOT, 저자 Organization,
   [ADR](../../../../../../../../docs/adr/common/seo/0011-guides-editorial-hub.md)).
+  홈·about 의 Organization JSON-LD 에 연락처 `email` + `sameAs`(운영자 GitHub — 화면 비노출)
+  ([ADR 0013](../../../../../../../../docs/adr/common/seo/0013-publisher-identity-contact-and-sameas.md)).
+  기사 `<title>`·og:title 은 `metaTitle` 키 우선(h1·headline 은 긴 `title`) — 제목 예산 ko 35/en 60
+  ([ADR 0014](../../../../../../../../docs/adr/common/seo/0014-serp-title-budget-and-meta-title.md)). `/faq` FAQPage 는
+  화면과 같은 `faq.q1~q8/a1~a8` 키로 빌드.
 - **InsightsService** - 집계 인기 통계 (`/insights/trends`).
 - **AppUserService** - 카카오 프로필 upsert (`kakaoId` unique, 재로그인 시 닉네임·프로필·lastLoginAt 갱신).
 - **UserActivityService** - 로그인 사용자 활동 이벤트(참여·투표·일정생성) append-only 기록,

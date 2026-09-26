@@ -31,7 +31,7 @@
 | `schedule_created` | 핵심 conversion. 신규 일정 생성률, 트래픽 소스 attribution |
 | `participant_added` | 일정 활성화 시그널. 평균 참가자 수, drop-off (참가자 1명 만 추가 후 이탈) |
 | `selections_saved` | 핵심 engagement. days_count 분포로 "전체 가능"/"몇 일만 가능" 패턴 |
-| `vote_cast` | 일정 후속 활동. 장소·메뉴 어느 쪽이 더 활발한가, vote vs unvote 비율 |
+| `vote_cast` | 일정 후속 활동. 장소·메뉴·시간(`target`) 어느 쪽이 더 활발한가, vote vs unvote 비율 |
 | `run_created` | Runner admin 활동. 크루 운영자 활성도 |
 | `attendance_marked` | 크루 멤버 활성도. distance 분포, 출석 시간대 |
 
@@ -57,6 +57,8 @@
 | `location_votes` | id, location_id, voter_name | 장소 투표 |
 | `menus` | id, schedule_id, name, **url**, created_at | 일정의 메뉴 후보 (외부 URL 포함) |
 | `menu_votes` | id, menu_id, voter_name | 메뉴 투표 |
+| `time_slots` | id, schedule_id, **day_index**, start_minute, end_minute (자정 기준 분, 30분 단위), created_at | 일정의 시간 후보 — day_index 는 selections 와 같은 인덱스 |
+| `time_slot_votes` | id, time_slot_id, voter_name | 시간 투표 |
 
 **Selections JSON 구조**:
 

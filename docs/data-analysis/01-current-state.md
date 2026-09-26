@@ -119,8 +119,9 @@
 
 ## 9. dataLayer 비즈니스 이벤트 (코드 적용 완료)
 
-`G-9QTMK4CDDF` 로 송신할 이벤트 **11종** 이 코드 **13개 지점** 에서 푸시된다. 아래 표는 12행이며,
-`vote_cast` 행 하나가 장소·메뉴 2개 지점을 겸한다 (`schedule_created` 는 2행으로 분리 표기).
+`G-9QTMK4CDDF` 로 송신할 이벤트 **12종** 이 코드 **15개 지점** 에서 푸시된다. 아래 표는 14행이며,
+`vote_cast` 의 `voting.js` 행 하나가 장소·메뉴 2개 지점을 겸한다 (`schedule_created` 는 2행,
+`vote_cast` 는 `voting.js`·`timeslots.js` 2행으로 분리 표기).
 **GTM 측 트리거·태그 매핑은 대기 중**.
 
 | 이벤트 이름 | 코드 위치 | 발화 시점 | 파라미터 |
@@ -130,11 +131,13 @@
 | `participant_added` | `static/js/schedule/participants.js` | `addParticipant()` 성공 후 | `schedule_id, participant_count_after` |
 | `selections_saved` | `static/js/schedule/calendar.js` | `updateSelections()` 성공 후 | `schedule_id, days_count` |
 | `vote_cast` | `static/js/schedule/voting.js` (×2) | toggle 성공 후 | `target('location'\|'menu'), target_id, action('vote'\|'unvote')` |
+| `vote_cast` | `static/js/schedule/timeslots.js` | 시간 투표 toggle 성공 후 | `target('time'), target_id, action('vote'\|'unvote')` |
 | `run_created` | `templates/runners/admin/run-form.html` | form submit (생성 시만, `th:if="${run == null}"`) | `category` |
 | `attendance_marked` | `static/js/run-detail.js` | `response.ok` 분기 | `run_id, distance` |
 | `link_shared` | `static/js/schedule/utils.js` | clipboard / execCommand 성공 후 | `schedule_id, share_method` |
 | `location_added` | `static/js/schedule/voting.js` | `addLocation()` 성공 후 | `schedule_id, location_count_after` |
 | `menu_added` | `static/js/schedule/voting.js` | `addMenu()` 성공 후 | `schedule_id, menu_count_after` |
+| `time_slot_added` | `static/js/schedule/timeslots.js` | `addTimeSlot()` 성공 후 | `schedule_id, time_slot_count_after` |
 | `schedule_viewed` | `templates/schedule/view.html` (인라인) | DOMContentLoaded | `schedule_id, is_owner, participant_count` |
 | `owner_dashboard_viewed` | `templates/owner/dashboard.html` (인라인) | DOMContentLoaded (비동기 해시 후) | `owner_id_hash, schedule_count` |
 
@@ -163,3 +166,4 @@
 | 2026-05 | Looker Studio 파이프라인 구성 |
 | 2026-05 | troubleshooting/lighthouse-performance-audit.md B 항목 정정 (`G-ERBDZ6V6VN` 오진 → 실제는 GTM Tag ID, destination = `G-9QTMK4CDDF`) |
 | 2026-05-24 | datedate dataLayer 이벤트 5종 추가 (`link_shared`, `location_added`, `menu_added`, `schedule_viewed`, `owner_dashboard_viewed`) — GTM 매핑 (P0-1) 함께 갱신 필요 |
+| 2026-09-24 | 시간 투표 신설 — `time_slot_added` 추가, `vote_cast.target` 에 `'time'` 추가 — GTM 매핑 (P0-1) 함께 갱신 필요 |

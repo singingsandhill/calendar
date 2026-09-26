@@ -276,9 +276,15 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 
 - `InsightsService` + `InsightsController` → `/insights/trends.html` (집계 인기 통계)
 - `UseCaseController` → `/use-cases` 허브 인덱스(`index.html`, 광고 없음) + `/use-cases/{slug}` 상세(`detail.html` — 콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹, 동호회). 슬러그 단일 진실원 `UseCaseSlugs.ALL` (라우팅·사이트맵·푸터 자동 반영). 슬러그별 워크드 예시(`sample.*`)로 템플릿 차별화. 미지 슬러그는 HTTP 404 ([ADR datedate/domain/0008](docs/adr/datedate/domain/0008-unknown-content-slug-404.md)). `GET /tools` 는 `/tools/date-diff` 로 영구 리다이렉트.
-- `GuidesController` → `/guides` "모임 노하우" 에디토리얼 허브(`guides/index.html`, 광고 없음) + `/guides/{slug}` 기사 4편 — **기사별 전용 템플릿**(`guides/<slug>.html`), 검색의도형 장문(ko ≈3,900자/en ≈1,200단어). 단일 진실원 `GuideSlugs.ALL`(record: slug·published·modified — 사이트맵 lastmod·Article JSON-LD·바이라인 3곳의 원천, **기사 수정 시 `modified` 필수 갱신**). 미지 슬러그 404. 키 네임스페이스 `guides.*`(기존 `/guide` 페이지의 `guide.*` 와 별개) ([ADR common/seo/0011](docs/adr/common/seo/0011-guides-editorial-hub.md)).
+- `GuidesController` → `/guides` "모임 노하우" 에디토리얼 허브(`guides/index.html`, 광고 없음) + `/guides/{slug}` 기사 12편 — **기사별 전용 템플릿**(`guides/<slug>.html`), 검색의도형 장문(분량 하한 ko 3,800자/en 1,100단어 — `GuidesLocaleRenderingTest` 가드). 단일 진실원 `GuideSlugs.ALL`(record: slug·published·modified — 사이트맵 lastmod·Article JSON-LD·바이라인 3곳의 원천, **기사 수정 시 `modified` 필수 갱신**). 미지 슬러그 404. 키 네임스페이스 `guides.*`(기존 `/guide` 페이지의 `guide.*` 와 별개) ([ADR common/seo/0011](docs/adr/common/seo/0011-guides-editorial-hub.md)). `<title>`·og:title 은 `guides.article.<slug>.metaTitle` 우선(없으면 `title`) — 색인 페이지 제목 예산 ko 35자/en 60자, 브랜드 접미 포함 (`SerpTitleBudgetTest`, [ADR common/seo/0014](docs/adr/common/seo/0014-serp-title-budget-and-meta-title.md)).
 - `SeoService` — 페이지별 JSON-LD 스키마 포함 SEO 메타데이터 생성
 - `PopularityService` — 시간 가중 점수 기반 장소/메뉴 인기 순위 (노출 기준: 최소 2표 + 비속어 블록리스트 — [ADR 0006](docs/adr/datedate/domain/0006-popularity-exposure-criteria.md))
+- 시간 투표: `TimeSlotService` + `TimeSlotApiController` (`POST /api/schedules/{id}/time-slots`,
+  `POST /api/time-slots/{id}/votes`, `DELETE /api/time-slots/{id}/votes/{voterName}`) — 후보 =
+  dayIndex(`Participant.selections` 와 같은 인덱스) + 30분 단위 시간대(00:00~24:00, 자정 넘김 없음).
+  참여자 누군가 저장한 날만 허용(`Schedule.hasAvailabilityOn`, 아니면 400). 목록·겹침 차트는
+  `static/js/schedule/timeslots.js` 가 `SCHEDULE_DATA.timeSlots` 로 JS 렌더. 삭제 API·활동 기록 없음
+  ([ADR datedate/domain/0009](docs/adr/datedate/domain/0009-time-slot-vote.md))
 - 카카오 로그인 (선택적): `KakaoOAuth2UserService` → `AppUser` upsert, 오너 연결(first-claim), `UserActivity` 이벤트 기록
 - `RecapService` + `RecapController` → `GET /recap` (당해년 리다이렉트), `/recap/{year}` 연간 리캡,
   `POST /recap/{year}/share` 공유 토큰 발급, `/recap/share/{token}` 공개 공유 (ADR datedate/domain/0005)
@@ -385,7 +391,7 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 | `error/` | `4xx.html`, `5xx.html` |
 | `insights/` | `trends.html` |
 | `use-cases/` | `index.html` (허브 인덱스), `detail.html` (슬러그 기반 콘텐츠 페이지) |
-| `guides/` | `index.html` (모임 노하우 허브), 기사별 전용 템플릿 4개 (`how-to-pick-a-date.html` 등 — 루트 `guide.html` 과 별개 네임스페이스) |
+| `guides/` | `index.html` (모임 노하우 허브), 기사별 전용 템플릿 12개 (`how-to-pick-a-date.html` 등 — 루트 `guide.html` 과 별개 네임스페이스) |
 | (루트) | `index.html`, `guide.html`, `privacy.html`, `terms.html`, `about.html`, `faq.html` |
 
 ## Database
