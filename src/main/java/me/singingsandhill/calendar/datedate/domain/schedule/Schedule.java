@@ -124,6 +124,14 @@ public class Schedule {
                 .anyMatch(p -> p.getName().equalsIgnoreCase(name));
     }
 
+    /**
+     * 참여자 중 한 명이라도 해당 날짜를 가능한 날로 저장했는지 — 시간 투표 후보의 전제 조건.
+     */
+    public boolean hasAvailabilityOn(int dayIndex) {
+        return participants.stream()
+                .anyMatch(p -> p.getSelections().contains(dayIndex));
+    }
+
     public int nextColorIndex() {
         return participants.size();
     }

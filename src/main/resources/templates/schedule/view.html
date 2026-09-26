@@ -99,6 +99,27 @@
         <button class="btn btn-primary" data-action="selections.save" th:text="#{schedule.save}">저장</button>
     </div>
 
+    <!-- Time Voting Section — 목록·겹침 차트는 schedule/timeslots.js 가 SCHEDULE_DATA.timeSlots 로 렌더 -->
+    <div class="location-section time-section">
+        <h3 th:text="#{schedule.time.title}">시간 투표</h3>
+        <div class="location-add time-add">
+            <select id="timeDaySelect" th:aria-label="#{schedule.time.day.label}"></select>
+            <div class="time-range">
+                <select id="timeStartSelect" th:aria-label="#{schedule.time.start}"></select>
+                <span class="time-range-sep" aria-hidden="true">~</span>
+                <select id="timeEndSelect" th:aria-label="#{schedule.time.end}"></select>
+            </div>
+            <button class="btn btn-outline btn-sm" data-action="time.add" th:text="#{schedule.time.add}">추가</button>
+        </div>
+        <div class="time-overlap" id="timeOverlap" hidden>
+            <h4 class="time-overlap-title" th:text="#{schedule.time.overlap.title}">겹치는 시간</h4>
+            <div class="time-chart" id="timeOverlapChart"></div>
+        </div>
+        <div class="location-list" id="timeSlotList">
+            <p th:if="${schedule.timeSlots().isEmpty()}" class="empty-locations" th:text="#{schedule.time.empty}">아직 제안된 시간이 없습니다.</p>
+        </div>
+    </div>
+
     <!-- Location Voting Section -->
     <div class="location-section">
         <h3 th:text="#{schedule.location.title}">장소 투표</h3>
@@ -239,6 +260,18 @@
             }[# th:unless="${stat.last}"],[/]
             [/]
         ],
+        timeSlots: [
+            [# th:each="ts, stat : ${schedule.timeSlots()}"]
+            {
+                id: [[${ts.id()}]],
+                dayIndex: [[${ts.dayIndex()}]],
+                startMinute: [[${ts.startMinute()}]],
+                endMinute: [[${ts.endMinute()}]],
+                voters: [[${ts.voters()}]],
+                voteCount: [[${ts.voteCount()}]]
+            }[# th:unless="${stat.last}"],[/]
+            [/]
+        ],
         messages: {
             selectName: [[#{schedule.alert.selectName}]],
             locationRequired: [[#{schedule.alert.locationRequired}]],
@@ -247,7 +280,13 @@
             linkCopied: [[#{schedule.link.copied}]],
             linkCopyPrompt: [[#{schedule.link.copyPrompt}]],
             voteLabel: [[#{schedule.location.vote}]],
-            votesTemplate: [[#{schedule.votes('{0}')}]]
+            votesTemplate: [[#{schedule.votes('{0}')}]],
+            timeDayEmpty: [[#{schedule.time.day.empty}]],
+            timeEmpty: [[#{schedule.time.empty}]],
+            timeRangeInvalid: [[#{schedule.alert.timeRangeInvalid}]],
+            timeNoVotes: [[#{schedule.time.noVotes}]],
+            timeDayCountTemplate: [[#{schedule.time.dayCount('{0}')}]],
+            timeBestTemplate: [[#{schedule.time.best('{0}', '{1}')}]]
         }
     };
 </script>

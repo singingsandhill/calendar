@@ -170,6 +170,27 @@ const api = {
         return this.request(`/api/menus/${menuId}/votes/${encodeURIComponent(voterName)}`, {
             method: 'DELETE'
         });
+    },
+
+    // Time Slot API
+    async addTimeSlot(scheduleId, dayIndex, startMinute, endMinute) {
+        return this.request(`/api/schedules/${scheduleId}/time-slots`, {
+            method: 'POST',
+            body: JSON.stringify({ dayIndex, startMinute, endMinute })
+        });
+    },
+
+    async voteTimeSlot(timeSlotId, voterName) {
+        return this.request(`/api/time-slots/${timeSlotId}/votes`, {
+            method: 'POST',
+            body: JSON.stringify({ voterName })
+        });
+    },
+
+    async unvoteTimeSlot(timeSlotId, voterName) {
+        return this.request(`/api/time-slots/${timeSlotId}/votes/${encodeURIComponent(voterName)}`, {
+            method: 'DELETE'
+        });
     }
 };
 

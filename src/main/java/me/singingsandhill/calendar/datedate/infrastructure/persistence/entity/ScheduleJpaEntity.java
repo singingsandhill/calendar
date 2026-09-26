@@ -51,6 +51,10 @@ public class ScheduleJpaEntity {
     @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MenuJpaEntity> menus = new ArrayList<>();
 
+    // 일정 삭제 시 시간 투표 후보 cascade 삭제 전용 (FK 위반 방지) — 조회는 TimeSlotJpaRepository 경유
+    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TimeSlotJpaEntity> timeSlots = new ArrayList<>();
+
     protected ScheduleJpaEntity() {
     }
 

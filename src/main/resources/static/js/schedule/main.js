@@ -5,6 +5,7 @@ import {
     closeAddParticipantModal
 } from './participants.js';
 import { bindVotingInputs, addLocation, voteLocation, addMenu, voteMenu } from './voting.js';
+import { initTimeSlots, refreshDayOptions, addTimeSlot, voteTimeSlot } from './timeslots.js';
 import { copyLink } from './utils.js';
 
 const ONBOARDING_DISMISSED_KEY = 'datedate.onboarding.dismissed';
@@ -40,7 +41,8 @@ function initOnboardingBanner() {
 
 const actions = {
     'selections.reset': () => resetSelections(),
-    'selections.save': () => saveSelections(),
+    // 저장된 날짜가 바뀌면 시간 투표의 날짜 드롭다운(누군가 고른 날)도 갱신
+    'selections.save': () => saveSelections().then(refreshDayOptions),
     'participant.openModal': () => openAddParticipantModal(),
     'participant.closeModal': () => closeAddParticipantModal(),
     'link.copy': () => copyLink(),
@@ -48,6 +50,8 @@ const actions = {
     'location.vote': (target) => voteLocation(target),
     'menu.add': () => addMenu(),
     'menu.vote': (target) => voteMenu(target),
+    'time.add': () => addTimeSlot(),
+    'time.vote': (target) => voteTimeSlot(target),
     'onboarding.dismiss': () => {
         setBannerOpen(false);
         lsSet(ONBOARDING_DISMISSED_KEY, 'true');
@@ -72,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCalendar();
     bindParticipantForm();
     bindVotingInputs();
+    initTimeSlots();
     initOnboardingBanner();
     document.addEventListener('click', dispatch);
 });

@@ -18,11 +18,13 @@ import jakarta.validation.Valid;
 import me.singingsandhill.calendar.datedate.application.service.LocationService;
 import me.singingsandhill.calendar.datedate.application.service.MenuService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
+import me.singingsandhill.calendar.datedate.application.service.TimeSlotService;
 import me.singingsandhill.calendar.datedate.application.service.UserActivityService;
 import me.singingsandhill.calendar.datedate.domain.activity.ActivityType;
 import me.singingsandhill.calendar.datedate.domain.location.Location;
 import me.singingsandhill.calendar.datedate.domain.menu.Menu;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
+import me.singingsandhill.calendar.datedate.domain.timeslot.TimeSlot;
 import me.singingsandhill.calendar.datedate.presentation.dto.request.ScheduleCreateRequest;
 import me.singingsandhill.calendar.datedate.presentation.dto.request.ScheduleUpdateRequest;
 import me.singingsandhill.calendar.datedate.presentation.dto.response.ScheduleDetailResponse;
@@ -36,13 +38,16 @@ public class ScheduleApiController {
     private final ScheduleService scheduleService;
     private final LocationService locationService;
     private final MenuService menuService;
+    private final TimeSlotService timeSlotService;
     private final UserActivityService userActivityService;
 
     public ScheduleApiController(ScheduleService scheduleService, LocationService locationService,
-                                  MenuService menuService, UserActivityService userActivityService) {
+                                  MenuService menuService, TimeSlotService timeSlotService,
+                                  UserActivityService userActivityService) {
         this.scheduleService = scheduleService;
         this.locationService = locationService;
         this.menuService = menuService;
+        this.timeSlotService = timeSlotService;
         this.userActivityService = userActivityService;
     }
 
@@ -54,7 +59,8 @@ public class ScheduleApiController {
         Schedule schedule = scheduleService.getScheduleByOwnerAndYearMonth(ownerId, year, month);
         List<Location> locations = locationService.getLocationsByScheduleId(schedule.getId());
         List<Menu> menus = menuService.getMenusByScheduleId(schedule.getId());
-        return ResponseEntity.ok(ScheduleDetailResponse.from(schedule, locations, menus));
+        List<TimeSlot> timeSlots = timeSlotService.getTimeSlotsByScheduleId(schedule.getId());
+        return ResponseEntity.ok(ScheduleDetailResponse.from(schedule, locations, menus, timeSlots));
     }
 
     @PostMapping

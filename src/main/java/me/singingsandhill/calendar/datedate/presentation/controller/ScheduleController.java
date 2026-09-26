@@ -16,9 +16,11 @@ import me.singingsandhill.calendar.datedate.application.service.LocationService;
 import me.singingsandhill.calendar.datedate.application.service.MenuService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
 import me.singingsandhill.calendar.datedate.application.service.SeoService;
+import me.singingsandhill.calendar.datedate.application.service.TimeSlotService;
 import me.singingsandhill.calendar.datedate.domain.location.Location;
 import me.singingsandhill.calendar.datedate.domain.menu.Menu;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
+import me.singingsandhill.calendar.datedate.domain.timeslot.TimeSlot;
 import me.singingsandhill.calendar.datedate.presentation.dto.response.ScheduleDetailResponse;
 
 @Controller
@@ -27,16 +29,19 @@ public class ScheduleController {
     private final ScheduleService scheduleService;
     private final LocationService locationService;
     private final MenuService menuService;
+    private final TimeSlotService timeSlotService;
     private final SeoService seoService;
     private final LocaleLinks localeLinks;
 
     public ScheduleController(ScheduleService scheduleService,
                                LocationService locationService, MenuService menuService,
+                               TimeSlotService timeSlotService,
                                SeoService seoService,
                                LocaleLinks localeLinks) {
         this.scheduleService = scheduleService;
         this.locationService = locationService;
         this.menuService = menuService;
+        this.timeSlotService = timeSlotService;
         this.seoService = seoService;
         this.localeLinks = localeLinks;
     }
@@ -69,7 +74,8 @@ public class ScheduleController {
         Schedule schedule = scheduleOpt.get();
         List<Location> locations = locationService.getLocationsByScheduleId(schedule.getId());
         List<Menu> menus = menuService.getMenusByScheduleId(schedule.getId());
-        model.addAttribute("schedule", ScheduleDetailResponse.from(schedule, locations, menus));
+        List<TimeSlot> timeSlots = timeSlotService.getTimeSlotsByScheduleId(schedule.getId());
+        model.addAttribute("schedule", ScheduleDetailResponse.from(schedule, locations, menus, timeSlots));
 
         return "schedule/view";
     }

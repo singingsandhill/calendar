@@ -3,6 +3,8 @@ package me.singingsandhill.calendar.datedate.domain.schedule;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -122,5 +124,29 @@ class ScheduleTest {
 
         assertThatThrownBy(() -> schedule.addParticipant(new Participant(1L, "alice", 1)))
                 .isInstanceOf(DuplicateParticipantException.class);
+    }
+
+    @Test
+    @DisplayName("hasAvailabilityOn: 참여자 중 한 명이라도 저장한 날이면 true, 아니면 false")
+    void hasAvailabilityOn_anyParticipantSelection() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+        Participant alice = new Participant(1L, "Alice", 0);
+        alice.updateSelections(List.of(5, 12), schedule.getTotalDays());
+        Participant bob = new Participant(1L, "Bob", 1);
+        bob.updateSelections(List.of(20), schedule.getTotalDays());
+        schedule.addParticipant(alice);
+        schedule.addParticipant(bob);
+
+        assertThat(schedule.hasAvailabilityOn(12)).isTrue();
+        assertThat(schedule.hasAvailabilityOn(20)).isTrue();
+        assertThat(schedule.hasAvailabilityOn(13)).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasAvailabilityOn: 참여자가 없으면 어떤 날도 false")
+    void hasAvailabilityOn_noParticipants_false() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+
+        assertThat(schedule.hasAvailabilityOn(1)).isFalse();
     }
 }

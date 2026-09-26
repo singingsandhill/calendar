@@ -14,6 +14,7 @@ export const schedule = {
 export const participants = data.participants;
 export const locations = data.locations;
 export const menus = data.menus;
+export const timeSlots = data.timeSlots;
 export const messages = data.messages;
 
 export function formatVotes(count) {
