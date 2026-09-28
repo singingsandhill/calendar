@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 단, **2단계 고정 결정은 [0012](0012-breadcrumb-hub-hierarchy.md) 로 Superseded** (허브가 있는 활용 사례·기사는 3단계; 전 항목 `item` 규칙은 유효) |
 | 날짜 | 2026-07-30 |
 | 도메인 | common |
 | 관심사 | SEO |
@@ -77,6 +77,7 @@ breadcrumb 을 **홈 → 현재 페이지 2단계로 고정**하고, **마지막
   - 검색 결과 breadcrumb 에서 `활용 사례` / `도구` 그룹 표기가 사라진다.
 - **후속:**
   - `/use-cases`·`/tools` 허브 페이지를 만들면 3단계 복원 + 이 ADR Superseded 검토.
+    → 2026-09-24 `/use-cases`·`/guides` 허브 기준으로 실행: [ADR-0012](0012-breadcrumb-hub-hierarchy.md).
 
 ## References
 

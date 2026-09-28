@@ -116,8 +116,18 @@ public class SeoService {
         return m("seo.common.priceCurrency");
     }
 
+    /** 홈 → 현재 페이지 2단계 BreadcrumbList. 허브가 없는 페이지용 — {@link #breadcrumbJsonLd(String[]...)} 참고. */
+    private String breadcrumbJsonLd(String leafName, String leafPath) {
+        return breadcrumbJsonLd(new String[] {leafName, leafPath});
+    }
+
+    /** 홈 → 허브 → 현재 페이지 3단계 BreadcrumbList. 허브가 있는 활용 사례·모임 노하우 상세용 (ADR common/seo/0012). */
+    private String breadcrumbJsonLd(String hubName, String hubPath, String leafName, String leafPath) {
+        return breadcrumbJsonLd(new String[] {hubName, hubPath}, new String[] {leafName, leafPath});
+    }
+
     /**
-     * 홈 → 현재 페이지 2단계 BreadcrumbList 객체를 만든다.
+     * 홈을 첫 항목으로 두고 {@code {name, path}} 크럼을 순서대로 이은 BreadcrumbList 객체를 만든다.
      *
      * <p>Google 은 <em>마지막을 제외한</em> 모든 {@code ListItem} 에 {@code item} 을 요구한다. 여기서는
      * 마지막 항목까지 전부 채워 계층이 늘어나도 규칙이 깨지지 않게 한다 — 중간 항목에 {@code item} 이 없어
@@ -125,32 +135,33 @@ public class SeoService {
      *
      * <p>URL 은 같은 JSON-LD 안의 {@code "url"} 필드와 동일하게 {@code baseUrl + path} (ko 정규 URL) 을 쓴다.
      *
-     * @param leafName 이스케이프 전 원문 — 내부에서 {@link #jsonEscape} 처리한다
-     * @param leafPath {@code /} 로 시작하는 페이지 경로
+     * @param crumbs {@code {이스케이프 전 이름, "/" 로 시작하는 경로}} — 이름은 내부에서 {@link #jsonEscape} 처리한다
      */
-    private String breadcrumbJsonLd(String leafName, String leafPath) {
-        return """
-            {
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                "itemListElement": [
+    private String breadcrumbJsonLd(String[]... crumbs) {
+        StringBuilder items = new StringBuilder("""
                     {
                         "@type": "ListItem",
                         "position": 1,
                         "name": "%s",
                         "item": "%s/"
-                    },
+                    }""".formatted(mJson("seo.breadcrumb.home"), baseUrl));
+        for (int i = 0; i < crumbs.length; i++) {
+            items.append(",\n").append("""
                     {
                         "@type": "ListItem",
-                        "position": 2,
+                        "position": %d,
                         "name": "%s",
                         "item": "%s%s"
-                    }
+                    }""".formatted(i + 2, jsonEscape(crumbs[i][0]), baseUrl, crumbs[i][1]));
+        }
+        return """
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+            %s
                 ]
-            }""".formatted(
-                mJson("seo.breadcrumb.home"), baseUrl,
-                jsonEscape(leafName), baseUrl, leafPath
-            );
+            }""".formatted(items);
     }
 
     // ===== 페이지별 SEO =====
@@ -166,7 +177,7 @@ public class SeoService {
                 "alternateName": ["약속 잡기", "Group Scheduling"],
                 "description": "%s",
                 "url": "%s",
-                "applicationCategory": "SchedulingApplication",
+                "applicationCategory": "UtilitiesApplication",
                 "operatingSystem": "All",
                 "offers": {
                     "@type": "Offer",
@@ -199,7 +210,11 @@ public class SeoService {
                 "name": "%s",
                 "url": "%s",
                 "logo": "%s/og-image.png",
-                "description": "%s"
+                "description": "%s",
+                "email": "cheongyakplanet@gmail.com",
+                "sameAs": [
+                    "https://github.com/singingsandhill"
+                ]
             },
             {
                 "@context": "https://schema.org",
@@ -575,6 +590,9 @@ public class SeoService {
         String path = "/guides/" + slug;
         String title = m("guides.article." + slug + ".title");
         String summary = m("guides.article." + slug + ".summary");
+        // h1·headline 은 긴 제목을 유지하고, <title>·og:title 만 SERP 예산 안의 metaTitle 로 (ADR common/seo/0014)
+        String metaTitle = mOrEmpty("guides.article." + slug + ".metaTitle");
+        String serpTitle = (metaTitle.isEmpty() ? title : metaTitle) + " | " + BRAND_NAME;
 
         String jsonLd = """
             [{
@@ -615,11 +633,11 @@ public class SeoService {
                 baseUrl, slug,
                 baseUrl,
                 ogLocale().replace('_', '-'),
-                breadcrumbJsonLd(title, path)
+                breadcrumbJsonLd(m("seo.breadcrumb.guides"), "/guides", title, path)
             );
 
         return SeoMetadata.builder()
-            .title(title + " | " + BRAND_NAME)
+            .title(serpTitle)
             .description(summary)
             .keywords(m("guides.article." + slug + ".keywords"))
             .robots("index, follow")
@@ -627,7 +645,7 @@ public class SeoService {
             .canonicalKo(canonicalKo(path))
             .canonicalEn(canonicalEn(path))
             .ogType("article")
-            .ogTitle(title + " | " + BRAND_NAME)
+            .ogTitle(serpTitle)
             .ogDescription(summary)
             .ogImage(baseUrl + DEFAULT_OG_IMAGE)
             .ogLocale(ogLocale())
@@ -665,7 +683,7 @@ public class SeoService {
                 jsonEscape(title), BRAND_NAME,
                 jsonEscape(description),
                 baseUrl, slug,
-                breadcrumbJsonLd(title, path),
+                breadcrumbJsonLd(m("seo.breadcrumb.useCases"), "/use-cases", title, path),
                 trailingObjects
             );
 
@@ -812,9 +830,14 @@ public class SeoService {
                     "url": "%s",
                     "logo": "%s%s",
                     "description": "%s",
+                    "email": "cheongyakplanet@gmail.com",
+                    "sameAs": [
+                        "https://github.com/singingsandhill"
+                    ],
                     "contactPoint": {
                         "@type": "ContactPoint",
                         "url": "%s",
+                        "email": "cheongyakplanet@gmail.com",
                         "contactType": "customer support",
                         "availableLanguage": ["Korean", "English"]
                     }
@@ -922,7 +945,8 @@ public class SeoService {
             },
             %s]
             """.formatted(
-                buildFaqMainEntity(6, "seo.faq"),
+                // 화면 FAQ 와 같은 faq.* 키 — 구조화 데이터 문구가 가시 콘텐츠와 어긋나지 않게
+                buildFaqMainEntity(8, "faq"),
                 breadcrumbJsonLd(m("seo.breadcrumb.faq"), path)
             );
 

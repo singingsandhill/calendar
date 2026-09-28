@@ -3,9 +3,17 @@
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
-<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <main class="container guides-page">
+    <!-- 홈 → 허브 → 현재: JSON-LD BreadcrumbList 와 같은 계층 (ADR common/seo/0012) -->
+    <nav class="breadcrumb" aria-label="breadcrumb">
+        <a th:href="${@localeLinks.href('/')}" th:text="#{seo.breadcrumb.home}">홈</a>
+        <span class="separator">/</span>
+        <a th:href="${@localeLinks.href('/guides')}" th:text="#{seo.breadcrumb.guides}">모임 노하우</a>
+        <span class="separator">/</span>
+        <span class="current" th:text="#{guides.article.how-to-pick-a-date.navLabel}">how-to-pick-a-date</span>
+    </nav>
     <article class="guides-article">
         <header class="guides-hero animate-on-scroll">
             <h1 th:text="#{guides.article.how-to-pick-a-date.title}">모임 날짜 정하기</h1>
@@ -135,17 +143,8 @@
     </section>
 </main>
 
-<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 
-<script>
-// FAQ 토글 (guide.html / index.html 과 동일 메커니즘 — 전역 .faq-item.open CSS 사용)
-document.querySelectorAll('.faq-question').forEach(button => {
-    button.addEventListener('click', () => {
-        const faqItem = button.parentElement;
-        const isOpen = faqItem.classList.toggle('open');
-        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    });
-});
-</script>
+<script defer th:src="@{/js/faq-toggle.js}"></script>
 </body>
 </html>

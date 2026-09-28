@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,6 +109,33 @@ class UseCaseLocaleRenderingTest {
                 .contains("/use-cases/travel-planning")
                 .contains("/use-cases/study-group")
                 .contains("/use-cases/club-activity");
+    }
+
+    @Test
+    @DisplayName("use-case 상세는 허브(/use-cases)로 가는 가시 breadcrumb 를 양 로케일로 렌더한다 (ADR common/seo/0012)")
+    void detailBreadcrumbLinksHub() throws Exception {
+        for (String slug : UseCaseSlugs.ALL) {
+            String ko = mockMvc.perform(get("/use-cases/" + slug))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(breadcrumbNav(ko)).as("%s ko", slug)
+                    .contains("href=\"/use-cases\"")
+                    .contains("href=\"/\"");
+
+            String en = mockMvc.perform(get("/use-cases/" + slug).param("lang", "en"))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(breadcrumbNav(en)).as("%s en", slug)
+                    .contains("href=\"/use-cases?lang=en\"")
+                    .contains("href=\"/?lang=en\"");
+        }
+    }
+
+    /** 가시 breadcrumb {@code <nav class="breadcrumb">} 블록. 없으면 빈 문자열. */
+    private static String breadcrumbNav(String html) {
+        Matcher m = Pattern
+                .compile("(?s)<nav class=\"breadcrumb\".*?</nav>").matcher(html);
+        return m.find() ? m.group() : "";
     }
 
     private static String extractBody(String html) {

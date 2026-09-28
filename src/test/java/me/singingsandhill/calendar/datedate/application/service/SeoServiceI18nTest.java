@@ -466,4 +466,93 @@ class SeoServiceI18nTest {
             .as("[%s] %s — BreadcrumbList 가 없다", locale, seo.canonical())
             .isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("활용 사례·모임 노하우 상세는 홈 → 허브 → 페이지 3단계 BreadcrumbList 를 낸다 (ADR common/seo/0012)")
+    void breadcrumbList_useCaseAndGuideArticlesIncludeHub() throws Exception {
+        MessageSource messageSource = buildMessageSource();
+        Locale[] locales = { Locale.KOREAN, Locale.ENGLISH };
+        for (Locale locale : locales) {
+            LocaleContextHolder.setLocale(locale);
+            String useCasesHub = messageSource.getMessage("seo.breadcrumb.useCases", null, locale);
+            String guidesHub = messageSource.getMessage("seo.breadcrumb.guides", null, locale);
+
+            for (String slug : UseCaseSlugs.ALL) {
+                assertHubCrumb(locale, service.getUseCaseSeo(slug),
+                        useCasesHub, "/use-cases", "/use-cases/" + slug);
+            }
+            for (GuideSlug g : GuideSlugs.ALL) {
+                assertHubCrumb(locale, service.getGuideArticleSeo(g.slug()),
+                        guidesHub, "/guides", "/guides/" + g.slug());
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("/faq FAQPage JSON-LD 는 화면의 faq.q1~q8/a1~a8 문구와 같다 (구조화 데이터 ↔ 가시 콘텐츠 일치)")
+    void faqSeo_jsonLdMatchesVisibleFaq() throws Exception {
+        MessageSource messageSource = buildMessageSource();
+        for (Locale locale : new Locale[] { Locale.KOREAN, Locale.ENGLISH }) {
+            LocaleContextHolder.setLocale(locale);
+            JsonNode faqPage = null;
+            for (JsonNode node : json.readTree(service.getFaqSeo().jsonLd())) {
+                if ("FAQPage".equals(node.path("@type").asText())) {
+                    faqPage = node;
+                }
+            }
+            assertThat(faqPage).as("[%s] FAQPage 가 없다", locale).isNotNull();
+
+            JsonNode questions = faqPage.path("mainEntity");
+            assertThat(questions.size()).as("[%s] 화면 FAQ 8문항 전부", locale).isEqualTo(8);
+            for (int i = 0; i < questions.size(); i++) {
+                int n = i + 1;
+                assertThat(questions.get(i).path("name").asText()).as("[%s] q%d", locale, n)
+                    .isEqualTo(messageSource.getMessage("faq.q" + n, null, locale));
+                assertThat(questions.get(i).path("acceptedAnswer").path("text").asText()).as("[%s] a%d", locale, n)
+                    .isEqualTo(messageSource.getMessage("faq.a" + n, null, locale));
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("WebApplication JSON-LD 의 applicationCategory 는 Google 지원 값이다")
+    void webApplicationJsonLd_usesSupportedCategory() throws Exception {
+        // developers.google.com/search/docs/appearance/structured-data/software-app (2026-09-24 조회)
+        List<String> supported = List.of(
+            "GameApplication", "SocialNetworkingApplication", "TravelApplication", "ShoppingApplication",
+            "SportsApplication", "LifestyleApplication", "BusinessApplication", "DesignApplication",
+            "DeveloperApplication", "DriverApplication", "EducationalApplication", "HealthApplication",
+            "FinanceApplication", "SecurityApplication", "BrowserApplication", "CommunicationApplication",
+            "DesktopEnhancementApplication", "EntertainmentApplication", "MultimediaApplication",
+            "HomeApplication", "UtilitiesApplication", "ReferenceApplication");
+        for (Locale locale : new Locale[] { Locale.KOREAN, Locale.ENGLISH }) {
+            LocaleContextHolder.setLocale(locale);
+            for (SeoMetadata seo : List.of(service.getHomeSeo(), service.getDateDiffSeo())) {
+                for (JsonNode node : json.readTree(seo.jsonLd())) {
+                    if ("WebApplication".equals(node.path("@type").asText())) {
+                        assertThat(node.path("applicationCategory").asText())
+                            .as("[%s] %s", locale, seo.canonical())
+                            .isIn(supported);
+                    }
+                }
+            }
+        }
+    }
+
+    private void assertHubCrumb(Locale locale, SeoMetadata seo,
+                                String hubName, String hubPath, String leafPath) throws Exception {
+        JsonNode elements = null;
+        for (JsonNode node : json.readTree(seo.jsonLd())) {
+            if ("BreadcrumbList".equals(node.path("@type").asText())) {
+                elements = node.path("itemListElement");
+            }
+        }
+        String where = "[%s] %s".formatted(locale, leafPath);
+        assertThat(elements).as("%s — BreadcrumbList 가 없다", where).isNotNull();
+        assertThat(elements.size()).as("%s — 홈 → 허브 → 페이지 3단계", where).isEqualTo(3);
+        assertThat(elements.get(0).path("item").asText()).as(where).isEqualTo(BASE_URL + "/");
+        assertThat(elements.get(1).path("name").asText()).as("%s — 허브 이름", where).isEqualTo(hubName);
+        assertThat(elements.get(1).path("item").asText()).as("%s — 허브 URL", where).isEqualTo(BASE_URL + hubPath);
+        assertThat(elements.get(2).path("item").asText()).as("%s — 현재 페이지 URL", where).isEqualTo(BASE_URL + leafPath);
+    }
 }

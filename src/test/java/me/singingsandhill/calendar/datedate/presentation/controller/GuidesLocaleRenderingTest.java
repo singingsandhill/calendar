@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -38,12 +40,20 @@ class GuidesLocaleRenderingTest {
     private static final int KO_MIN_VISIBLE_CHARS = 3_800;
     private static final int EN_MIN_VISIBLE_WORDS = 1_100;
 
-    /** slug → {고유 ko 마커, 고유 en 마커}. 4개 기사 간 서로 겹치지 않는 문구여야 한다. */
-    private static final Map<String, String[]> MARKERS = Map.of(
-            "how-to-pick-a-date", new String[] {"리드타임", "lead time"},
-            "scheduling-methods-compared", new String[] {"준비 비용", "spreadsheet"},
-            "scheduling-etiquette", new String[] {"노쇼", "RSVP"},
-            "group-poll-best-practices", new String[] {"가지치기", "anchoring"}
+    /** slug → {고유 ko 마커, 고유 en 마커}. 12개 기사 간 서로 겹치지 않는 문구여야 한다. */
+    private static final Map<String, String[]> MARKERS = Map.ofEntries(
+            Map.entry("how-to-pick-a-date", new String[] {"리드타임", "lead time"}),
+            Map.entry("scheduling-methods-compared", new String[] {"준비 비용", "spreadsheet"}),
+            Map.entry("scheduling-etiquette", new String[] {"노쇼", "RSVP"}),
+            Map.entry("group-poll-best-practices", new String[] {"가지치기", "anchoring"}),
+            Map.entry("timezone-coordination", new String[] {"황금 겹침 시간대", "golden overlap"}),
+            Map.entry("annual-dinner-scheduling", new String[] {"골든 위크", "peak booking window"}),
+            Map.entry("wedding-invitation-gathering", new String[] {"D-30 골든타임", "D-30 window"}),
+            Map.entry("study-team-project-management", new String[] {"공강 시간표", "empty class hours"}),
+            Map.entry("calendar-vs-poll-comparison", new String[] {"폐쇄형 캘린더", "closed calendar ecosystem"}),
+            Map.entry("meeting-place-and-budget", new String[] {"중간 지점 계산", "geographic midpoint"}),
+            Map.entry("weekend-vs-weekday-meetup", new String[] {"회복 버퍼", "recovery buffer"}),
+            Map.entry("last-minute-cancellation-etiquette", new String[] {"대안 일시 3개", "three alternative slots"})
     );
 
     @Autowired
@@ -149,7 +159,7 @@ class GuidesLocaleRenderingTest {
     }
 
     @Test
-    @DisplayName("홈 푸터가 모든 guides 기사 링크를 노출한다 (GuideNavAdvice + footer-minimal)")
+    @DisplayName("홈 푸터가 모든 guides 기사 링크를 노출한다 (GuideNavAdvice + 공용 footer)")
     void footerListsAllGuideArticles() throws Exception {
         MvcResult result = mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
@@ -159,6 +169,32 @@ class GuidesLocaleRenderingTest {
         for (String slug : GuideSlugs.slugs()) {
             assertThat(html).contains("/guides/" + slug);
         }
+    }
+
+    @ParameterizedTest(name = "[{index}] /guides/{0} breadcrumb")
+    @MethodSource("slugs")
+    @DisplayName("기사는 허브(/guides)로 가는 가시 breadcrumb 를 양 로케일로 렌더한다 (ADR common/seo/0012)")
+    void articleBreadcrumbLinksHub(String slug) throws Exception {
+        String ko = mockMvc.perform(get("/guides/" + slug))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(breadcrumbNav(ko)).as("%s ko", slug)
+                .contains("href=\"/guides\"")
+                .contains("href=\"/\"");
+
+        String en = mockMvc.perform(get("/guides/" + slug).param("lang", "en"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(breadcrumbNav(en)).as("%s en", slug)
+                .contains("href=\"/guides?lang=en\"")
+                .contains("href=\"/?lang=en\"");
+    }
+
+    /** 가시 breadcrumb {@code <nav class="breadcrumb">} 블록. 없으면 빈 문자열. */
+    private static String breadcrumbNav(String html) {
+        Matcher m = Pattern
+                .compile("(?s)<nav class=\"breadcrumb\".*?</nav>").matcher(html);
+        return m.find() ? m.group() : "";
     }
 
     /** body 에서 script/style 블록과 태그를 제거한 가시 텍스트. */

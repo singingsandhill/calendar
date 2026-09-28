@@ -3,9 +3,18 @@
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
-<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <main class="container use-case-page">
+    <!-- 홈 → 허브 → 현재: JSON-LD BreadcrumbList 와 같은 계층 (ADR common/seo/0012) -->
+    <nav class="breadcrumb" aria-label="breadcrumb">
+        <a th:href="${@localeLinks.href('/')}" th:text="#{seo.breadcrumb.home}">홈</a>
+        <span class="separator">/</span>
+        <a th:href="${@localeLinks.href('/use-cases')}" th:text="#{seo.breadcrumb.useCases}">활용 사례</a>
+        <span class="separator">/</span>
+        <span class="current" th:text="#{'seo.useCase.' + ${currentSlug} + '.navLabel'}">친구 모임</span>
+    </nav>
+
     <!-- Hero (title + description) — always rendered -->
     <section class="use-case-hero animate-on-scroll">
         <h1 th:text="#{'seo.useCase.' + ${currentSlug} + '.title'}">Use Case</h1>
@@ -130,6 +139,6 @@
     </section>
 </main>
 
-<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 </body>
 </html>

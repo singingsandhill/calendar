@@ -1,7 +1,7 @@
 # Common Package
 
-> 결정 근거: [`docs/adr/common/`](../../../../../../../docs/adr/common/) — SEO 7개,
-> i18n 3개, error-handling 1개, security 5개 ADR.
+> 결정 근거: [`docs/adr/common/`](../../../../../../../docs/adr/common/) — SEO 14개,
+> i18n 3개, error-handling 1개, security 6개, infrastructure 3개 ADR.
 
 ## BusinessException Pattern
 
