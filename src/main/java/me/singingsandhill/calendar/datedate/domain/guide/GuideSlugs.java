@@ -21,7 +21,23 @@ public final class GuideSlugs {
             new GuideSlug("scheduling-etiquette",
                     java.time.LocalDate.of(2026, 8, 23), java.time.LocalDate.of(2026, 8, 23)),
             new GuideSlug("group-poll-best-practices",
-                    java.time.LocalDate.of(2026, 8, 23), java.time.LocalDate.of(2026, 8, 23))
+                    java.time.LocalDate.of(2026, 8, 23), java.time.LocalDate.of(2026, 8, 23)),
+            new GuideSlug("timezone-coordination",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24)),
+            new GuideSlug("annual-dinner-scheduling",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24)),
+            new GuideSlug("wedding-invitation-gathering",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24)),
+            new GuideSlug("study-team-project-management",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24)),
+            new GuideSlug("calendar-vs-poll-comparison",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24)),
+            new GuideSlug("meeting-place-and-budget",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24)),
+            new GuideSlug("weekend-vs-weekday-meetup",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24)),
+            new GuideSlug("last-minute-cancellation-etiquette",
+                    java.time.LocalDate.of(2026, 9, 24), java.time.LocalDate.of(2026, 9, 24))
     );
 
     private GuideSlugs() {

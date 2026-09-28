@@ -3,7 +3,7 @@
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
-<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <main class="container policy-page">
     <section class="policy-hero animate-on-scroll">
@@ -43,6 +43,10 @@
         <article class="policy-section">
             <h2 th:text="#{about.section.contact.title}">Contact and feedback</h2>
             <p th:text="#{about.section.contact.body}">Body</p>
+            <p class="about-email">
+                <span th:text="#{about.section.contact.emailLabel}">Email</span>:
+                <a href="mailto:cheongyakplanet@gmail.com">cheongyakplanet@gmail.com</a>
+            </p>
             <p>
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
                    target="_blank" rel="noopener noreferrer"
@@ -58,6 +62,6 @@
     </section>
 </main>
 
-<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 </body>
 </html>

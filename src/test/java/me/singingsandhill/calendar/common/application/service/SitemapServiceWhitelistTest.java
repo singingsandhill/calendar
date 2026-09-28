@@ -37,6 +37,10 @@ class SitemapServiceWhitelistTest {
             "/guides", "/guides/how-to-pick-a-date",
             "/guides/scheduling-methods-compared", "/guides/scheduling-etiquette",
             "/guides/group-poll-best-practices",
+            "/guides/timezone-coordination", "/guides/annual-dinner-scheduling",
+            "/guides/wedding-invitation-gathering", "/guides/study-team-project-management",
+            "/guides/calendar-vs-poll-comparison", "/guides/meeting-place-and-budget",
+            "/guides/weekend-vs-weekday-meetup", "/guides/last-minute-cancellation-etiquette",
             "/use-cases/friend-meetup", "/use-cases/team-meeting",
             "/use-cases/travel-planning", "/use-cases/study-group",
             "/use-cases/club-activity");

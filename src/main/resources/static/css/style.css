@@ -192,12 +192,17 @@ a:focus-visible {
 /* ======================================
    NAVBAR - Minimal Style (Garriock)
    ====================================== */
-.navbar {
-    background-color: var(--bg-white);
-    box-shadow: var(--shadow);
+/* sticky 는 <header class="site-header"> 에 둔다 — nav 에 두면 부모 <header> 높이가 nav 와 같아
+   실제로 고정되지 않는다. 홈 오버레이(.navbar-minimal)는 fixed 라 이 규칙과 무관하다 */
+.site-header {
     position: sticky;
     top: 0;
     z-index: 1000;
+}
+
+.navbar {
+    background-color: var(--bg-white);
+    box-shadow: var(--shadow);
 }
 
 /* Navbar Minimal - 투명 배경, 스크롤 시 변경 */
@@ -244,35 +249,6 @@ a:focus-visible {
 }
 
 .nav-link {
-    color: var(--text-color);
-    text-decoration: none;
-    font-weight: 500;
-    padding: 0.5rem 0;
-    position: relative;
-    transition: color 0.2s;
-}
-
-.nav-link:hover {
-    color: var(--primary-color);
-}
-
-.nav-link::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background-color: var(--primary-color);
-    transition: width 0.2s;
-}
-
-.nav-link:hover::after {
-    width: 100%;
-}
-
-/* Nav Link Animated - Garriock style (좌->우 확장) */
-.nav-link-animated {
     position: relative;
     color: var(--text-color);
     text-decoration: none;
@@ -282,11 +258,12 @@ a:focus-visible {
     transition: color var(--duration-fast);
 }
 
-.nav-link-animated:hover {
+.nav-link:hover {
     color: var(--primary-color);
 }
 
-.nav-link-animated::after {
+/* hover 밑줄 좌->우 spring 확장 — 구 .nav-link-animated 를 단일 링크 클래스로 흡수 (ADR datedate/frontend/0004) */
+.nav-link::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -299,7 +276,7 @@ a:focus-visible {
     transition: transform 0.3s var(--ease-spring);
 }
 
-.nav-link-animated:hover::after {
+.nav-link:hover::after {
     transform: scaleX(1);
 }
 
@@ -721,80 +698,185 @@ a:focus-visible {
 }
 
 /* ======================================
-   FOOTER MINIMAL - Garriock Style
+   SITE FOOTER — 전 페이지 공용 단일 푸터 (ADR datedate/frontend/0004)
+   좌측 정렬선 = 헤더 .navbar-content (max-width 1200px, 좌우 여백 동일)
    ====================================== */
-.footer-minimal {
-    padding: var(--section-padding) 2rem;
-    text-align: center;
-    background: var(--bg-light);
-    border-top: 1px solid var(--border-color);
+.site-footer {
+    --footer-gutter: 2rem;
+    margin-top: 2rem;
+    background: var(--bg-white);
+    border-top: 1px solid var(--border-light);
+    font-family: var(--font-sans);
 }
 
-.footer-minimal .footer-logo {
+.site-footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3.5rem var(--footer-gutter) 2.5rem;
+    display: grid;
+    grid-template-columns: minmax(13rem, 1.2fr) repeat(3, minmax(0, 1fr)) minmax(0, 2.6fr);
+    gap: 2.5rem 2rem;
+    align-items: start;
+}
+
+.site-footer-logo {
+    display: block;
     font-family: var(--font-serif);
     font-size: 1.5rem;
     font-weight: 600;
+    line-height: 1.2;
     color: var(--primary-color);
-    margin-bottom: 1.5rem;
-    display: block;
 }
 
-.footer-links {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
+.site-footer-tagline,
+.site-footer-contact {
+    font-size: 0.875rem;
+    color: var(--text-light);
 }
 
-.footer-sections {
-    display: flex;
-    justify-content: center;
-    gap: 3rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
+.site-footer-tagline {
+    margin-top: 0.75rem;
 }
 
-.footer-section {
-    text-align: center;
+.site-footer-contact {
+    margin-top: 1rem;
 }
 
-.footer-section-title {
+.site-footer-contact a {
+    color: var(--text-light);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+}
+
+.site-footer-contact a:hover {
+    color: var(--primary-color);
+}
+
+/* 전역 h2 serif 를 푸터에서는 sans 로 — 제목은 sentence case(대문자 변환 없음) */
+.site-footer-heading {
     font-family: var(--font-sans);
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-color);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.75rem;
-    display: block;
+    margin-bottom: 1rem;
 }
 
-.footer-section-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+.site-footer-links,
+.site-footer-legal {
+    list-style: none;
 }
 
-.footer-link,
-.footer-link:link,
-.footer-link:visited {
+.site-footer-links {
+    display: grid;
+    gap: 0.625rem;
+}
+
+/* 기사 12편은 2열로 — 한 줄 12개가 다른 칼럼보다 두세 배 길어지던 불균형 해소 */
+.site-footer-links--cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.5rem;
+}
+
+.site-footer-links a,
+.site-footer-legal a {
     color: var(--text-light);
     text-decoration: none;
-    font-size: 0.9rem;
-    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
     transition: color var(--duration-fast);
 }
 
-.footer-link:hover,
-.footer-link:focus {
+.site-footer-links a:hover,
+.site-footer-legal a:hover {
     color: var(--primary-color);
 }
 
-.footer-copyright {
-    font-size: 0.8rem;
+/* 하단 줄 — 구분선이 탐색 링크와 법적 링크를 가른다. 선 길이를 본문 정렬선에 맞추려고 width 로 여백을 뺀다 */
+.site-footer-bottom {
+    width: min(calc(1200px - 2 * var(--footer-gutter)), calc(100% - 2 * var(--footer-gutter)));
+    margin: 0 auto;
+    padding: 1.25rem 0 2rem;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    font-size: 0.8125rem;
     color: var(--text-light);
-    font-family: var(--font-sans);
+}
+
+.site-footer-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+}
+
+.site-footer-legal a {
+    font-size: 0.8125rem;
+}
+
+/* 태블릿: 브랜드 한 줄 → 서비스·도움말·활용 사례 3열 → 기사 전체 폭 3열 목록 */
+@media (max-width: 1023px) {
+    .site-footer-inner {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .site-footer-brand,
+    .site-footer-section--guides {
+        grid-column: 1 / -1;
+    }
+
+    .site-footer-section--guides .site-footer-links--cols {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* 모바일: 서비스·도움말 2열, 활용 사례·기사는 전체 폭 2열 목록 — 1열 27줄 적재 대신 */
+@media (max-width: 640px) {
+    .site-footer {
+        --footer-gutter: 1.25rem;
+    }
+
+    .site-footer-inner {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding-top: 2.5rem;
+        padding-bottom: 2rem;
+        gap: 2rem 1.25rem;
+    }
+
+    .site-footer-section--wide {
+        grid-column: 1 / -1;
+    }
+
+    .site-footer-section--wide .site-footer-links,
+    .site-footer-section--guides .site-footer-links--cols {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 1.25rem;
+    }
+
+    .site-footer-links {
+        gap: 0.25rem;
+    }
+
+    /* 터치 타깃 — 링크 한 줄 높이 약 33px */
+    .site-footer-links a {
+        display: inline-block;
+        padding: 0.375rem 0;
+    }
+
+    .site-footer-bottom {
+        flex-direction: column;
+        align-items: flex-start;
+        padding-bottom: 1.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .site-footer {
+        --footer-gutter: 1rem;
+    }
 }
 
 /* Buttons */
@@ -1533,19 +1615,6 @@ a:focus-visible {
     margin-bottom: 0.5rem;
 }
 
-/* Footer */
-footer {
-    background: var(--bg-white);
-    padding: 2rem;
-    text-align: center;
-    margin-top: 2rem;
-    border-top: 1px solid var(--border-color);
-}
-
-.footer-content p {
-    color: var(--text-light);
-}
-
 /* Responsive */
 @media (max-width: 768px) {
     /* Navigation - Mobile */
@@ -1737,15 +1806,6 @@ footer {
 
     .logo {
         font-size: 1.25rem;
-    }
-
-    .nav-menu {
-        width: 100%;
-    }
-
-    .nav-link {
-        font-size: 1rem;
-        padding: 0.875rem 0;
     }
 
     /* Container */
@@ -1997,15 +2057,6 @@ footer {
     }
 
     .step p {
-        font-size: 0.875rem;
-    }
-
-    /* Footer */
-    footer {
-        padding: 1.5rem 1rem;
-    }
-
-    .footer-content p {
         font-size: 0.875rem;
     }
 }
@@ -3207,66 +3258,6 @@ footer {
         display: none;
     }
 
-    /* Navbar Minimal */
-    .navbar-minimal .nav-menu {
-        position: fixed;
-        top: 0;
-        right: -100%;
-        width: 280px;
-        height: 100vh;
-        flex-direction: column;
-        background-color: var(--bg-white);
-        padding: 5rem 2rem 2rem;
-        gap: 0;
-        box-shadow: var(--shadow-lg);
-        transition: right 0.3s ease;
-        z-index: 1000;
-    }
-
-    .navbar-minimal .nav-menu.open {
-        right: 0;
-    }
-
-    .navbar-minimal .nav-link-animated {
-        width: 100%;
-        padding: 1rem 0;
-        border-bottom: 1px solid var(--border-color);
-        font-size: 1.125rem;
-    }
-
-    .navbar-minimal .nav-link-animated::after {
-        display: none;
-    }
-
-    /* Footer Minimal */
-    .footer-minimal {
-        padding: var(--section-padding-mobile) 1.5rem;
-    }
-
-    .footer-links {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .footer-sections {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.75rem 1.25rem;
-        text-align: left;
-    }
-
-    .footer-section {
-        text-align: left;
-    }
-
-    .footer-section-links {
-        gap: 0.625rem;
-    }
-
-    .footer-link {
-        padding: 0.125rem 0;
-    }
-
     /* Guide Page */
     .guide-step {
         flex-direction: column;
@@ -3325,20 +3316,6 @@ footer {
     .form-actions-minimal .btn-outline {
         width: 100%;
         justify-content: center;
-    }
-
-    /* Footer Minimal */
-    .footer-minimal {
-        padding: 3rem 1rem;
-    }
-
-    .footer-minimal .footer-logo {
-        font-size: 1.25rem;
-    }
-
-    .footer-sections {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
     }
 }
 
@@ -4026,46 +4003,6 @@ footer {
     color: var(--primary-dark);
 }
 
-/* footer-nav for default footer */
-.footer-nav {
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    margin-top: 0.75rem;
-}
-
-.footer-nav-link,
-.footer-nav-link:link,
-.footer-nav-link:visited {
-    font-size: 0.85rem;
-    color: var(--text-light);
-    text-decoration: none;
-    transition: color var(--duration-fast);
-}
-
-.footer-nav-link:hover,
-.footer-nav-link:focus {
-    color: var(--primary-color);
-}
-
-@media (max-width: 640px) {
-    .footer-nav {
-        flex-direction: column;
-        gap: 0.75rem;
-        margin-top: 1rem;
-    }
-
-    .footer-nav-link {
-        font-size: 0.9rem;
-        padding: 0.25rem 0;
-    }
-
-    .footer-content p {
-        margin-bottom: 0.25rem;
-    }
-}
-
 @media (max-width: 480px) {
     .policy-page {
         padding-top: 1rem;
@@ -4365,10 +4302,15 @@ footer {
     font-weight: 300;
 }
 
+/* 닫힘 상태(max-height: 0)에 컨테이너 패딩이 남지 않도록 하단 여백은 내부 p 가 갖는다 — 열린 모양은 이전과 동일
+   (.faq-answer p 기본 하단 1.25rem + 이전 컨테이너 하단 var(--space-4)) */
 .faq-page .faq-answer {
-    padding: 0 0 var(--space-4);
     color: var(--text-light);
     line-height: 1.7;
+}
+
+.faq-page .faq-answer p {
+    padding-bottom: calc(1.25rem + var(--space-4));
 }
 
 .faq-cta {
