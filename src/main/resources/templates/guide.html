@@ -3,7 +3,7 @@
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
-<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <main class="container guide-page">
     <section class="guide-hero animate-on-scroll">
@@ -178,17 +178,8 @@
     </section>
 </main>
 
-<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 
-<script>
-// FAQ 토글 (index.html 과 동일 메커니즘 — 전역 .faq-item.open CSS 사용)
-document.querySelectorAll('.faq-question').forEach(button => {
-    button.addEventListener('click', () => {
-        const faqItem = button.parentElement;
-        const isOpen = faqItem.classList.toggle('open');
-        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    });
-});
-</script>
+<script defer th:src="@{/js/faq-toggle.js}"></script>
 </body>
 </html>

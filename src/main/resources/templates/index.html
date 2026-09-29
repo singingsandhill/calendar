@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-      th:lang="${#locale.language}">
+      th:lang="${#locale.language}"
+      th:with="navOverlay=true">
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
@@ -9,7 +10,7 @@
 <!-- Skip Navigation (Accessibility) -->
 <a href="#main-content" class="skip-nav" th:text="#{a11y.skip.nav}">본문 바로가기</a>
 
-<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <!-- Hero Section - Fullscreen (Garriock Style) -->
 <section class="hero-fullscreen">
@@ -379,15 +380,6 @@ const ID_MESSAGES = {
 };
 const RESERVED_IDS = new Set(/*[[${reservedOwnerIds}]]*/ []);
 
-// FAQ 토글 기능 (aria-expanded 포함)
-document.querySelectorAll('.faq-question').forEach(button => {
-    button.addEventListener('click', () => {
-        const faqItem = button.parentElement;
-        const isOpen = faqItem.classList.toggle('open');
-        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    });
-});
-
 // Owner ID 클라이언트 검증 - onChange 마스킹 + 인라인 헬퍼
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('startForm');
@@ -514,7 +506,7 @@ async function generateRandomId() {
 }
 </script>
 
-<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 <th:block th:if="${errorMessage}">
     <script th:inline="javascript">
         document.addEventListener('DOMContentLoaded', function() {
@@ -525,5 +517,6 @@ async function generateRandomId() {
     </script>
 </th:block>
 <script defer th:src="@{/js/toast.js}"></script>
+<script defer th:src="@{/js/faq-toggle.js}"></script>
 </body>
 </html>

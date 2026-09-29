@@ -3,11 +3,11 @@
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
-<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <main class="container tool-page tool-page--almanac" id="main-content">
     <nav class="breadcrumb" aria-label="breadcrumb">
-        <a th:href="@{/}" th:text="#{tool.breadcrumb.home}">홈</a>
+        <a th:href="${@localeLinks.href('/')}" th:text="#{tool.breadcrumb.home}">홈</a>
         <span class="separator">/</span>
         <span th:text="#{tool.breadcrumb.tools}">도구</span>
         <span class="separator">/</span>
@@ -152,11 +152,11 @@
     <section class="tool-cta animate-on-scroll">
         <h2 th:text="#{tool.datediff.cta.title}">날짜 조율도 DateDate로</h2>
         <p th:text="#{tool.datediff.cta.desc}">여러 명의 가능한 날짜를 한 번에 모으세요. 가입 없이 링크 하나로 시작합니다.</p>
-        <a href="/#start-form" class="btn-spring" th:text="#{tool.datediff.cta.start}">일정 만들기</a>
+        <a th:href="${@localeLinks.href('/#start-form')}" class="btn-spring" th:text="#{tool.datediff.cta.start}">일정 만들기</a>
     </section>
 </main>
 
-<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 
 <!-- i18n 레이블 변수 (Thymeleaf → JS) -->
 <script th:inline="javascript">

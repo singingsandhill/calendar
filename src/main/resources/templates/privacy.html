@@ -3,7 +3,7 @@
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body>
 <div th:replace="~{fragments/gtm-noscript :: gtm-noscript}"></div>
-<div th:replace="~{fragments/header :: [th:fragment='header-minimal']}"></div>
+<div th:replace="~{fragments/header :: [th:fragment='header']}"></div>
 
 <main class="container policy-page">
     <section class="policy-hero animate-on-scroll">
@@ -85,6 +85,6 @@
     </section>
 </main>
 
-<div th:replace="~{fragments/footer :: [th:fragment='footer-minimal']}"></div>
+<div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
 </body>
 </html>
