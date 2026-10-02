@@ -23,4 +23,30 @@
     </div>
 </nav>
 
+<!-- 관리자 navbar — 어드민 3페이지 공용. 공개 navbar 와 같은 토글 id(runnersNavToggle/runnersNavMenu)를 써서
+     runners/fragments/footer 의 토글 스크립트를 재사용한다. <=768px 에서 .runners-nav 는 토글로만 열리므로
+     토글 없는 인라인 nav 를 복사하면 모바일에서 메뉴·로그아웃에 닿을 수 없다 (RunnerSeoRenderingTest 가드) -->
+<nav th:fragment="admin-navbar" class="runners-navbar" role="navigation" aria-label="관리자 메뉴">
+    <div class="runners-navbar-content">
+        <a th:href="@{/runners}" class="runners-logo">
+            <img th:src="@{/image/crew_logo.png}" alt="Running Crew Logo" onerror="this.style.display='none'">
+            <span class="runners-logo-text">97 Runners</span>
+        </a>
+        <button class="runners-navbar-toggle" id="runnersNavToggle"
+                aria-label="메뉴 열기" aria-expanded="false" aria-controls="runnersNavMenu">
+            <span class="runners-hamburger-line" aria-hidden="true"></span>
+            <span class="runners-hamburger-line" aria-hidden="true"></span>
+            <span class="runners-hamburger-line" aria-hidden="true"></span>
+        </button>
+        <div class="runners-nav" id="runnersNavMenu">
+            <a th:href="@{/runners}">홈</a>
+            <a th:href="@{/runners/runs}">런 목록</a>
+            <a th:href="@{/runners/admin}">관리자 대시보드</a>
+            <form th:action="@{/runners/admin/logout}" method="post" style="display: inline;">
+                <button type="submit" class="runners-btn runners-btn-secondary runners-btn-sm">로그아웃</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
 </html>

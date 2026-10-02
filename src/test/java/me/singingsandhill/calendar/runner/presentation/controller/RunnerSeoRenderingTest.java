@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.runner.presentation.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,5 +74,22 @@ class RunnerSeoRenderingTest {
 
         assertThat(html).contains("runners-navbar");
         assertThat(html).contains("97 Runners");
+    }
+
+    @Test
+    @DisplayName("어드민 페이지는 햄버거 토글이 있는 공용 admin navbar 를 렌더한다 (모바일 메뉴 접근)")
+    void adminPages_renderAdminNavbarWithToggle() throws Exception {
+        // runners.css 는 <=768px 에서 .runners-nav 를 숨기고 토글로만 연다. 토글 없는 인라인 nav 를 복사하면
+        // 모바일에서 로그아웃·대시보드 링크에 닿을 수 없다.
+        for (String path : new String[] {"/runners/admin", "/runners/admin/runs/new"}) {
+            String html = mockMvc.perform(get(path).with(user("admin").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            assertThat(html).as(path).contains("id=\"runnersNavToggle\"");
+            assertThat(html).as(path).contains("id=\"runnersNavMenu\"");
+            assertThat(html).as(path).contains("/runners/admin/logout");
+            assertThat(html).as(path).contains("97 Runners");
+        }
     }
 }
