@@ -16,13 +16,13 @@
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | **common**   | — | 3 | — | 14 | 3 | — | — | — | 7 | 27 |
-| **datedate** | 9 | — | 6 | — | — | — | — | — | — | 15 |
+| **datedate** | 9 | — | 7 | — | — | — | — | — | — | 16 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 5 | — | — | — | 3 | 16 | 3 | — | 27 |
 | **stock**    | — | 8 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 23 |
-| **합계** | 11 | 16 | 6 | 14 | 3 | 5 | 26 | 6 | 7 | **94** |
+| **합계** | 11 | 16 | 7 | 14 | 3 | 5 | 26 | 6 | 7 | **95** |
 
-총 **94개 ADR**.
+총 **95개 ADR**.
 
 ---
 
@@ -125,6 +125,7 @@
 | 2026-09-24 | common/seo | [0012 BreadcrumbList 허브 계층 복원 (3단계 + 가시 breadcrumb)](common/seo/0012-breadcrumb-hub-hierarchy.md) | 0008 의 2단계 제약 전제(허브 부재) 해소 + 점검에서 허브 고아(유입 링크 0) 실측 — 0008 의 2단계 고정 부분 대체 |
 | 2026-09-26 | common/seo | [0013 퍼블리셔 신원 — 연락처 이메일 공개 + Organization sameAs(운영자 GitHub)](common/seo/0013-publisher-identity-contact-and-sameas.md) | AdSense 3차 통지 후 게시자 신원 신호 보강 — 08-17 진단의 'sameAs 보류' 를 실존 계정 한정으로 대체 |
 | 2026-09-26 | common/seo | [0014 SERP 제목 예산 — ko 35 / en 60 가드 + 기사 metaTitle 분리](common/seo/0014-serp-title-budget-and-meta-title.md) | 제목 기준 부재 — 기사 8편 추가로 예산 초과 ko 12·en 12건, 기사 title 은 h1·headline 과 공유 |
+| 2026-09-27 | datedate/frontend | [0004 사이트 크롬 단일 fragment — 오버레이 홈 한정 + 푸터 재설계](datedate/frontend/0004-single-site-chrome.md) | 헤더·푸터 두 벌 편차 — 고정 헤더 밑 브레드크럼 겹침(17페이지 확산)·sticky 불능·푸터 칼럼 불균형 |
 
 ---
 
@@ -136,7 +137,7 @@
 - [common/security/](common/security/) — 6 ADRs
 - [common/infrastructure/](common/infrastructure/) — 3 ADRs
 - [datedate/domain/](datedate/domain/) — 9 ADRs
-- [datedate/frontend/](datedate/frontend/) — 3 ADRs
+- [datedate/frontend/](datedate/frontend/) — 4 ADRs
 - [datedate/ux/](datedate/ux/) — 3 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
