@@ -16,10 +16,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -149,5 +151,34 @@ class RebalanceServiceAccountingTest {
         assertThat(saved.getTakeProfitPrice()).isEqualByComparingTo("1150");
         assertThat(saved.getEntryVolume()).isEqualByComparingTo("50"); // 50000 / 1000
         verify(tradeRepo).save(any(Trade.class));
+    }
+
+    @Test
+    void buy_linksTradeToOpenedPositionAtSaveTime() {
+        // 운영 30일: 리밸런싱 매수 Trade 가 positionId 없이 저장돼 분석 ⑥ 이 66건을 신호 진입으로 오분류했다.
+        // 참조 캡처는 저장 후 set 해도 통과하므로, 저장 "시점" 의 값을 잡는다.
+        BithumbApiClient api = mock(BithumbApiClient.class);
+        BithumbOrderResponse resp = new BithumbOrderResponse(
+                "uuid-3", "bid", "price", null, "done", MARKET, null,
+                null, null, null, null, "0", null, null, null, null);
+        when(api.placeMarketBuyOrder(new BigDecimal("50000"))).thenReturn(resp);
+        RiskManagementService risk = mock(RiskManagementService.class);
+        PositionRepository posRepo = mock(PositionRepository.class);
+        doAnswer(inv -> {
+            Position p = inv.getArgument(0);
+            p.setId(77L);
+            return p;
+        }).when(posRepo).save(any(Position.class));
+        TradeRepository tradeRepo = mock(TradeRepository.class);
+        AtomicReference<Long> positionIdAtSave = new AtomicReference<>();
+        doAnswer(inv -> {
+            positionIdAtSave.set(((Trade) inv.getArgument(0)).getPositionId());
+            return inv.getArgument(0);
+        }).when(tradeRepo).save(any(Trade.class));
+        RebalanceService svc = service(posRepo, api, risk, tradeRepo);
+
+        svc.buyAndOpenPosition(MARKET, new BigDecimal("50000"), new BigDecimal("1000"));
+
+        assertThat(positionIdAtSave.get()).isEqualTo(77L);
     }
 }

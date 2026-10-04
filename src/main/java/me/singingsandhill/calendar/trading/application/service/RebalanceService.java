@@ -126,10 +126,12 @@ public class RebalanceService {
         // P1-3: 리밸런스 매수도 추적 Position 생성 → 리스크 루프(SL/TP/트레일링)가 보호
         Position position = Position.open(market, entryPrice, volume, stopLoss, takeProfit, fee);
 
-        // P0-3b: 영속화만 짧은 트랜잭션 (주문 HTTP 는 위에서 완료)
+        // P0-3b: 영속화만 짧은 트랜잭션 (주문 HTTP 는 위에서 완료).
+        // Position 을 먼저 저장해 id 를 받고 Trade 에 연결한다 — 미연결이면 분석이 신호 진입으로 오분류한다.
         txTemplate.executeWithoutResult(status -> {
-            tradeRepository.save(trade);
             positionRepository.save(position);
+            trade.setPositionId(position.getId());
+            tradeRepository.save(trade);
         });
         log.info("Rebalance buy: opened tracked position - volume {}, SL {}, TP {}, fee {}",
                 volume, stopLoss, takeProfit, fee);

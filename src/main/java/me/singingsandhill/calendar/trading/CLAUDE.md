@@ -53,6 +53,8 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 > 전체 진단·로드맵: [`docs/audit/coin-trading-profit-audit-2026-05-30.md`](../../../../../../../docs/audit/coin-trading-profit-audit-2026-05-30.md).
 > 수익성 비판 검사(2026-09-15, 리플레이 결과 = 리밸런싱 손절 루프가 손실 주범·신호 엔진 휴면·캔들 동결 확정):
 > [`docs/audit/coin-trading-strategy-review-2026-09-15.md`](../../../../../../../docs/audit/coin-trading-strategy-review-2026-09-15.md).
+> 운영 30일 실적 대조(2026-09-27, 청산 69건 중 66건 = 리밸런싱 기원·수수료 0 기록·리밸런싱은 꺼진 게 아니라 막힌 상태):
+> [`docs/audit/coin-trading-live-record-review-2026-09-27.md`](../../../../../../../docs/audit/coin-trading-live-record-review-2026-09-27.md).
 
 - **`Bot.Mode {LIVE, PAPER, BACKTEST}`** — **기본 PAPER**, 실주문은 서버 환경변수
   `TRADING_BOT_MODE=LIVE` 로만 opt-in ([ADR modes/0002](../../../../../../../docs/adr/trading/modes/0002-paper-default-mode.md)).
@@ -94,6 +96,10 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
   취소 422(처리 중)는 1회 재시도. 재조회 전부 실패 시 `state=UNKNOWN` 부분 응답 →
   §8-B 스윕이 수습. cid 는 `t1-`/`t2-` 버전 프리픽스로 추적. 지정가는 미사용 경로라 v1
   유지 + cid 부착만 [ADR infrastructure/0003].
+  **V1 시장가도 같은 형태로 정규화** — `POST /v1/orders` 응답은 접수 시점이라 trades 없음·`paid_fee` 0
+  이므로 `BithumbApiClient.withFills` 가 `GET /v1/order` 를 최대 3회(300ms 선형 백오프) 재조회해 trades 가
+  채워진 상세를 반환(못 찾으면 원 응답). 조회만 반복, 주문 재전송 없음. 이전에는 모든 경로의 수수료가 0 으로,
+  리밸런싱 진입가가 호가 mid 로 기록됐다 (2026-09-27 실적 대조 L2·L3).
 - **포지션 리스크 가드 (P2)** — `maxHoldMinutes`(360) 정체 포지션 손익분기 이상이면
   `TIME_EXIT` 청산 / `blockAveragingDown`(true) 손실 포지션 보유 중 추가 매수 차단 /
   `maxCoinExposurePct`(0.8) 코인 비중 상한 초과 시 신규 매수 스킵 [ADR risk/0003].

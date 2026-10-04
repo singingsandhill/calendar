@@ -65,7 +65,7 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
   `DailySummaryScheduler` 두 잡의 실제 구현체.
 - **`TradingAnalyticsService`** — 신호 품질 분석 7개 섹션. `/trading/analytics` 가 요청 시점에
   호출한다 ([ADR observability/0001](../../../../../../../../docs/adr/trading/observability/0001-signal-quality-analytics-page.md)).
-  주의할 점 네 가지:
+  주의할 점 다섯 가지:
   1. **전방수익은 캔들이 아니라 `trading_signals.current_price` 로 계산한다** — 신호가 매 분
      기록되므로 그 테이블 자체가 1분 가격 시계열이고, 점수 입력과 가격 원천이 같아 기준가
      불일치가 없다. 목표 시각 ±90초 안의 최근접 행만 쓰고 없으면 결측 처리 —
@@ -78,6 +78,11 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
      리팩터링 중이라도 넘어가면 안 된다** — 임계 반사실이 조용히 거짓이 된다는 뜻이다.
   4. 신호 읽기만 엔티티가 아니라 `SignalSample` 투영을 쓴다 — 90일 ≈ 130,000행을 엔티티로
      읽으면 1차 캐시에 남아 요청 내내 힙을 붙잡는다(Jetson Nano 고려).
+  5. **진입 맥락(⑥)은 BUY 체결이 `positionId` 로 연결된 포지션만 신호 후보로 본다.** 미연결이면
+     제외 — 리밸런싱·수동 매수는 2026-09-27 이전 Trade 에 positionId 를 남기지 않아, 제외하지 않으면
+     인접 신호에 타임스탬프로 붙어 신호 진입으로 둔갑했다(운영 30일 66건). 신호 매수의 연결은
+     2026-07-12 부터라 그 이전 신호 포지션도 빠진다(오염 대신 과소집계). 리밸런싱·수동 매수도 이제
+     `executeBuy` 와 같은 순서(Position 저장 → `setPositionId` → Trade 저장)로 연결한다.
 
 ## Circuit Breaker (P0-2)
 

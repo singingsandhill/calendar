@@ -614,7 +614,11 @@ public class TradingAnalyticsService {
 
         for (Position p : closed) {
             Trade buy = buyTradeByPosition.get(p.getId());
-            if (buy != null && !isSignalDriven(buy)) {
+            // 연결된 BUY 가 없으면 신호 기원임을 확인할 수 없다. 신호 매수는 2026-07-12 부터 항상
+            // positionId 로 연결되지만 리밸런싱·수동 매수는 2026-09 까지 연결되지 않아, 여기서 걸러내지
+            // 않으면 인접 신호에 타임스탬프로 붙어 신호 진입으로 둔갑했다(운영 30일 66건). 07-12 이전
+            // 신호 포지션도 함께 빠진다 — 오염 대신 과소집계를 택한다.
+            if (buy == null || !isSignalDriven(buy)) {
                 excluded++;
                 continue;
             }

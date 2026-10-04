@@ -4,6 +4,7 @@ import me.singingsandhill.calendar.trading.domain.account.AccountSnapshotReposit
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
+import me.singingsandhill.calendar.trading.domain.trade.Trade;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
 import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbOrderResponse;
@@ -16,9 +17,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,5 +96,31 @@ class TradingBotServiceManualTest {
 
         assertThat(oldest.getStatus()).isEqualTo(PositionStatus.CLOSED);
         assertThat(newest.getStatus()).isEqualTo(PositionStatus.OPEN);
+    }
+
+    @Test
+    void manualBuy_linksTradeToOpenedPositionAtSaveTime() {
+        // 수동 매수 Trade 도 positionId 없이 저장되면 분석 ⑥ 이 신호 진입으로 오분류한다 (리밸런싱과 같은 결함).
+        BithumbApiClient api = mock(BithumbApiClient.class);
+        when(api.placeMarketBuyOrder(new BigDecimal("50000"))).thenReturn(fill("1000", "50", "bid"));
+        RiskManagementService risk = mock(RiskManagementService.class);
+        PositionRepository posRepo = mock(PositionRepository.class);
+        doAnswer(inv -> {
+            Position p = inv.getArgument(0);
+            p.setId(88L);
+            return p;
+        }).when(posRepo).save(any(Position.class));
+        TradeRepository tradeRepo = mock(TradeRepository.class);
+        AtomicReference<Long> positionIdAtSave = new AtomicReference<>();
+        doAnswer(inv -> {
+            positionIdAtSave.set(((Trade) inv.getArgument(0)).getPositionId());
+            return inv.getArgument(0);
+        }).when(tradeRepo).save(any(Trade.class));
+        TradingBotService svc = service(api, risk, tradeRepo, posRepo, mock(TradingCircuitBreaker.class));
+
+        boolean ok = svc.manualBuy(new BigDecimal("50000"));
+
+        assertThat(ok).isTrue();
+        assertThat(positionIdAtSave.get()).isEqualTo(88L);
     }
 }

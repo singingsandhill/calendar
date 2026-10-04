@@ -251,6 +251,22 @@ class TradingAnalyticsServiceTest {
     }
 
     @Test
+    void unlinkedPositionIsExcludedNotTimestampMatched() {
+        // 운영 형태 그대로: 리밸런싱 매수 Trade 가 positionId 없이 저장돼 있다(2026-09 이전 전건).
+        // 연결된 BUY 가 없으면 신호 기원임을 확인할 수 없다 — 5초 앞 신호에 타임스탬프로 붙이면 안 된다.
+        List<SignalSample> samples = List.of(sample(0, 10, "1000"));
+        Position rebalancePos = closedPosition(2L, T0.plusSeconds(5), "1000", "980");
+        Trade unlinkedRebalanceBuy = Trade.createBuyOrder("uuid-rb", MARKET, new BigDecimal("1000"),
+                BigDecimal.TEN, "market", null, "Rebalancing buy");
+
+        AnalyticsReport r = report(samples, List.of(rebalancePos), List.of(unlinkedRebalanceBuy));
+
+        assertThat(r.entryContext().excludedNonSignalPositions()).isEqualTo(1);
+        assertThat(r.entryContext().signalDrivenPositions()).isZero();
+        assertThat(r.entryContext().matchedByTimestamp()).isZero();
+    }
+
+    @Test
     void unmatchedPositionIsCountedNotDropped() {
         // 신호가 전혀 없는 구간에 열린 포지션.
         Position orphan = closedPosition(9L, T0.plusHours(5), "1000", "1010");

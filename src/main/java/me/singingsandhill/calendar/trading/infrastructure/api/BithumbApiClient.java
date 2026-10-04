@@ -20,11 +20,14 @@ import java.util.UUID;
 public class BithumbApiClient {
 
     private static final Logger log = LoggerFactory.getLogger(BithumbApiClient.class);
+    private static final int FILL_REQUERY_ATTEMPTS = 3;
 
     private final BithumbPublicApi publicApi;
     private final BithumbPrivateApi privateApi;
     private final BithumbV2OrderApi v2OrderApi;
     private final TradingProperties tradingProperties;
+
+    private long fillRequeryBackoffMillis = 300;
 
     public BithumbApiClient(BithumbPublicApi publicApi,
                             BithumbPrivateApi privateApi,
@@ -184,11 +187,11 @@ public class BithumbApiClient {
             return v2OrderApi.placeMarketBuyOrder(market, totalAmount, clientOrderId);
         }
         if (!tradingProperties.getBithumb().isClientOrderIdEnabled()) {
-            return privateApi.placeMarketBuyOrder(market, totalAmount);
+            return withFills(privateApi.placeMarketBuyOrder(market, totalAmount));
         }
         // P0-2(v1): 멱등키 부착 + 응답 null(타임아웃 등) 시 재전송이 아니라 재조회로 접수 여부 확인
         BithumbOrderResponse response = privateApi.placeMarketBuyOrder(market, totalAmount, clientOrderId);
-        return response != null ? response : reconcileByClientOrderId(clientOrderId, "BUY");
+        return withFills(response != null ? response : reconcileByClientOrderId(clientOrderId, "BUY"));
     }
 
     /**
@@ -211,11 +214,45 @@ public class BithumbApiClient {
             return v2OrderApi.placeMarketSellOrder(market, volume, clientOrderId);
         }
         if (!tradingProperties.getBithumb().isClientOrderIdEnabled()) {
-            return privateApi.placeMarketSellOrder(market, volume);
+            return withFills(privateApi.placeMarketSellOrder(market, volume));
         }
         // P0-2(v1): 멱등키 부착 + 응답 null 시 재조회로 접수 여부 확인 (재전송 금지)
         BithumbOrderResponse response = privateApi.placeMarketSellOrder(market, volume, clientOrderId);
-        return response != null ? response : reconcileByClientOrderId(clientOrderId, "SELL");
+        return withFills(response != null ? response : reconcileByClientOrderId(clientOrderId, "SELL"));
+    }
+
+    /**
+     * V1 시장가 응답을 체결 정보로 정규화한다. POST /v1/orders 응답은 접수 시점 스냅샷이라 trades 가 없고
+     * paid_fee 가 0 이다 — 그대로 올려보내면 수수료가 0 으로 기록되고(운영 30일 전건), 재시도가 없는
+     * 리밸런싱 매수는 체결가 대신 호가 mid 를 진입가로 남긴다. v2 어댑터처럼 GET /v1/order 로 재조회해
+     * trades 가 채워진 상세를 반환한다. 끝내 못 찾으면 원 응답 그대로 — 상위의 체결가 재시도가 이어받는다.
+     * 조회만 반복하고 주문은 재전송하지 않는다.
+     */
+    private BithumbOrderResponse withFills(BithumbOrderResponse placed) {
+        if (placed == null || placed.uuid() == null || hasTrades(placed)) {
+            return placed;
+        }
+        for (int attempt = 0; attempt < FILL_REQUERY_ATTEMPTS; attempt++) {
+            if (attempt > 0) {
+                try {
+                    Thread.sleep(fillRequeryBackoffMillis * attempt);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return placed;
+                }
+            }
+            BithumbOrderResponse detail = privateApi.getOrder(placed.uuid());
+            if (hasTrades(detail)) {
+                return detail;
+            }
+        }
+        log.warn("V1 order {} accepted but fills not visible after {} re-queries — returning accepted response",
+                placed.uuid(), FILL_REQUERY_ATTEMPTS);
+        return placed;
+    }
+
+    private static boolean hasTrades(BithumbOrderResponse response) {
+        return response != null && response.trades() != null && !response.trades().isEmpty();
     }
 
     /**
@@ -260,6 +297,11 @@ public class BithumbApiClient {
         log.warn("[client_order_id] {} order response null and not found via reconcile — treating as not placed: cid={}",
                 side, cid);
         return null;
+    }
+
+    /** 테스트 전용 — 체결 재조회 백오프 대기 단축. */
+    void setFillRequeryBackoffMillis(long fillRequeryBackoffMillis) {
+        this.fillRequeryBackoffMillis = fillRequeryBackoffMillis;
     }
 
     // ==================== Mode Gate / Paper Simulation (P0-1) ====================
