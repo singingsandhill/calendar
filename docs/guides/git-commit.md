@@ -860,7 +860,7 @@ git commit -m "docs(seo): SEO 종합 점검 보고서 2026-09-24 + 09-26 재검�
 # 코드 변경 없음 — G1 수정은 배포 즉시 서버 .env 의 ADSENSE_CLIENT 잔존 여부에 따라 승인 전 광고를 켤 수 있어,
 #   사용자 확인(서버 .env) 뒤로 보류(보고서 §4 G1·§5 로드맵).
 
-# Commit 185 — docs(adsense): 심사·게재 준비 상태 재분석 보고서 — 마지막 커밋(git-commit.md 포함)
+# Commit 185 — ✅ DONE() docs(adsense): 심사·게재 준비 상태 재분석 보고서 — 마지막 커밋(git-commit.md 포함)
 git add docs/audit/adsense-readiness-audit-2026-09-26.md docs/guides/git-commit.md
 git commit -m "docs(adsense): 심사·게재 준비 상태 재분석 — 기술·도메인 정상, 개선분 미배포, ADSENSE_CLIENT 바인딩 결함" -m "AdSense 재검토 통과와 실제 광고 게재를 목표로 미비점을 재분석했다. 라이브 실측(09-26): 도메인 RDAP 등록 2025-12-14·만료 2026-12-14(79일 — 자동 연장 확인 필요), DNS apex·www 동일 A, TLS Let's Encrypt SAN apex+www 만료 11-09(44일 — certbot 타이머 확인 필요), Safe Browsing 위협 플래그 없음, http·www 301 1홉, Mediapartners-Google·AdsBot-Google·Googlebot 으로 주요 경로 전부 200(두 광고 크롤러는 robots 의 * 그룹을 무시 — 공식 문서), ads.txt 는 인증 ID 포함 정상 형식·4변형 200 text/plain 이나 라이브는 아직 CRLF(커밋 176 미배포), 사이트맵 38 URL 에 CSP·COEP·X-Robots-Tag·미완성 문구 0, 개인정보처리방침 AdSense 쿠키·맞춤 광고 해제 고지 존재, 배포 503 에 Retry-After 120. 사이트 소유권 연결은 ads.txt 방식으로 충족(google-adsense-account 메타는 선택). 미비점: G1 게재 차단 — application.yaml 의 adsense.client 가 빈 값 고정이고 운영은 .env 파일 임포트라 ADSENSE_CLIENT 가 바인딩되지 않음(임시 프로브 실측 client 빈 값, 슬롯은 바인딩 — 확인 후 삭제). 문서화된 게재 절차가 조용히 실패하므로 플레이스홀더·.env.example·바인딩 테스트로 고쳐야 하나, 서버 .env 에 ADSENSE_CLIENT 가 남아 있으면 배포 즉시 승인 전 광고가 켜지므로 확인 뒤로 보류. G2 개선분 전부 미배포(재검토는 배포·색인 확인 후). G3 ads.txt CRLF(다음 배포로 해소). G4 도메인·인증서 만료. G5 인피드 예약 높이 200px·자동 광고 결정. G6 EEA/UK/CH 인증 CMP(AdSense 개인 정보 보호 메시지). G7 콘텐츠 잔여 신호(기존 기록). G8 /stock 무로그인 공개(noindex·무링크). G9 저장소 밖 확인 항목. §5 에 게재까지 5단계 로드맵. 코드 변경 없음."
 

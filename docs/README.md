@@ -10,13 +10,13 @@
 | [`adr/`](adr/README.md) | 아키텍처 결정 기록 (도메인 × 관심사 매트릭스, 자체 인덱스) |
 | [`audit/`](audit/) | 감사·운영 리뷰 보고서 |
 | [`data-analysis/`](data-analysis/README.md) | 데이터 분석 (GA4/GTM 현황, 인벤토리, 플레이북) — 구 `DA/` |
-| [`datedate/`](datedate/) | DateDate 도메인 문서 (아키텍처 리뷰, 카카오 로그인·Recap 체크리스트) |
+| [`datedate/`](datedate/) | DateDate 도메인 문서 (아키텍처 리뷰, 카카오 로그인·Recap 체크리스트, ERD `erd.html`) |
 | [`guides/`](guides/) | 작업 가이드 (`git-commit.md` 커밋 시퀀스, `ux-validation.md` 입력 검증 UX) |
 | [`operations/`](operations/) | 배포·서버 운영 (`deployment.md` 파이프라인, `server-migration-runbook.md` 1회성 이관) |
 | [`prompts/`](prompts/) | 재사용 프롬프트 모음 — 구 `prompt/` 병합 |
 | [`seo/`](seo/) | SEO·AdSense (진화 플레이북, 회고 시리즈, 저가치 콘텐츠 대응) |
-| [`stock/`](stock/) | 주식 봇 (전략·리스크 상세) |
-| [`trading/`](trading/) | 코인 트레이딩 봇 (전략 상세, v2 마이그레이션, 백로그) |
+| [`stock/`](stock/) | 주식 봇 (전략·리스크 상세, ERD `erd.html`, 매매 판단 `trade-decision.html`) |
+| [`trading/`](trading/) | 코인 트레이딩 봇 (전략 상세, v2 마이그레이션, 백로그, ERD `erd.html`, 매매 시퀀스 `trade-sequence.html`, 매매 판단 `trade-decision.html`) |
 | [`superpowers/`](superpowers/) | 기능 단위 설계 스펙(`specs/`)과 구현 계획(`plans/`) |
 | [`troubleshooting/`](troubleshooting/README.md) | 트러블슈팅 기록 (자체 인덱스) |
 
