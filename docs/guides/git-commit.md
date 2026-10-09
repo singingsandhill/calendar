@@ -873,7 +873,7 @@ git commit -m "docs(adsense): 심사·게재 준비 상태 재분석 — 기술�
 # 코드 변경 없음, 결정 변경 아님(ADR 불필요). 검증: 스킬 self_check 통과, verify-geometry SVG 별 0건
 #   (파일 단위 실행 시 1건은 서로 다른 SVG 좌표를 비교한 오탐), Windows 헤드리스 Chrome 렌더 확인.
 
-# Commit 186 — docs(datedate): ERD 다이어그램 (계정·소유·참여 / 후보·투표) — 마지막 커밋(git-commit.md 포함)
+# Commit 186 — ✅ docs(datedate): ERD 다이어그램 (계정·소유·참여 / 후보·투표) — 마지막 커밋(git-commit.md 포함)
 git add docs/datedate/erd.html docs/README.md docs/guides/git-commit.md
 git commit -m "docs(datedate): ERD 다이어그램 — 계정·소유·참여 / 후보·투표 2장" -m "datedate 12개 테이블을 JPA 엔티티 기준으로 그린 단일 HTML(인라인 SVG, diagram-design 기본 스킨). Fig. 1 은 DB FK 로 묶인 익명 일정 영역(owners -> schedules -> participants, 일정당 참여자 0..8)과 FK 없이 user_id·schedule_id 값만 가지는 카카오 로그인 영역(app_users·user_activities·recap_shares)을 나누고, owners.user_id first-claim 연결을 강조. Fig. 2 는 schedules 아래 후보 3종(locations·menus·time_slots)과 후보별 투표 테이블. 하단 카드에 DB 제약(FK·UQ·IDX), 코드만 보장하는 규칙(참여자 8명·이름 중복, 후보·투표 중복, 활동 중복 억제), 삭제 전파(JPA cascade ALL + orphanRemoval, FK 에 ON DELETE 없음, user_activities·recap_shares 미정리)를 정리. docs/README.md 의 datedate 행에 ERD 추가."
 
@@ -889,7 +889,7 @@ git commit -m "docs(datedate): ERD 다이어그램 — 계정·소유·참여 / 
 # 주의: docs/README.md 의 trading·stock 행 ERD 표기는 Commit 186 이 파일을 먼저 소유해 186 에 흡수됨.
 git add docs/trading/erd.html docs/stock/erd.html docs/guides/git-commit.md
 git commit -m "docs(trading,stock): ERD 다이어그램 — 코인 봇 7개·주식 봇 6개 테이블" -m "datedate ERD(Commit 186)와 같은 형식의 단일 HTML(인라인 SVG). trading: 신호 -> 주문 <- 포지션을 FK 없는 signal_id·position_id 로 잇는 매매 영역과, id 참조 없이 시간으로만 이어지는 시계열 4개(캔들 90일 보관·5분 계좌 스냅샷·00:01 일일 요약·이벤트 로그)를 나눠 그림. 주문 레코드(trading_trades)를 강조하고, 매수·신규 포지션 동일 트랜잭션 저장, client_order_id 선영속화 멱등키, 캔들 외 삭제 경로 없음을 카드로 정리. stock: 종목·거래일당 1행인 stock_monitoring 을 중심으로 포지션(stock_id)·주문(position_id)은 논리 id 참조, 신호·진입 시도는 stock_code·날짜 자연키 대응으로 구분하고 stock_candles 는 쓰는 코드가 없는 비활성 스캐폴딩으로 표시. 모든 stock 테이블은 삭제 호출처가 없어 누적됨을 기록."
-
+    
 # =====================================================================
 # trading 매매 시퀀스 다이어그램 (2026-09-27)
 # =====================================================================
