@@ -885,7 +885,7 @@ git commit -m "docs(datedate): ERD 다이어그램 — 계정·소유·참여 / 
 # 근거: 각 모듈 infrastructure/persistence/entity/*JpaEntity.java + 서비스·스케줄러 코드 (호출처·보관 주기는 grep 으로 확인).
 # 코드 변경 없음, 결정 변경 아님(ADR 불필요). 검증: 스킬 self_check·verify-geometry 각 0건, Windows 헤드리스 Chrome 렌더 확인.
 
-# Commit 187 — docs(trading,stock): ERD 다이어그램 — 마지막 커밋(git-commit.md 포함)
+# Commit 187 — ✅ docs(datedate): docs(trading,stock): ERD 다이어그램 — 마지막 커밋(git-commit.md 포함)
 # 주의: docs/README.md 의 trading·stock 행 ERD 표기는 Commit 186 이 파일을 먼저 소유해 186 에 흡수됨.
 git add docs/trading/erd.html docs/stock/erd.html docs/guides/git-commit.md
 git commit -m "docs(trading,stock): ERD 다이어그램 — 코인 봇 7개·주식 봇 6개 테이블" -m "datedate ERD(Commit 186)와 같은 형식의 단일 HTML(인라인 SVG). trading: 신호 -> 주문 <- 포지션을 FK 없는 signal_id·position_id 로 잇는 매매 영역과, id 참조 없이 시간으로만 이어지는 시계열 4개(캔들 90일 보관·5분 계좌 스냅샷·00:01 일일 요약·이벤트 로그)를 나눠 그림. 주문 레코드(trading_trades)를 강조하고, 매수·신규 포지션 동일 트랜잭션 저장, client_order_id 선영속화 멱등키, 캔들 외 삭제 경로 없음을 카드로 정리. stock: 종목·거래일당 1행인 stock_monitoring 을 중심으로 포지션(stock_id)·주문(position_id)은 논리 id 참조, 신호·진입 시도는 stock_code·날짜 자연키 대응으로 구분하고 stock_candles 는 쓰는 코드가 없는 비활성 스캐폴딩으로 표시. 모든 stock 테이블은 삭제 호출처가 없어 누적됨을 기록."
