@@ -83,9 +83,9 @@ class RecapServiceTest {
         Participant p2 = new Participant(2L, 10L, "서연", ParticipantColor.ofIndex(1),
                 List.of(2, 3), LocalDateTime.of(2026, 3, 1, 0, 0));
         Schedule mar2026 = new Schedule(10L, "my-crew", 2026, 3, 7,
-                LocalDateTime.of(2026, 2, 20, 0, 0), List.of(p1, p2));
+                LocalDateTime.of(2026, 2, 20, 0, 0), List.of(p1, p2), null);
         Schedule dec2025 = new Schedule(11L, "my-crew", 2025, 12, 7,
-                LocalDateTime.of(2025, 11, 20, 0, 0), List.of());
+                LocalDateTime.of(2025, 11, 20, 0, 0), List.of(), null);
         when(scheduleRepository.findAllByOwnerId("my-crew")).thenReturn(List.of(mar2026, dec2025));
         when(userActivityRepository.findAllByUserIdAndOccurredAtBetween(eq(42L), any(), any()))
                 .thenReturn(List.of());

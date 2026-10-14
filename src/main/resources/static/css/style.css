@@ -1197,6 +1197,71 @@ a:focus-visible {
     text-decoration: underline;
 }
 
+/* Schedule description (ADR datedate/domain/0011) */
+.schedule-description {
+    background: var(--bg-white);
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.schedule-description.is-empty {
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    text-align: center;
+}
+
+.schedule-description-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.schedule-description.is-empty .schedule-description-head {
+    justify-content: center;
+}
+
+.schedule-description-title {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.schedule-description-body {
+    margin: 0.5rem 0 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.schedule-description-body a {
+    color: var(--primary-color);
+}
+
+.schedule-description-form textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font: inherit;
+    resize: vertical;
+}
+
+.schedule-description-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.schedule-description-count {
+    margin-right: auto;
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
 .participant-section {
     background: var(--bg-white);
     padding: 1.5rem;

@@ -12,7 +12,9 @@ public record ParticipantColor(String hexCode) {
             "#0D9488", // Teal   — teal-600
             "#2563EB", // Blue   — blue-600
             "#4F46E5", // Indigo — indigo-600
-            "#7C3AED"  // Violet — violet-600
+            "#7C3AED", // Violet — violet-600
+            "#92400E", // Brown  — amber-800 (9th, ADR datedate/ux/0004)
+            "#0E7490"  // Cyan   — cyan-700 (10th, ADR datedate/ux/0004)
     );
 
     public ParticipantColor {

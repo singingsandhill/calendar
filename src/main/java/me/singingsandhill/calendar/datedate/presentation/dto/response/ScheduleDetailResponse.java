@@ -8,6 +8,7 @@ import me.singingsandhill.calendar.datedate.domain.location.Location;
 import me.singingsandhill.calendar.datedate.domain.menu.Menu;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.domain.timeslot.TimeSlot;
+import me.singingsandhill.calendar.datedate.presentation.support.DescriptionLinks;
 
 public record ScheduleDetailResponse(
         Long id,
@@ -19,6 +20,9 @@ public record ScheduleDetailResponse(
         int firstDayOfWeek,
         int totalDays,
         boolean isExtendedMode,
+        int maxParticipants,
+        String description,
+        List<TextSegment> descriptionSegments,
         List<ParticipantResponse> participants,
         List<LocationResponse> locations,
         List<MenuResponse> menus,
@@ -41,6 +45,9 @@ public record ScheduleDetailResponse(
                 schedule.getFirstDayOfWeek(),
                 schedule.getTotalDays(),
                 schedule.isExtendedMode(),
+                Schedule.MAX_PARTICIPANTS,
+                schedule.getDescription(),
+                DescriptionLinks.split(schedule.getDescription()),
                 schedule.getParticipants().stream()
                         .map(ParticipantResponse::from)
                         .collect(Collectors.toList()),

@@ -32,12 +32,14 @@ class ParticipantTest {
     }
 
     @Test
-    @DisplayName("Color index should wrap around after 8")
+    @DisplayName("Color index should wrap around after 10")
     void colorIndex_wrapsAround() {
         Participant p0 = new Participant(1L, "User0", 0);
         Participant p8 = new Participant(1L, "User8", 8);
+        Participant p10 = new Participant(1L, "User10", 10);
 
-        assertThat(p0.getColorHex()).isEqualTo(p8.getColorHex());
+        assertThat(p8.getColorHex()).isNotEqualTo(p0.getColorHex());
+        assertThat(p10.getColorHex()).isEqualTo(p0.getColorHex());
     }
 
     @Test

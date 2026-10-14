@@ -16,7 +16,9 @@
   ([ADR](../../../../../../../../docs/adr/datedate/domain/0007-collision-free-random-owner-id.md)).
 - **ScheduleService** - (ownerId, year, month) 기준 CRUD. 일정 미존재 시 자동 생성 X →
   create 페이지 분기 ([ADR](../../../../../../../../docs/adr/datedate/domain/0003-no-auto-create-on-missing-schedule.md)).
-- **ParticipantService** - 스케줄당 최대 8명 / 중복 이름 검증.
+  `updateSchedule(…, weeks, description)` 은 null 인 값은 그대로 두고, 바뀐 것이 있을 때만 저장한다(설명 `""` = 지우기,
+  최대 500자 — `Schedule.changeDescription`, [ADR](../../../../../../../../docs/adr/datedate/domain/0011-schedule-description.md)).
+- **ParticipantService** - 스케줄당 최대 10명 / 중복 이름 검증. 한도 값은 `Schedule.MAX_PARTICIPANTS` 하나 — 웹 템플릿과 일정 상세 API(미니앱)는 `ScheduleDetailResponse.maxParticipants` 로 받는다 ([ADR](../../../../../../../../docs/adr/datedate/domain/0010-participant-cap-10.md)).
 - **LocationService** - 장소 투표 (add/delete/vote/unvote).
 - **MenuService** - 메뉴 투표 (URL 포함, add/delete/vote/unvote).
 - **TimeSlotService** - 시간 투표 (add/vote/unvote). 후보 날짜는 참여자 누군가 저장한 날만

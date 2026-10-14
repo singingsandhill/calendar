@@ -16,13 +16,13 @@
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | **common**   | — | 3 | — | 14 | 3 | — | — | — | 7 | 27 |
-| **datedate** | 9 | — | 7 | — | — | — | — | — | — | 16 |
+| **datedate** | 11 | — | 8 | — | — | — | — | — | — | 19 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 5 | — | — | — | 3 | 16 | 3 | — | 27 |
 | **stock**    | — | 8 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 23 |
-| **합계** | 11 | 16 | 7 | 14 | 3 | 5 | 26 | 6 | 7 | **95** |
+| **합계** | 13 | 16 | 8 | 14 | 3 | 5 | 26 | 6 | 7 | **98** |
 
-총 **95개 ADR**.
+총 **98개 ADR**.
 
 ---
 
@@ -126,6 +126,9 @@
 | 2026-09-26 | common/seo | [0013 퍼블리셔 신원 — 연락처 이메일 공개 + Organization sameAs(운영자 GitHub)](common/seo/0013-publisher-identity-contact-and-sameas.md) | AdSense 3차 통지 후 게시자 신원 신호 보강 — 08-17 진단의 'sameAs 보류' 를 실존 계정 한정으로 대체 |
 | 2026-09-26 | common/seo | [0014 SERP 제목 예산 — ko 35 / en 60 가드 + 기사 metaTitle 분리](common/seo/0014-serp-title-budget-and-meta-title.md) | 제목 기준 부재 — 기사 8편 추가로 예산 초과 ko 12·en 12건, 기사 title 은 h1·headline 과 공유 |
 | 2026-09-27 | datedate/frontend | [0004 사이트 크롬 단일 fragment — 오버레이 홈 한정 + 푸터 재설계](datedate/frontend/0004-single-site-chrome.md) | 헤더·푸터 두 벌 편차 — 고정 헤더 밑 브레드크럼 겹침(17페이지 확산)·sticky 불능·푸터 칼럼 불균형 |
+| 2026-10-10 | datedate/domain | [0010 참여자 한도 10명 + 한도 값 서버 전달(maxParticipants)](datedate/domain/0010-participant-cap-10.md) | 사용자 결정 8 → 10 — 템플릿·미니앱·문구에 복제된 8 이 테스트에 안 잡힘 |
+| 2026-10-10 | datedate/ux | [0004 참여자 색 10색 — 갈색·청록 덧붙이기](datedate/ux/0004-ten-color-participant-palette.md) | 한도 10 → 9·10번째가 1·2번째 색과 중복 — ux/0001 의 8색 spec 대체 |
+| 2026-10-11 | datedate/domain | [0011 일정 설명 — 링크 공개 편집, 링크 판별은 서버 한 곳](datedate/domain/0011-schedule-description.md) | use-case 문구 25곳이 없는 "페이지 설명" 을 안내 — 사용자가 필드 신설을 택함 |
 
 ---
 
@@ -136,9 +139,9 @@
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 6 ADRs
 - [common/infrastructure/](common/infrastructure/) — 3 ADRs
-- [datedate/domain/](datedate/domain/) — 9 ADRs
+- [datedate/domain/](datedate/domain/) — 11 ADRs
 - [datedate/frontend/](datedate/frontend/) — 4 ADRs
-- [datedate/ux/](datedate/ux/) — 3 ADRs
+- [datedate/ux/](datedate/ux/) — 4 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
 - [trading/modes/](trading/modes/) — 3 ADRs

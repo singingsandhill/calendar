@@ -7,6 +7,12 @@ import {
 import { bindVotingInputs, addLocation, voteLocation, addMenu, voteMenu } from './voting.js';
 import { initTimeSlots, refreshDayOptions, addTimeSlot, voteTimeSlot } from './timeslots.js';
 import { copyLink } from './utils.js';
+import {
+    initDescription,
+    openDescriptionEditor,
+    closeDescriptionEditor,
+    saveDescription
+} from './description.js';
 
 const ONBOARDING_DISMISSED_KEY = 'datedate.onboarding.dismissed';
 
@@ -52,6 +58,9 @@ const actions = {
     'menu.vote': (target) => voteMenu(target),
     'time.add': () => addTimeSlot(),
     'time.vote': (target) => voteTimeSlot(target),
+    'description.edit': () => openDescriptionEditor(),
+    'description.cancel': () => closeDescriptionEditor(),
+    'description.save': () => saveDescription(),
     'onboarding.dismiss': () => {
         setBannerOpen(false);
         lsSet(ONBOARDING_DISMISSED_KEY, 'true');
@@ -78,5 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bindVotingInputs();
     initTimeSlots();
     initOnboardingBanner();
+    initDescription();
     document.addEventListener('click', dispatch);
 });

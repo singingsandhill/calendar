@@ -3,6 +3,9 @@ package me.singingsandhill.calendar.datedate.domain.participant;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -58,17 +61,34 @@ class ParticipantColorTest {
     }
 
     @Test
-    @DisplayName("ofIndex should wrap around for index >= 8")
+    @DisplayName("ofIndex should wrap around for index >= 10")
     void ofIndex_wrapsAround() {
         ParticipantColor color0 = ParticipantColor.ofIndex(0);
-        ParticipantColor color8 = ParticipantColor.ofIndex(8);
+        ParticipantColor color10 = ParticipantColor.ofIndex(10);
 
-        assertThat(color0.hexCode()).isEqualTo(color8.hexCode());
+        assertThat(color0.hexCode()).isEqualTo(color10.hexCode());
     }
 
     @Test
-    @DisplayName("getPresetColorCount should return 8")
-    void getPresetColorCount_returns8() {
-        assertThat(ParticipantColor.getPresetColorCount()).isEqualTo(8);
+    @DisplayName("getPresetColorCount should return 10")
+    void getPresetColorCount_returns10() {
+        assertThat(ParticipantColor.getPresetColorCount()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("9·10번째 색은 덧붙인 갈색·청록이다 — 기존 0~7 은 그대로 (ADR datedate/ux/0004)")
+    void ofIndex_appendedColors() {
+        assertThat(ParticipantColor.ofIndex(8).hexCode()).isEqualTo("#92400E");
+        assertThat(ParticipantColor.ofIndex(9).hexCode()).isEqualTo("#0E7490");
+    }
+
+    @Test
+    @DisplayName("프리셋 색은 모두 서로 다르다")
+    void presetColors_areDistinct() {
+        List<String> hexes = IntStream.range(0, ParticipantColor.getPresetColorCount())
+                .mapToObj(i -> ParticipantColor.ofIndex(i).hexCode())
+                .toList();
+
+        assertThat(hexes).doesNotHaveDuplicates();
     }
 }

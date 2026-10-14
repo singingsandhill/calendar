@@ -109,7 +109,7 @@ common/
 | 핵심 도메인 | Owner, Schedule, Participant, Location, Menu |
 | 주요 서비스 | OwnerService, ScheduleService, ParticipantService, LocationService, MenuService, PopularityService |
 | API 경로 | `GET/POST /api/owners/{ownerId}`, `GET/POST/PATCH/DELETE /api/owners/{ownerId}/schedules/{year}/{month}` |
-| 비즈니스 규칙 | 참여자 최대 8명, ownerId 패턴 `^[a-z0-9-]+$` (2-20자) |
+| 비즈니스 규칙 | 참여자 최대 10명, ownerId 패턴 `^[a-z0-9-]+$` (2-20자) |
 
 ### 3.3 runner 모듈
 

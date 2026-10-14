@@ -96,7 +96,7 @@ public class ScheduleApiController {
             @PathVariable int year,
             @PathVariable int month,
             @Valid @RequestBody ScheduleUpdateRequest request) {
-        Schedule schedule = scheduleService.updateSchedule(ownerId, year, month, request.weeks());
+        Schedule schedule = scheduleService.updateSchedule(ownerId, year, month, request.weeks(), request.description());
         return ResponseEntity.ok(ScheduleResponse.from(schedule));
     }
 }

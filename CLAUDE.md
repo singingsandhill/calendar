@@ -285,6 +285,10 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
   참여자 누군가 저장한 날만 허용(`Schedule.hasAvailabilityOn`, 아니면 400). 목록·겹침 차트는
   `static/js/schedule/timeslots.js` 가 `SCHEDULE_DATA.timeSlots` 로 JS 렌더. 삭제 API·활동 기록 없음
   ([ADR datedate/domain/0009](docs/adr/datedate/domain/0009-time-slot-vote.md))
+- 일정 설명: `Schedule.description`(최대 500자, 링크 공개 편집) — `PATCH /api/owners/{id}/schedules/{y}/{m}` 의
+  `description`(null = 그대로, `""` = 지우기). 링크는 서버 `DescriptionLinks` 가 http(s) 만 조각으로 나눠
+  `ScheduleDetailResponse.descriptionSegments` 로 내리고 `schedule/view.html` 은 `th:text`/`th:href` 로만 그린다
+  (`th:utext` 금지). 미니앱은 평문 읽기 전용 ([ADR datedate/domain/0011](docs/adr/datedate/domain/0011-schedule-description.md))
 - 카카오 로그인 (선택적): `KakaoOAuth2UserService` → `AppUser` upsert, 오너 연결(first-claim), `UserActivity` 이벤트 기록
 - `RecapService` + `RecapController` → `GET /recap` (당해년 리다이렉트), `/recap/{year}` 연간 리캡,
   `POST /recap/{year}/share` 공유 토큰 발급, `/recap/share/{token}` 공개 공유 (ADR datedate/domain/0005)

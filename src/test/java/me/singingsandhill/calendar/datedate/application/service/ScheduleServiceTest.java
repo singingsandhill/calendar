@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -139,5 +140,44 @@ class ScheduleServiceTest {
         List<Schedule> result = scheduleService.getSchedulesByOwnerId("test-user");
 
         assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("updateSchedule 에 설명만 주면 설명을 바꿔 저장한다")
+    void updateSchedule_descriptionOnly_savesDescription() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+        when(scheduleRepository.findByOwnerIdAndYearMonth("test-user", 2025, 12)).thenReturn(Optional.of(schedule));
+        when(scheduleRepository.save(any(Schedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Schedule result = scheduleService.updateSchedule("test-user", 2025, 12, null, " 회의 60분 ");
+
+        assertThat(result.getDescription()).isEqualTo("회의 60분");
+        assertThat(result.getWeeks()).isEqualTo(7);
+        verify(scheduleRepository).save(schedule);
+    }
+
+    @Test
+    @DisplayName("updateSchedule 에 주 수만 주면 설명은 그대로다")
+    void updateSchedule_weeksOnly_keepsDescription() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+        schedule.changeDescription("메모");
+        when(scheduleRepository.findByOwnerIdAndYearMonth("test-user", 2025, 12)).thenReturn(Optional.of(schedule));
+        when(scheduleRepository.save(any(Schedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Schedule result = scheduleService.updateSchedule("test-user", 2025, 12, 5, null);
+
+        assertThat(result.getWeeks()).isEqualTo(5);
+        assertThat(result.getDescription()).isEqualTo("메모");
+    }
+
+    @Test
+    @DisplayName("updateSchedule 에 바꿀 값이 없으면 저장하지 않는다")
+    void updateSchedule_nothingToChange_doesNotSave() {
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+        when(scheduleRepository.findByOwnerIdAndYearMonth("test-user", 2025, 12)).thenReturn(Optional.of(schedule));
+
+        scheduleService.updateSchedule("test-user", 2025, 12, null, null);
+
+        verify(scheduleRepository, never()).save(any(Schedule.class));
     }
 }

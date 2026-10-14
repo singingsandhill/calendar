@@ -26,6 +26,30 @@
         </div>
     </div>
 
+    <!-- 일정 설명 (ADR datedate/domain/0011) — 링크 공개 모델이라 누구나 편집. 본문은 서버가 나눈 조각을
+         th:text / th:href 로만 그린다(utext 없음). <p> 안은 pre-line 이라 태그 사이 공백을 두지 않는다. -->
+    <section class="schedule-description" id="scheduleDescription"
+             th:classappend="${schedule.description() == null} ? 'is-empty'">
+        <div class="schedule-description-view" id="descriptionView">
+            <div class="schedule-description-head">
+                <h3 class="schedule-description-title" th:if="${schedule.description() != null}" th:text="#{schedule.description.title}">설명</h3>
+                <button type="button" class="btn btn-outline btn-sm" data-action="description.edit"
+                        th:text="${schedule.description() != null} ? #{schedule.description.edit} : #{schedule.description.add}">+ 설명 추가</button>
+            </div>
+            <p class="schedule-description-body" th:if="${schedule.description() != null}"><th:block th:each="seg : ${schedule.descriptionSegments()}"><a th:if="${seg.url() != null}" th:href="${seg.url()}" target="_blank" rel="nofollow ugc noopener noreferrer" th:text="${seg.text()}">링크</a><th:block th:if="${seg.url() == null}" th:text="${seg.text()}">설명</th:block></th:block></p>
+        </div>
+        <form class="schedule-description-form" id="descriptionForm" hidden>
+            <label class="sr-only" for="descriptionInput" th:text="#{schedule.description.title}">설명</label>
+            <textarea id="descriptionInput" maxlength="500" rows="4"
+                      th:placeholder="#{schedule.description.placeholder}" th:text="${schedule.description()}"></textarea>
+            <div class="schedule-description-actions">
+                <span class="schedule-description-count" id="descriptionCount" aria-live="polite"></span>
+                <button type="button" class="btn btn-secondary btn-sm" data-action="description.cancel" th:text="#{schedule.description.cancel}">취소</button>
+                <button type="button" class="btn btn-primary btn-sm" data-action="description.save" th:text="#{schedule.description.save}">저장</button>
+            </div>
+        </form>
+    </section>
+
     <!-- 온보딩 배너: 첫 방문(참여자 없음)에 자동 표시. 닫으면 localStorage에 저장되어
          다음 방문에도 닫힌 상태 유지. 우상단 "도움말 보기" 버튼으로 다시 열 수 있음.
          noscript 케이스: 참여자 있으면 hidden 으로 막아 기존 동작 유지. -->
@@ -196,13 +220,13 @@
                            maxlength="10" required
                            th:placeholder="#{schedule.participant.name.placeholder}">
                 </div>
-                <p class="participant-count-info" th:text="#{schedule.participant.count(${schedule.participants().size()})}">
-                    0 / 8명
+                <p class="participant-count-info" th:text="#{schedule.participant.count(${schedule.participants().size()}, ${schedule.maxParticipants()})}">
+                    0 / 10명
                 </p>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" data-action="participant.closeModal" th:text="#{schedule.participant.cancel}">취소</button>
                     <button type="submit" class="btn btn-primary"
-                            th:disabled="${schedule.participants().size() >= 8}"
+                            th:disabled="${schedule.participants().size() >= schedule.maxParticipants()}"
                             th:text="#{schedule.participant.add.btn}">추가</button>
                 </div>
             </form>
@@ -286,7 +310,8 @@
             timeRangeInvalid: [[#{schedule.alert.timeRangeInvalid}]],
             timeNoVotes: [[#{schedule.time.noVotes}]],
             timeDayCountTemplate: [[#{schedule.time.dayCount('{0}')}]],
-            timeBestTemplate: [[#{schedule.time.best('{0}', '{1}')}]]
+            timeBestTemplate: [[#{schedule.time.best('{0}', '{1}')}]],
+            descriptionCountTemplate: [[#{schedule.description.count('{0}', '{1}')}]]
         }
     };
 </script>
