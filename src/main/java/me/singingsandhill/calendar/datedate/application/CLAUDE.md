@@ -25,7 +25,8 @@
   (`Schedule.hasAvailabilityOn`, 아니면 `InvalidTimeSlotException` 400), 같은 날짜·시간대 중복 409.
   30분 단위·자정 넘김 없음은 `TimeSlot` 생성자가 검증
   ([ADR](../../../../../../../../docs/adr/datedate/domain/0009-time-slot-vote.md)).
-- **PopularityService** - 시간 가중 점수 기반 장소/메뉴 인기 순위. 노출 기준: 집계 후
+- **PopularityService** - 표수순(동점은 최근 등록 우선) 장소/메뉴 인기 순위
+  ([ADR 0012](../../../../../../../../docs/adr/datedate/domain/0012-popularity-order-votes-first.md)). 노출 기준: 집계 후
   최소 2표 + 비속어 블록리스트, 홈·트렌드·top 전역 적용
   ([ADR](../../../../../../../../docs/adr/datedate/domain/0006-popularity-exposure-criteria.md)).
 - **SeoService** - 페이지 타입별 SEO 메타데이터 (i18n + JSON-LD 포함). BreadcrumbList 는
@@ -40,7 +41,8 @@
   ([ADR 0013](../../../../../../../../docs/adr/common/seo/0013-publisher-identity-contact-and-sameas.md)).
   기사 `<title>`·og:title 은 `metaTitle` 키 우선(h1·headline 은 긴 `title`) — 제목 예산 ko 35/en 60
   ([ADR 0014](../../../../../../../../docs/adr/common/seo/0014-serp-title-budget-and-meta-title.md)). `/faq` FAQPage 는
-  화면과 같은 `faq.q1~q8/a1~a8` 키로 빌드.
+  화면과 같은 `faq.q1~q8/a1~a8` 키로 빌드. use-case 의 FAQPage·HowTo 도 화면의 FAQ·진행 순서와 같은 키다 —
+  마크업한 질문·답·단계 이름이 화면 텍스트에 없으면 `StructuredDataVisibilityTest`(사이트맵 전 URL 렌더)가 실패한다.
 - **InsightsService** - 집계 인기 통계 (`/insights/trends`).
 - **AppUserService** - 카카오 프로필 upsert (`kakaoId` unique, 재로그인 시 닉네임·프로필·lastLoginAt 갱신).
 - **UserActivityService** - 로그인 사용자 활동 이벤트(참여·투표·일정생성) append-only 기록,

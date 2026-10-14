@@ -21,87 +21,118 @@
         <p class="use-case-subtitle" th:text="#{'seo.useCase.' + ${currentSlug} + '.description'}">Description</p>
     </section>
 
-    <!-- Intro — short context paragraph (~80 KO words). Falls back to legacy 'body' key while new content rolls out. -->
-    <section class="use-case-intro animate-on-scroll"
-             th:with="introBody=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.intro')}"
-             th:if="${introBody != null and !#strings.isEmpty(introBody)}">
-        <p class="use-case-intro-body" th:text="${introBody}">Intro</p>
-    </section>
+    <!--
+      본문 — 프로즈 스타일은 기사·날짜 계산기와 같은 .guides-article 규칙을 공유한다.
+      가드 변수(th:with)는 바깥 th:block 에 둔다. Thymeleaf 는 같은 요소의 th:if 를 th:with 보다 먼저 평가하므로
+      한 요소에 두면 변수가 null 이라 섹션이 항상 사라진다 (2026-05-16 ~ 10-13 라이브 결함, UseCaseContentSectionsRenderingTest).
+    -->
+    <div class="guides-article">
+        <!-- Intro — short context paragraph (~80 KO words) -->
+        <th:block th:with="introBody=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.intro')}">
+            <section class="use-case-intro animate-on-scroll"
+                     th:if="${introBody != null and !#strings.isEmpty(introBody)}">
+                <p class="use-case-intro-body" th:text="${introBody}">Intro</p>
+            </section>
+        </th:block>
 
-    <!-- Worked example — per-slug differentiation (breaks the single-template look, adds unique content) -->
-    <section class="use-case-sample animate-on-scroll"
-             th:classappend="${'use-case-sample-' + currentSlug}"
-             th:with="sampleTitle=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.sample.title')}"
-             th:if="${sampleTitle != null and !#strings.isEmpty(sampleTitle)}">
-        <div class="use-case-sample-icon" th:switch="${currentSlug}">
-            <span th:case="'friend-meetup'">🎉</span>
-            <span th:case="'team-meeting'">💼</span>
-            <span th:case="'travel-planning'">✈️</span>
-            <span th:case="'study-group'">📚</span>
-            <span th:case="'club-activity'">🎾</span>
-            <span th:case="*">📅</span>
-        </div>
-        <h2 th:text="${sampleTitle}">Worked example</h2>
-        <p class="use-case-sample-body" th:text="#{'seo.useCase.' + ${currentSlug} + '.sample.body'}">Example walkthrough</p>
-    </section>
+        <!-- Steps — HowTo JSON-LD 와 같은 step1~3 문구. 구조화 데이터는 화면에 보이는 것만 마크업한다 (StructuredDataVisibilityTest) -->
+        <section class="use-case-steps animate-on-scroll">
+            <h2 th:text="#{usecase.steps.title}">진행 순서</h2>
+            <ol>
+                <li th:each="i : ${#numbers.sequence(1, 3)}">
+                    <strong th:text="#{'seo.useCase.' + ${currentSlug} + '.step' + ${i} + '.name'}">Step</strong>
+                    — <span th:text="#{'seo.useCase.' + ${currentSlug} + '.step' + ${i} + '.text'}">Step text</span>
+                </li>
+            </ol>
+        </section>
 
-    <!-- When to use — 3 scenarios with concrete situations -->
-    <section class="use-case-when animate-on-scroll"
-             th:with="whenLead=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.whenToUse.lead')}"
-             th:if="${whenLead != null and !#strings.isEmpty(whenLead)}">
-        <h2 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.title'}">When to use</h2>
-        <p class="use-case-section-lead" th:text="${whenLead}">Lead</p>
-        <div class="use-case-scenarios">
-            <article class="use-case-scenario" th:each="i : ${#numbers.sequence(1, 3)}">
-                <h3 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.scenario' + ${i} + '.title'}">Scenario</h3>
-                <p th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.scenario' + ${i} + '.text'}">Scenario text</p>
-            </article>
-        </div>
-    </section>
+        <!-- Worked example — per-slug differentiation (breaks the single-template look, adds unique content) -->
+        <th:block th:with="sampleTitle=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.sample.title')}">
+            <section class="use-case-sample animate-on-scroll"
+                     th:classappend="${'use-case-sample-' + currentSlug}"
+                     th:if="${sampleTitle != null and !#strings.isEmpty(sampleTitle)}">
+                <div class="use-case-sample-icon" th:switch="${currentSlug}">
+                    <span th:case="'friend-meetup'">🎉</span>
+                    <span th:case="'team-meeting'">💼</span>
+                    <span th:case="'travel-planning'">✈️</span>
+                    <span th:case="'study-group'">📚</span>
+                    <span th:case="'club-activity'">🎾</span>
+                    <span th:case="*">📅</span>
+                </div>
+                <h2 th:text="${sampleTitle}">Worked example</h2>
+                <p class="use-case-sample-body" th:text="#{'seo.useCase.' + ${currentSlug} + '.sample.body'}">Example walkthrough</p>
+            </section>
+        </th:block>
 
-    <!-- Common mistakes — 3 problem/fix pairs -->
-    <section class="use-case-mistakes animate-on-scroll"
-             th:with="mistakesLead=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.mistakes.lead')}"
-             th:if="${mistakesLead != null and !#strings.isEmpty(mistakesLead)}">
-        <h2 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.title'}">Common mistakes</h2>
-        <p class="use-case-section-lead" th:text="${mistakesLead}">Lead</p>
-        <div class="use-case-mistakes-grid">
-            <article class="use-case-mistake" th:each="i : ${#numbers.sequence(1, 3)}">
-                <p class="use-case-mistake-problem">
-                    <strong th:text="#{usecase.mistake.problem}">Problem:</strong>
-                    <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.mistake' + ${i} + '.problem'}">Problem text</span>
-                </p>
-                <p class="use-case-mistake-fix">
-                    <strong th:text="#{usecase.mistake.fix}">Fix:</strong>
-                    <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.mistake' + ${i} + '.fix'}">Fix text</span>
-                </p>
-            </article>
-        </div>
-    </section>
+        <!-- When to use — 3 scenarios with concrete situations -->
+        <th:block th:with="whenLead=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.whenToUse.lead')}">
+            <section class="use-case-when animate-on-scroll"
+                     th:if="${whenLead != null and !#strings.isEmpty(whenLead)}">
+                <h2 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.title'}">When to use</h2>
+                <p class="use-case-section-lead" th:text="${whenLead}">Lead</p>
+                <div class="use-case-scenarios">
+                    <article class="use-case-scenario" th:each="i : ${#numbers.sequence(1, 3)}">
+                        <h3 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.scenario' + ${i} + '.title'}">Scenario</h3>
+                        <p th:text="#{'seo.useCase.' + ${currentSlug} + '.section.whenToUse.scenario' + ${i} + '.text'}">Scenario text</p>
+                    </article>
+                </div>
+            </section>
+        </th:block>
 
-    <!-- Tips — checklist-style 4 items -->
-    <section class="use-case-tips animate-on-scroll"
-             th:with="tipsTitle=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.tips.title')}"
-             th:if="${tipsTitle != null and !#strings.isEmpty(tipsTitle)}">
-        <h2 th:text="${tipsTitle}">Tips</h2>
-        <ul class="use-case-tips-list">
-            <li th:each="i : ${#numbers.sequence(1, 4)}">
-                <strong th:text="#{'seo.useCase.' + ${currentSlug} + '.section.tips.tip' + ${i} + '.title'}">Tip</strong>
-                — <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.tips.tip' + ${i} + '.text'}">Tip text</span>
-            </li>
-        </ul>
-    </section>
+        <!-- Common mistakes — 3 problem/fix pairs -->
+        <th:block th:with="mistakesLead=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.mistakes.lead')}">
+            <section class="use-case-mistakes animate-on-scroll"
+                     th:if="${mistakesLead != null and !#strings.isEmpty(mistakesLead)}">
+                <h2 th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.title'}">Common mistakes</h2>
+                <p class="use-case-section-lead" th:text="${mistakesLead}">Lead</p>
+                <div class="use-case-mistakes-grid">
+                    <article class="use-case-mistake" th:each="i : ${#numbers.sequence(1, 3)}">
+                        <p class="use-case-mistake-problem">
+                            <strong th:text="#{usecase.mistake.problem}">Problem:</strong>
+                            <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.mistake' + ${i} + '.problem'}">Problem text</span>
+                        </p>
+                        <p class="use-case-mistake-fix">
+                            <strong th:text="#{usecase.mistake.fix}">Fix:</strong>
+                            <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.mistakes.mistake' + ${i} + '.fix'}">Fix text</span>
+                        </p>
+                    </article>
+                </div>
+            </section>
+        </th:block>
 
-    <!-- FAQ — 5 expandable Q&A. Also feeds FAQPage JSON-LD. -->
-    <section class="use-case-faq animate-on-scroll"
-             th:with="firstFaq=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.faq.q1')}"
-             th:if="${firstFaq != null and !#strings.isEmpty(firstFaq)}">
-        <h2 th:text="#{usecase.faq.title}">자주 묻는 질문</h2>
-        <details class="use-case-faq-item" th:each="i : ${#numbers.sequence(1, 5)}">
-            <summary th:text="#{'seo.useCase.' + ${currentSlug} + '.section.faq.q' + ${i}}">Question</summary>
-            <p th:text="#{'seo.useCase.' + ${currentSlug} + '.section.faq.a' + ${i}}">Answer</p>
-        </details>
-    </section>
+        <!-- Tips — checklist-style 4 items -->
+        <th:block th:with="tipsTitle=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.tips.title')}">
+            <section class="use-case-tips animate-on-scroll"
+                     th:if="${tipsTitle != null and !#strings.isEmpty(tipsTitle)}">
+                <h2 th:text="${tipsTitle}">Tips</h2>
+                <ul class="use-case-tips-list">
+                    <li th:each="i : ${#numbers.sequence(1, 4)}">
+                        <strong th:text="#{'seo.useCase.' + ${currentSlug} + '.section.tips.tip' + ${i} + '.title'}">Tip</strong>
+                        — <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.tips.tip' + ${i} + '.text'}">Tip text</span>
+                    </li>
+                </ul>
+            </section>
+        </th:block>
+
+        <!-- FAQ — 5 Q&A, 사이트 공용 아코디언(faq-toggle.js). FAQPage JSON-LD 와 같은 키 -->
+        <th:block th:with="firstFaq=${#messages.msgOrNull('seo.useCase.' + currentSlug + '.section.faq.q1')}">
+            <section class="use-case-faq animate-on-scroll"
+                     th:if="${firstFaq != null and !#strings.isEmpty(firstFaq)}">
+                <h2 th:text="#{usecase.faq.title}">자주 묻는 질문</h2>
+                <div class="faq-list">
+                    <div class="faq-item" th:each="i : ${#numbers.sequence(1, 5)}">
+                        <button class="faq-question" aria-expanded="false" th:attr="aria-controls='use-case-faq-' + ${i}">
+                            <span th:text="#{'seo.useCase.' + ${currentSlug} + '.section.faq.q' + ${i}}">Q</span>
+                            <span class="faq-toggle" aria-hidden="true">+</span>
+                        </button>
+                        <div class="faq-answer" th:attr="id='use-case-faq-' + ${i}" role="region">
+                            <p th:text="#{'seo.useCase.' + ${currentSlug} + '.section.faq.a' + ${i}}">A</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </th:block>
+    </div>
 
     <!-- Example URL block — preserved from original layout -->
     <section class="use-case-example animate-on-scroll">
@@ -140,5 +171,7 @@
 </main>
 
 <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+
+<script defer th:src="@{/js/faq-toggle.js}"></script>
 </body>
 </html>

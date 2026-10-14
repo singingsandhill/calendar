@@ -1,7 +1,6 @@
 package me.singingsandhill.calendar.datedate.application.service;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -21,13 +20,16 @@ import me.singingsandhill.calendar.datedate.domain.menu.MenuRepository;
 @Transactional(readOnly = true)
 public class PopularityService {
 
-    private static final int MAX_DAYS = 30;
-    private static final double TIME_WEIGHT_MAX = 5.0;
     private static final int DEFAULT_LIMIT = 5;
+
+    /** 표수 내림차순, 동점이면 최근 등록 우선 — 화면에 보이는 표수와 순서가 어긋나지 않게 (ADR datedate/domain/0012) */
+    private static final Comparator<AggregatedItem> BY_VOTES_THEN_RECENCY =
+            Comparator.comparingInt(AggregatedItem::totalVotes).reversed()
+                    .thenComparing(AggregatedItem::latestCreatedAt, Comparator.reverseOrder());
 
     /**
      * 노출 기준 — ADR datedate/domain/0006.
-     * 최소 2표: 여러 명이 동의한 항목만 노출 (0표 항목이 recency 보너스만으로 랭킹 진입 차단).
+     * 최소 2표: 여러 명이 동의한 항목만 노출 (1인 제안·셀프 투표 1회로는 진입 불가).
      * 블록리스트: 명백한 비속어 토큰만 — 자모 변형 우회는 막지 못하는 best-effort.
      */
     private static final int MIN_EXPOSURE_VOTES = 2;
@@ -88,12 +90,9 @@ public class PopularityService {
             });
         }
 
-        LocalDateTime now = LocalDateTime.now();
         return aggregated.values().stream()
                 .filter(this::isExposable)
-                .sorted(Comparator.comparingDouble((AggregatedItem item) ->
-                        calculatePopularityScore(item.totalVotes, item.latestCreatedAt, now))
-                        .reversed())
+                .sorted(BY_VOTES_THEN_RECENCY)
                 .limit(limit)
                 .map(item -> new PopularItemDto(item.name, item.url, item.totalVotes, item.latestCreatedAt))
                 .collect(Collectors.toList());
@@ -125,12 +124,9 @@ public class PopularityService {
             });
         }
 
-        LocalDateTime now = LocalDateTime.now();
         return aggregated.values().stream()
                 .filter(this::isExposable)
-                .sorted(Comparator.comparingDouble((AggregatedItem item) ->
-                        calculatePopularityScore(item.totalVotes, item.latestCreatedAt, now))
-                        .reversed())
+                .sorted(BY_VOTES_THEN_RECENCY)
                 .limit(limit)
                 .map(item -> new PopularItemDto(item.name, item.url, item.totalVotes, item.latestCreatedAt))
                 .collect(Collectors.toList());
@@ -143,12 +139,6 @@ public class PopularityService {
         }
         String normalized = item.name.toLowerCase().replaceAll("\\s+", "");
         return BLOCKED_TOKENS.stream().noneMatch(normalized::contains);
-    }
-
-    private double calculatePopularityScore(int voteCount, LocalDateTime createdAt, LocalDateTime now) {
-        long daysBetween = ChronoUnit.DAYS.between(createdAt, now);
-        double timeWeight = Math.max(0, (MAX_DAYS - daysBetween) / (double) MAX_DAYS * TIME_WEIGHT_MAX);
-        return voteCount + timeWeight;
     }
 
     private record AggregatedItem(String name, String url, int totalVotes, LocalDateTime latestCreatedAt) {}
