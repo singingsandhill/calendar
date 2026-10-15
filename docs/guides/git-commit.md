@@ -608,7 +608,7 @@ git commit -m "feat(datedate): 참여자 한도 10명 + 참여자 색 10색 + �
 # 범위 밖(보고만): seo.useCase.<slug>.body 레거시 키 5 x 2 는 fe46757 이후 미사용 — 삭제하지 않음. 미커밋 docs/stock/trade-decision.html(Commit 190)·
 #   package-lock.json 은 이 작업과 무관.
 
-# Commit 198 — fix(datedate): use-case 본문 섹션 렌더 복구 + 구조화 데이터-화면 정합 가드 + 인기 순위 표수순 (ADR datedate/domain/0012) — 마지막 커밋(git-commit.md 포함)
+# Commit 198 — ✅ DONE() fix(datedate): use-case 본문 섹션 렌더 복구 + 구조화 데이터-화면 정합 가드 + 인기 순위 표수순 (ADR datedate/domain/0012) — 마지막 커밋(git-commit.md 포함)
 # 주의: Commit 197 은 사용자가 이미 staging 했다 — 197 은 git commit 만 실행할 것. 197 의 git add 를 다시 실행하면 이 커밋의 변경
 #   (messages*.properties·CLAUDE.md 2곳·ADR README·git-commit.md)이 197 에 흡수된다.
 # 주의: 세 결함이 한 커밋인 이유 — messages*.properties 와 datedate/application/CLAUDE.md 를 셋이 함께 고친다. 처음 등장하는 커밋이 소유하므로
