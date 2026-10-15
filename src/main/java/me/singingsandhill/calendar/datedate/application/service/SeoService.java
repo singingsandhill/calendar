@@ -422,6 +422,13 @@ public class SeoService {
                         "name": "%s",
                         "text": "%s",
                         "url": "%s/guide#step-5"
+                    },
+                    {
+                        "@type": "HowToStep",
+                        "position": 6,
+                        "name": "%s",
+                        "text": "%s",
+                        "url": "%s/guide#step-6"
                     }
                 ]
             },
@@ -435,6 +442,7 @@ public class SeoService {
                 mJson("seo.guide.step3.name"), mJson("seo.guide.step3.text"), baseUrl,
                 mJson("seo.guide.step4.name"), mJson("seo.guide.step4.text"), baseUrl,
                 mJson("seo.guide.step5.name"), mJson("seo.guide.step5.text"), baseUrl,
+                mJson("seo.guide.step6.name"), mJson("seo.guide.step6.text"), baseUrl,
                 breadcrumbJsonLd(m("seo.breadcrumb.guide"), path)
             );
 
@@ -763,7 +771,7 @@ public class SeoService {
     }
 
     /**
-     * 인기 트렌드 & 이용 현황.
+     * 모임 데이터 & 인기 트렌드.
      *
      * <p>{@code hasData=false} (인기 데이터·통계 모두 0) 인 경우 PP-Full 의 *콘텐츠가 거의 없는 화면*
      * 신호를 회피하기 위해 robots 를 {@code noindex, follow} 로, 광고를 OFF 로, hreflang 도 비활성으로

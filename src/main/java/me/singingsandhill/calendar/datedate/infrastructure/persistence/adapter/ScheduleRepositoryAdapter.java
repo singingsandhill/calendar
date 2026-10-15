@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.infrastructure.persistence.adapter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -88,6 +89,11 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
     @Override
     public long count() {
         return scheduleJpaRepository.count();
+    }
+
+    @Override
+    public List<LocalDateTime> findAllCreatedAt() {
+        return scheduleJpaRepository.findAllCreatedAt();
     }
 
     private Schedule toDomain(ScheduleJpaEntity entity) {

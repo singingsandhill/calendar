@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import me.singingsandhill.calendar.datedate.domain.participant.Participant;
 import me.singingsandhill.calendar.datedate.domain.participant.ParticipantColor;
+import me.singingsandhill.calendar.datedate.domain.participant.ParticipantAvailability;
 import me.singingsandhill.calendar.datedate.domain.participant.ParticipantRepository;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.entity.ParticipantJpaEntity;
 import me.singingsandhill.calendar.datedate.infrastructure.persistence.entity.ScheduleJpaEntity;
@@ -85,6 +86,19 @@ public class ParticipantRepositoryAdapter implements ParticipantRepository {
     @Override
     public long count() {
         return participantJpaRepository.count();
+    }
+
+    @Override
+    public List<ParticipantAvailability> findAllAvailability() {
+        return participantJpaRepository.findAllWithSchedule().stream()
+                .map(p -> new ParticipantAvailability(
+                        p.getSchedule().getId(),
+                        p.getSchedule().getYear(),
+                        p.getSchedule().getMonth(),
+                        p.getSchedule().getWeeks(),
+                        p.getSchedule().getCreatedAt(),
+                        p.getSelections()))
+                .toList();
     }
 
     private Participant toDomain(ParticipantJpaEntity entity) {

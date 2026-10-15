@@ -138,6 +138,17 @@ class SeoServiceI18nTest {
         assertThat(ko.jsonLd()).contains("DateDate로 여러명 약속 잡기");
     }
 
+    @Test
+    @DisplayName("가이드 HowTo 는 6단계이고 5단계는 시간 정하기다 (AdSense ② — 시간 투표 단계)")
+    void guideHowToHasSixSteps() throws Exception {
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+        com.fasterxml.jackson.databind.JsonNode root = json.readTree(service.getGuideSeo().jsonLd());
+        com.fasterxml.jackson.databind.JsonNode steps = root.get(0).get("step");
+        assertThat(steps).hasSize(6);
+        assertThat(steps.get(4).get("name").asText()).isEqualTo("시간 정하기");
+        assertThat(steps.get(5).get("url").asText()).endsWith("/guide#step-6");
+    }
+
     // ===== Use cases =====
 
     @Test
@@ -485,6 +496,24 @@ class SeoServiceI18nTest {
                 assertHubCrumb(locale, service.getGuideArticleSeo(g.slug()),
                         guidesHub, "/guides", "/guides/" + g.slug());
             }
+        }
+    }
+
+    @Test
+    @DisplayName("/insights/trends BreadcrumbList 의 현재 페이지 이름은 화면 브레드크럼과 같다")
+    void breadcrumbList_insightsNameMatchesVisibleBreadcrumb() throws Exception {
+        MessageSource messageSource = buildMessageSource();
+        for (Locale locale : new Locale[] { Locale.KOREAN, Locale.ENGLISH }) {
+            LocaleContextHolder.setLocale(locale);
+            JsonNode elements = null;
+            for (JsonNode node : json.readTree(service.getInsightsTrendsSeo(true).jsonLd())) {
+                if ("BreadcrumbList".equals(node.path("@type").asText())) {
+                    elements = node.path("itemListElement");
+                }
+            }
+            assertThat(elements).as("[%s] BreadcrumbList 가 없다", locale).isNotNull();
+            assertThat(elements.get(elements.size() - 1).path("name").asText()).as("[%s]", locale)
+                .isEqualTo(messageSource.getMessage("insights.breadcrumb.current", null, locale));
         }
     }
 

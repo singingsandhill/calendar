@@ -57,6 +57,24 @@ class PolicyPagesLocaleRenderingTest {
     }
 
     @Test
+    @DisplayName("/privacy — 카카오 로그인 저장 항목·활동 기록·공유 링크·세션 쿠키·삭제 요청 방법을 적는다 (About 과 일치)")
+    void privacyDisclosesKakaoLoginData() throws Exception {
+        String ko = visibleText(mockMvc.perform(get("/privacy").param("lang", "ko"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(ko).contains("카카오 회원번호").contains("닉네임").contains("프로필 이미지 주소")
+                .contains("로그인 중 활동 기록").contains("리캡 공유 링크").contains("자주 함께한 사람 이름")
+                .contains("로그인 세션 쿠키").contains("cheongyakplanet@gmail.com").contains("연결을 끊어도")
+                .contains("2026년 10월 15일");
+
+        String en = visibleText(mockMvc.perform(get("/privacy").param("lang", "en"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(en).contains("Kakao user ID").contains("nickname").contains("profile image URL")
+                .contains("Activity while signed in").contains("Recap share links").contains("people you met most often")
+                .contains("Login session cookie").contains("cheongyakplanet@gmail.com").contains("Disconnecting DateDate")
+                .contains("October 15, 2026");
+    }
+
+    @Test
     @DisplayName("GET /terms?lang=en → 본문이 영어, html lang=en")
     void termsEnglishBody() throws Exception {
         MvcResult result = mockMvc.perform(get("/terms").param("lang", "en"))
@@ -100,6 +118,15 @@ class PolicyPagesLocaleRenderingTest {
         assertThat(extractBody(en.getResponse().getContentAsString()))
                 .contains("guide-faq-1")
                 .contains("Troubleshooting common issues");
+    }
+
+    /** &lt;main&gt; 본문 텍스트만 — 푸터에도 이메일이 있어 본문 검사가 그냥 통과하지 않게 한다. */
+    private static String visibleText(String html) {
+        int start = html.indexOf("<main");
+        int end = html.indexOf("</main>");
+        String main = (start >= 0 && end > start) ? html.substring(start, end) : extractBody(html);
+        return org.springframework.web.util.HtmlUtils.htmlUnescape(
+                main.replaceAll("(?s)<[^>]+>", " ")).replaceAll("\\s+", " ");
     }
 
     private static String extractBody(String html) {

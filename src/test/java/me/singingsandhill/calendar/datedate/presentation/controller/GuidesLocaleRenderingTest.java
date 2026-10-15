@@ -190,6 +190,18 @@ class GuidesLocaleRenderingTest {
                 .contains("href=\"/?lang=en\"");
     }
 
+    @Test
+    @DisplayName("기사 바이라인은 실제 첫 공개일을 보여주고 저자는 'DateDate' 다 (AdSense ② — 게시일 정정)")
+    void bylineShowsActualPublishDate() throws Exception {
+        String ko = visibleText(mockMvc.perform(get("/guides/how-to-pick-a-date"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(ko).contains("2026년 9월 19일").doesNotContain("2026년 8월 23일").doesNotContain("DateDate 팀");
+
+        String koNew = visibleText(mockMvc.perform(get("/guides/timezone-coordination"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(koNew).contains("2026년 10월 4일").doesNotContain("2026년 9월 24일");
+    }
+
     /** 가시 breadcrumb {@code <nav class="breadcrumb">} 블록. 없으면 빈 문자열. */
     private static String breadcrumbNav(String html) {
         Matcher m = Pattern

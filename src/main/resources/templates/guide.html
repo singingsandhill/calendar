@@ -8,7 +8,7 @@
 <main class="container guide-page">
     <section class="guide-hero animate-on-scroll">
         <h1 th:text="#{guide.hero.title}">DateDate 사용 가이드</h1>
-        <p class="guide-subtitle" th:text="#{guide.hero.subtitle}">5단계로 여러명의 약속을 쉽게 잡는 방법</p>
+        <p class="guide-subtitle" th:text="#{guide.hero.subtitle}">6단계로 여러명의 약속을 쉽게 잡는 방법</p>
     </section>
 
     <section class="guide-steps">
@@ -23,6 +23,14 @@
                     <li th:utext="#{guide.step1.li3}">예시: <code>my-team</code>, <code>college-friends</code>, <code>trip-2025</code></li>
                 </ul>
                 <p class="guide-tip" th:text="#{guide.step1.tip}">랜덤 생성 버튼으로 고유한 ID를 자동으로 만들 수도 있습니다.</p>
+                <figure class="guide-shot">
+                    <img class="guide-shot-img"
+                         th:src="@{'/image/guide/' + ${#locale.language == 'en' ? 'en' : 'ko'} + '/step1.webp'}"
+                         th:alt="#{guide.step1.imgAlt}"
+                         th:width="#{guide.screenshot.width}" th:height="#{guide.step1.imgHeight}"
+                         loading="eager" decoding="async">
+                    <figcaption th:text="#{guide.screenshot.caption}">예시 화면 — 이름과 날짜는 예시입니다</figcaption>
+                </figure>
             </div>
         </div>
 
@@ -34,7 +42,16 @@
                 <ul>
                     <li th:text="#{guide.step2.li1}">여러 달의 일정을 동시에 관리 가능</li>
                     <li th:text="#{guide.step2.li2}">대시보드에서 모든 일정을 한눈에 확인</li>
+                    <li th:text="#{guide.step2.li3}">일정 설명</li>
                 </ul>
+                <figure class="guide-shot">
+                    <img class="guide-shot-img"
+                         th:src="@{'/image/guide/' + ${#locale.language == 'en' ? 'en' : 'ko'} + '/step2.webp'}"
+                         th:alt="#{guide.step2.imgAlt}"
+                         th:width="#{guide.screenshot.width}" th:height="#{guide.step2.imgHeight}"
+                         loading="lazy" decoding="async">
+                    <figcaption th:text="#{guide.screenshot.caption}">예시 화면 — 이름과 날짜는 예시입니다</figcaption>
+                </figure>
             </div>
         </div>
 
@@ -48,6 +65,14 @@
                     <li th:text="#{guide.step3.li2}">참여자는 가입이나 앱 설치 없이 바로 참여</li>
                     <li th:text="#{guide.step3.li3}">링크만 있으면 누구나 접근 가능</li>
                 </ul>
+                <figure class="guide-shot">
+                    <img class="guide-shot-img"
+                         th:src="@{'/image/guide/' + ${#locale.language == 'en' ? 'en' : 'ko'} + '/step3.webp'}"
+                         th:alt="#{guide.step3.imgAlt}"
+                         th:width="#{guide.screenshot.width}" th:height="#{guide.step3.imgHeight}"
+                         loading="lazy" decoding="async">
+                    <figcaption th:text="#{guide.screenshot.caption}">예시 화면 — 이름과 날짜는 예시입니다</figcaption>
+                </figure>
             </div>
         </div>
 
@@ -62,24 +87,61 @@
                     <li th:text="#{guide.step4.li3}">날짜 수정도 간편 - 드롭다운에서 이름 선택 후 재선택</li>
                     <li th:text="#{guide.step4.li4}">장소와 메뉴도 제안하고 투표할 수 있음</li>
                 </ul>
+                <figure class="guide-shot">
+                    <img class="guide-shot-img"
+                         th:src="@{'/image/guide/' + ${#locale.language == 'en' ? 'en' : 'ko'} + '/step4.webp'}"
+                         th:alt="#{guide.step4.imgAlt}"
+                         th:width="#{guide.screenshot.width}" th:height="#{guide.step4.imgHeight}"
+                         loading="lazy" decoding="async">
+                    <figcaption th:text="#{guide.screenshot.caption}">예시 화면 — 이름과 날짜는 예시입니다</figcaption>
+                </figure>
             </div>
         </div>
 
         <div class="guide-step animate-on-scroll" id="step-5">
             <div class="guide-step-number">5</div>
             <div class="guide-step-content">
-                <h2 th:text="#{guide.step5.title}">결과 확인 & 결정</h2>
-                <p th:utext="#{guide.step5.p}">가장 많은 사람이 가능한 날짜가 <strong>자동으로 하이라이트</strong>됩니다.</p>
+                <h2 th:text="#{guide.step5.title}">시간 정하기</h2>
+                <p th:utext="#{guide.step5.p}">누군가 가능하다고 고른 날에 시간 후보를 올리고 투표합니다.</p>
                 <ul>
-                    <li th:text="#{guide.step5.li1}">겹치는 날짜가 많을수록 진한 색상으로 표시</li>
-                    <li th:text="#{guide.step5.li2}">인기 장소와 메뉴 순위도 함께 확인</li>
-                    <li th:text="#{guide.step5.li3}">최종 약속 날짜, 장소, 메뉴를 결정하세요</li>
+                    <li th:text="#{guide.step5.li1}">후보는 30분 단위</li>
+                    <li th:text="#{guide.step5.li2}">가능하다고 고른 날짜에만 후보를 올릴 수 있음</li>
+                    <li th:text="#{guide.step5.li3}">겹치는 시간 차트로 확인</li>
                 </ul>
+                <figure class="guide-shot">
+                    <img class="guide-shot-img"
+                         th:src="@{'/image/guide/' + ${#locale.language == 'en' ? 'en' : 'ko'} + '/step5.webp'}"
+                         th:alt="#{guide.step5.imgAlt}"
+                         th:width="#{guide.screenshot.width}" th:height="#{guide.step5.imgHeight}"
+                         loading="lazy" decoding="async">
+                    <figcaption th:text="#{guide.screenshot.caption}">예시 화면 — 이름과 날짜는 예시입니다</figcaption>
+                </figure>
+            </div>
+        </div>
+
+        <div class="guide-step animate-on-scroll" id="step-6">
+            <div class="guide-step-number">6</div>
+            <div class="guide-step-content">
+                <h2 th:text="#{guide.step6.title}">결과 확인 & 결정</h2>
+                <p th:utext="#{guide.step6.p}">가장 많은 사람이 가능한 날짜가 자동으로 하이라이트됩니다.</p>
+                <ul>
+                    <li th:text="#{guide.step6.li1}">겹치는 날짜가 많을수록 진한 색상</li>
+                    <li th:text="#{guide.step6.li2}">인기 장소와 메뉴 순위</li>
+                    <li th:text="#{guide.step6.li3}">최종 결정</li>
+                </ul>
+                <figure class="guide-shot">
+                    <img class="guide-shot-img"
+                         th:src="@{'/image/guide/' + ${#locale.language == 'en' ? 'en' : 'ko'} + '/step6.webp'}"
+                         th:alt="#{guide.step6.imgAlt}"
+                         th:width="#{guide.screenshot.width}" th:height="#{guide.step6.imgHeight}"
+                         loading="lazy" decoding="async">
+                    <figcaption th:text="#{guide.screenshot.caption}">예시 화면 — 이름과 날짜는 예시입니다</figcaption>
+                </figure>
             </div>
         </div>
     </section>
 
-    <!-- 카카오 로그인 가치 제안 배너 (비로그인만, 공유 fragment) — 5단계 가이드 직후 '선택: 계정 연결' 안내 -->
+    <!-- 카카오 로그인 가치 제안 배너 (비로그인만, 공유 fragment) — 6단계 가이드 직후 '선택: 계정 연결' 안내 -->
     <div th:replace="~{fragments/login-banner :: [th:fragment='login-banner']}"></div>
 
     <!-- 광고 슬롯: 가이드 소비 후, CTA 직전 -->

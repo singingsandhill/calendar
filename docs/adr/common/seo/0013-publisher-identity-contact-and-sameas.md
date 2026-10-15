@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted — [08-17 AdSense 진단 §5-6](../../../audit/adsense-low-value-content-diagnosis-2026-08-17.md) 의 "`founder`/`sameAs` 보류 유지" 를 이 ADR 로 대체 (`sameAs` 한정 — `founder`·개인 저자는 여전히 두지 않음) |
+| 상태 | Accepted — [08-17 AdSense 진단 §5-6](../../../audit/adsense-low-value-content-diagnosis-2026-08-17.md) 의 "`founder`/`sameAs` 보류 유지" 를 이 ADR 로 대체 (`sameAs` 한정 — `founder`·개인 저자는 여전히 두지 않음) — 결정 3 의 UI 비노출은 [ADR 0015](0015-operator-github-link-on-about.md) 로 대체 (2026-10-14) |
 | 날짜 | 2026-09-26 |
 | 도메인 | common (SEO) / datedate |
 | 관심사 | SEO / E-E-A-T / AdSense 게시자 신원 |

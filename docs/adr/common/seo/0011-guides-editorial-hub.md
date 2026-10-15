@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 결정 6 의 바이라인 표기 "DateDate 팀" 은 [ADR 0015](0015-operator-github-link-on-about.md) 에서 "DateDate" 로 정정 |
 | 날짜 | 2026-08-23 |
 | 도메인 | common (SEO) / datedate |
 | 관심사 | SEO / 콘텐츠 아키텍처 |

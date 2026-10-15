@@ -1,11 +1,13 @@
 package me.singingsandhill.calendar.datedate.application.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import me.singingsandhill.calendar.datedate.application.dto.InsightsOverviewDto;
+import me.singingsandhill.calendar.datedate.application.dto.MeetupReportDto;
 import me.singingsandhill.calendar.datedate.application.dto.PopularItemDto;
 import me.singingsandhill.calendar.datedate.application.dto.ServiceStatsDto;
 import me.singingsandhill.calendar.datedate.domain.location.LocationRepository;
@@ -57,6 +59,14 @@ public class InsightsService {
                 topLocation,
                 topMenu
         );
+    }
+
+    /** 모임 데이터 리포트 — 렌더 시점 집계 (ADR datedate/domain/0013). */
+    public MeetupReportDto getMeetupReport(LocalDate today) {
+        return MeetupReportCalculator.calculate(
+                participantRepository.findAllAvailability(),
+                scheduleRepository.findAllCreatedAt(),
+                today);
     }
 
     public ServiceStatsDto getServiceStats() {

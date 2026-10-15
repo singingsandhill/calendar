@@ -2775,6 +2775,26 @@ a:focus-visible {
     font-style: italic;
 }
 
+/* /guide 단계 스크린샷 (예시 화면) */
+.guide-shot {
+    margin: 1rem 0 0;
+    max-width: 390px;
+}
+
+.guide-shot-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.guide-shot figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
 .guide-cta {
     text-align: center;
     padding: 3rem 0;
@@ -3727,6 +3747,87 @@ a:focus-visible {
     font-size: 0.95rem;
     line-height: 1.7;
     margin: 0;
+}
+
+/* 모임 데이터 리포트 (/insights/trends, ADR datedate/domain/0013) */
+.report-section {
+    max-width: 700px;
+    margin: 0 auto 3rem;
+}
+
+.report-section h2 {
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.report-as-of {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.report-method,
+.report-block-desc {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+
+.report-block {
+    margin-bottom: 2.5rem;
+}
+
+.report-block h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.report-median {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.report-bars {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.report-bars li {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr 3.5rem;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.report-bar-track {
+    height: 0.75rem;
+    background: var(--bg-light);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.report-bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 999px;
+}
+
+.report-bar-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.report-bar-label small {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    white-space: nowrap;
 }
 
 /* Insights Navigation */

@@ -37,13 +37,15 @@
   guides 계열: `getGuidesIndexSeo()`(CollectionPage, 광고 없음) + `getGuideArticleSeo(slug)`
   (Article JSON-LD — datePublished/dateModified 는 `GuideSlugs` SSOT, 저자 Organization,
   [ADR](../../../../../../../../docs/adr/common/seo/0011-guides-editorial-hub.md)).
-  홈·about 의 Organization JSON-LD 에 연락처 `email` + `sameAs`(운영자 GitHub — 화면 비노출)
+  홈·about 의 Organization JSON-LD 에 연락처 `email` + `sameAs`(운영자 GitHub — About 화면에도 링크, [ADR 0015](../../../../../../../../docs/adr/common/seo/0015-operator-github-link-on-about.md))
   ([ADR 0013](../../../../../../../../docs/adr/common/seo/0013-publisher-identity-contact-and-sameas.md)).
   기사 `<title>`·og:title 은 `metaTitle` 키 우선(h1·headline 은 긴 `title`) — 제목 예산 ko 35/en 60
   ([ADR 0014](../../../../../../../../docs/adr/common/seo/0014-serp-title-budget-and-meta-title.md)). `/faq` FAQPage 는
   화면과 같은 `faq.q1~q8/a1~a8` 키로 빌드. use-case 의 FAQPage·HowTo 도 화면의 FAQ·진행 순서와 같은 키다 —
   마크업한 질문·답·단계 이름이 화면 텍스트에 없으면 `StructuredDataVisibilityTest`(사이트맵 전 URL 렌더)가 실패한다.
-- **InsightsService** - 집계 인기 통계 (`/insights/trends`).
+- **InsightsService** - 집계 인기 통계 (`/insights/trends`) + 모임 데이터 리포트 `getMeetupReport(today)` — 참여자+일정 `JOIN FETCH` 1회·일정 생성 시각 1회를
+  `MeetupReportCalculator`(순수 계산, 표본 하한 요일 300/월별 30/리드타임 30, 최근 12개월)에 넘긴다
+  ([ADR 0013](../../../../../../../../docs/adr/datedate/domain/0013-meetup-data-report.md)).
 - **AppUserService** - 카카오 프로필 upsert (`kakaoId` unique, 재로그인 시 닉네임·프로필·lastLoginAt 갱신).
 - **UserActivityService** - 로그인 사용자 활동 이벤트(참여·투표·일정생성) append-only 기록,
   (userId, type, targetId) 중복 방지, REQUIRES_NEW + 예외 삼킴으로 본 동작 무영향

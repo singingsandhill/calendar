@@ -121,7 +121,7 @@ class SitemapServiceHreflangTest {
         // 기사 <url> 블록의 lastmod 는 SSOT 의 modified(KST 자정) — buildTime(테스트에선 now)과 달라야 한다
         int idx = xml.indexOf("<loc>" + BASE_URL + "/guides/how-to-pick-a-date</loc>");
         String block = xml.substring(idx, xml.indexOf("</url>", idx));
-        assertThat(block).contains("<lastmod>2026-08-23T00:00:00+09:00</lastmod>");
+        assertThat(block).contains("<lastmod>2026-09-19T00:00:00+09:00</lastmod>");
     }
 
     @Test

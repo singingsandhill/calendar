@@ -2,6 +2,7 @@ package me.singingsandhill.calendar.datedate.domain.schedule;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 public record YearMonth(int year, int month) {
 
@@ -49,6 +50,19 @@ public record YearMonth(int year, int month) {
             throw new IllegalArgumentException("Index must be between 1 and " + FIXED_TOTAL_DAYS);
         }
         return getGridStartDate().plusDays(index - 1);
+    }
+
+    /**
+     * 참여자 선택 인덱스를 실제 날짜로 — 웹 달력(static/js/schedule/calendar.js)의 두 렌더 경로와 같은 규칙.
+     * 7주 확장 모드(weeks == FIXED_WEEKS)는 그리드 시작 + (index − 1), 기존 모드는 그 달의 index 일. 범위 밖은 빈 값.
+     */
+    public Optional<LocalDate> dateOf(int index, int weeks) {
+        if (weeks == FIXED_WEEKS) {
+            return index >= 1 && index <= FIXED_TOTAL_DAYS ? Optional.of(indexToDate(index)) : Optional.empty();
+        }
+        return index >= 1 && index <= getDaysInMonth()
+                ? Optional.of(LocalDate.of(year, month, index))
+                : Optional.empty();
     }
 
     /**

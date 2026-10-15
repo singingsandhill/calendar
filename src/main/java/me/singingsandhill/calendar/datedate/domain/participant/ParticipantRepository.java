@@ -18,4 +18,7 @@ public interface ParticipantRepository {
     boolean existsByScheduleIdAndName(Long scheduleId, String name);
 
     long count();
+
+    /** 모임 데이터 리포트용 — 전체 참여자의 고른 날짜와 일정 정보 (ADR datedate/domain/0013). */
+    List<ParticipantAvailability> findAllAvailability();
 }
