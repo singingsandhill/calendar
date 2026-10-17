@@ -55,3 +55,6 @@ docs/git_commit.md
 # 감사 리플레이 스크립트의 로컬 캐시·산출물 (docs/audit/coin-trading-strategy-review-2026-09-15.md 부록 A)
 docs/audit/scripts/ada_1m.json
 docs/audit/scripts/replay_results.json
+
+# Node — 저장소는 npx 도구(tailwindcss@3.4, shellcheck@4.1.0)만 쓴다. 루트에서 npm install 을 실수로 돌려도 의존성 트리가 잡히지 않게
+node_modules/
