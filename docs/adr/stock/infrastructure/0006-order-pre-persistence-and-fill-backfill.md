@@ -54,6 +54,10 @@
 - 미확인 주문이 있는 동안 틱당 당일주문조회 1콜이 추가된다(최대 12틱).
 - 회귀 가드: `StockPositionServiceTest` (backfill·수수료·선영속화·스윕 3종·동적 손절).
 
+- 2026-08-31: 체결조회 TR 은 KIS 신TR 전환에 따라 TTTC8001R → TTTC0081R 로 교체(주문 tr_id 도
+  TTTC0012U/0011U — 구TR 은 "사전고지 없이 막힐 수 있음" 안내). 신TR 응답 output1 에 backfill 이 쓰는
+  13개 필드 존재 확인 (git-commit.md Commit 167).
+
 ## References
 
 - `stock/application/service/StockPositionService.java` (`reconcileUnconfirmedOrders`, `resolveBuyFill`)

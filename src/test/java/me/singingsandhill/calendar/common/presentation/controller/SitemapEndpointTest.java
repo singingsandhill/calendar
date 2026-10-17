@@ -104,6 +104,16 @@ class SitemapEndpointTest {
     }
 
     @Test
+    @DisplayName("robots.txt 가 카카오 OAuth 시작 경로(/oauth2/)를 크롤 차단한다")
+    void robotsTxtBlocksOAuthStart() throws Exception {
+        String robots = readRobotsTxt();
+        assertThat(isBlocked("/oauth2/authorization/kakao",
+                directives(robots, "Disallow:"), directives(robots, "Allow:")))
+                .as("전 페이지 헤더의 로그인 링크를 크롤러가 따라가 kauth.kakao.com 302·세션 생성을 반복하지 않도록")
+                .isTrue();
+    }
+
+    @Test
     @DisplayName("robots.txt 의 Sitemap: 줄이 app.base-url 과 일치한다")
     void robotsTxtSitemapLineMatchesBaseUrl() throws Exception {
         assertThat(readRobotsTxt())

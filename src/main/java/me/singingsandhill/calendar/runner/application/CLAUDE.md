@@ -5,8 +5,8 @@
 
 ## Services
 
-- **RunService** - Run CRUD (date, time, location, category)
-- **AttendanceService** - Register attendance with distance, rankings (top 10 by count/distance), member stats by category
+- **RunService** - Run CRUD (date, time, location, category). `getAllRuns(from, to)` 는 optional 날짜 범위 필터 (null=무제한, 서비스에서 EPOCH/9999-12-31 sentinel 정규화 후 BETWEEN 쿼리)
+- **AttendanceService** - Register attendance with distance, rankings (top 10 by count/distance), member stats by category. `getAllMemberStats(from, to)` 도 같은 optional 날짜 범위 계약 (run.date 조인 기준)
 - **RunnerAdminService** - Admin account management (password encoded)
 
 ## Exceptions

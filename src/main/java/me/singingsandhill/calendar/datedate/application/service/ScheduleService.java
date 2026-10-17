@@ -61,15 +61,20 @@ public class ScheduleService {
     }
 
     @Transactional
-    public Schedule updateSchedule(String ownerId, int year, int month, Integer weeks) {
+    public Schedule updateSchedule(String ownerId, int year, int month, Integer weeks, String description) {
         Schedule schedule = scheduleRepository.findByOwnerIdAndYearMonth(ownerId, year, month)
                 .orElseThrow(() -> new ScheduleNotFoundException(ownerId, year, month));
 
+        boolean changed = false;
         if (weeks != null) {
             schedule.changeWeeks(weeks);
-            return scheduleRepository.save(schedule);
+            changed = true;
+        }
+        if (description != null) {
+            schedule.changeDescription(description);
+            changed = true;
         }
 
-        return schedule;
+        return changed ? scheduleRepository.save(schedule) : schedule;
     }
 }

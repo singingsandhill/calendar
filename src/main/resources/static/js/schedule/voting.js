@@ -1,7 +1,7 @@
 import { schedule, locations, menus, messages, formatVotes } from './state.js';
 import { escapeHtml } from './utils.js';
 
-function getSelectedVoterName() {
+export function getSelectedVoterName() {
     const select = document.getElementById('participantSelect');
     if (!select.value) {
         alert(messages.selectName);
@@ -18,7 +18,7 @@ function updateItemUI(itemElement, item) {
     ).join('');
 }
 
-async function toggleVoteFor(item, voterName, voteApi, unvoteApi) {
+export async function toggleVoteFor(item, voterName, voteApi, unvoteApi) {
     const hasVoted = item.voters.some(v => v.toLowerCase() === voterName.toLowerCase());
     if (hasVoted) {
         await unvoteApi(item.id, voterName);

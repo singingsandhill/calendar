@@ -15,17 +15,17 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 
 1. **사용자 정의 변수** (Data Layer Variable 유형):
    `DLV - owner_id`, `DLV - schedule_id`, `DLV - target`, `DLV - target_id`, `DLV - action`, `DLV - days_count`, `DLV - participant_count_after`, `DLV - category`, `DLV - run_id`, `DLV - distance`, `DLV - year`, `DLV - month`,
-   `DLV - share_method`, `DLV - location_count_after`, `DLV - menu_count_after`, `DLV - is_owner`, `DLV - participant_count`, `DLV - owner_id_hash`, `DLV - schedule_count`
+   `DLV - share_method`, `DLV - location_count_after`, `DLV - menu_count_after`, `DLV - is_owner`, `DLV - participant_count`, `DLV - owner_id_hash`, `DLV - schedule_count`, `DLV - time_slot_count_after`
 
 2. **트리거 1개** (Custom Event, 정규식):
    - 이름: `Custom - Business Events`
-   - 이벤트 이름: `^(schedule_created|participant_added|selections_saved|vote_cast|run_created|attendance_marked|link_shared|location_added|menu_added|schedule_viewed|owner_dashboard_viewed)$`
+   - 이벤트 이름: `^(schedule_created|participant_added|selections_saved|vote_cast|run_created|attendance_marked|link_shared|location_added|menu_added|schedule_viewed|owner_dashboard_viewed|time_slot_added)$`
    - "이벤트 이름 일치 정규식 사용" 체크
 
 3. **태그 1개** (GA4 Event):
    - 구성 태그: 기존 Google Tag "datedate" (`G-9QTMK4CDDF`)
    - 이벤트 이름: `{{Event}}` (built-in, dataLayer 의 event 그대로 전달)
-   - 이벤트 매개변수: 위 19개 DLV 매핑 (없는 키는 빈 문자열로 안전)
+   - 이벤트 매개변수: 위 20개 DLV 매핑 (없는 키는 빈 문자열로 안전)
    - 트리거: `Custom - Business Events`
 
 4. **DebugView 검증** → 사이트에서 실제 행동 → 이벤트 흐름 확인 → **게시**
@@ -85,7 +85,7 @@ P0 (즉시) → P1 (단기, 1~2주) → P2 (중기, 1~2개월) → P3 (장기). 
 
 1. Spring Boot 스케줄러 `WarehouseExportScheduler` 추가:
    - 매일 KST 02:00 (BQ 적재 04:00 직전)
-   - 모든 도메인 테이블 (owners, schedules, participants, locations, location_votes, menus, menu_votes, runs, attendances) 을 `JSONL` 로 직렬화
+   - 모든 도메인 테이블 (owners, schedules, participants, locations, location_votes, menus, menu_votes, time_slots, time_slot_votes, runs, attendances) 을 `JSONL` 로 직렬화
    - GCS 버킷 (`gs://datedate-warehouse/exports/{table}_{YYYYMMDD}.jsonl`) 업로드
 2. BQ 외부 테이블 등록:
    ```sql

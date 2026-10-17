@@ -11,10 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import me.singingsandhill.calendar.common.presentation.dto.response.ErrorResponse;
+import me.singingsandhill.calendar.datedate.application.exception.ParticipantLimitExceededException;
 import me.singingsandhill.calendar.datedate.application.exception.ReservedOwnerIdException;
+import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 
 /**
  * GlobalExceptionHandler 가 BusinessException 의 messageKey 를 현재 로케일로 해석하는지 검증.
@@ -79,5 +82,33 @@ class GlobalExceptionHandlerI18nTest {
         assertThat(response.getBody().message())
                 .isEqualTo(expectedMessage(Locale.ENGLISH, "guide"))
                 .isEqualTo("This ID is taken or reserved: guide");
+    }
+
+    @Test
+    @DisplayName("ParticipantLimitExceededException — KO 로케일에서 한도가 들어간 한국어 메시지를 반환한다")
+    void participantLimit_koreanLocale_returnsKoreanMessageWithCap() {
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+
+        ResponseEntity<ErrorResponse> response =
+                handler.handleBusinessException(new ParticipantLimitExceededException());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo("PARTICIPANT_LIMIT_EXCEEDED");
+        assertThat(response.getBody().message())
+                .isEqualTo("참여자는 일정당 최대 " + Schedule.MAX_PARTICIPANTS + "명까지 추가할 수 있습니다.");
+    }
+
+    @Test
+    @DisplayName("ParticipantLimitExceededException — EN 로케일에서 한도가 들어간 영어 메시지를 반환한다")
+    void participantLimit_englishLocale_returnsEnglishMessageWithCap() {
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
+
+        ResponseEntity<ErrorResponse> response =
+                handler.handleBusinessException(new ParticipantLimitExceededException());
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().message())
+                .isEqualTo("A schedule can have up to " + Schedule.MAX_PARTICIPANTS + " participants.");
     }
 }

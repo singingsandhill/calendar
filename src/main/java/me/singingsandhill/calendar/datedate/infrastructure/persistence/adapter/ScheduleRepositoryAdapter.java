@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.infrastructure.persistence.adapter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -57,6 +58,7 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
             entity = scheduleJpaRepository.findById(schedule.getId())
                     .orElseThrow(() -> new IllegalStateException("Schedule not found: " + schedule.getId()));
             entity.setWeeks(schedule.getWeeks());
+            entity.setDescription(schedule.getDescription());
         } else {
             entity = new ScheduleJpaEntity(
                     owner,
@@ -65,6 +67,7 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
                     schedule.getWeeks(),
                     schedule.getCreatedAt()
             );
+            entity.setDescription(schedule.getDescription());
         }
 
         ScheduleJpaEntity saved = scheduleJpaRepository.save(entity);
@@ -88,6 +91,11 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
         return scheduleJpaRepository.count();
     }
 
+    @Override
+    public List<LocalDateTime> findAllCreatedAt() {
+        return scheduleJpaRepository.findAllCreatedAt();
+    }
+
     private Schedule toDomain(ScheduleJpaEntity entity) {
         return new Schedule(
                 entity.getId(),
@@ -98,7 +106,8 @@ public class ScheduleRepositoryAdapter implements ScheduleRepository {
                 entity.getCreatedAt(),
                 entity.getParticipants().stream()
                         .map(this::participantToDomain)
-                        .collect(Collectors.toList())
+                        .collect(Collectors.toList()),
+                entity.getDescription()
         );
     }
 

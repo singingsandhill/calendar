@@ -15,14 +15,22 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class RunService {
 
+    private static final LocalDate FILTER_MIN = LocalDate.EPOCH;
+    private static final LocalDate FILTER_MAX = LocalDate.of(9999, 12, 31);
+
     private final RunRepository runRepository;
 
     public RunService(RunRepository runRepository) {
         this.runRepository = runRepository;
     }
 
-    public List<Run> getAllRuns() {
-        return runRepository.findAllOrderByDateDesc();
+    public List<Run> getAllRuns(LocalDate from, LocalDate to) {
+        if (from == null && to == null) {
+            return runRepository.findAllOrderByDateDesc();
+        }
+        return runRepository.findByDateBetweenOrderByDateDesc(
+                from != null ? from : FILTER_MIN,
+                to != null ? to : FILTER_MAX);
     }
 
     public Run getRunById(Long id) {

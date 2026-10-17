@@ -42,6 +42,10 @@ public class ScheduleJpaEntity {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    // 일정 설명 (ADR datedate/domain/0011) — null 허용, ddl-auto 가 기존 행을 null 로 둔 채 컬럼만 추가
+    @Column(length = 500)
+    private String description;
+
     @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ParticipantJpaEntity> participants = new ArrayList<>();
 
@@ -50,6 +54,10 @@ public class ScheduleJpaEntity {
 
     @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MenuJpaEntity> menus = new ArrayList<>();
+
+    // 일정 삭제 시 시간 투표 후보 cascade 삭제 전용 (FK 위반 방지) — 조회는 TimeSlotJpaRepository 경유
+    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TimeSlotJpaEntity> timeSlots = new ArrayList<>();
 
     protected ScheduleJpaEntity() {
     }
@@ -96,6 +104,14 @@ public class ScheduleJpaEntity {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public List<ParticipantJpaEntity> getParticipants() {

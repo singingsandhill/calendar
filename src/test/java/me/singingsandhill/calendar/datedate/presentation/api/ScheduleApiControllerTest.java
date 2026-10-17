@@ -3,9 +3,11 @@ package me.singingsandhill.calendar.datedate.presentation.api;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,6 +27,7 @@ import me.singingsandhill.calendar.datedate.application.exception.ScheduleNotFou
 import me.singingsandhill.calendar.datedate.application.service.LocationService;
 import me.singingsandhill.calendar.datedate.application.service.MenuService;
 import me.singingsandhill.calendar.datedate.application.service.ScheduleService;
+import me.singingsandhill.calendar.datedate.application.service.TimeSlotService;
 import me.singingsandhill.calendar.datedate.application.service.UserActivityService;
 import me.singingsandhill.calendar.datedate.presentation.api.ScheduleApiController;
 import me.singingsandhill.calendar.runner.domain.AdminRepository;
@@ -46,6 +49,9 @@ class ScheduleApiControllerTest {
 
     @MockitoBean
     private MenuService menuService;
+
+    @MockitoBean
+    private TimeSlotService timeSlotService;
 
     @MockitoBean
     private UserActivityService userActivityService;
@@ -130,5 +136,33 @@ class ScheduleApiControllerTest {
 
         mockMvc.perform(delete("/api/owners/test-user/schedules/2025/12"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("PATCH 로 설명만 보내면 서비스에 설명을 넘기고 주 수는 null 로 둔다")
+    void updateSchedule_description_passesToService() throws Exception {
+        when(ownerRepository.existsById("test-user")).thenReturn(true);
+        Schedule schedule = new Schedule("test-user", 2025, 12);
+        schedule.setId(1L);
+        when(scheduleService.updateSchedule("test-user", 2025, 12, null, "회의 60분")).thenReturn(schedule);
+
+        mockMvc.perform(patch("/api/owners/test-user/schedules/2025/12")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\": \"회의 60분\"}"))
+                .andExpect(status().isOk());
+
+        verify(scheduleService).updateSchedule("test-user", 2025, 12, null, "회의 60분");
+    }
+
+    @Test
+    @DisplayName("PATCH 설명이 500자를 넘으면 400 VALIDATION_ERROR")
+    void updateSchedule_descriptionTooLong_returns400() throws Exception {
+        when(ownerRepository.existsById("test-user")).thenReturn(true);
+
+        mockMvc.perform(patch("/api/owners/test-user/schedules/2025/12")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\": \"" + "가".repeat(Schedule.MAX_DESCRIPTION_LENGTH + 1) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 }

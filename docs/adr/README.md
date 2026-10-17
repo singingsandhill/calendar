@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | 2 | — | 11 | 3 | — | — | — | 7 | 23 |
-| **datedate** | 8 | — | 6 | — | — | — | — | — | — | 14 |
+| **common**   | — | 3 | — | 15 | 3 | — | — | — | 7 | 28 |
+| **datedate** | 13 | — | 8 | — | — | — | — | — | — | 21 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 5 | — | — | — | 3 | 16 | 3 | — | 27 |
 | **stock**    | — | 8 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 23 |
-| **합계** | 10 | 15 | 6 | 11 | 3 | 5 | 26 | 6 | 7 | **89** |
+| **합계** | 15 | 16 | 8 | 15 | 3 | 5 | 26 | 6 | 7 | **101** |
 
-총 **89개 ADR**.
+총 **101개 ADR**.
 
 ---
 
@@ -120,19 +120,31 @@
 | 2026-08-18 | datedate/domain | [0008 미지 콘텐츠 슬러그는 HTTP 404](datedate/domain/0008-unknown-content-slug-404.md) | AdSense 3차 통지 진단 — 미지 use-case 슬러그 302→홈이 소프트 404 신호 (owner 404 와 비대칭) |
 | 2026-08-23 | common/seo | [0011 /guides 에디토리얼 허브 — 기사별 전용 템플릿 + 날짜 SSOT](common/seo/0011-guides-editorial-hub.md) | 3차 통지의 editorial 판정 — 검색의도형 장문 카테고리 부재 + use-case 의 "복제 템플릿" 신호 회피 필요 |
 | 2026-08-31 | stock/infrastructure | [0008 종목명 소스 search-stock-info](stock/infrastructure/0008-stock-name-source-search-stock-info.md) | 09:20 메일·대시보드 종목명 칸에 종목코드 인쇄 — 스크리닝 TR 3종에 종목명 필드 부재, 최초 커밋부터 placeholder |
+| 2026-09-10 | common/infrastructure | [0003 이미지 발행을 deploy 릴리스 브랜치로 분리](common/infrastructure/0003-image-publish-on-deploy-branch.md) | 발행 브랜치 = 개발 브랜치라 :latest 가 개발 tip 을 따라감 — 서버 반영은 0001 의 수동 버튼 유지 |
+| 2026-09-24 | datedate/domain | [0009 시간 투표 — 날짜+시간대 후보, 선택된 날 서버 강제](datedate/domain/0009-time-slot-vote.md) | 날짜는 모이지만 "몇 시" 결정 수단 부재 — 장소·메뉴와 같은 양식의 시간 투표 요청 |
+| 2026-09-24 | common/seo | [0012 BreadcrumbList 허브 계층 복원 (3단계 + 가시 breadcrumb)](common/seo/0012-breadcrumb-hub-hierarchy.md) | 0008 의 2단계 제약 전제(허브 부재) 해소 + 점검에서 허브 고아(유입 링크 0) 실측 — 0008 의 2단계 고정 부분 대체 |
+| 2026-09-26 | common/seo | [0013 퍼블리셔 신원 — 연락처 이메일 공개 + Organization sameAs(운영자 GitHub)](common/seo/0013-publisher-identity-contact-and-sameas.md) | AdSense 3차 통지 후 게시자 신원 신호 보강 — 08-17 진단의 'sameAs 보류' 를 실존 계정 한정으로 대체 |
+| 2026-09-26 | common/seo | [0014 SERP 제목 예산 — ko 35 / en 60 가드 + 기사 metaTitle 분리](common/seo/0014-serp-title-budget-and-meta-title.md) | 제목 기준 부재 — 기사 8편 추가로 예산 초과 ko 12·en 12건, 기사 title 은 h1·headline 과 공유 |
+| 2026-09-27 | datedate/frontend | [0004 사이트 크롬 단일 fragment — 오버레이 홈 한정 + 푸터 재설계](datedate/frontend/0004-single-site-chrome.md) | 헤더·푸터 두 벌 편차 — 고정 헤더 밑 브레드크럼 겹침(17페이지 확산)·sticky 불능·푸터 칼럼 불균형 |
+| 2026-10-10 | datedate/domain | [0010 참여자 한도 10명 + 한도 값 서버 전달(maxParticipants)](datedate/domain/0010-participant-cap-10.md) | 사용자 결정 8 → 10 — 템플릿·미니앱·문구에 복제된 8 이 테스트에 안 잡힘 |
+| 2026-10-10 | datedate/ux | [0004 참여자 색 10색 — 갈색·청록 덧붙이기](datedate/ux/0004-ten-color-participant-palette.md) | 한도 10 → 9·10번째가 1·2번째 색과 중복 — ux/0001 의 8색 spec 대체 |
+| 2026-10-11 | datedate/domain | [0011 일정 설명 — 링크 공개 편집, 링크 판별은 서버 한 곳](datedate/domain/0011-schedule-description.md) | use-case 문구 25곳이 없는 "페이지 설명" 을 안내 — 사용자가 필드 신설을 택함 |
+| 2026-10-13 | datedate/domain | [0012 인기 순위 정렬 — 표수 우선, 동점은 최근 등록](datedate/domain/0012-popularity-order-votes-first.md) | AdSense 4번째 통지 진단 — 홈 인기 메뉴가 4표 > 2표 > 7표 (표시는 표수, 정렬은 표수+최근 보너스) |
+| 2026-10-14 | common/seo | [0015 운영자 GitHub 링크를 About 화면에 노출](common/seo/0015-operator-github-link-on-about.md) | AdSense 4번째 통지 — 사람 리뷰어가 볼 신원 신호 부재 (0013 의 UI 비노출 대체) |
+| 2026-10-14 | datedate/domain | [0013 모임 데이터 리포트 — 렌더 시 집계·표본 하한·집계만 공개](datedate/domain/0013-meetup-data-report.md) | AdSense 4번째 통지 — 사이트만 가진 실사용 데이터가 인기 장소·메뉴 표뿐 |
 
 ---
 
 ## 도메인별 폴더 구조
 
-- [common/seo/](common/seo/) — 10 ADRs
+- [common/seo/](common/seo/) — 15 ADRs
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 6 ADRs
-- [common/infrastructure/](common/infrastructure/) — 2 ADRs
-- [datedate/domain/](datedate/domain/) — 7 ADRs
-- [datedate/frontend/](datedate/frontend/) — 3 ADRs
-- [datedate/ux/](datedate/ux/) — 3 ADRs
+- [common/infrastructure/](common/infrastructure/) — 3 ADRs
+- [datedate/domain/](datedate/domain/) — 13 ADRs
+- [datedate/frontend/](datedate/frontend/) — 4 ADRs
+- [datedate/ux/](datedate/ux/) — 4 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
 - [trading/modes/](trading/modes/) — 3 ADRs

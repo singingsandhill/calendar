@@ -18,4 +18,8 @@ public interface ParticipantJpaRepository extends JpaRepository<ParticipantJpaEn
 
     @Query("SELECT COUNT(p) > 0 FROM ParticipantJpaEntity p WHERE p.schedule.id = :scheduleId AND LOWER(p.name) = LOWER(:name)")
     boolean existsByScheduleIdAndName(@Param("scheduleId") Long scheduleId, @Param("name") String name);
+
+    // 모임 데이터 리포트 — 일정과 함께 한 번에 읽는다(일정마다 지연 로딩하면 일정 수만큼 쿼리)
+    @Query("SELECT p FROM ParticipantJpaEntity p JOIN FETCH p.schedule")
+    List<ParticipantJpaEntity> findAllWithSchedule();
 }

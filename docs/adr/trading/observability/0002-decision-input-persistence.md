@@ -7,7 +7,7 @@
 | 도메인 | trading |
 | 관심사 | 관측성 |
 | 관련 커밋 | (배치 커밋 시 기입) |
-| 관련 ADR | [trading/observability/0001](0001-signal-quality-analytics-page.md), [trading/risk/0003](../risk/0003-position-risk-guards.md) |
+| 관련 ADR | [trading/observability/0001](0001-signal-quality-analytics-page.md), [trading/risk/0003](../risk/0003-entry-and-time-risk-guards.md) |
 
 ## Context — 무엇이 문제였나
 

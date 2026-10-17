@@ -11,7 +11,8 @@ import me.singingsandhill.calendar.datedate.domain.participant.Participant;
 
 public class Schedule {
 
-    public static final int MAX_PARTICIPANTS = 8;
+    public static final int MAX_PARTICIPANTS = 10;
+    public static final int MAX_DESCRIPTION_LENGTH = 500;
     private static final int EXTENDED_WEEKS = 7;
 
     private Long id;
@@ -20,23 +21,25 @@ public class Schedule {
     private int weeks;
     private final LocalDateTime createdAt;
     private final List<Participant> participants;
+    private String description;
 
     public Schedule(String ownerId, int year, int month) {
-        this(null, ownerId, year, month, EXTENDED_WEEKS, LocalDateTime.now(), new ArrayList<>());
+        this(null, ownerId, year, month, EXTENDED_WEEKS, LocalDateTime.now(), new ArrayList<>(), null);
     }
 
     public Schedule(String ownerId, int year, int month, Integer weeks) {
-        this(null, ownerId, year, month, weeks != null ? weeks : EXTENDED_WEEKS, LocalDateTime.now(), new ArrayList<>());
+        this(null, ownerId, year, month, weeks != null ? weeks : EXTENDED_WEEKS, LocalDateTime.now(), new ArrayList<>(), null);
     }
 
     public Schedule(Long id, String ownerId, int year, int month, Integer weeks,
-                    LocalDateTime createdAt, List<Participant> participants) {
+                    LocalDateTime createdAt, List<Participant> participants, String description) {
         this.id = id;
         this.ownerId = ownerId;
         this.yearMonth = YearMonth.of(year, month);
         this.weeks = weeks != null ? weeks : EXTENDED_WEEKS;
         this.createdAt = createdAt;
         this.participants = new ArrayList<>(participants);
+        this.description = description;
     }
 
     public Long getId() {
@@ -73,6 +76,10 @@ public class Schedule {
 
     public List<Participant> getParticipants() {
         return Collections.unmodifiableList(participants);
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public int getParticipantCount() {
@@ -124,8 +131,28 @@ public class Schedule {
                 .anyMatch(p -> p.getName().equalsIgnoreCase(name));
     }
 
+    /**
+     * 참여자 중 한 명이라도 해당 날짜를 가능한 날로 저장했는지 — 시간 투표 후보의 전제 조건.
+     */
+    public boolean hasAvailabilityOn(int dayIndex) {
+        return participants.stream()
+                .anyMatch(p -> p.getSelections().contains(dayIndex));
+    }
+
     public int nextColorIndex() {
         return participants.size();
+    }
+
+    /**
+     * 일정 설명 — 앞뒤 공백을 자르고, 비어 있으면 지운다(null). 링크 공개 모델이라 누구나 바꿀 수 있다
+     * (ADR datedate/domain/0011).
+     */
+    public void changeDescription(String newDescription) {
+        String stripped = newDescription == null ? "" : newDescription.strip();
+        if (stripped.length() > MAX_DESCRIPTION_LENGTH) {
+            throw new IllegalArgumentException("Description cannot exceed " + MAX_DESCRIPTION_LENGTH + " characters");
+        }
+        this.description = stripped.isEmpty() ? null : stripped;
     }
 
     public void changeWeeks(int newWeeks) {

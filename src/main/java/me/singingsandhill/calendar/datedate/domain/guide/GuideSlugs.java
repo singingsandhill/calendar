@@ -10,18 +10,36 @@ import java.util.Optional;
  * (use-case 의 {@code UseCaseSlugs} 패턴). 슬러그는 반드시 대응 템플릿
  * ({@code templates/guides/<slug>.html})·메시지 키 블록({@code guides.article.<slug>.*})과
  * 같은 커밋에서만 추가한다 — 템플릿 없는 슬러그는 렌더링 시 500 이 된다.
+ *
+ * <p>published 는 실제 첫 공개(라이브 배포)일이다 — 4편 09-19 빌드, 8편 10-04 배포 (2026-10-14 정정, AdSense ②).
  */
 public final class GuideSlugs {
 
     public static final List<GuideSlug> ALL = List.of(
             new GuideSlug("how-to-pick-a-date",
-                    java.time.LocalDate.of(2026, 8, 23), java.time.LocalDate.of(2026, 8, 23)),
+                    java.time.LocalDate.of(2026, 9, 19), java.time.LocalDate.of(2026, 9, 19)),
             new GuideSlug("scheduling-methods-compared",
-                    java.time.LocalDate.of(2026, 8, 23), java.time.LocalDate.of(2026, 8, 23)),
+                    java.time.LocalDate.of(2026, 9, 19), java.time.LocalDate.of(2026, 9, 19)),
             new GuideSlug("scheduling-etiquette",
-                    java.time.LocalDate.of(2026, 8, 23), java.time.LocalDate.of(2026, 8, 23)),
+                    java.time.LocalDate.of(2026, 9, 19), java.time.LocalDate.of(2026, 9, 19)),
             new GuideSlug("group-poll-best-practices",
-                    java.time.LocalDate.of(2026, 8, 23), java.time.LocalDate.of(2026, 8, 23))
+                    java.time.LocalDate.of(2026, 9, 19), java.time.LocalDate.of(2026, 9, 19)),
+            new GuideSlug("timezone-coordination",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4)),
+            new GuideSlug("annual-dinner-scheduling",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4)),
+            new GuideSlug("wedding-invitation-gathering",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4)),
+            new GuideSlug("study-team-project-management",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4)),
+            new GuideSlug("calendar-vs-poll-comparison",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4)),
+            new GuideSlug("meeting-place-and-budget",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4)),
+            new GuideSlug("weekend-vs-weekday-meetup",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4)),
+            new GuideSlug("last-minute-cancellation-etiquette",
+                    java.time.LocalDate.of(2026, 10, 4), java.time.LocalDate.of(2026, 10, 4))
     );
 
     private GuideSlugs() {

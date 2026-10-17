@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>trading 매매 판단</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-paper:       #f5f5f5;
+      --color-ink:         #2d3142;
+      --color-muted:       #4f5d75;
+      --color-soft:        #7a8399;
+      --color-rule:        rgba(45,49,66,0.12);
+      --color-accent:      #eb6c36;
+      --font-sans:   'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+      --font-serif:  'Instrument Serif', 'Noto Serif', 'Noto Serif KR', serif;
+      --font-mono:   'Geist Mono', ui-monospace, Menlo, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      min-height: 100vh;
+      padding: 3rem 2rem;
+      color: var(--color-ink);
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .header { margin-bottom: 2.5rem; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.75rem, 3vw + 1rem, 2.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--color-muted);
+      max-width: 64ch;
+    }
+
+    .figure { margin-bottom: 3rem; }
+    .figure .eyebrow { margin-bottom: 0.35rem; }
+
+    h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 1rem;
+    }
+
+    .diagram-container { overflow-x: auto; }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+
+    .caption {
+      margin-top: 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.7;
+      color: var(--color-muted);
+      max-width: 80ch;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      color: var(--color-ink);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1.1fr 1.2fr 0.9fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 6px;
+      border: 1px solid var(--color-rule);
+      padding: 1.25rem;
+    }
+
+    .card .eyebrow { margin-bottom: 0.5rem; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.875rem;
+      padding-bottom: 0.875rem;
+      border-bottom: 1px solid rgba(45,49,66,0.08);
+    }
+
+    .card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .card-dot.ink   { background: var(--color-ink); }
+    .card-dot.muted { background: var(--color-muted); }
+    .card-dot.coral { background: var(--color-accent); }
+
+    .card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+    }
+
+    .card ul {
+      list-style: none;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+      line-height: 1.6;
+    }
+
+    .card li {
+      margin-bottom: 0.4rem;
+      padding-left: 0.875rem;
+      position: relative;
+    }
+
+    .card li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: rgba(45,49,66,0.25);
+      font-size: 0.75rem;
+    }
+
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(45,49,66,0.10);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: var(--color-soft);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    .pair svg { min-width: 0; }
+    .panel .eyebrow { margin-bottom: 0.25rem; }
+    .panel h3 {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    @media (max-width: 900px) {
+      .pair { grid-template-columns: 1fr; }
+    }
+
+    table.score {
+      width: 100%;
+      max-width: 80ch;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.8125rem;
+      color: var(--color-muted);
+    }
+    table.score th {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 0.4rem 0.75rem 0.4rem 0;
+      border-bottom: 1px solid var(--color-rule);
+    }
+    table.score td {
+      padding: 0.4rem 0.75rem 0.4rem 0;
+      border-bottom: 1px solid rgba(45,49,66,0.06);
+      vertical-align: top;
+    }
+    table.score td:first-child { color: var(--color-ink); white-space: nowrap; }
+    table.score td:last-child { font-family: var(--font-mono); white-space: nowrap; color: var(--color-ink); }
+    .subtitle a { color: inherit; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <p class="eyebrow">Flowchart · trading module</p>
+      <h1>코인 봇 매매 판단</h1>
+      <p class="subtitle">루프가 매 틱 내리는 판단을 조건 단위로 그렸습니다 — 신호를 어떻게 정하는지, 신호가 언제 주문이 되는지, 신호와 무관하게 나가는 청산·리밸런싱 주문은 언제인지. 단계 번호(2·4·5·6)는 <a href="trade-sequence.html">매매 시퀀스</a> 의 번호입니다. 모든 수치는 현재 <code>application.yaml</code> 과 코드 기본값 기준입니다.</p>
+    </header>
+
+    <section class="figure">
+      <p class="eyebrow">Fig. 1 · step 3</p>
+      <h2>신호 판정 — BUY · SELL · HOLD</h2>
+      <div class="diagram-container">
+<svg viewBox="0 0 1232 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dec-signal-title dec-signal-desc">
+<title id="dec-signal-title">신호 판정 — BUY · SELL · HOLD</title>
+<desc id="dec-signal-desc">Flowchart of how the eight-indicator score becomes a BUY, SELL or HOLD signal: indicator agreement first, then buy thresholds with an extra reversal check below MA60, then sell thresholds.</desc>
+<defs>
+<marker id="dec-signal-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="dec-signal-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<!-- CONNECTORS — drawn before nodes -->
+<path d="M 360 72 L 360 104" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 360 200 L 360 232" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 460 152 L 1032 152 Q 1040 152 1040 160 L 1040 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 460 280 L 620 280" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 360 328 L 360 360" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 360 456 L 360 488" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 260 408 L 220 408 Q 212 408 212 416 L 212 728 Q 212 736 220 736 L 260 736" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 360 584 L 360 712" fill="none" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#dec-signal-arrow-accent)"/>
+<path d="M 460 536 H 712 a 8,8 0 0,1 16,0 L 1040 536" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 720 328 L 720 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<path d="M 820 280 L 1040 280" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<!-- CONNECTOR LABELS — masked -->
+<rect x="368" y="210" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="384" y="219" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="528" y="132" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="540" y="141" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="528" y="260" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="540" y="269" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="368" y="338" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="384" y="347" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="368" y="466" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="384" y="475" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="224" y="388" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="236" y="397" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="368" y="642" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="384" y="651" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="528" y="516" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="540" y="525" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="728" y="394" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="744" y="403" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="918" y="260" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="930" y="269" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<!-- NODES -->
+<rect x="260" y="24" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="260" y="24" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="360" y="46" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">신호 점수 합</text>
+<text x="360" y="61" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">8 components · ±128</text>
+<polygon points="360,104 460,152 360,200 260,152" fill="#f5f5f5"/>
+<polygon points="360,104 460,152 360,200 260,152" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="360" y="150" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">지표 합의?</text>
+<text x="360" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">≥ 3 of 8 same sign</text>
+<polygon points="360,232 460,280 360,328 260,280" fill="#f5f5f5"/>
+<polygon points="360,232 460,280 360,328 260,280" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="360" y="270" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">매수 조건?</text>
+<text x="360" y="286" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">score ≥ 40</text>
+<text x="360" y="298" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">RSI &lt; 70 · %K &lt; 85</text>
+<polygon points="360,360 460,408 360,456 260,408" fill="#f5f5f5"/>
+<polygon points="360,360 460,408 360,456 260,408" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="360" y="406" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">하락 추세?</text>
+<text x="360" y="422" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">price &lt; MA60</text>
+<polygon points="360,488 460,536 360,584 260,536" fill="#f5f5f5"/>
+<polygon points="360,488 460,536 360,584 260,536" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="360" y="526" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">반전 근거?</text>
+<text x="360" y="542" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">bull div · RSI &lt; 30</text>
+<text x="360" y="554" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">or vol &gt; 1.5× avg</text>
+<polygon points="720,232 820,280 720,328 620,280" fill="#f5f5f5"/>
+<polygon points="720,232 820,280 720,328 620,280" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="720" y="270" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">매도 조건?</text>
+<text x="720" y="286" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">score ≤ −40</text>
+<text x="720" y="298" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">RSI &gt; 30 · %K &gt; 15</text>
+<rect x="260" y="712" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="260" y="712" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="360" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">BUY</text>
+<text x="360" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">entry candidate</text>
+<rect x="620" y="712" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="620" y="712" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="720" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">SELL</text>
+<text x="720" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">exit candidate</text>
+<rect x="940" y="712" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="940" y="712" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="1040" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">HOLD</text>
+<text x="1040" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">no trade</text>
+<!-- MERGE POINTS -->
+<circle cx="1040" cy="280" r="4" fill="#2d3142"/>
+<circle cx="1040" cy="536" r="4" fill="#2d3142"/>
+<!-- LEGEND -->
+<line x1="16" y1="792" x2="1216" y2="792" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="16" y="808" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+<rect x="16" y="819" width="24" height="12" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="48" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Start / end</text>
+<polygon points="132,825 144,819 156,825 144,831" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="164" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Decision</text>
+<circle cx="244" cy="825" r="4" fill="#2d3142"/>
+<text x="264" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Merge</text>
+<rect x="320" y="820" width="16" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="348" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<line x1="400" y1="825" x2="424" y2="825" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#dec-signal-arrow-accent)"/>
+<text x="432" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Key path</text>
+<line x1="500" y1="825" x2="524" y2="825" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-signal-arrow)"/>
+<text x="532" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Branch</text>
+<line x1="600" y1="817" x2="600" y2="833" stroke="#4f5d75" stroke-width="1"/>
+<path d="M 588 825 H 594 a 6,6 0 0,1 12,0 H 612" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="620" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Crossing</text>
+</svg>
+      </div>
+      <p class="caption">매 틱 계산한 8개 지표 점수의 합으로 신호를 정합니다. 먼저 총점과 같은 부호인 지표가 8개 중 3개 이상이어야 하고(0점은 동의로 세지 않음), 매수 조건을 먼저 본 뒤 아니면 매도 조건을 봅니다. RSI·%K 상한과 하한은 과매수 구간에서 사거나 과매도 구간에서 파는 것을 막습니다. 매수 조건을 통과해도 현재가가 MA60 아래면 반전 근거 — 강세 다이버전스(RSI·스토캐스틱·거래량 중 하나), RSI &lt; 30, 거래량이 20봉 평균의 1.5배 초과 — 중 하나가 있어야 BUY 가 됩니다. 매도 쪽에는 이런 추가 확인이 없습니다. 결과가 HOLD 여도 신호 행은 저장됩니다.</p>
+      <table class="score">
+        <thead><tr><th>지표</th><th>조건</th><th>점수</th></tr></thead>
+        <tbody>
+          <tr><td>MA 크로스</td><td>골든·데드 크로스 이벤트면 ±25, 아니면 MA5·MA20 위아래 상태로 ±5. 간격 |MA5−MA20|/MA20 &lt; 0.2% 면 0</td><td>±25 / ±5</td></tr>
+          <tr><td>MA 추세</td><td>현재가가 MA60 위 / 아래</td><td>±8</td></tr>
+          <tr><td>RSI 다이버전스</td><td>강세 / 약세</td><td>±20</td></tr>
+          <tr><td>RSI 레벨</td><td>RSI &lt; 35 / &gt; 65</td><td>±15</td></tr>
+          <tr><td>스토캐스틱 다이버전스</td><td>강세 / 약세</td><td>±15</td></tr>
+          <tr><td>스토캐스틱 레벨</td><td>%K &lt; 25 / &gt; 75</td><td>±15</td></tr>
+          <tr><td>거래량 다이버전스</td><td>강세 / 약세</td><td>±20</td></tr>
+          <tr><td>RSI 추세</td><td>3봉 전 RSI 대비 2포인트 이상 상승 / 하락</td><td>±10</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="figure">
+      <p class="eyebrow">Fig. 2 · steps 4 · 6</p>
+      <h2>신호가 주문이 되기까지</h2>
+      <div class="pair">
+        <div class="panel">
+          <p class="eyebrow">a</p>
+          <h3>BUY 신호</h3>
+<svg viewBox="0 0 616 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dec-buy-title dec-buy-desc">
+<title id="dec-buy-title">BUY 신호가 주문이 되기까지</title>
+<desc id="dec-buy-desc">Flowchart of the gates a BUY signal passes before a market buy: cooldown and position count, circuit breaker and pending orders, balance and price, entry guards, then ATR-based sizing.</desc>
+<defs>
+<marker id="dec-buy-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="dec-buy-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<!-- CONNECTORS — drawn before nodes -->
+<path d="M 132 72 L 132 104" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-buy-arrow)"/>
+<path d="M 132 200 L 132 232" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-buy-arrow)"/>
+<path d="M 132 328 L 132 360" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-buy-arrow)"/>
+<path d="M 132 456 L 132 488" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-buy-arrow)"/>
+<path d="M 132 584 L 132 616" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-buy-arrow)"/>
+<path d="M 132 680 L 132 712" fill="none" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#dec-buy-arrow-accent)"/>
+<path d="M 232 152 L 520 152 Q 528 152 528 160 L 528 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-buy-arrow)"/>
+<path d="M 232 280 L 528 280" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 232 408 L 528 408" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 232 536 L 528 536" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<!-- CONNECTOR LABELS — masked -->
+<rect x="140" y="210" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="219" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="140" y="338" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="347" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="140" y="466" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="475" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="140" y="594" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="603" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="368" y="132" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="141" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="368" y="260" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="269" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="368" y="388" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="397" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="368" y="516" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="525" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<!-- NODES -->
+<rect x="32" y="24" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="24" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="132" y="46" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">BUY 신호</text>
+<text x="132" y="61" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">step 4 · 6</text>
+<polygon points="132,104 232,152 132,200 32,152" fill="#f5f5f5"/>
+<polygon points="132,104 232,152 132,200 32,152" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="150" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">쿨다운·포지션?</text>
+<text x="132" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">≥ 30 min · OPEN &lt; 2</text>
+<polygon points="132,232 232,280 132,328 32,280" fill="#f5f5f5"/>
+<polygon points="132,232 232,280 132,328 32,280" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="270" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">차단 없음?</text>
+<text x="132" y="286" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">circuit breaker off</text>
+<text x="132" y="298" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">no SUBMITTED order</text>
+<polygon points="132,360 232,408 132,456 32,408" fill="#f5f5f5"/>
+<polygon points="132,360 232,408 132,456 32,408" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="398" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">잔고·시세?</text>
+<text x="132" y="414" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">KRW ≥ 5,000</text>
+<text x="132" y="426" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ticker available</text>
+<polygon points="132,488 232,536 132,584 32,536" fill="#f5f5f5"/>
+<polygon points="132,488 232,536 132,584 32,536" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="526" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">진입 가드?</text>
+<text x="132" y="542" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">no averaging-down</text>
+<text x="132" y="554" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">coin ≤ 80% equity</text>
+<rect x="32" y="616" width="200" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="638" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">주문 금액</text>
+<text x="132" y="654" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">KRW × 15–35% by ATR</text>
+<text x="132" y="668" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">then −0.5% slippage</text>
+<rect x="32" y="712" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="712" width="200" height="48" rx="20" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="132" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">시장가 매수</text>
+<text x="132" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">executeBuy</text>
+<rect x="456" y="712" width="144" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="456" y="712" width="144" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="528" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">스킵</text>
+<text x="528" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">next tick</text>
+<!-- MERGE POINTS -->
+<circle cx="528" cy="280" r="4" fill="#2d3142"/>
+<circle cx="528" cy="408" r="4" fill="#2d3142"/>
+<circle cx="528" cy="536" r="4" fill="#2d3142"/>
+<!-- LEGEND -->
+<line x1="16" y1="792" x2="600" y2="792" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="16" y="808" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+<rect x="16" y="819" width="24" height="12" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="48" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Start / end</text>
+<rect x="132" y="819" width="24" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="164" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Step</text>
+<polygon points="212,825 224,819 236,825 224,831" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="244" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Decision</text>
+<circle cx="324" cy="825" r="4" fill="#2d3142"/>
+<text x="344" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Merge</text>
+<rect x="400" y="820" width="16" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="428" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<line x1="480" y1="825" x2="504" y2="825" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#dec-buy-arrow-accent)"/>
+<text x="512" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Key path</text>
+<line x1="16" y1="849" x2="40" y2="849" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-buy-arrow)"/>
+<text x="48" y="852" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Branch</text>
+</svg>
+        </div>
+        <div class="panel">
+          <p class="eyebrow">b</p>
+          <h3>SELL 신호</h3>
+<svg viewBox="0 0 616 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dec-sell-title dec-sell-desc">
+<title id="dec-sell-title">SELL 신호가 주문이 되기까지</title>
+<desc id="dec-sell-desc">Flowchart of the per-position SELL decision: cooldown, minimum holding time, then strong signals sell above a -2% net loss while ordinary signals need at least +0.1% net profit.</desc>
+<defs>
+<marker id="dec-sell-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="dec-sell-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<!-- ZONE -->
+<rect x="16" y="224" width="584" height="472" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.22)" stroke-width="0.8" stroke-dasharray="4,3"/>
+<rect x="24" y="228" width="80" height="12" rx="2" fill="#f5f5f5"/>
+<text x="64" y="237" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">EACH POSITION</text>
+<!-- CONNECTORS — drawn before nodes -->
+<path d="M 132 72 L 132 104" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 132 200 L 132 248" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 232 152 L 520 152 Q 528 152 528 160 L 528 728" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 132 344 L 132 376" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 232 296 L 528 296" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 132 472 L 132 504" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 232 424 L 272 424" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 372 472 L 372 648 Q 372 656 364 656 L 232 656" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 472 424 L 528 424" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 132 600 L 132 632" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<path d="M 232 552 H 364 a 8,8 0 0,1 16,0 L 528 552" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<!-- CONNECTOR LABELS — masked -->
+<rect x="140" y="210" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="219" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="368" y="132" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="141" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="140" y="354" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="363" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="368" y="276" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="285" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="140" y="482" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="491" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="240" y="404" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="252" y="413" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="380" y="494" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="396" y="503" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="488" y="404" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="500" y="413" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="140" y="610" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="619" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="284" y="532" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="296" y="541" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<!-- NODES -->
+<rect x="32" y="24" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="24" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="132" y="46" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">SELL 신호</text>
+<text x="132" y="61" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">step 4 · 6</text>
+<polygon points="132,104 232,152 132,200 32,152" fill="#f5f5f5"/>
+<polygon points="132,104 232,152 132,200 32,152" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="150" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">쿨다운?</text>
+<text x="132" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">≥ 30 min since trade</text>
+<polygon points="132,248 232,296 132,344 32,296" fill="#f5f5f5"/>
+<polygon points="132,248 232,296 132,344 32,296" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="294" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">최소 보유?</text>
+<text x="132" y="310" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">held ≥ 30 min</text>
+<polygon points="132,376 232,424 132,472 32,424" fill="#f5f5f5"/>
+<polygon points="132,376 232,424 132,472 32,424" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="132" y="414" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">강한 SELL?</text>
+<text x="132" y="430" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">score ≤ −60</text>
+<text x="132" y="442" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">or bearish div</text>
+<polygon points="372,376 472,424 372,472 272,424" fill="#f5f5f5"/>
+<polygon points="372,376 472,424 372,472 272,424" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="372" y="422" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">최소 순익?</text>
+<text x="372" y="438" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">net pnl ≥ +0.1%</text>
+<polygon points="132,504 232,552 132,600 32,552" fill="#f5f5f5"/>
+<polygon points="132,504 232,552 132,600 32,552" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="550" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">손실 한도 안?</text>
+<text x="132" y="566" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">net pnl ≥ −2%</text>
+<rect x="32" y="632" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="632" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="132" y="654" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">시장가 매도</text>
+<text x="132" y="669" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">executeSell</text>
+<rect x="456" y="728" width="144" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="456" y="728" width="144" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="528" y="750" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">매도 없음</text>
+<text x="528" y="765" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">keep position</text>
+<!-- MERGE POINTS -->
+<circle cx="528" cy="296" r="4" fill="#2d3142"/>
+<circle cx="528" cy="424" r="4" fill="#2d3142"/>
+<circle cx="528" cy="552" r="4" fill="#2d3142"/>
+<!-- LEGEND -->
+<line x1="16" y1="808" x2="600" y2="808" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="16" y="824" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+<rect x="16" y="835" width="24" height="12" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="48" y="844" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Start / end</text>
+<polygon points="132,841 144,835 156,841 144,847" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="164" y="844" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Decision</text>
+<circle cx="244" cy="841" r="4" fill="#2d3142"/>
+<text x="264" y="844" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Merge</text>
+<rect x="320" y="836" width="16" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="348" y="844" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<line x1="400" y1="841" x2="424" y2="841" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-sell-arrow)"/>
+<text x="432" y="844" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Branch</text>
+<line x1="500" y1="833" x2="500" y2="849" stroke="#4f5d75" stroke-width="1"/>
+<path d="M 488 841 H 494 a 6,6 0 0,1 12,0 H 512" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="520" y="844" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Crossing</text>
+<rect x="16" y="858" width="24" height="14" rx="3" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.22)" stroke-width="0.8" stroke-dasharray="4,3"/>
+<text x="48" y="868" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Per position</text>
+</svg>
+        </div>
+      </div>
+      <p class="caption">신호가 나와도 바로 주문이 되지는 않습니다. 두 방향 모두 마지막 체결 뒤 30분 쿨다운을 먼저 보고, 리밸런싱 체결도 이 시계를 갱신합니다. BUY 는 열린 포지션이 2개 미만일 때만 진행하며, 서킷브레이커(연속 손실 3회 또는 당일 실현손익 −5%)와 결과 미확인 주문, KRW 5,000원 이상과 현재가 확보, 손실 중인 포지션이 있으면 추가 매수 금지와 코인 비중 80% 상한을 차례로 통과해야 합니다. SELL 은 열린 포지션마다 따로 판단합니다. 30분 이상 보유한 포지션만 보고, 손익은 현재가에서 0.5% 를 뺀 보수적 가격에 수수료까지 뺀 순손익입니다. 강한 SELL(점수 ≤ −60, 또는 RSI·스토캐스틱 약세 다이버전스)은 −2% 까지의 손실을 감수하고 팔고, 보통 SELL 은 +0.1% 이상일 때만 팝니다. 현재가 조회에 실패하면 매도를 건너뜁니다.</p>
+    </section>
+
+    <section class="figure">
+      <p class="eyebrow">Fig. 3 · steps 2 · 5</p>
+      <h2>신호 밖에서 나가는 주문</h2>
+      <div class="pair">
+        <div class="panel">
+          <p class="eyebrow">a · step 2, every tick</p>
+          <h3>리스크 청산</h3>
+<svg viewBox="0 0 616 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dec-risk-title dec-risk-desc">
+<title id="dec-risk-title">리스크 청산 판정</title>
+<desc id="dec-risk-desc">Flowchart of the per-position risk check run every tick before signals: stop-loss first, then trailing-stop update and trigger, take-profit, and time exit for stale break-even positions.</desc>
+<defs>
+<marker id="dec-risk-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="dec-risk-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<!-- CONNECTORS — drawn before nodes -->
+<path d="M 132 72 L 132 104" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<path d="M 132 200 L 132 232" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<path d="M 232 152 L 520 152 Q 528 152 528 160 L 528 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<path d="M 132 296 L 132 328" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<path d="M 132 424 L 132 456" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<path d="M 132 552 L 132 584" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<path d="M 132 680 L 132 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<path d="M 232 376 L 528 376" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 232 504 L 528 504" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 232 632 L 528 632" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<!-- CONNECTOR LABELS — masked -->
+<rect x="140" y="210" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="152" y="219" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="346" y="132" width="68" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="141" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">STOP LOSS</text>
+<rect x="140" y="434" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="152" y="443" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="140" y="562" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="152" y="571" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="140" y="690" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="152" y="699" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="350" y="356" width="60" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="365" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">TRAILING</text>
+<rect x="340" y="484" width="80" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="493" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">TAKE PROFIT</text>
+<rect x="346" y="612" width="68" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="621" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">TIME EXIT</text>
+<!-- NODES -->
+<rect x="32" y="24" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="24" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="132" y="46" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">열린 포지션마다</text>
+<text x="132" y="61" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">fee-adjusted pnl</text>
+<polygon points="132,104 232,152 132,200 32,152" fill="#f5f5f5"/>
+<polygon points="132,104 232,152 132,200 32,152" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="132" y="150" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">손절선?</text>
+<text x="132" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pnl ≤ −1.5%</text>
+<rect x="32" y="232" width="200" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="254" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">고점·트레일 갱신</text>
+<text x="132" y="270" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">on at pnl ≥ +1.5%</text>
+<text x="132" y="284" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">stop = high × 0.992</text>
+<polygon points="132,328 232,376 132,424 32,376" fill="#f5f5f5"/>
+<polygon points="132,328 232,376 132,424 32,376" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="374" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">트레일 이탈?</text>
+<text x="132" y="390" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">price ≤ trail stop</text>
+<polygon points="132,456 232,504 132,552 32,504" fill="#f5f5f5"/>
+<polygon points="132,456 232,504 132,552 32,504" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">익절선?</text>
+<text x="132" y="518" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pnl ≥ +3%</text>
+<polygon points="132,584 232,632 132,680 32,632" fill="#f5f5f5"/>
+<polygon points="132,584 232,632 132,680 32,632" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="622" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">정체 포지션?</text>
+<text x="132" y="638" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">held ≥ 360 min</text>
+<text x="132" y="650" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">and pnl ≥ 0</text>
+<rect x="32" y="712" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="712" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="132" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">유지</text>
+<text x="132" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">save trailing state</text>
+<rect x="456" y="712" width="144" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="456" y="712" width="144" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="528" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">시장가 청산</text>
+<text x="528" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">closePosition</text>
+<!-- MERGE POINTS -->
+<circle cx="528" cy="376" r="4" fill="#2d3142"/>
+<circle cx="528" cy="504" r="4" fill="#2d3142"/>
+<circle cx="528" cy="632" r="4" fill="#2d3142"/>
+<!-- LEGEND -->
+<line x1="16" y1="792" x2="600" y2="792" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="16" y="808" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+<rect x="16" y="819" width="24" height="12" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="48" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Start / end</text>
+<rect x="132" y="819" width="24" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="164" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Step</text>
+<polygon points="212,825 224,819 236,825 224,831" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="244" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Decision</text>
+<circle cx="324" cy="825" r="4" fill="#2d3142"/>
+<text x="344" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Merge</text>
+<rect x="400" y="820" width="16" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="428" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<line x1="480" y1="825" x2="504" y2="825" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-risk-arrow)"/>
+<text x="512" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Branch</text>
+</svg>
+        </div>
+        <div class="panel">
+          <p class="eyebrow">b · step 5, weak-signal ticks</p>
+          <h3>리밸런싱</h3>
+<svg viewBox="0 0 616 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dec-rebal-title dec-rebal-desc">
+<title id="dec-rebal-title">리밸런싱 판단</title>
+<desc id="dec-rebal-desc">Flowchart of the rebalancing decision: eight-hour cooldown, MA60-based target coin ratio, ten-point deviation and 5,000 KRW minimum, then buying with a tracked position or selling only profitable positions.</desc>
+<defs>
+<marker id="dec-rebal-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="dec-rebal-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<!-- CONNECTORS — drawn before nodes -->
+<path d="M 132 72 L 132 104" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 132 200 L 132 232" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 232 152 L 520 152 Q 528 152 528 160 L 528 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 132 296 L 132 328" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 132 424 L 132 456" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 132 552 L 132 584" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 132 680 L 132 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 232 632 L 336 632 Q 344 632 344 640 L 344 712" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<path d="M 232 376 L 528 376" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<path d="M 232 504 L 528 504" fill="none" stroke="#4f5d75" stroke-width="1.2"/>
+<!-- CONNECTOR LABELS — masked -->
+<rect x="140" y="210" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="219" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="368" y="132" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="141" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="140" y="434" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="443" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="140" y="562" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="571" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="140" y="690" width="32" height="12" rx="2" fill="#f5f5f5"/>
+<text x="156" y="699" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+<rect x="276" y="612" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="288" y="621" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="368" y="356" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="365" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<rect x="368" y="484" width="24" height="12" rx="2" fill="#f5f5f5"/>
+<text x="380" y="493" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+<!-- NODES -->
+<rect x="32" y="24" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="24" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="132" y="46" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">리밸런싱 확인</text>
+<text x="132" y="61" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">step 5</text>
+<polygon points="132,104 232,152 132,200 32,152" fill="#f5f5f5"/>
+<polygon points="132,104 232,152 132,200 32,152" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="150" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">쿨다운?</text>
+<text x="132" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">≥ 8 h since last</text>
+<rect x="32" y="232" width="200" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="254" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">목표 코인 비중</text>
+<text x="132" y="270" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">price &gt; MA60 → 70%</text>
+<text x="132" y="284" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">price &lt; MA60 → 30%</text>
+<polygon points="132,328 232,376 132,424 32,376" fill="#f5f5f5"/>
+<polygon points="132,328 232,376 132,424 32,376" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="374" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">편차 ≥ 10%p?</text>
+<text x="132" y="390" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">|current − target|</text>
+<polygon points="132,456 232,504 132,552 32,504" fill="#f5f5f5"/>
+<polygon points="132,456 232,504 132,552 32,504" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="502" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">금액 ≥ 5,000?</text>
+<text x="132" y="518" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">KRW gap to target</text>
+<polygon points="132,584 232,632 132,680 32,632" fill="#f5f5f5"/>
+<polygon points="132,584 232,632 132,680 32,632" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="132" y="630" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">코인 부족?</text>
+<text x="132" y="646" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">target &gt; current</text>
+<rect x="32" y="712" width="200" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="32" y="712" width="200" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="132" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">매수 + Position</text>
+<text x="132" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SL/TP attached</text>
+<rect x="264" y="712" width="160" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="264" y="712" width="160" height="48" rx="20" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="344" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">수익 포지션 매도</text>
+<text x="344" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">FIFO · pnl ≥ 0</text>
+<rect x="456" y="712" width="144" height="48" rx="20" fill="#f5f5f5"/>
+<rect x="456" y="712" width="144" height="48" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="528" y="734" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">스킵</text>
+<text x="528" y="749" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">no rebalance</text>
+<!-- MERGE POINTS -->
+<circle cx="528" cy="376" r="4" fill="#2d3142"/>
+<circle cx="528" cy="504" r="4" fill="#2d3142"/>
+<!-- LEGEND -->
+<line x1="16" y1="792" x2="600" y2="792" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="16" y="808" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+<rect x="16" y="819" width="24" height="12" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="48" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Start / end</text>
+<rect x="132" y="819" width="24" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="164" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Step</text>
+<polygon points="212,825 224,819 236,825 224,831" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<text x="244" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Decision</text>
+<circle cx="324" cy="825" r="4" fill="#2d3142"/>
+<text x="344" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Merge</text>
+<rect x="400" y="820" width="16" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="428" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<line x1="480" y1="825" x2="504" y2="825" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#dec-rebal-arrow)"/>
+<text x="512" y="828" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Branch</text>
+</svg>
+        </div>
+      </div>
+      <p class="caption">둘 다 신호로 난 주문이 아니어서 주문 기록에 <code>signal_id</code> 가 없습니다. 리스크 청산은 매 틱 신호 계산보다 먼저 열린 포지션마다 현재가로 판정하고, 가장 먼저 걸린 사유 하나로 청산합니다 — 손절이 항상 먼저입니다. 트레일링은 순손익 +1.5% 에서 켜지고, 스톱은 최고가 × 0.992 를 따라 올라가되 진입가 + 왕복 수수료(0.5%) 아래로는 내려가지 않습니다. 360분 넘게 정체된 포지션은 손익분기 이상일 때만 시간 청산하고 손실은 손절에 맡깁니다. 리밸런싱은 강한 신호가 없던 틱(5단계)에서만 봅니다. 8시간 쿨다운 뒤 현재 코인 비중을 MA60 기준 목표(위 70% · 아래 30% · 같으면 50%, MA60 을 못 구하면 스킵)와 비교해 10%p 이상 벌어지고 차액이 5,000원 이상이면 0.5% 를 덜고 주문합니다. 매수는 SL/TP 가 붙은 Position 을 만들고, 매도는 수수료를 뺀 손익이 0 이상인 포지션만 오래된 순으로 통째로 청산합니다. 청산할 수익 포지션이 없으면 리밸런싱을 건너뜁니다.</p>
+    </section>
+
+    <div class="cards">
+      <div class="card">
+        <p class="eyebrow">application.yaml</p>
+        <div class="card-header"><span class="card-dot ink"></span><h3>운영값 (yaml)</h3></div>
+        <ul>
+          <li>신호 <code>thresholds</code> — ±40, 동의 3개, RSI 35/65·70/30, %K 25/75·85/15, MA 수렴 0.2%</li>
+          <li><code>risk</code> — 손절 −1.5%, 익절 +3%, 트레일 +1.5% / 0.8%, 수수료 0.25%, 최소 순익 0.1%, 서킷브레이커 3회 / −5%</li>
+          <li><code>bot</code> — 쿨다운 30분, 최소 보유 30분, 최대 포지션 2</li>
+          <li><code>rebalancing</code> — 70/30/50%, 편차 10%p, 쿨다운 480분, 최소 5,000원</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">TradingProperties</p>
+        <div class="card-header"><span class="card-dot muted"></span><h3>Java 기본값 (yaml 에 없음)</h3></div>
+        <ul>
+          <li>강한 SELL 손실 한도 −2%, 슬리피지 0.5% (<code>risk</code>)</li>
+          <li>정체 청산 360분, 물타기 차단, 코인 비중 상한 80% (<code>bot</code>)</li>
+          <li>주문 비중 15~35%, RSI 추세 3봉·2포인트</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Hard-coded</p>
+        <div class="card-header"><span class="card-dot coral"></span><h3>코드에 박힌 값</h3></div>
+        <ul>
+          <li>강한 신호 |점수| ≥ 60, 강한 SELL ≤ −60 — <code>TradingBotService</code></li>
+          <li>MA60 아래 반전 근거 RSI &lt; 30, 거래량 1.5배 — <code>SignalService</code></li>
+          <li>신호 매수 최소 5,000원 — <code>executeBuy</code></li>
+          <li>지표별 점수 가중치 (위 표)</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <span>source · trading/application/service/{Signal,TradingBot,RiskManagement,Rebalance}Service.java · application.yaml</span>
+      <span>2026-09-27 · diagram-design</span>
+    </footer>
+  </div>
+</body>
+</html>

@@ -8,11 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
 public class AttendanceService {
+
+    private static final LocalDate FILTER_MIN = LocalDate.EPOCH;
+    private static final LocalDate FILTER_MAX = LocalDate.of(9999, 12, 31);
 
     private final AttendanceRepository attendanceRepository;
     private final RunRepository runRepository;
@@ -48,8 +52,13 @@ public class AttendanceService {
         return attendanceRepository.findTop10ByTotalDistance();
     }
 
-    public List<MemberAttendanceStatsDto> getAllMemberStats() {
-        return attendanceRepository.findAllMemberStats();
+    public List<MemberAttendanceStatsDto> getAllMemberStats(LocalDate from, LocalDate to) {
+        if (from == null && to == null) {
+            return attendanceRepository.findAllMemberStats();
+        }
+        return attendanceRepository.findMemberStatsByRunDateBetween(
+                from != null ? from : FILTER_MIN,
+                to != null ? to : FILTER_MAX);
     }
 
     public List<Attendance> getAttendancesByParticipantName(String participantName) {

@@ -6,6 +6,15 @@ export function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// calendar.js 의 셀 렌더링과 같은 규칙 — 확장 모드는 그리드 시작(1일이 속한 주의 일요일)부터의
+// 1-based 인덱스, 레거시 모드는 해당 월의 일자.
+export function dayIndexToDate(dayIndex) {
+    if (schedule.isExtendedMode) {
+        return new Date(schedule.year, schedule.month - 1, 1 - schedule.firstDayOfWeek + (dayIndex - 1));
+    }
+    return new Date(schedule.year, schedule.month - 1, dayIndex);
+}
+
 export function copyLink() {
     const url = window.location.href;
     if (navigator.clipboard && window.isSecureContext) {

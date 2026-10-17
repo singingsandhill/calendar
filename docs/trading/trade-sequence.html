@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>trading 매매 시퀀스</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-paper:       #f5f5f5;
+      --color-ink:         #2d3142;
+      --color-muted:       #4f5d75;
+      --color-soft:        #7a8399;
+      --color-rule:        rgba(45,49,66,0.12);
+      --color-accent:      #eb6c36;
+      --font-sans:   'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+      --font-serif:  'Instrument Serif', 'Noto Serif', 'Noto Serif KR', serif;
+      --font-mono:   'Geist Mono', ui-monospace, Menlo, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      min-height: 100vh;
+      padding: 3rem 2rem;
+      color: var(--color-ink);
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .header { margin-bottom: 2.5rem; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.75rem, 3vw + 1rem, 2.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--color-muted);
+      max-width: 64ch;
+    }
+
+    .figure { margin-bottom: 3rem; }
+    .figure .eyebrow { margin-bottom: 0.35rem; }
+
+    h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 1rem;
+    }
+
+    .diagram-container { overflow-x: auto; }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+
+    .caption {
+      margin-top: 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.7;
+      color: var(--color-muted);
+      max-width: 80ch;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      color: var(--color-ink);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1.1fr 1.2fr 0.9fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 6px;
+      border: 1px solid var(--color-rule);
+      padding: 1.25rem;
+    }
+
+    .card .eyebrow { margin-bottom: 0.5rem; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.875rem;
+      padding-bottom: 0.875rem;
+      border-bottom: 1px solid rgba(45,49,66,0.08);
+    }
+
+    .card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .card-dot.ink   { background: var(--color-ink); }
+    .card-dot.muted { background: var(--color-muted); }
+    .card-dot.coral { background: var(--color-accent); }
+
+    .card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+    }
+
+    .card ul {
+      list-style: none;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+      line-height: 1.6;
+    }
+
+    .card li {
+      margin-bottom: 0.4rem;
+      padding-left: 0.875rem;
+      position: relative;
+    }
+
+    .card li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: rgba(45,49,66,0.25);
+      font-size: 0.75rem;
+    }
+
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(45,49,66,0.10);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: var(--color-soft);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <p class="eyebrow">Sequence · trading module</p>
+      <h1>코인 봇 매매 시퀀스</h1>
+      <p class="subtitle">코인 트레이딩 봇(빗썸, <code>KRW-ADA</code>)이 매분 한 번 도는 루프와, 그 안에서 매수 한 건이 나가는 경로입니다. 코드 기준이며 0–6 단계 번호는 <code>TradingBotService.executeTradeLoop</code> 주석의 번호를 따릅니다.</p>
+    </header>
+
+    <section class="figure">
+      <p class="eyebrow">Fig. 1</p>
+      <h2>1분 틱 — <code>executeTradeLoop</code></h2>
+      <div class="diagram-container">
+<svg viewBox="0 0 1232 912" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="seq-loop-title seq-loop-desc">
+<title id="seq-loop-title">코인 봇 1분 틱 — executeTradeLoop</title>
+<desc id="seq-loop-desc">Sequence of one trading-loop tick: the scheduler triggers the bot, which sweeps pending orders, syncs candles from Bithumb, runs the risk check before generating a signal, returns early when gated, and otherwise places a strong-signal order or checks rebalancing before a normal signal order.</desc>
+<defs>
+<marker id="seq-loop-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="seq-loop-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+<marker id="seq-loop-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<!-- LIFELINES -->
+<line x1="114" y1="88" x2="114" y2="832" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="326" y1="88" x2="326" y2="832" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="538" y1="88" x2="538" y2="832" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="750" y1="88" x2="750" y2="832" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="962" y1="88" x2="962" y2="832" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<!-- COMBINED FRAGMENT -->
+<rect x="144" y="552" width="452" height="248" rx="4" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.22)" stroke-width="1"/>
+<rect x="144" y="552" width="40" height="16" rx="2" fill="#f5f5f5" stroke="rgba(45,49,66,0.22)" stroke-width="1"/>
+<text x="164" y="564" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
+<line x1="152" y1="656" x2="588" y2="656" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="156" y="584" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">[|score| ≥ 60 · not HOLD]</text>
+<text x="156" y="680" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">[else · rebalance first]</text>
+<!-- ACTIVATION BARS -->
+<rect x="110" y="128" width="8" height="672" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="322" y="136" width="8" height="664" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="534" y="232" width="8" height="20" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="746" y="288" width="8" height="80" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="534" y="328" width="8" height="20" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="958" y="416" width="8" height="40" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="534" y="616" width="8" height="20" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="534" y="712" width="8" height="20" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="534" y="760" width="8" height="20" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<!-- MESSAGES — drawn before labels and actors -->
+<line x1="118" y1="136" x2="322" y2="136" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-loop-arrow)"/>
+<path d="M 330 176 H 354 A 8 8 0 0 1 362 184 A 8 8 0 0 1 354 192 H 330" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-loop-arrow)"/>
+<line x1="330" y1="232" x2="534" y2="232" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-loop-arrow-link)"/>
+<line x1="330" y1="288" x2="746" y2="288" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#seq-loop-arrow-accent)"/>
+<line x1="746" y1="328" x2="542" y2="328" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-loop-arrow-link)"/>
+<line x1="746" y1="368" x2="330" y2="368" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-loop-arrow)"/>
+<line x1="330" y1="416" x2="958" y2="416" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-loop-arrow)"/>
+<line x1="958" y1="456" x2="330" y2="456" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-loop-arrow)"/>
+<line x1="322" y1="512" x2="118" y2="512" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-loop-arrow)"/>
+<line x1="330" y1="616" x2="534" y2="616" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-loop-arrow-link)"/>
+<line x1="330" y1="712" x2="534" y2="712" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-loop-arrow-link)"/>
+<line x1="330" y1="760" x2="534" y2="760" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-loop-arrow-link)"/>
+<!-- MESSAGE LABELS — masked -->
+<rect x="186" y="116" width="68" height="12" rx="2" fill="#f5f5f5"/>
+<text x="220" y="126" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TRADE LOOP</text>
+<rect x="370" y="178" width="120" height="12" rx="2" fill="#f5f5f5"/>
+<text x="430" y="188" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">0 · SWEEP SUBMITTED</text>
+<rect x="386" y="212" width="92" height="12" rx="2" fill="#f5f5f5"/>
+<text x="432" y="222" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">1 · CANDLES 1M</text>
+<rect x="598" y="268" width="92" height="12" rx="2" fill="#f5f5f5"/>
+<text x="644" y="278" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">2 · RISK CHECK</text>
+<rect x="600" y="308" width="88" height="12" rx="2" fill="#f5f5f5"/>
+<text x="644" y="318" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TICKER · EXIT</text>
+<rect x="392" y="348" width="80" height="12" rx="2" fill="#f5f5f5"/>
+<text x="432" y="358" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLOSE REASON</text>
+<rect x="822" y="396" width="68" height="12" rx="2" fill="#f5f5f5"/>
+<text x="856" y="406" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">3 · SIGNAL</text>
+<rect x="604" y="436" width="80" height="12" rx="2" fill="#f5f5f5"/>
+<text x="644" y="446" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SCORE · TYPE</text>
+<rect x="174" y="492" width="92" height="12" rx="2" fill="#f5f5f5"/>
+<text x="220" y="502" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">[GATED] RETURN</text>
+<text x="220" y="530" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">exit · stale · null · recovery</text>
+<rect x="386" y="596" width="92" height="12" rx="2" fill="#f5f5f5"/>
+<text x="432" y="606" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">4 · BUY / SELL</text>
+<rect x="388" y="692" width="88" height="12" rx="2" fill="#f5f5f5"/>
+<text x="432" y="702" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">5 · REBALANCE</text>
+<rect x="386" y="740" width="92" height="12" rx="2" fill="#f5f5f5"/>
+<text x="432" y="750" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">6 · BUY / SELL</text>
+<!-- ACTORS -->
+<rect x="24" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="24" y="32" width="180" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+<rect x="32" y="40" width="32" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.40)" stroke-width="0.8"/>
+<text x="48" y="49" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CRON</text>
+<text x="114" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">CandleScheduler</text>
+<text x="114" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">5 * * * * *</text>
+<rect x="236" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="236" y="32" width="180" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<rect x="244" y="40" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+<text x="258" y="49" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SVC</text>
+<text x="326" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">TradingBotService</text>
+<text x="326" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">executeTradeLoop</text>
+<rect x="448" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="448" y="32" width="180" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<rect x="456" y="40" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+<text x="470" y="49" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+<text x="538" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bithumb</text>
+<text x="538" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">api.bithumb.com</text>
+<rect x="660" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="660" y="32" width="180" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<rect x="668" y="40" width="32" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+<text x="684" y="49" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">RISK</text>
+<text x="750" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">RiskManagementService</text>
+<text x="750" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SL · TP · trailing</text>
+<rect x="872" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="872" y="32" width="180" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<rect x="880" y="40" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+<text x="894" y="49" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SVC</text>
+<text x="962" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SignalService</text>
+<text x="962" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">8 indicators · ±128</text>
+<!-- ANNOTATION -->
+<text x="1080" y="432" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', 'Noto Serif KR', serif">청산이 발동한 틱에도</text>
+<text x="1080" y="450" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', 'Noto Serif KR', serif">신호는 먼저 저장된다</text>
+<path d="M 1072 427 Q 1021 436 970 436" fill="none" stroke="rgba(45,49,66,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+<circle cx="970" cy="436" r="2" fill="#2d3142"/>
+<!-- LEGEND -->
+<line x1="32" y1="856" x2="1200" y2="856" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="32" y="872" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+<rect x="32" y="884" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="52" y="892" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<line x1="116" y1="888" x2="144" y2="888" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-loop-arrow)"/>
+<text x="152" y="892" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Internal call</text>
+<line x1="256" y1="888" x2="284" y2="888" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-loop-arrow-link)"/>
+<text x="292" y="892" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">HTTP · Bithumb</text>
+<line x1="400" y1="888" x2="428" y2="888" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-loop-arrow)"/>
+<text x="436" y="892" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Return</text>
+<line x1="508" y1="888" x2="536" y2="888" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#seq-loop-arrow-accent)"/>
+<text x="544" y="892" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Headline</text>
+<rect x="624" y="880" width="28" height="18" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.22)" stroke-width="1"/>
+<text x="630" y="892" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace">ALT</text>
+<text x="660" y="892" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Fragment</text>
+</svg>
+      </div>
+      <p class="caption"><code>CandleScheduler</code> 가 매분 5초에 루프를 부릅니다. <code>trading.bot.enabled=false</code> 면 부르지 않고, 봇이 정지·일시정지 상태면 루프가 바로 끝납니다. 앞 네 단계는 순서가 고정입니다 — 0 결과 미확인(SUBMITTED) 주문 스윕, 1 1분봉 200개 동기화, 2 리스크 체크(열린 포지션마다 현재가로 손절·익절·트레일링 등을 판정하고 걸리면 시장가 매도), 3 신호 계산·저장. 그다음 이번 틱에 청산이 났거나(exit), 캔들 동기화가 실패했거나(stale), 신호가 없거나(null), 재시작 후 보호 전용 모드(recovery)면 매매 없이 끝납니다. 통과하면 |점수| ≥ 60 인 BUY/SELL 은 리밸런싱보다 먼저 신호 매매(4)로 가고, 아니면 리밸런싱(5)을 먼저 확인해 실행되지 않았을 때만 신호 매매(6)로 갑니다. 4·6 도 쿨다운 30분, 최대 포지션 2개, 매도 최소 보유 30분·최소 순익 조건을 다시 거칩니다. PAPER 모드에서는 청산·매매 주문이 거래소까지 가지 않고 API 클라이언트의 가상 체결에서 끝납니다(Fig. 2).</p>
+    </section>
+
+    <section class="figure">
+      <p class="eyebrow">Fig. 2</p>
+      <h2>매수 한 건 — <code>executeBuy</code></h2>
+      <div class="diagram-container">
+<svg viewBox="0 0 1232 856" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="seq-buy-title seq-buy-desc">
+<title id="seq-buy-title">매수 한 건 — executeBuy</title>
+<desc id="seq-buy-desc">Sequence of one signal BUY: entry guards and sizing in the bot, an optional pre-persisted SUBMITTED trade, the order passing the API client mode gate (real Bithumb order in LIVE, in-memory fill in PAPER), and the position plus executed trade saved in one transaction.</desc>
+<defs>
+<marker id="seq-buy-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="seq-buy-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+<marker id="seq-buy-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<!-- LIFELINES -->
+<line x1="114" y1="88" x2="114" y2="776" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="370" y1="88" x2="370" y2="776" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="626" y1="88" x2="626" y2="776" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="882" y1="88" x2="882" y2="776" stroke="rgba(45,49,66,0.22)" stroke-width="1" stroke-dasharray="3,3"/>
+<!-- COMBINED FRAGMENT -->
+<rect x="248" y="408" width="436" height="216" rx="4" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.22)" stroke-width="1"/>
+<rect x="248" y="408" width="40" height="16" rx="2" fill="#f5f5f5" stroke="rgba(45,49,66,0.22)" stroke-width="1"/>
+<text x="268" y="420" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
+<line x1="256" y1="536" x2="676" y2="536" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="260" y="440" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">[mode = LIVE]</text>
+<text x="260" y="560" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.04em">[else · PAPER]</text>
+<!-- ACTIVATION BARS -->
+<rect x="110" y="120" width="8" height="624" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="366" y="192" width="8" height="40" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="878" y="328" width="8" height="20" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="366" y="384" width="8" height="272" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="622" y="472" width="8" height="40" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<rect x="878" y="712" width="8" height="24" fill="rgba(45,49,66,0.06)" stroke="#4f5d75" stroke-width="0.8"/>
+<!-- MESSAGES — drawn before labels and actors -->
+<path d="M 118 136 H 142 A 8 8 0 0 1 150 144 A 8 8 0 0 1 142 152 H 118" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-buy-arrow)"/>
+<line x1="118" y1="192" x2="366" y2="192" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-buy-arrow)"/>
+<line x1="366" y1="232" x2="118" y2="232" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-buy-arrow)"/>
+<path d="M 118 272 H 142 A 8 8 0 0 1 150 280 A 8 8 0 0 1 142 288 H 118" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-buy-arrow)"/>
+<line x1="118" y1="328" x2="878" y2="328" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-buy-arrow)"/>
+<line x1="118" y1="384" x2="366" y2="384" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-buy-arrow)"/>
+<line x1="374" y1="472" x2="622" y2="472" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-buy-arrow-link)"/>
+<line x1="622" y1="512" x2="374" y2="512" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-buy-arrow)"/>
+<path d="M 374 584 H 398 A 8 8 0 0 1 406 592 A 8 8 0 0 1 398 600 H 374" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-buy-arrow)"/>
+<line x1="366" y1="656" x2="118" y2="656" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-buy-arrow)"/>
+<line x1="118" y1="712" x2="878" y2="712" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#seq-buy-arrow-accent)"/>
+<!-- MESSAGE LABELS — masked -->
+<rect x="158" y="138" width="108" height="12" rx="2" fill="#f5f5f5"/>
+<text x="212" y="148" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BREAKER · PENDING</text>
+<rect x="194" y="172" width="96" height="12" rx="2" fill="#f5f5f5"/>
+<text x="242" y="182" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BALANCE · PRICE</text>
+<rect x="182" y="212" width="120" height="12" rx="2" fill="#f5f5f5"/>
+<text x="242" y="222" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">KRW · COIN · TICKER</text>
+<rect x="158" y="274" width="120" height="12" rx="2" fill="#f5f5f5"/>
+<text x="218" y="284" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GUARDS · ATR SIZING</text>
+<rect x="692" y="308" width="124" height="12" rx="2" fill="#f5f5f5"/>
+<text x="754" y="318" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">[CID] SAVE SUBMITTED</text>
+<rect x="208" y="364" width="68" height="12" rx="2" fill="#f5f5f5"/>
+<text x="242" y="374" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MARKET BUY</text>
+<rect x="464" y="452" width="68" height="12" rx="2" fill="#f5f5f5"/>
+<text x="498" y="462" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">POST ORDER</text>
+<rect x="454" y="492" width="88" height="12" rx="2" fill="#f5f5f5"/>
+<text x="498" y="502" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">UUID · TRADES</text>
+<rect x="414" y="586" width="144" height="12" rx="2" fill="#f5f5f5"/>
+<text x="486" y="596" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SIM FILL · TICKER +0.5%</text>
+<rect x="196" y="636" width="92" height="12" rx="2" fill="#f5f5f5"/>
+<text x="242" y="646" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ORDER RESPONSE</text>
+<rect x="688" y="692" width="132" height="12" rx="2" fill="#f5f5f5"/>
+<text x="754" y="702" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TX · POSITION + TRADE</text>
+<!-- ACTORS -->
+<rect x="24" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="24" y="32" width="180" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+<rect x="32" y="40" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+<text x="46" y="49" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SVC</text>
+<text x="114" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">TradingBotService</text>
+<text x="114" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">executeBuy</text>
+<rect x="280" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="280" y="32" width="180" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<rect x="288" y="40" width="28" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+<text x="302" y="49" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
+<text x="370" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">BithumbApiClient</text>
+<text x="370" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">mode gate · PAPER</text>
+<rect x="536" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="536" y="32" width="180" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<rect x="544" y="40" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+<text x="558" y="49" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+<text x="626" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bithumb</text>
+<text x="626" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">api.bithumb.com</text>
+<rect x="792" y="32" width="180" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="792" y="32" width="180" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+<rect x="800" y="40" width="20" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.40)" stroke-width="0.8"/>
+<text x="810" y="49" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+<text x="882" y="66" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Trade · Position</text>
+<text x="882" y="80" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">JPA · H2</text>
+<!-- ANNOTATION -->
+<text x="1000" y="320" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', 'Noto Serif KR', serif">cid 구성에서만 저장 (기본 꺼짐)</text>
+<text x="1000" y="338" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', 'Noto Serif KR', serif">응답 유실 · UNKNOWN 이면 남아</text>
+<text x="1000" y="356" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', 'Noto Serif KR', serif">다음 틱 스윕이 cid 로 정합화</text>
+<path d="M 992 315 Q 941 338 890 338" fill="none" stroke="rgba(45,49,66,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+<circle cx="890" cy="338" r="2" fill="#2d3142"/>
+<!-- LEGEND -->
+<line x1="32" y1="800" x2="1200" y2="800" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="32" y="816" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+<rect x="32" y="828" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="52" y="836" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<line x1="116" y1="832" x2="144" y2="832" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#seq-buy-arrow)"/>
+<text x="152" y="836" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Internal call</text>
+<line x1="256" y1="832" x2="284" y2="832" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#seq-buy-arrow-link)"/>
+<text x="292" y="836" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">HTTP · Bithumb</text>
+<line x1="400" y1="832" x2="428" y2="832" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#seq-buy-arrow)"/>
+<text x="436" y="836" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Return</text>
+<line x1="508" y1="832" x2="536" y2="832" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#seq-buy-arrow-accent)"/>
+<text x="544" y="836" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Headline</text>
+<rect x="624" y="824" width="28" height="18" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.22)" stroke-width="1"/>
+<text x="630" y="836" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace">ALT</text>
+<text x="660" y="836" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Fragment</text>
+</svg>
+      </div>
+      <p class="caption">Fig. 1 의 4·6 단계에서 BUY 가 나온 경우입니다. 서킷브레이커(연속 손실 3회 또는 당일 −5%)와 결과 미확인 주문을 먼저 보고, 잔고·현재가를 받아 물타기 차단과 코인 비중 상한(80%)을 확인한 뒤 ATR 로 주문 비중(15~35%)을 정해 0.5% 를 덜고 주문합니다. 현재가를 받지 못하면 가드를 건너뛰지 않고 매수를 막습니다. cid 를 쓰는 구성(v2, 또는 v1 + <code>clientOrderIdEnabled</code>)이면 주문 전에 Trade 를 SUBMITTED 로 먼저 저장합니다. 주문은 <code>BithumbApiClient</code> 의 모드 게이트를 지나며, 기본값 PAPER 에서는 현재가 +0.5% 에 메모리 안에서 체결합니다. 체결가를 얻으면 SL/TP 를 붙인 Position 과 체결된 Trade 를 <code>TransactionTemplate</code> 한 트랜잭션에 저장합니다 — 주문 HTTP 는 트랜잭션 밖에서 끝납니다. 매도(<code>executeSell</code>)도 같은 모양이고, SUBMITTED 행이 청산할 포지션을 가리킵니다.</p>
+    </section>
+
+    <div class="cards">
+      <div class="card">
+        <p class="eyebrow">Invariant</p>
+        <div class="card-header"><span class="card-dot coral"></span><h3>순서가 곧 안전장치</h3></div>
+        <ul>
+          <li>리스크 체크(2)가 신호(3)보다 먼저 — 신호 쪽 예외·지연이 손절을 막지 못하게. 가드: <code>riskCheckRunsBeforeSignalGeneration</code></li>
+          <li>캔들 동기화가 실패해도 2·3 은 실행하고 4–6 만 막음 (리스크 판정은 캔들이 아니라 실시간 현재가)</li>
+          <li>복구 모드 게이트는 3 직후·4 앞 — 보호는 돌리고 신규 매매만 막는 유일한 위치</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Order path</p>
+        <div class="card-header"><span class="card-dot ink"></span><h3>주문 한 건의 안전장치</h3></div>
+        <ul>
+          <li>주문 HTTP 는 트랜잭션 밖, Position + Trade 저장만 짧은 트랜잭션</li>
+          <li>미해결 SUBMITTED 가 있으면 신규 매수 차단, 같은 포지션 미해결 매도가 있으면 재매도 차단</li>
+          <li>스윕: 10초 grace 뒤 cid 재조회 — 체결이면 DONE + Position, 취소면 CANCEL, 2분 동안 못 찾으면 FAILED</li>
+        </ul>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Defaults</p>
+        <div class="card-header"><span class="card-dot muted"></span><h3>기본 구성</h3></div>
+        <ul>
+          <li>모드 PAPER — LIVE 는 <code>TRADING_BOT_MODE=LIVE</code> 로만</li>
+          <li>주문 API V1 + <code>clientOrderIdEnabled=false</code> — 선영속화가 꺼져 있어 스윕할 SUBMITTED 행이 생기지 않음</li>
+          <li>시세·캔들 조회는 모드와 무관하게 실제 API</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <span>source · trading/application/service/TradingBotService.java · infrastructure/api/BithumbApiClient.java</span>
+      <span>2026-09-27 · diagram-design</span>
+    </footer>
+  </div>
+</body>
+</html>

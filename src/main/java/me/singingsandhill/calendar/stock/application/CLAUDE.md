@@ -41,6 +41,9 @@ rank 성공 스냅샷은 그대로 유지(거래일 1회 스냅샷 정합성). �
    - Spread score (inverse, 0~0.5%)
    - Market cap score (log scale, 500억~10조)
 3. Sort by score descending → 위 선정 규칙 통과분만 최대 `max-watchlist-size` 까지
+4. Floor 통과 종목만 `getStockName()`(search-stock-info `prdt_abrv_name`→`prdt_name`)으로 종목명 조회 →
+   `Stock.stockName`; null 이면 종목코드 대체 + `nameUnresolved` 집계(선정 무영향,
+   [ADR infrastructure/0008](../../../../../../../../docs/adr/stock/infrastructure/0008-stock-name-source-search-stock-info.md))
 
 **Legacy mode** (`scoring.enabled=false`): sequential hard-cut filters (gap, market cap, trade value, strength, spread).
 

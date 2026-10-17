@@ -90,6 +90,11 @@ Time-decay take profit: minimum profit threshold decreases linearly from
   스크리닝 Floor 3·진입 검증의 체결강도는 주식현재가 체결(FHKST01010300, inquire-ccnl)의
   `tday_rltv`(최신 행)를 `KisRestClient.getTradeStrength()` 로 조회하며, 실패/부재 시 null →
   데이터 부족 처리 ([ADR stock/infrastructure/0007](../../../../../../../docs/adr/stock/infrastructure/0007-trade-strength-source-inquire-ccnl.md)).
+- **종목명 데이터 소스** — 스크리닝이 쓰는 시세·체결·호가 TR 3종에는 종목명 필드가 없다.
+  `Stock.stockName` 은 Floor 통과 종목에 한해 주식기본조회(CTPF1002R, `search-stock-info`, 실전 전용)의
+  `prdt_abrv_name`(없으면 `prdt_name`)을 `KisRestClient.getStockName()` 으로 조회해 채우고, 실패/필드 부재 시
+  null → 종목코드로 대체(종전 동작) + `ScreeningStats.nameUnresolved` 요약 WARN·`SCREENING_SUMMARY` 키
+  ([ADR stock/infrastructure/0008](../../../../../../../docs/adr/stock/infrastructure/0008-stock-name-source-search-stock-info.md)).
 - **주문 신뢰성** ([ADR stock/infrastructure/0006](../../../../../../../docs/adr/stock/infrastructure/0006-order-pre-persistence-and-fill-backfill.md)) —
   매수는 주문 *전* `PENDING` 거래 선영속화 → 응답 성공 시 ODNO 부착 + 당일주문체결조회로
   **실체결가·수수료 backfill**(포지션 진입가도 실체결 기준). 응답 유실분은 트레이딩 루프

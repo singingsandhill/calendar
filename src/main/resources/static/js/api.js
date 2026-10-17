@@ -6,7 +6,6 @@ const errorMessages = {
     'SCHEDULE_NOT_FOUND': '일정을 찾을 수 없습니다',
     'DUPLICATE_SCHEDULE': '이미 존재하는 일정입니다',
     'PARTICIPANT_NOT_FOUND': '참여자를 찾을 수 없습니다',
-    'MAX_PARTICIPANTS_EXCEEDED': '참여자는 최대 8명까지 가능합니다',
     'DUPLICATE_PARTICIPANT': '이미 같은 이름의 참여자가 있습니다',
     'LOCATION_NOT_FOUND': '장소를 찾을 수 없습니다',
     'DUPLICATE_LOCATION': '이미 같은 장소가 있습니다',
@@ -82,6 +81,13 @@ const api = {
         return this.request(`/api/owners/${ownerId}/schedules/${year}/${month}`, {
             method: 'PATCH',
             body: JSON.stringify({ weeks })
+        });
+    },
+
+    async updateScheduleDescription(ownerId, year, month, description) {
+        return this.request(`/api/owners/${ownerId}/schedules/${year}/${month}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ description })
         });
     },
 
@@ -168,6 +174,27 @@ const api = {
 
     async unvoteMenu(menuId, voterName) {
         return this.request(`/api/menus/${menuId}/votes/${encodeURIComponent(voterName)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // Time Slot API
+    async addTimeSlot(scheduleId, dayIndex, startMinute, endMinute) {
+        return this.request(`/api/schedules/${scheduleId}/time-slots`, {
+            method: 'POST',
+            body: JSON.stringify({ dayIndex, startMinute, endMinute })
+        });
+    },
+
+    async voteTimeSlot(timeSlotId, voterName) {
+        return this.request(`/api/time-slots/${timeSlotId}/votes`, {
+            method: 'POST',
+            body: JSON.stringify({ voterName })
+        });
+    },
+
+    async unvoteTimeSlot(timeSlotId, voterName) {
+        return this.request(`/api/time-slots/${timeSlotId}/votes/${encodeURIComponent(voterName)}`, {
             method: 'DELETE'
         });
     }

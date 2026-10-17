@@ -1057,9 +1057,11 @@ public class TradingBotService {
             trade.markExecuted(entryPrice, volume, fee);
             Position position = Position.open(market, entryPrice, volume, stopLoss, takeProfit, fee);
 
+            // executeBuy 와 같은 순서 — Position id 를 받아 Trade 에 연결 (미연결이면 분석이 신호 진입으로 오분류)
             txTemplate.executeWithoutResult(status -> {
-                tradeRepository.save(trade);
                 positionRepository.save(position);
+                trade.setPositionId(position.getId());
+                tradeRepository.save(trade);
             });
             log.info("Manual buy: opened tracked position - entry={}, volume={}, SL={}, TP={}",
                     entryPrice, volume, stopLoss, takeProfit);

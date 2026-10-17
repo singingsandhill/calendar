@@ -31,7 +31,7 @@ class TradingAnalyticsServiceTest {
 
     private final TradingProperties properties = new TradingProperties();
     private final TradingAnalyticsService service =
-            new TradingAnalyticsService(null, null, null, properties);
+            new TradingAnalyticsService(null, null, null, properties, null);
 
     /** 점수와 가격만 다른 최소 관측치. 게이트를 통과하도록 지표를 중립값으로 채운다. */
     private SignalSample sample(int minuteOffset, int totalScore, String price) {
@@ -248,6 +248,22 @@ class TradingAnalyticsServiceTest {
         assertThat(r.entryContext().excludedNonSignalPositions()).isEqualTo(1);
         assertThat(r.entryContext().signalDrivenPositions()).isEqualTo(1);
         assertThat(r.entryContext().scoreConfirmedMatches()).isEqualTo(1);
+    }
+
+    @Test
+    void unlinkedPositionIsExcludedNotTimestampMatched() {
+        // 운영 형태 그대로: 리밸런싱 매수 Trade 가 positionId 없이 저장돼 있다(2026-09 이전 전건).
+        // 연결된 BUY 가 없으면 신호 기원임을 확인할 수 없다 — 5초 앞 신호에 타임스탬프로 붙이면 안 된다.
+        List<SignalSample> samples = List.of(sample(0, 10, "1000"));
+        Position rebalancePos = closedPosition(2L, T0.plusSeconds(5), "1000", "980");
+        Trade unlinkedRebalanceBuy = Trade.createBuyOrder("uuid-rb", MARKET, new BigDecimal("1000"),
+                BigDecimal.TEN, "market", null, "Rebalancing buy");
+
+        AnalyticsReport r = report(samples, List.of(rebalancePos), List.of(unlinkedRebalanceBuy));
+
+        assertThat(r.entryContext().excludedNonSignalPositions()).isEqualTo(1);
+        assertThat(r.entryContext().signalDrivenPositions()).isZero();
+        assertThat(r.entryContext().matchedByTimestamp()).isZero();
     }
 
     @Test

@@ -1,78 +1,72 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 
-<!-- Default Footer -->
-<th:block th:fragment="footer">
-    <footer>
-        <div class="footer-content">
-            <p th:text="'DateDate - ' + #{footer.tagline}">DateDate - 간편한 그룹 일정 조율</p>
-            <div class="footer-nav">
-                <a th:href="${@localeLinks.href('/')}" class="footer-nav-link" th:text="#{footer.home}">홈</a>
-                <a th:href="${@localeLinks.href('/privacy')}" class="footer-nav-link" th:text="#{footer.privacy}">개인정보처리방침</a>
-                <a th:href="${@localeLinks.href('/terms')}" class="footer-nav-link" th:text="#{footer.terms}">이용약관</a>
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
-                   target="_blank" rel="noopener noreferrer" class="footer-nav-link" th:text="#{footer.feedback}">의견 보내기</a>
-            </div>
-        </div>
-    </footer>
-</th:block>
-
-<!-- Minimal Footer (Garriock Style) -->
-<th:block th:fragment="footer-minimal">
-    <footer class="footer-minimal">
-        <span class="footer-logo">DateDate</span>
-        <div class="footer-sections">
-            <div class="footer-section">
-                <span class="footer-section-title" th:text="#{footer.section.service}">서비스</span>
-                <div class="footer-section-links">
-                    <a th:href="${@localeLinks.href('/')}" class="footer-link" th:text="#{footer.home}">홈</a>
-                    <a th:href="${@localeLinks.href('/#start-form')}" class="footer-link" th:text="#{nav.create}">일정 만들기</a>
-                    <a th:href="${@localeLinks.href('/insights/trends')}" class="footer-link" th:text="#{nav.insights}">인사이트</a>
-                    <a th:href="${@localeLinks.href('/tools/date-diff')}" class="footer-link" th:text="#{nav.dateDiff}">날짜 계산기</a>
-                </div>
-            </div>
-            <div class="footer-section">
-                <span class="footer-section-title" th:text="#{footer.section.help}">도움말</span>
-                <div class="footer-section-links">
-                    <a th:href="${@localeLinks.href('/about')}" class="footer-link" th:text="#{footer.about}">서비스 소개</a>
-                    <a th:href="${@localeLinks.href('/guide')}" class="footer-link" th:text="#{footer.guide}">사용 가이드</a>
-                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
-                       target="_blank" rel="noopener noreferrer" class="footer-link" th:text="#{footer.feedback}">의견 보내기</a>
-                </div>
-            </div>
-            <div class="footer-section">
-                <span class="footer-section-title" th:text="#{footer.section.policy}">정책</span>
-                <div class="footer-section-links">
-                    <a th:href="${@localeLinks.href('/privacy')}" class="footer-link" th:text="#{footer.privacy}">개인정보처리방침</a>
-                    <a th:href="${@localeLinks.href('/terms')}" class="footer-link" th:text="#{footer.terms}">이용약관</a>
-                </div>
-            </div>
-            <div class="footer-section">
-                <span class="footer-section-title" th:text="#{footer.section.usecases}">활용 사례</span>
-                <div class="footer-section-links">
-                    <a th:each="slug : ${useCaseSlugs}"
-                       th:href="${@localeLinks.href('/use-cases/' + slug)}"
-                       class="footer-link"
-                       th:text="#{'seo.useCase.' + ${slug} + '.navLabel'}">활용 사례</a>
-                </div>
-            </div>
-            <div class="footer-section">
-                <span class="footer-section-title" th:text="#{footer.section.guides}">모임 노하우</span>
-                <div class="footer-section-links">
-                    <a th:each="slug : ${guideSlugs}"
-                       th:href="${@localeLinks.href('/guides/' + slug)}"
-                       class="footer-link"
-                       th:text="#{'guides.article.' + ${slug} + '.navLabel'}">모임 노하우</a>
-                </div>
-            </div>
-        </div>
-        <p class="footer-copyright" th:text="'DateDate - ' + #{footer.tagline}">DateDate - 간편한 그룹 일정 조율</p>
-    </footer>
-</th:block>
-
 <!--
+  Footer fragment — DateDate 전 페이지 공용 단일 푸터 (ADR datedate/frontend/0004).
+  사용법: <div th:replace="~{fragments/footer :: [th:fragment='footer']}"></div>
+
+  - 활용 사례·기사 링크는 UseCaseNavAdvice·GuideNavAdvice 가 주입하는 슬러그를 순회한다 — 하드코딩 금지(고아 페이지 방지).
+  - 연락처 이메일·피드백 폼 URL·태그라인은 이 파일에 각 1회만 둔다.
+  - 정책 링크는 탐색 섹션이 아니라 하단 줄에 둔다(법적 링크와 탐색 링크 구분).
   공통 스크립트는 fragments/scripts.html 을 사용하세요.
-  <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
 -->
+<th:block th:fragment="footer">
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-brand">
+                <span class="site-footer-logo">DateDate</span>
+                <p class="site-footer-tagline" th:text="#{footer.tagline}">간편한 그룹 일정 조율</p>
+                <p class="site-footer-contact">
+                    <span th:text="#{footer.contact}">문의</span>
+                    <a href="mailto:cheongyakplanet@gmail.com">cheongyakplanet@gmail.com</a>
+                </p>
+            </div>
+            <div class="site-footer-section">
+                <h2 class="site-footer-heading" th:text="#{footer.section.service}">서비스</h2>
+                <ul class="site-footer-links">
+                    <li><a th:href="${@localeLinks.href('/')}" th:text="#{footer.home}">홈</a></li>
+                    <li><a th:href="${@localeLinks.href('/#start-form')}" th:text="#{nav.create}">일정 만들기</a></li>
+                    <li><a th:href="${@localeLinks.href('/insights/trends')}" th:text="#{nav.insights}">인사이트</a></li>
+                    <li><a th:href="${@localeLinks.href('/tools/date-diff')}" th:text="#{nav.dateDiff}">날짜 계산기</a></li>
+                </ul>
+            </div>
+            <div class="site-footer-section">
+                <h2 class="site-footer-heading" th:text="#{footer.section.help}">도움말</h2>
+                <ul class="site-footer-links">
+                    <li><a th:href="${@localeLinks.href('/about')}" th:text="#{footer.about}">서비스 소개</a></li>
+                    <li><a th:href="${@localeLinks.href('/guide')}" th:text="#{footer.guide}">사용 가이드</a></li>
+                    <li><a th:href="${@localeLinks.href('/faq')}" th:text="#{seo.breadcrumb.faq}">자주 묻는 질문</a></li>
+                    <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSd_CtragyTvcclHy7MRITgDgnh43pnnItONJRzxJ_kXJOBrnQ/viewform?usp=publish-editor"
+                           target="_blank" rel="noopener noreferrer" th:text="#{footer.feedback}">의견 보내기</a></li>
+                </ul>
+            </div>
+            <div class="site-footer-section site-footer-section--wide">
+                <h2 class="site-footer-heading" th:text="#{footer.section.usecases}">활용 사례</h2>
+                <ul class="site-footer-links">
+                    <li th:each="slug : ${useCaseSlugs}">
+                        <a th:href="${@localeLinks.href('/use-cases/' + slug)}"
+                           th:text="#{'seo.useCase.' + ${slug} + '.navLabel'}">활용 사례</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="site-footer-section site-footer-section--wide site-footer-section--guides">
+                <h2 class="site-footer-heading" th:text="#{footer.section.guides}">모임 노하우</h2>
+                <ul class="site-footer-links site-footer-links--cols">
+                    <li th:each="slug : ${guideSlugs}">
+                        <a th:href="${@localeLinks.href('/guides/' + slug)}"
+                           th:text="#{'guides.article.' + ${slug} + '.navLabel'}">모임 노하우</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="site-footer-bottom">
+            <p class="site-footer-copy">&copy; DateDate</p>
+            <ul class="site-footer-legal">
+                <li><a th:href="${@localeLinks.href('/privacy')}" th:text="#{footer.privacy}">개인정보처리방침</a></li>
+                <li><a th:href="${@localeLinks.href('/terms')}" th:text="#{footer.terms}">이용약관</a></li>
+            </ul>
+        </div>
+    </footer>
+</th:block>
 
 </html>

@@ -20,6 +20,8 @@ import me.singingsandhill.calendar.datedate.domain.menu.MenuRepository;
 /**
  * 노출 기준(최소 2표 + 비속어 블록리스트) — ADR datedate/domain/0006.
  * 핵심 회귀: 0표 항목이 recency 보너스만으로 홈 인기 순위에 진입하던 문제.
+ * 정렬(표수 우선, 동점은 최근 등록 우선) — ADR datedate/domain/0012. 표시는 표수인데 정렬에 recency 보너스(0~5)를
+ * 더하면 4표가 7표 위에 오는 깨진 목록이 됐다.
  */
 class PopularityServiceTest {
 
@@ -99,17 +101,47 @@ class PopularityServiceTest {
     }
 
     @Test
-    @DisplayName("필터 후 정렬(표수+최신 가중)과 limit 이 기존대로 동작한다")
+    @DisplayName("필터 후 표수순 정렬과 limit 이 동작한다")
     void sortsAndLimitsAfterFiltering() {
         when(locationRepository.findAllOrderByPopularity()).thenReturn(List.of(
-                location("삼표집", 3, NOW.minusDays(40)),   // score 3 + 0
-                location("십표집", 10, NOW.minusDays(40)),  // score 10 + 0
+                location("삼표집", 3, NOW.minusDays(40)),
+                location("십표집", 10, NOW.minusDays(40)),
                 location("일표집", 1, NOW),                  // 임계 미달
-                location("오표집", 5, NOW.minusDays(40)))); // score 5 + 0
+                location("오표집", 5, NOW.minusDays(40))));
 
         assertThat(service.getPopularLocations(2))
                 .extracting(PopularItemDto::name)
                 .containsExactly("십표집", "오표집");
+    }
+
+    @Test
+    @DisplayName("표수가 많은 항목이 최근 등록된 적은 표수 항목보다 앞선다 — 화면의 표수와 순서 일치 (ADR datedate/domain/0012)")
+    void ordersByVotesBeforeRecency() {
+        when(menuRepository.findAllOrderByPopularity()).thenReturn(List.of(
+                menu("마라탕", null, 4, NOW),                 // 오늘 등록 4표
+                menu("곱창", null, 7, NOW.minusDays(40))));   // 40일 전 등록 7표
+
+        assertThat(service.getPopularMenus())
+                .extracting(PopularItemDto::name)
+                .containsExactly("곱창", "마라탕");
+    }
+
+    @Test
+    @DisplayName("표수가 같으면 최근에 등록된 항목이 앞선다 (입력 순서와 무관)")
+    void breaksVoteTiesByRecency() {
+        when(locationRepository.findAllOrderByPopularity()).thenReturn(List.of(
+                location("홍대", 6, NOW.minusDays(20)),
+                location("사당", 6, NOW.minusDays(1))));
+        assertThat(service.getPopularLocations())
+                .extracting(PopularItemDto::name)
+                .containsExactly("사당", "홍대");
+
+        when(locationRepository.findAllOrderByPopularity()).thenReturn(List.of(
+                location("홍대", 6, NOW.minusDays(1)),
+                location("사당", 6, NOW.minusDays(20))));
+        assertThat(service.getPopularLocations())
+                .extracting(PopularItemDto::name)
+                .containsExactly("홍대", "사당");
     }
 
     @Test

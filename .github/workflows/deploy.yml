@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: '배포할 이미지 태그 (40자 git SHA 권장, latest 는 서버에서 다이제스트로 고정됨)'
+        description: '배포할 이미지 태그 (40자 git SHA 권장, latest 는 서버에서 다이제스트로 고정됨). 비우면 dispatch 한 브랜치의 SHA 가 쓰이는데 이미지는 deploy 브랜치 푸시에서만 발행되므로, 위 Use workflow from 에서 deploy 를 고를 것 (ADR 0003)'
         required: true
         default: ''
       force:

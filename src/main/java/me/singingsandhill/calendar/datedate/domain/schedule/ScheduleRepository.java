@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.domain.schedule;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,4 +19,7 @@ public interface ScheduleRepository {
     boolean existsByOwnerIdAndYearMonth(String ownerId, int year, int month);
 
     long count();
+
+    /** 모임 데이터 리포트용 — 전체 일정의 생성 시각. */
+    List<LocalDateTime> findAllCreatedAt();
 }

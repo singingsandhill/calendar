@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.infrastructure.persistence.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,4 +29,7 @@ public interface ScheduleJpaRepository extends JpaRepository<ScheduleJpaEntity, 
             @Param("ownerId") String ownerId,
             @Param("year") int year,
             @Param("month") int month);
+
+    @Query("SELECT s.createdAt FROM ScheduleJpaEntity s")
+    List<LocalDateTime> findAllCreatedAt();
 }

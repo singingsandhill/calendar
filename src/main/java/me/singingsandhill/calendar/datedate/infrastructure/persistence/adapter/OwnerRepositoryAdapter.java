@@ -77,7 +77,8 @@ public class OwnerRepositoryAdapter implements OwnerRepository {
                 entity.getCreatedAt(),
                 entity.getParticipants().stream()
                         .map(this::participantToDomain)
-                        .collect(Collectors.toList())
+                        .collect(Collectors.toList()),
+                entity.getDescription()
         );
     }
 

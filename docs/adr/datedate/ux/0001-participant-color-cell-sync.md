@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 단, **팔레트 8색 spec 결정은 [0004](0004-ten-color-participant-palette.md) 로 Superseded** (색 = 1차 신호, 색맹 보조 신호 4종, 칩↔셀 색 동기화는 유효) |
 | 날짜 | 2026-05-01 |
 | 도메인 | datedate |
 | 관심사 | UX / 접근성 |

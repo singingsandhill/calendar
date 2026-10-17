@@ -6,6 +6,7 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import me.singingsandhill.calendar.stock.application.service.StockMailService;
 import me.singingsandhill.calendar.stock.application.service.UniverseBuilder;
+import me.singingsandhill.calendar.stock.domain.stock.Stock;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -53,10 +54,15 @@ class StockMailServiceTest {
 
     private String sendAndCaptureHtml(StockProperties props, UniverseBuilder.Snapshot universe,
                                        List<String> fileNames) throws Exception {
+        return sendAndCaptureHtml(props, List.of(), universe, fileNames);
+    }
+
+    private String sendAndCaptureHtml(StockProperties props, List<Stock> stocks,
+                                       UniverseBuilder.Snapshot universe, List<String> fileNames) throws Exception {
         when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
         StockMailService service = new StockMailService(mailSender, props);
 
-        service.sendScreeningResult(LocalDate.of(2026, 5, 1), List.of(), universe);
+        service.sendScreeningResult(LocalDate.of(2026, 5, 1), stocks, universe);
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
@@ -106,6 +112,22 @@ class StockMailServiceTest {
             .contains(props.getScoring().getFloorMaxGap().toPlainString())
             .contains("신호점수");
         assertThat(html).doesNotContain("최소 거래대금");
+    }
+
+    /**
+     * 2026-08-31: 종목명 칸에 종목코드가 인쇄됐다(스크리닝이 이름 자리에 코드를 넣던 placeholder,
+     * ADR stock/infrastructure/0008). 메일 표의 컬럼 계약 가드 — 종목코드는 종목코드 칸에만.
+     */
+    @Test
+    void screeningRowPrintsStockNameInNameColumn_codeOnlyOnce() throws Exception {
+        Stock stock = new Stock("005930", "삼성전자", LocalDate.of(2026, 5, 1));
+        stock.setGapPercent(new java.math.BigDecimal("4.0"));
+
+        String html = sendAndCaptureHtml(mailEnabledProps(), List.of(stock), null, new ArrayList<>());
+
+        assertThat(html).contains(">삼성전자</td>");
+        // 종목명 칸까지 코드였던 회귀는 코드 셀 2회 등장으로 드러난다
+        assertThat(html).containsOnlyOnce(">005930</td>");
     }
 
     private static void collect(Part part, List<String> fileNames, StringBuilder html) throws Exception {

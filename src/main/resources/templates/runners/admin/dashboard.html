@@ -4,25 +4,7 @@
       th:with="extraStylesheets=${ {'/css/runners.css'} }">
 <head th:replace="~{fragments/head :: head(${seo})}"></head>
 <body class="runners-body">
-    <nav class="runners-navbar">
-        <div class="runners-navbar-content">
-            <a th:href="@{/runners}" class="runners-logo">
-                <img th:src="@{/image/crew_logo.png}" alt="Running Crew Logo" onerror="this.style.display='none'">
-                <span class="runners-logo-text">Running Crew</span>
-            </a>
-            <div class="runners-nav">
-                <a th:href="@{/runners}">홈</a>
-                <a th:href="@{/runners/runs}">런 목록</a>
-                <span style="color: var(--runners-text-secondary);">|</span>
-                <span style="color: var(--runners-accent-primary);">관리자</span>
-                <form th:action="@{/runners/admin/logout}" method="post" style="display: inline;">
-                    <button type="submit" class="runners-btn runners-btn-secondary runners-btn-sm">
-                        로그아웃
-                    </button>
-                </form>
-            </div>
-        </div>
-    </nav>
+    <nav th:replace="~{runners/fragments/header :: admin-navbar}"></nav>
 
     <main class="runners-container">
         <div class="runners-admin-header">
@@ -35,6 +17,23 @@
         <div th:if="${message}" class="runners-message runners-message-success">
             <span th:text="${message}">메시지</span>
         </div>
+
+        <form method="get" th:action="@{/runners/admin}" class="runners-filter-form"
+              th:classappend="${filterFrom != null or filterTo != null} ? 'active'">
+            <div class="runners-form-group">
+                <label for="from">시작일</label>
+                <input type="date" id="from" name="from"
+                       class="runners-input runners-filter-input" th:value="${filterFrom}">
+            </div>
+            <div class="runners-form-group">
+                <label for="to">종료일</label>
+                <input type="date" id="to" name="to"
+                       class="runners-input runners-filter-input" th:value="${filterTo}">
+            </div>
+            <button type="submit" class="runners-btn runners-btn-primary runners-btn-sm">적용</button>
+            <a th:href="@{/runners/admin}" class="runners-filter-reset"
+               th:if="${filterFrom != null or filterTo != null}">전체 보기 ✕</a>
+        </form>
 
         <table class="runners-admin-table" th:if="${!runs.isEmpty()}">
             <thead>
@@ -77,7 +76,7 @@
 
         <div class="runners-empty" th:if="${runs.isEmpty()}">
             <div class="runners-empty-icon">📅</div>
-            <p>아직 등록된 런이 없습니다</p>
+            <p th:text="${filterFrom != null or filterTo != null} ? '해당 기간에 등록된 런이 없습니다' : '아직 등록된 런이 없습니다'">아직 등록된 런이 없습니다</p>
             <a th:href="@{/runners/admin/runs/new}" class="runners-btn runners-btn-primary" style="margin-top: 1rem;">
                 첫 런 만들기
             </a>

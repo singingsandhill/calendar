@@ -44,6 +44,8 @@ class BithumbApiClientIdempotencyTest {
         props.getBot().setMode(TradingProperties.Bot.Mode.LIVE);
         props.getBithumb().setClientOrderIdEnabled(true);
         client = new BithumbApiClient(publicApi, privateApi, v2Api, props);
+        // wait 응답은 V1 체결 재조회(withFills)를 탄다 — 목이 null 을 주므로 백오프만 없앤다
+        client.setFillRequeryBackoffMillis(0);
 
         BithumbOrderbookResponse ob = new BithumbOrderbookResponse(
                 "KRW-ADA", 0L, 0.0, 0.0,

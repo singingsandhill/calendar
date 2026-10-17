@@ -16,13 +16,13 @@
 | 기동 방식·JVM 플래그 | `ps auxww \| grep java` | 4단계 롤백 커맨드, `JAVA_OPTS` 기준 |
 | 메모리 실사용 | `ps -o rss= -p <pid>` | `JAVA_OPTS`(-Xmx 상당)·compose `mem_limit` 확정 |
 | 부팅 소요 (3회) | `app.log` 의 `Started CalendarApplication in ...` | compose `start_period`·`HEALTH_TIMEOUT` = p95×2 |
-| 호스트 TZ | `timedatectl` | `.deploy/env` 의 `HOST_TZ` (무존 trading cron 시각 보존 — 추정 UTC, 단정 금지) |
-| uid/gid | `id -u; id -g` | `.deploy/env` 의 `APP_GID` |
+| 호스트 TZ | `timedatectl show -p Timezone --value` (출력 파싱보다 정확) | `.deploy/env` 의 `HOST_TZ` (무존 trading cron 시각 보존 — 추정 UTC, 단정 금지) |
+| uid/gid | `id -u; id -g` — **반드시 `ourbalance_topping` 로 로그인한 채**. `sudo id -g` 는 0(root) 이 나오고 그 값을 넣으면 컨테이너가 root 그룹으로 돈다 | `.deploy/env` 의 `APP_GID` |
 | server `.env` 실값 | `sudo cat ~/calendar/.env` | **TRADING_BOT_MODE / STOCK_BOT_MODE / RUNNER_ADMIN_PASSWORD 존재·강도** 확인. 기본값 admin123 이면 여기서 교체 |
 | certbot 상태 | `sudo certbot certificates`; `sudo cat /etc/letsencrypt/renewal/datedate.site.conf`; `systemctl list-timers \| grep certbot` | authenticator/installer 확인 (8단계 입력) |
 | 크론·잔재 | `crontab -l`; `sudo crontab -l` | 10단계 정리 목록 |
 | nginx 원문 | `sudo nginx -T > ~/backup/nginx-T-before.txt` | 7단계 전환 후 diff 대조 기준 |
-| rrsync 존재 | `command -v rrsync \|\| ls /usr/share/rsync/scripts/` | 3단계 rsync 키 게이트 (없으면 rsync 패키지 스크립트 설치) |
+| rrsync 존재·**경로** | `command -v rrsync \|\| ls /usr/share/rsync/scripts/` | 3단계 rsync 키 게이트. **PATH 에 없으면 authorized_keys2 에 절대경로로 써야 한다** — forced command 는 최소 PATH 로 실행돼 `/usr/share/rsync/scripts/rrsync` 를 못 찾는다 |
 
 ## 2. 백업
 
@@ -39,28 +39,89 @@
 3. `.env` 복사: `cp ~/calendar/.env ~/apps/calendar/.env && chmod 600 ~/apps/calendar/.env`
    (현행 775 는 과다). 필요 시 `H2_CONSOLE_ENABLED` 는 **넣지 않는다**(운영 기본 비활성).
 4. `sudo chown -R 10001:$(id -g) ~/apps/calendar/data ~/apps/calendar/logs` (컨테이너 uid 10001).
-5. `.deploy/env` 작성 (1단계 실측값):
+   `$(id -g)` 는 sudo 실행 **전에** 사용자 셸이 확장하므로 이 형태는 옳다. 통째로
+   `sudo bash -c '... $(id -g) ...'` 로 감싸면 0 이 들어가니 금지.
+5. `.deploy/env` 작성 (1단계 실측값 — 저장소에 커밋된 템플릿이 없다. `compose.yaml` 이
+   `APP_REF`·`HOST_TZ`·`JAVA_OPTS`·`APP_GID` 를 `:?` fail-fast 로 요구한다):
    ```
    HOST_TZ=<timedatectl 값>
    JAVA_OPTS=-XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError
    APP_GID=<id -g 값>
    ```
-6. GHCR 로그인: fine-grained PAT(packages:read) 발급 → `echo <PAT> | docker login ghcr.io -u singingsandhill --password-stdin`
-   → `chmod 600 ~/.docker/config.json` → `docker pull ghcr.io/singingsandhill/calendar:latest` 성공 확인.
-   **PAT 만료일 달력 등록.**
-7. SSH 키 2개 발급(실행용/rsync 용) + 게이트 설치:
+6. GHCR 로그인. ★**classic PAT 이어야 한다** — 공식 문서: "GitHub Packages only supports
+   authentication using a personal access token (classic)." fine-grained 토큰은 ghcr.io 에
+   동작하지 않는다.
+   - 발급: GitHub → Settings → Developer settings → Personal access tokens →
+     **Tokens (classic)** → Generate new token (classic).
+     Note `calendar-server-ghcr-pull`, Expiration 지정(무기한 금지),
+     스코프는 **`read:packages` 하나만** 체크 — 이 토큰은 서버에 평문에 가깝게 저장되므로
+     표면을 최소로 둔다(pull 이 401 이면 그때 넓힌다). 토큰 값은 생성 직후 화면에서만 보인다.
+   - 서버에서 (셸 히스토리에 토큰을 남기지 않는 형태):
+     ```
+     read -rsp 'PAT: ' PAT && echo "$PAT" | docker login ghcr.io -u singingsandhill --password-stdin && unset PAT
+     chmod 600 ~/.docker/config.json
+     docker pull ghcr.io/singingsandhill/calendar:latest
+     ```
+     `~/.docker/config.json` 은 토큰을 **base64 로 인코딩만** 해서 담는다(암호화 아님) —
+     `chmod 600` 이 유일한 보호막이다.
+   - **PAT 만료일 달력 등록.** 만료 증상은 "어느 날 갑자기 모든 배포가 exit 5".
+   - 이 단계는 A(CI 그린 → 첫 이미지 발행) 이후에만 성공한다 — 받을 이미지가 있어야 한다.
+7. **첫 번들 반입 — 게이트 설치보다 먼저.** 8단계의 `sudo cp` 가 이 파일을 소스로 쓴다
+   (순서가 뒤집히면 `No such file`). 로컬에서:
    ```
-   sudo cp ~/apps/calendar/deploy/server/calendar-deploy-gate.sh /usr/local/bin/calendar-deploy-gate
-   sudo chown root:root /usr/local/bin/calendar-deploy-gate && sudo chmod 755 /usr/local/bin/calendar-deploy-gate
+   rsync -az deploy/ 서버:~/apps/calendar/deploy/
+   rsync -az deploy/compose.yaml 서버:~/apps/calendar/compose.yaml
    ```
-   `~/.ssh/authorized_keys`:
-   ```
-   restrict,command="/usr/local/bin/calendar-deploy-gate" ssh-ed25519 <실행키 공개키>
-   restrict,command="rrsync -wo /home/ourbalance_topping/apps/calendar" ssh-ed25519 <rsync키 공개키>
-   ```
-8. GitHub Secrets 등록 ([deployment.md](deployment.md) 표) — `DEPLOY_KNOWN_HOSTS` 는 `ssh-keyscan <host>`.
-9. 첫 번들 반입: 로컬에서 `rsync -az deploy/ 서버:~/apps/calendar/deploy/` +
-   `rsync -az deploy/compose.yaml 서버:~/apps/calendar/compose.yaml` (이후는 deploy.yml 이 수행).
+   맨 `ssh` 가 아직 안 뚫려 있으면 `gcloud compute scp --recurse --zone <존> deploy <인스턴스>:~/apps/calendar/`
+   로 대체. 이후 반입은 deploy.yml 이 수행한다.
+8. SSH 키 2개 발급 + 게이트 설치 + authorized_keys.
+   - **키는 로컬에서 만든다.** 개인키를 쥐는 쪽은 Actions 러너이고 서버는 공개키만 필요하다 —
+     서버에서 만들면 개인키가 서버에 남아 지우는 단계가 는다. 서버로 가는 것은 `.pub` 두 줄뿐.
+     ```
+     ssh-keygen -t ed25519 -N "" -C "calendar-deploy" -f ~/.ssh/calendar_deploy
+     ssh-keygen -t ed25519 -N "" -C "calendar-rsync"  -f ~/.ssh/calendar_rsync
+     ```
+   - 게이트 설치 (7단계 번들이 도착한 뒤):
+     ```
+     sudo cp ~/apps/calendar/deploy/server/calendar-deploy-gate.sh /usr/local/bin/calendar-deploy-gate
+     sudo chown root:root /usr/local/bin/calendar-deploy-gate && sudo chmod 755 /usr/local/bin/calendar-deploy-gate
+     ```
+   - **`~/.ssh/authorized_keys2` 에** 아래 두 줄 (항목당 정확히 한 줄, 옵션이 줄 맨 앞):
+     ```
+     restrict,command="/usr/local/bin/calendar-deploy-gate" ssh-ed25519 <실행키 공개키>
+     restrict,command="rrsync -wo /home/ourbalance_topping/apps/calendar" ssh-ed25519 <rsync키 공개키>
+     ```
+     ★`authorized_keys` 가 아니라 **`authorized_keys2`** 다 — GCP 게스트 에이전트가
+     `authorized_keys` 를 덮어쓸 수 있고(공식 문서: "might be overwritten by the VM's guest
+     agent"), 이 서버는 `authorizedkeyscommand none` 이라 파일 방식이 살아 있다. sshd 의
+     `authorizedkeysfile` 이 `.ssh/authorized_keys .ssh/authorized_keys2` 두 개를 읽고
+     에이전트가 관리하는 이름은 앞쪽 하나뿐이라, 뒤쪽에 두면 sshd 는 읽고 에이전트는 안 건드린다.
+     지워지면 배포 키가 통째로 사라질 뿐 게이트가 풀리지는 않는다 — 가용성 문제다.
+     ★`rrsync` 가 PATH 에 없으면(1단계 실측) **절대경로로 쓴다** — forced command 는 최소
+     PATH 로 실행돼 `/usr/share/rsync/scripts/rrsync` 를 못 찾고, 증상은 rsync 만 조용히
+     실패하는 것이다. 예: `command="/usr/share/rsync/scripts/rrsync -wo /home/..."`.
+   - 권한: `chmod 700 ~/.ssh; chmod 600 ~/.ssh/authorized_keys2; chmod go-w ~`
+     (홈이 group/world 쓰기 가능이면 StrictModes 가 키를 무시한다).
+   - 검증(비파괴, 기존 세션을 열어둔 채 새 터미널에서):
+     ```
+     ssh -i ~/.ssh/calendar_deploy 서버 "whoami"     # 기대: REJECTED: 'whoami' (allowed: ...) + exit 1
+     ssh -i ~/.ssh/calendar_rsync  서버 "ls"          # 기대: rrsync 거부
+     rsync -az -e "ssh -i ~/.ssh/calendar_rsync" /tmp/probe.txt 서버:deploy/probe.txt   # 성공해야
+     rsync -az -e "ssh -i ~/.ssh/calendar_rsync" 서버:deploy/probe.txt /tmp/            # 거부돼야(-wo)
+     ```
+     실행키가 사용자명을 찍거나 셸이 열리면 forced-command 미적용 — 즉시 중단.
+     `No such file` 이면 게이트 미설치(7↔8 순서).
+9. GitHub Secrets 등록 ([deployment.md](deployment.md) 표). 값 출처:
+   - `DEPLOY_SSH_PORT` — `sudo sshd -T | grep '^port'` 가 22 면 **등록하지 않는다**(deploy.yml 폴백).
+     `sshd_config` 를 직접 보면 `sshd_config.d/*.conf` 를 놓친다.
+   - `DEPLOY_KNOWN_HOSTS` — `ssh-keyscan` 은 TOFU 라 이 시크릿(=MITM 방어선)을 신뢰 없는 채널로
+     만든다. 서버 안에서 직접 뜬다:
+     ```
+     ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub          # 지문을 로컬이 본 값과 대조
+     echo "<서버IP> $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"
+     ```
+     호스트 토큰은 `DEPLOY_SSH_HOST` 와 **글자 그대로** 같아야 한다(IP↔호스트명 혼용 금지).
+     포트가 22 가 아니면 `[호스트]:포트` 형식.
 
 ## 4. 🔥 구 프로세스 정지
 
@@ -93,12 +154,15 @@
 ## 7. 🔥 nginx 전환 (수 초 중단)
 
 1. `sudo systemctl stop certbot.timer` (8단계 완료까지 — nginx authenticator 오발 방지).
-2. `sudo systemctl stop nginx && sudo systemctl disable nginx`.
-3. `docker compose ... up -d nginx`.
-4. 검증: `curl -I https://datedate.site` 200 / `http://`·`www` 301 / `/h2-console`·`/actuator`
+2. **`sudo mkdir -p /var/www/certbot`** — compose 가 이 경로를 `:ro` 바인드 마운트한다.
+   먼저 만들지 않으면 Docker 가 대신 만들며 소유권·컨텍스트가 의도와 달라진다
+   (8단계에도 같은 명령이 있지만 nginx 기동이 먼저라 여기가 실제 필요 시점).
+3. `sudo systemctl stop nginx && sudo systemctl disable nginx`.
+4. `docker compose ... up -d nginx`.
+5. 검증: `curl -I https://datedate.site` 200 / `http://`·`www` 301 / `/h2-console`·`/actuator`
    404 / 카카오 로그인 재확인(X-Forwarded 계약) / `docker compose exec nginx nginx -T` 를
    1단계 덤프와 diff — TLS 프로토콜·암호군 동일(`nmap --script ssl-enum-ciphers -p 443` 전후 비교).
-5. 유지보수 페이지: `docker compose stop app` 후 `curl -i https://datedate.site` →
+6. 유지보수 페이지: `docker compose stop app` 후 `curl -i https://datedate.site` →
    **503** + `Retry-After: 120` + 점검 문구 본문 → `up -d app` 원복.
 - **롤백**: `docker compose stop nginx && sudo systemctl start nginx` (수 초).
 

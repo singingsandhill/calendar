@@ -15,6 +15,8 @@ import me.singingsandhill.calendar.datedate.application.service.InsightsService;
 import me.singingsandhill.calendar.datedate.application.service.PopularityService;
 import me.singingsandhill.calendar.datedate.application.service.SeoService;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 
 @Controller
@@ -27,15 +29,18 @@ public class InsightsController {
     private final PopularityService popularityService;
     private final SeoService seoService;
     private final LocaleLinks localeLinks;
+    private final Clock clock;
 
     public InsightsController(InsightsService insightsService,
                               PopularityService popularityService,
                               SeoService seoService,
-                              LocaleLinks localeLinks) {
+                              LocaleLinks localeLinks,
+                              Clock clock) {
         this.insightsService = insightsService;
         this.popularityService = popularityService;
         this.seoService = seoService;
         this.localeLinks = localeLinks;
+        this.clock = clock;
     }
 
     @GetMapping
@@ -62,6 +67,7 @@ public class InsightsController {
         model.addAttribute("popularLocations", popularLocations);
         model.addAttribute("popularMenus", popularMenus);
         model.addAttribute("stats", stats);
+        model.addAttribute("report", insightsService.getMeetupReport(LocalDate.now(clock)));
         return "insights/trends";
     }
 }

@@ -25,6 +25,9 @@ Allow: /guides/
 # Block API endpoints
 Disallow: /api/
 
+# Block OAuth login start — 전 페이지 헤더의 카카오 로그인 링크. 따라가면 kauth.kakao.com 302 + 세션 생성뿐
+Disallow: /oauth2/
+
 # Block admin and dev pages
 Disallow: /h2-console/
 Disallow: /runners/admin/

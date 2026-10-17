@@ -92,18 +92,22 @@ class SitemapServiceHreflangTest {
     }
 
     @Test
-    @DisplayName("인기 데이터 없을 때 — 공개 페이지 18개 × 2 url × 3 alt = 108개 (insights/trends 제외)")
+    @DisplayName("인기 데이터 없을 때 — 공개 페이지 26개 × 2 url × 3 alt = 156개 (insights/trends 제외)")
     void hreflangEntryCountReasonable() {
         String xml = service.generateSitemapXml();
         int count = xml.split("<xhtml:link", -1).length - 1;
         // setUp 의 null 리포지토리로 인해 /insights/trends 는 제외.
-        // 공개 양방향 엔트리 18개:
+        // 공개 양방향 엔트리 26개:
         //   home, guide, about, privacy, terms, faq, date-diff, use-cases 허브, guides 허브,
         //   use-cases x 5 (friend, team, travel, study, club-activity),
-        //   guides x 4 (how-to-pick-a-date, scheduling-methods-compared,
-        //               scheduling-etiquette, group-poll-best-practices)
-        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 18 * 2 * 3 = 108
-        assertThat(count).isEqualTo(18 * 2 * 3);
+        //   guides x 12 (how-to-pick-a-date, scheduling-methods-compared,
+        //                scheduling-etiquette, group-poll-best-practices,
+        //                timezone-coordination, annual-dinner-scheduling,
+        //                wedding-invitation-gathering, study-team-project-management,
+        //                calendar-vs-poll-comparison, meeting-place-and-budget,
+        //                weekend-vs-weekday-meetup, last-minute-cancellation-etiquette)
+        // 각 엔트리는 ko/en 두 개 url, 각 url 은 3개 hreflang = 26 * 2 * 3 = 156
+        assertThat(count).isEqualTo(26 * 2 * 3);
     }
 
     @Test
@@ -117,7 +121,7 @@ class SitemapServiceHreflangTest {
         // 기사 <url> 블록의 lastmod 는 SSOT 의 modified(KST 자정) — buildTime(테스트에선 now)과 달라야 한다
         int idx = xml.indexOf("<loc>" + BASE_URL + "/guides/how-to-pick-a-date</loc>");
         String block = xml.substring(idx, xml.indexOf("</url>", idx));
-        assertThat(block).contains("<lastmod>2026-08-23T00:00:00+09:00</lastmod>");
+        assertThat(block).contains("<lastmod>2026-09-19T00:00:00+09:00</lastmod>");
     }
 
     @Test

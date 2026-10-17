@@ -198,4 +198,16 @@ class TradingAnalyticsPageTest {
         assertThat(TradingAnalyticsService.clampDays(captor.getValue()))
                 .isEqualTo(TradingAnalyticsService.clampDays(9999));
     }
+
+    @Test
+    @DisplayName("공용 navbar fragment 가 토스트 컨테이너를 함께 렌더한다")
+    void navbarFragmentIncludesToastContainer() throws Exception {
+        // 컨테이너가 fragment 밖에 있으면 th:replace 에 포함되지 않아 TradingToast.push 가 전부 조용히 버려진다
+        // (봇 start/stop·리밸런스·verify 결과 무음). 모든 trading 페이지가 같은 fragment 를 쓰므로 한 페이지로 고정한다.
+        String html = mockMvc.perform(get("/trading/analytics").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("id=\"trading-toast-container\"");
+    }
 }

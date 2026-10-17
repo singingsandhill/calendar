@@ -1,9 +1,12 @@
-# CI — 빌드+테스트(main 푸시·PR) + main 푸시 시 GHCR 이미지 발행 (ADR common/infrastructure/0001)
+# CI — 빌드+테스트(main·deploy 푸시·PR) + deploy 푸시 시 GHCR 이미지 발행
+# (ADR common/infrastructure/0001, 발행 브랜치 분리는 0003)
 name: CI
 
 on:
   push:
-    branches: [main]
+    # deploy 는 릴리스 브랜치 — 이미지 발행 잡이 여기서만 돈다 (ADR 0003).
+    # main 도 계속 빌드+테스트한다: deploy 로 올리기 전에 회귀를 잡는 자리다.
+    branches: [main, deploy]
   pull_request:
     branches: [main]
 
@@ -32,7 +35,7 @@ jobs:
       - name: Build & test
         run: ./gradlew build
       - name: Upload jar for image job
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/deploy'
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
@@ -40,7 +43,7 @@ jobs:
           retention-days: 1
 
   push-image:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/deploy'
     needs: build-test
     permissions:
       contents: read

@@ -523,6 +523,88 @@
     color: var(--runners-text-muted);
 }
 
+/* ==================== Date Filter ==================== */
+/* 아래 목록(.runners-run-card / .runners-member-table)과 같은 12px 카드 계열 표면 */
+.runners-filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    background: var(--runners-bg-card);
+    border: 1px solid var(--runners-border);
+    border-radius: 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 필터가 걸린 목록임을 알리는 유일한 강조 */
+.runners-filter-form.active {
+    border-color: rgba(0, 255, 136, 0.35);
+    box-shadow: var(--runners-shadow);
+}
+
+.runners-filter-form .runners-form-group {
+    flex: 0 1 11rem;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+/* 테이블 헤더(.runners-member-table th)와 같은 마이크로 라벨 */
+.runners-filter-form .runners-form-group label {
+    margin-bottom: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.runners-filter-input {
+    width: 100%;
+    min-height: 2.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color-scheme: dark;
+}
+
+/* 네이티브 달력 글리프는 기본이 검정이라 다크 필드에서 묻힌다 */
+.runners-filter-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.runners-filter-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+.runners-filter-form .runners-btn {
+    flex: 0 0 auto;
+    width: auto; /* @media 480 의 .runners-btn { width: 100% } 를 특이도로 무력화 */
+    min-height: 2.375rem;
+}
+
+/* .runners-run-category 와 같은 pill 어휘 */
+.runners-filter-reset {
+    margin-left: auto;
+    align-self: flex-end;
+    margin-bottom: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--runners-border);
+    border-radius: 20px;
+    color: var(--runners-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.runners-filter-reset:hover {
+    color: var(--runners-accent-primary);
+    border-color: var(--runners-accent-primary);
+}
+
 /* ==================== Buttons ==================== */
 .runners-btn {
     display: inline-flex;
@@ -1055,6 +1137,15 @@
 
     .runners-login-card {
         padding: 2rem;
+    }
+
+    .runners-filter-form {
+        padding: 0.875rem 1rem;
+    }
+
+    /* input[type=date] 는 min-content 아래로 줄지 않아 2단이면 가로 넘침 */
+    .runners-filter-form .runners-form-group {
+        flex: 1 1 100%;
     }
 
     .runners-btn {

@@ -11,6 +11,23 @@
                 <p class="runners-section-subtitle" th:text="'총 ' + ${members.size()} + '명의 러너'">총 N명의 러너</p>
             </div>
 
+            <form method="get" th:action="@{/runners/members}" class="runners-filter-form"
+                  th:classappend="${filterFrom != null or filterTo != null} ? 'active'">
+                <div class="runners-form-group">
+                    <label for="from">시작일</label>
+                    <input type="date" id="from" name="from"
+                           class="runners-input runners-filter-input" th:value="${filterFrom}">
+                </div>
+                <div class="runners-form-group">
+                    <label for="to">종료일</label>
+                    <input type="date" id="to" name="to"
+                           class="runners-input runners-filter-input" th:value="${filterTo}">
+                </div>
+                <button type="submit" class="runners-btn runners-btn-primary runners-btn-sm">적용</button>
+                <a th:href="@{/runners/members}" class="runners-filter-reset"
+                   th:if="${filterFrom != null or filterTo != null}">전체 보기 ✕</a>
+            </form>
+
             <div class="runners-member-table-wrapper" th:if="${!members.isEmpty()}">
                 <table class="runners-member-table">
                     <thead>
@@ -44,7 +61,7 @@
 
             <div class="runners-empty" th:if="${members.isEmpty()}">
                 <div class="runners-empty-icon">👥</div>
-                <p>아직 출석 기록이 없습니다</p>
+                <p th:text="${filterFrom != null or filterTo != null} ? '해당 기간에 출석 기록이 없습니다' : '아직 출석 기록이 없습니다'">아직 출석 기록이 없습니다</p>
             </div>
         </section>
     </main>

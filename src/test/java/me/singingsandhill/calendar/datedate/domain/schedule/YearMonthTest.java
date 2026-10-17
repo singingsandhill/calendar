@@ -87,4 +87,25 @@ class YearMonthTest {
 
         assertThat(firstDay).isBetween(0, 6);
     }
+
+    @Test
+    @DisplayName("dateOf — 7주 확장 모드는 그리드 시작(1일이 속한 주의 일요일)부터 센다")
+    void dateOf_extendedMode() {
+        YearMonth oct = new YearMonth(2026, 10);   // 10-01 목요일 → 그리드 시작 09-27(일)
+        assertThat(oct.dateOf(1, 7)).contains(java.time.LocalDate.of(2026, 9, 27));
+        assertThat(oct.dateOf(5, 7)).contains(java.time.LocalDate.of(2026, 10, 1));
+        assertThat(oct.dateOf(49, 7)).contains(java.time.LocalDate.of(2026, 11, 14));
+        assertThat(oct.dateOf(0, 7)).isEmpty();
+        assertThat(oct.dateOf(50, 7)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("dateOf — 기존 모드(weeks != 7)는 인덱스 = 그 달의 날짜 (확장 규칙이면 요일이 어긋난다)")
+    void dateOf_legacyMode() {
+        YearMonth oct = new YearMonth(2026, 10);
+        assertThat(oct.dateOf(1, 5)).contains(java.time.LocalDate.of(2026, 10, 1));
+        assertThat(oct.dateOf(31, 5)).contains(java.time.LocalDate.of(2026, 10, 31));
+        assertThat(oct.dateOf(32, 5)).isEmpty();
+        assertThat(oct.dateOf(0, 5)).isEmpty();
+    }
 }

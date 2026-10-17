@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface AttendanceJpaRepository extends JpaRepository<AttendanceJpaEntity, Long> {
@@ -37,6 +38,18 @@ public interface AttendanceJpaRepository extends JpaRepository<AttendanceJpaEnti
            "GROUP BY a.participantName " +
            "ORDER BY COUNT(a) DESC")
     List<Object[]> findAllMemberAttendanceStats();
+
+    @Query("SELECT a.participantName, " +
+           "SUM(CASE WHEN a.run.category = me.singingsandhill.calendar.runner.infrastructure.persistence.entity.RunCategoryJpa.REGULAR THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN a.run.category = me.singingsandhill.calendar.runner.infrastructure.persistence.entity.RunCategoryJpa.LIGHTNING THEN 1 ELSE 0 END), " +
+           "COUNT(a) " +
+           "FROM AttendanceJpaEntity a " +
+           "WHERE a.run.date BETWEEN :from AND :to " +
+           "GROUP BY a.participantName " +
+           "ORDER BY COUNT(a) DESC")
+    List<Object[]> findMemberAttendanceStatsByRunDateBetween(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 
     @Query("SELECT a FROM AttendanceJpaEntity a " +
            "JOIN FETCH a.run " +
