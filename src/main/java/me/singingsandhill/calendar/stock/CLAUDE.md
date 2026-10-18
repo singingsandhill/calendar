@@ -110,7 +110,8 @@ Time-decay take profit: minimum profit threshold decreases linearly from
   `gapBelowFloor`/`gapAboveCeiling` (구 `gapFiltered`) — 합산 카운터로는 2026-07-20~23 의
   4일 연속 0건에서 근본 원인을 특정할 수 없었다. 합계는 `ScreeningSnapshot` 의 파생 접근자로 유지.
 - **09:20 스크리닝 메일** — 본문 최상단에 유니버스 크기(`rank`/`fallback`/`pinned` 내역)를
-  인쇄하고, 정적 안전망보다 작으면 경고 문구를 붙인다. "스크리닝 조건" 블록은
+  인쇄하고, 보장 하한 `min(rank-api-top, fallback-codes 수)`(rank 비활성이면 fallback 수)보다
+  작으면 경고 문구를 붙인다 — rank 가 top-N 을 채우면 폴백을 대체하므로 30/30 이 정상. "스크리닝 조건" 블록은
   `scoring.enabled` 분기로 **실제 적용되는 임계**를 출력 (score 모드에서 legacy 키를
   인쇄하던 문제 — 08-03 에 실효 갭 상한 15% 를 10% 로 표시).
 - **거래정지·VI 가드** ([ADR algorithm/0008](../../../../../../../docs/adr/stock/algorithm/0008-screening-selection-and-cost-model.md)) —

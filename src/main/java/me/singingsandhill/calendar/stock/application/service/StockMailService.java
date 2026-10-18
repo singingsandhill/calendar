@@ -194,9 +194,13 @@ public class StockMailService {
         // 1종목이었는데 그 사실이 메일 어디에도 없어 스크리닝 임계 문제로 오인될 수 있었다.
         if (universe != null) {
             int size = universe.codes().size();
-            // 정상이라면 유니버스는 최소한 정적 안전망만큼은 된다 (rank 미달 시 합집합으로 보강되므로).
-            // 그보다 작으면 설정이나 API 응답에 문제가 있는 것이다.
-            int expectedMin = stockProperties.getUniverse().getFallbackCodes().size();
+            // 보장 하한: rank 가 top-N 을 채우면 rank 가 폴백을 대체하고(≥ top-N), 미달이면 폴백이
+            // 합집합으로 들어온다(≥ 안전망) — 둘 중 작은 쪽 (ADR stock/algorithm/0010). 안전망 크기만
+            // 기준으로 삼으면 30/30 정상일에도 30 < 70 경고가 붙는다. 그보다 작으면 설정이나 API 응답 문제다.
+            StockProperties.Universe universeProps = stockProperties.getUniverse();
+            int fallbackSize = universeProps.getFallbackCodes().size();
+            int rankApiTop = universeProps.getRankApiTop();
+            int expectedMin = rankApiTop > 0 ? Math.min(rankApiTop, fallbackSize) : fallbackSize;
             boolean tooSmall = size < expectedMin;
             sb.append("<p").append(tooSmall ? " style='color: #c00; font-weight: bold;'" : "")
                 .append("><strong>유니버스:</strong> ")
@@ -204,7 +208,7 @@ public class StockMailService {
                 .append(", 정적폴백 ").append(universe.fallback())
                 .append(", 핀 ").append(universe.pinned()).append(")");
             if (tooSmall) {
-                sb.append(" &larr; 정적 안전망(").append(expectedMin)
+                sb.append(" &larr; 보장 하한(").append(expectedMin)
                     .append("종목)보다 작습니다. 거래량순위 API 응답과 stock.universe.* 설정을 확인하세요.");
             }
             sb.append("</p>");

@@ -91,14 +91,34 @@ class StockMailServiceTest {
     void bodyReportsUniverseSizeAndFlagsCollapse() throws Exception {
         StockProperties props = mailEnabledProps();
         props.getUniverse().setFallbackCodes(List.of("000660", "035420", "005930"));
+        props.getUniverse().setRankApiTop(30);
 
         String html = sendAndCaptureHtml(props,
             new UniverseBuilder.Snapshot(LocalDate.of(2026, 5, 1), List.of("252670"), 0, 0, 1),
             new ArrayList<>());
 
         assertThat(html).contains("유니버스").contains("1종목").contains("거래량순위 1");
-        // 정적 안전망(3종목)보다 작으므로 경고 문구가 붙어야 한다
-        assertThat(html).contains("정적 안전망");
+        // 보장 하한 min(top-N 30, 안전망 3) = 3 보다 작으므로 경고 문구가 붙어야 한다
+        assertThat(html).contains("보장 하한(3종목)");
+    }
+
+    /**
+     * 2026-10-17: 거래량순위가 top-N 을 다 채운 정상일(30/30, 폴백 0)에도 유니버스 30 이 정적 안전망
+     * 70 보다 작다는 이유로 경고가 붙었다. 완전 응답이면 rank 가 폴백을 대체하므로(ADR stock/algorithm/0010)
+     * 보장 하한은 안전망 크기가 아니라 min(rank-api-top, 안전망 크기)다.
+     */
+    @Test
+    void bodyDoesNotFlagHealthyFullRankUniverse() throws Exception {
+        StockProperties props = mailEnabledProps();
+        props.getUniverse().setFallbackCodes(List.of("000660", "035420", "005930"));
+        props.getUniverse().setRankApiTop(2);
+
+        String html = sendAndCaptureHtml(props,
+            new UniverseBuilder.Snapshot(LocalDate.of(2026, 5, 1), List.of("252670", "122630"), 0, 0, 2),
+            new ArrayList<>());
+
+        assertThat(html).contains("2종목").contains("거래량순위 2");
+        assertThat(html).doesNotContain("설정을 확인하세요");
     }
 
     @Test
