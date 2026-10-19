@@ -148,9 +148,11 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 - CI: `.github/workflows/ci.yml` — main·deploy 푸시·PR 빌드+테스트, **`deploy` 브랜치 푸시 시에만**
   GHCR(`ghcr.io/singingsandhill/calendar:<git-sha>`, `:latest`) 이미지 푸시
-  (릴리스는 `main → deploy` fast-forward 푸시, [ADR common/infrastructure/0003](docs/adr/common/infrastructure/0003-image-publish-on-deploy-branch.md)).
+  ([ADR common/infrastructure/0003](docs/adr/common/infrastructure/0003-image-publish-on-deploy-branch.md)).
+  릴리스는 `main → deploy` **PR 을 merge commit 으로 머지**(squash·rebase·직접 커밋 금지) — 배포 버튼의 `image_tag` 는
+  deploy 최신 머지 커밋 SHA ([ADR common/infrastructure/0004](docs/adr/common/infrastructure/0004-release-via-pr-merge.md)).
 - 서버 반영: `.github/workflows/deploy.yml` **workflow_dispatch 수동 버튼 전용** —
-  재시작 배포(1~3분 계획 중단, nginx 503 유지보수 페이지), 헬스/엣지 게이트 실패 시
+  재시작 배포(5~6분 계획 중단 — 실측 부팅 약 5분, nginx 503 유지보수 페이지), 헬스/엣지 게이트 실패 시
   직전 **다이제스트**로 자동 롤백. 평일 09:15~11:25 KST(주식 LIVE 창) 배포 거부 가드.
 - 런타임: 서버 `~/apps/calendar/` 의 docker compose (app + nginx). 배포 산출물은
   `Dockerfile`·`deploy/`. 절차·시크릿·불변식: [`docs/operations/deployment.md`](docs/operations/deployment.md),
@@ -324,7 +326,8 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 | `StockTradingScheduler` | 08:30 프리마켓; 09:20 갭 스크리닝; 09:20~11:20 5초마다 트레이딩 루프; 11:20 최종 청산; 11:40 일일 실적 리포트 |
 
 `stock.bot.enabled=false`이면 모든 잡 스킵 (5개 메서드 전부 `isEnabled()` 가드 — 트레이딩 모듈과 다름).
-공휴일은 `stock.trading.holidays` (yyyy-MM-dd 리스트) 에서 관리. 자동화 미구현 — 매년 갱신.
+공휴일은 `stock.trading.holidays` (yyyy-MM-dd 리스트) 에서 관리. 자동화 미구현 — 매년 갱신
+(현재 2026·2027 등록, 2028 분은 2027 년 말 추가. 형식·요일은 `StockHolidayCalendarTest` 가 검증).
 
 **Common**:
 

@@ -677,3 +677,67 @@ git commit -m "feat(datedate): AdSense ② 도구 중심 콘텐츠 — About 운
 #   guides/*.html 8개의 개행만 다른 변경도 넣지 않는다(Commit 199 주의와 같음). git-commit.md 의 Commit 199 ✅ DONE 마커 갱신은 이 커밋이 흡수.
 git add .gitignore docs/guides/git-commit.md
 git commit -m "chore: .gitignore 에 node_modules/ 추가 — 루트 npm install 실수 시 의존성 트리 추적 방지" -m "저장소의 Node 도구는 버전을 명령에 고정한 npx 2종(tailwindcss@3.4 로 trading-tw.css 재생성, shellcheck@4.1.0 으로 배포 스크립트 린트 로컬 재현)뿐이고 package.json 은 없으며 CI·Dockerfile 은 npm 을 부르지 않는다. 그런데 작업 트리에 빈 package-lock.json(packages 비어 있음) 이 미추적으로 남아 있었다. 원인은 Windows PowerShell 이력에 남은 저장소 루트의 npm update · npm upgrade(-g 없음, npm install -g npm@12.1.0 직후, 754205e 와 132562b 커밋 사이)다 — package.json 없는 디렉터리에서 둘은 exit 0 으로 name 이 디렉터리명인 빈 lockfile 을 만들며, WSL npm 10.9.9 와 Windows npm 10.8.1 양쪽에서 같은 파일을 재현했다. npx(캐시·미캐시 모두)는 cwd 에 파일을 만들지 않았고, 그 시각 전후 Claude 세션 도구 호출·훅·Gradle 에도 npm 실행이 없어 배제했다. 이어서 npm install <pkg> 까지 돌리면 node_modules/ 가 생기는데 .gitignore 에 규칙이 없어 의존성 트리 전체가 미추적으로 잡힌다. 그래서 node_modules/ 한 줄을 추가했다(앞 슬래시 없이 써서 어느 깊이에서든 매칭). package-lock.json 은 커밋하지 않고 무시 규칙도 넣지 않는다 — 잠그는 의존성이 0 이고, 나중에 package.json 기반 관리로 바꾸면 lockfile 은 추적 대상이어야 하기 때문이다. 검증: node_modules/probe/x 를 만들어 git check-ignore -v 가 .gitignore:60 규칙으로 매칭하고 git status --untracked-files=all 에 node_modules 가 0건임을 확인한 뒤 지웠다. 추적 중인 node_modules 경로 0 건. ./gradlew test 는 돌리지 않았다 — .gitignore 와 마크다운만 바뀌어 빌드·테스트 경로와 무관하다. ADR 없음: 도구 사용 방식(npx 버전 고정)은 그대로이고 무시 규칙 추가는 결정 변경이 아니다. CLAUDE.md 무변경."
+
+# =====================================================================
+# stock 봇 — 스크리닝 메일 유니버스 경고 오탐 + KRX 휴장일 2026·2027 등록 (2026-10-17)
+# =====================================================================
+# 배경: 09:20 스크리닝 메일에 "유니버스: 30종목 (거래량순위 30, 정적폴백 0, 핀 0) ← 정적 안전망(70종목)보다
+#   작습니다" 경고가 찍혔다. 거래량순위가 rank-api-top(30)을 다 채운 정상 상태다 — UniverseBuilder 는 rank 가
+#   top-N 을 채우면 폴백을 섞지 않는다(ADR stock/algorithm/0010 Rationale). 메일 경고(e672237)는 같은 ADR
+#   Consequences 의 "하한 = 정적 안전망 크기" 문장을 근거로 fallback-codes 수(70)를 하한으로 써서 rank 정상일마다
+#   오탐했다(ADR 안의 두 문장이 서로 모순). 같은 진단에서 stock.trading.holidays 가 도입(5a5be58) 이후 [] 임을
+#   발견 — isTradingDay() 는 주말 + 이 목록만 보므로 평일 휴장일에도 08:30~11:40 잡이 전부 돌았다(서버 로그가
+#   없어 휴장일의 실제 영향은 미확인. 로컬 logs/ 의 휴일 날짜 파일은 테스트 실행 산물이라 근거로 쓰지 않음).
+# 사용자 결정: 둘 다 수정, 휴장일은 웹 검색으로 2년치(2026·2027) 등록. 코인 봇은 변경 없음.
+# TDD(RED 선확인 → GREEN): StockMailServiceTest 2건(신규 정상 30/30 무경고 — 경고 스타일 렌더로 AssertionError,
+#   기존 붕괴 케이스 — 문구 "보장 하한(3종목)" 부재) + StockHolidayCalendarTest 2건(목록 비어 있음 / 12-25 false)
+#   RED 후 GREEN. 전체 스위트 141 클래스 / 907 테스트 / failures 0.
+# ADR: 결정 변경 없음 — 0010 은 Consequences 의 사실 오류에 정정 각주(common/seo/0003 의 "> **정정**" 전례)만,
+#   휴장일 등록은 동기화 표의 "단순 사실 변경". CLAUDE.md 2곳(루트 휴장일 1줄, stock 모듈 메일 1줄) 갱신.
+# 범위 밖(기록만): 수능일·새해 첫 거래일은 휴장이 아니라 정규장 10:00 개장(관례) — 09:20 스크리닝이 개장 전에
+#   돈다. 휴장일 목록으로 막을 대상이 아니라 별도 판단 필요.
+
+# Commit 201 — ✅ DONE() fix(stock): 스크리닝 메일 유니버스 경고 기준을 보장 하한 min(rank-api-top, 안전망)으로 — 30/30 정상일 오탐 제거 (ADR stock/algorithm/0010 정정)
+git add src/main/java/me/singingsandhill/calendar/stock/application/service/StockMailService.java src/test/java/me/singingsandhill/calendar/stock/application/StockMailServiceTest.java docs/adr/stock/algorithm/0010-universe-degradation-threshold.md src/main/java/me/singingsandhill/calendar/stock/CLAUDE.md
+git commit -m "fix(stock): 스크리닝 메일 유니버스 경고 기준을 보장 하한 min(rank-api-top, 안전망)으로 — 30/30 정상일 오탐 제거" -m "09:20 스크리닝 메일이 거래량순위 30/30 · 정적폴백 0 인 정상일에 '유니버스 30종목 ← 정적 안전망(70종목)보다 작습니다' 경고를 빨간 굵은 글씨로 붙였다. UniverseBuilder 는 rank 가 요청한 top-N 을 채우면 폴백을 섞지 않고(완전 응답이면 rank 가 폴백을 대체), 미달일 때만 fallback-codes 를 합집합으로 보강한다(ADR stock/algorithm/0010). 따라서 정상 유니버스의 보장 하한은 fallback 수가 아니라 min(rank-api-top, fallback 수) 이고 rank 비활성(rank-api-top=0)이면 fallback 수다. e672237 은 ADR 0010 Consequences 의 '하한 = 정적 안전망 크기' 문장(미달 경로에서만 참, 같은 ADR Rationale 의 완전 응답 문장과 모순)을 근거로 fallback 수를 하한으로 써서 rank 가 정상인 날마다 30 < 70 오탐을 냈다. 경고 기준을 이 하한으로 바꾸고 문구를 '보장 하한(N종목)' 으로 고쳤다. 08-03 형태의 붕괴(rank 1건 · 폴백 미합류 · 1종목)는 여전히 경고한다. 봇 동작(유니버스 구성·스크리닝·주문)은 무변경 — 메일 표시만. TDD: 신규 bodyDoesNotFlagHealthyFullRankUniverse(rank-api-top 2 · 폴백 3 · 2/2 스냅샷 → 경고 없음)는 경고 스타일이 렌더되어 AssertionError RED, 기존 bodyReportsUniverseSizeAndFlagsCollapse 는 운영값 rank-api-top 30 을 넣고 '보장 하한(3종목)' 을 기대하도록 바꿔 RED, 수정 후 둘 다 GREEN(클래스 5/5). ADR 0010 에 정정 각주를 달았다(결정 자체는 그대로). stock/CLAUDE.md 메일 항목 1줄 갱신."
+
+# Commit 202 — fix(stock): KRX 휴장일 2026·2027 33일 등록 + 운영 yaml 휴장일 형식·요일 가드 테스트 — 마지막 커밋(git-commit.md 포함)
+git add src/main/resources/application.yaml src/test/java/me/singingsandhill/calendar/stock/infrastructure/config/StockHolidayCalendarTest.java CLAUDE.md docs/guides/git-commit.md
+git commit -m "fix(stock): KRX 휴장일 2026·2027 33일 등록 — 평일 휴장일 봇 실행 차단" -m "stock.trading.holidays 가 도입(5a5be58) 이후 [] 로 비어 있었다. StockTradingScheduler.isTradingDay() 는 주말과 이 목록만 보므로 평일 휴장일에도 08:30 프리마켓 · 09:20 스크리닝 · 트레이딩 루프 · 11:20 청산 · 11:40 리포트가 전부 실행됐다. 평일 휴장일만 등록(주말은 cron MON-FRI 가 차단): 2026 17일(신정, 설 2/16~18, 삼일절 대체 3/2, 노동절 5/1, 어린이날 5/5, 부처님오신날 대체 5/25, 지방선거 6/3, 제헌절 7/17, 광복절 대체 8/17, 추석 9/24·25, 개천절 대체 10/5, 한글날 10/9, 성탄절 12/25, 연말 휴장 12/31), 2027 16일(신정, 설 2/8 · 대체 2/9, 삼일절 3/1, 노동절 대체 5/3, 어린이날 5/5, 부처님오신날 5/13, 제헌절 대체 7/19, 광복절 대체 8/16, 추석 9/14~16, 개천절 대체 10/4, 한글날 대체 10/11, 성탄절 대체 12/27, 연말 휴장 12/31). 출처: 관공서 공휴일·대체공휴일은 우주항공청 2027 월력요항(2026-06-29 발표, 천문연 데이터 페이지와 대조), 노동절·제헌절은 2026 공휴일법 개정으로 공휴일, 6/3 · 7/17 휴장은 거래소 2026-05-20 공지. 2026 합계 17일은 2차 자료의 'KRX 2026 휴장 17일' 과 일치. 12/31 연말 휴장은 관례라 매년 12월 거래소 공고로 재확인하도록 yaml 주석에 남겼다. 가드: isHoliday() 는 파싱 실패 항목을 조용히 무시해 오탈자가 '그날만 차단 안 됨' 으로만 드러나므로, StockHolidayCalendarTest 가 운영 application.yaml 첫 문서를 YamlPropertySourceLoader + Binder 로 stock.trading 에 바인딩해 전 항목 LocalDate 파싱 · 중복 없음 · 주말 아님을 검증하고 대표 휴장일(2026-12-25, 2026-12-31, 2027-05-03, 2027-07-19) true · 평일(2026-12-24) false 를 확인한다. TDD: 빈 목록 상태에서 2건 RED(isNotEmpty · 12-25 false) 후 GREEN. 루트 CLAUDE.md 휴장일 줄에 등록 범위(2026·2027, 2028 분은 2027 년 말)와 가드 테스트를 적었다. ADR 없음 — 휴장일 데이터 등록은 동기화 표의 단순 사실 변경. 범위 밖: 수능일 · 새해 첫 거래일의 10:00 개장(관례)은 휴장이 아니라 09:20 스크리닝이 개장 전에 도는 문제로 별도 판단이 필요해 손대지 않았다."
+
+# =====================================================================
+# 배포 — 첫 서버 이관(2026-10-17) 실측 반영: 헬스 게이트 900s + 이관 런북 버그 정정
+# =====================================================================
+# 배경: ff476ee(PR #22) 이미지로 런북 1~8단계를 실행해 직접 실행(~/calendar) → compose(app+nginx) 이관을 끝냈다.
+#   실행 중 드러난 것: ① 런북 3.3 의 .env chmod 600 — 컨테이너(user 10001:APP_GID)가 읽지 못해 exit 1 재시작 루프,
+#   12:42~13:11 UTC 약 29분 중단(640 으로 복구). ② 컨테이너 첫 기동 303s(스키마 변경 포함) — HEALTH_TIMEOUT 300 이면
+#   정상 배포도 실패 판정, 롤백도 같은 이유로 실패해 exit 4(앱 정지). ③ certbot 은 standalone + pre/post_hook
+#   (systemctl nginx) — 런북은 nginx authenticator 전제. ④ 런북 8-4 갱신 훅에 --env-file 누락 — compose 가 exec 에서도
+#   필수 변수를 보간해 실패, 인증서 만료 때에야 드러남. ⑤ 콘솔 SSH 임시 키 만료 시 게스트 에이전트가 authorized_keys 를
+#   비움(09-10 배포 키 소실 실측). ⑥ 서버 rsync 미설치. ⑦ GHCR 패키지 public — PAT 불필요. ⑧ 4단계 lock.db 판정 무효.
+#   ⑨ 9-3 리허설(JAVA_OPTS 오타)은 롤백도 같은 env 로 기동해 exit 4.
+# 서버 현황: app·nginx 컨테이너 가동, .deploy/current 기록, certbot webroot + 갱신 훅·renew --dry-run 성공, 타이머 재개.
+#   9단계(deploy.yml 첫 실행)는 이 커밋이 deploy 브랜치에 올라간 뒤 — 번들(deploy/)은 dispatch 한 브랜치에서 온다.
+# 사용자 결정: 재시작 중단 서술을 실측대로 5~6분으로 정정(Commit 204 — ADR 0001·0002 정정 각주, CLAUDE.md, 유지보수 페이지,
+#   Retry-After 300). 10단계(서버 정리)는 저장소 변경 없음.
+# 범위 밖(보고만): CLAUDE.md 의 /insights/trends.html 표기(실제 경로 /insights/trends). 릴리스 절차 서술(ADR 0003·deployment.md·
+#   CLAUDE.md 의 main → deploy fast-forward 푸시)과 실제 관행(PR 머지 — #22 머지 커밋 ff476ee)이 다르다 — 별도 판단.
+#   deploy-setup.md(한시 문서) 마무리와 troubleshooting/deploy-cicd.md 사례 추가는 9단계 후.
+
+# Commit 203 — fix(deploy): 헬스 게이트 900s·start_period 300s(실측 303s) + 이관 런북 버그 정정
+# 주의: git-commit.md 는 Commit 202 가 먼저 add 한다 — 202 를 실행하면 이 섹션 텍스트도 202 에 흡수된다. 203 의 add 는 그 뒤 변경분(없으면 무변화).
+# 주의: 201·202(stock 휴장일·메일 경고)와 파일이 겹치지 않는다. main → deploy 로 올리면 201·202 도 함께 릴리스된다.
+git add deploy/deploy.sh deploy/compose.yaml docs/operations/server-migration-runbook.md docs/operations/deployment.md docs/guides/git-commit.md
+git commit -m "fix(deploy): 헬스 게이트 900s·start_period 300s(실측 303s) + 이관 런북 버그 정정" -m "첫 서버 이관(2026-10-17, ff476ee 이미지)에서 컨테이너 첫 기동이 303s(스키마 변경 포함) 걸렸다. deploy.sh 의 HEALTH_TIMEOUT 기본 300s 로는 정상 배포도 실패로 판정되고, 롤백 기동도 같은 이유로 시간 초과해 exit 4(앱 정지)로 끝날 수 있다. 크래시(exited·재시작 증가)는 health_gate 가 즉시 실패시키므로 이 값은 느린 부팅의 상한일 뿐이라, 부하 시 실측 810s(구 직접 실행)를 덮는 900s 로 올렸다. SSH 강제 명령 게이트가 환경변수를 넘기지 못해 기본값 자체를 바꿔야 한다. compose healthcheck start_period 도 120s → 300s(짧으면 정상 부팅 중 unhealthy 로 표시 — 동작 영향은 없음). 백업 주석의 H2 크기를 실측 96MB 로 정정(5세대 약 0.5GB)." -m "런북(server-migration-runbook.md) 정정: ① 3.3 의 .env 는 600 이 아니라 640 — 컨테이너는 user 10001:APP_GID 로 돌아 그룹으로만 읽는다. 600 이면 FileNotFoundException(.env Permission denied)으로 exit 1 재시작 루프(이번 이관 약 29분 중단의 원인). ② 8단계 갱신 훅에 --env-file 추가 — compose 는 exec 에서도 파일 전체를 보간해 APP_REF 등 필수 변수가 없으면 실패하고, 갱신 인증서 미반영은 기존 인증서 만료 때에야 드러난다. ③ standalone + pre/post_hook(systemctl stop/start nginx) 이면 reconfigure 전에 훅 삭제. ④ 4단계 종료 판정 — 8081 은 kill 1초 뒤 이미 비었고 MVStore 는 실행 중에도 lock.db 를 만들지 않으므로 kill -0 으로 프로세스 종료를 본다. ⑤ 6단계 끝에 .deploy/current 기록(없으면 첫 워크플로 배포 실패 시 롤백 없이 exit 4), 부팅 약 5분, 주식 봇 Start. ⑥ 9-3 의 JAVA_OPTS 오타 리허설 금지 — 롤백도 같은 .deploy/env 로 기동해 exit 4. ⑦ 1단계에 DB_URL 상대경로·.env 값 형식(따옴표·공백) 확인 행과 실행 환경 메모(콘솔 SSH 임시 sudo 약 3분, root 셸의 홈 경로, 표 칸 복사·긴 줄 붙여넣기 함정), 게스트 에이전트의 authorized_keys 삭제 실측, rsync 미설치, GHCR public 이면 PAT 불필요, 서버 git checkout 에서 번들 꺼내기, 7-6 유지보수 페이지 확인은 선택. deployment.md: 헬스 게이트 900s, exit 5 의 PAT 의심은 패키지가 private 일 때만, 배포 후 확인에 포지션이 없으면 두 봇 모두 정지 상태로 뜬다는 항목(resumeProtectionOnStartup 이 0건이면 반환 — 코인은 Start, 주식은 거래일 08:30 KST 전 Start)." -m "검증: bash -n + shellcheck 4.1.0 -S warning(deploy.sh·게이트) exit 0, compose.yaml YAML 파싱(start_period 300s), 런북 번호 연속성·상대 링크 11개 깨짐 0. 서버 실측 근거: 컨테이너 기동 로그(Permission denied 스택, 헬스 UP 까지 303s), 접속 검증 4종(실행 키 REJECTED·rrsync 셸 거부·쓰기 성공·읽기 거부)과 --delete 드라이런, certbot reconfigure·훅 reload·renew --dry-run 성공, 엣지 TLS·리다이렉트 전후 동일(/actuator/health 는 외부 200 → 404). ./gradlew test 는 돌리지 않았다 — 셸·compose·마크다운만 바뀌어 빌드 경로와 무관하고, deploy 푸시 때 CI 가 전체 빌드·테스트를 돈다. ADR 없음: 대기 시간은 런북이 실측으로 조정하도록 둔 수치이고 나머지는 절차 버그 수정이다. 재시작 중단 서술(1~3분 → 5~6분)은 Commit 204."
+
+# Commit 204 — docs(deploy): 재시작 배포 중단 1~3분 → 5~6분 정정 + 유지보수 페이지 문구·Retry-After 300 (ADR common/infrastructure/0001·0002 정정)
+# 주의: CLAUDE.md 는 Commit 202 가 먼저 add 한다 — §Deployment 의 5~6분 정정도 202 에 흡수된다(202 의 휴장일 줄과 같은 파일). 그래서 201 → 202 → 203 → 204 순서로 실행할 것(203·204 만 단독 실행하면 202 의 휴장일 서술이 섞인 CLAUDE.md 가 남는다).
+# 주의: server-migration-runbook.md 의 Retry-After 300 정정 1곳은 Commit 203 에 흡수된다. git-commit.md 는 202 소유라 이 섹션 텍스트도 202 에 흡수된다.
+git add docs/adr/common/infrastructure/0001-container-restart-deploy-pipeline.md docs/adr/common/infrastructure/0002-nginx-in-compose-and-certbot-webroot.md deploy/nginx/datedate.conf deploy/nginx/maintenance.html docs/troubleshooting/deploy-cicd.md docs/guides/git-commit.md
+git commit -m "docs(deploy): 재시작 배포 중단 1~3분 → 5~6분 정정 + 유지보수 페이지 문구·Retry-After 300 (ADR common/infrastructure/0001·0002 정정)" -m "첫 서버 이관(2026-10-17)에서 컨테이너 기동이 303s(스키마 변경 포함) 걸려, 재시작 배포의 실제 중단은 정지(60s 이내) + 정지 상태 백업 + 부팅 약 5분 = 5~6분이다. 사용자 결정으로 서술을 5~6분으로 고쳤다: ADR 0001 의 Decision 과 대안 표, ADR 0002 Context(둘 다 정정 각주 — common/seo/0003·stock/algorithm/0010 의 정정 전례, 결정 자체는 그대로), CLAUDE.md §Deployment, troubleshooting/deploy-cicd.md 1부 2곳, 사용자에게 보이는 유지보수 페이지 문구(ko 5~6분, en 5–6 minutes). 유지보수 응답의 Retry-After 도 120 → 300 — 120 은 1~3분 전제의 크롤러 재방문 힌트였다(ADR 0002 정정 각주, 런북 7-6 기대값). docs/audit/adsense-readiness-audit-2026-09-26.md 의 1~3분·120 은 그 시점 실측 보고서라 고치지 않았다. 반영 시점: datedate.conf·maintenance.html 은 nginx 컨테이너에 단일 파일로 바인드 마운트돼, deploy.yml 의 rsync(임시 파일을 쓴 뒤 교체)를 실행 중인 컨테이너가 보지 못할 수 있다 — 배포 뒤 컨테이너 안의 값을 확인하고, 옛 값이면 nginx 컨테이너를 재생성한다(수 초 연결 거부). 검증: 저장소에서 1~3분·Retry-After 120 잔여는 위 audit 보고서와 커밋 로그 이력뿐이고, 테스트·CI 는 이 문구·헤더를 참조하지 않는다(grep). ADR 동기화: 결정 변경이 아니라 수치 정정이라 기존 ADR 에 정정 각주만 달았다."
+
+# Commit 205 — docs(deploy): 릴리스 절차를 main → deploy PR 머지로 (ADR common/infrastructure/0004, 0003 의 fast-forward 절차 부분 대체) — 마지막 커밋(git-commit.md 포함)
+# 사용자 결정(2026-10-17): "PR머지로 수정" — 0003 이 정한 fast-forward 푸시 대신 실제 관행(PR #22)대로.
+# 주의: CLAUDE.md(202)·deployment.md(203)·troubleshooting/deploy-cicd.md(204) 의 릴리스 절차 문구는 각 파일을 먼저 add 하는 커밋에 흡수된다. git-commit.md 도 202 소유.
+git add docs/adr/common/infrastructure/0004-release-via-pr-merge.md docs/adr/common/infrastructure/0003-image-publish-on-deploy-branch.md docs/adr/README.md docs/guides/deploy-setup.md docs/guides/git-commit.md
+git commit -m "docs(deploy): 릴리스 절차를 main → deploy PR 머지로 (ADR common/infrastructure/0004)" -m "ADR common/infrastructure/0003 은 릴리스를 main → deploy fast-forward 푸시로 정했다(두 ref 가 같은 SHA 라 배포 버튼 image_tag 에 main 의 SHA 를 그대로 쓴다는 근거). 실제 릴리스는 GitHub PR 이었고 deploy 에만 있는 머지 커밋 ff476ee(PR #22)가 생겨 그 뒤로 fast-forward 푸시는 거절된다 — 첫 서버 이관 이미지도 이 머지 커밋에서 발행됐다. 사용자 결정으로 절차를 관행에 맞췄다: base deploy ← compare main PR 을 merge commit 으로 머지, deploy 직접 커밋 금지(핫픽스도 main 경유). squash·rebase 머지는 머지 기준점이 앞으로 가지 않아 다음 PR 마다 이미 반영한 변경이 diff·충돌로 다시 나타나므로 쓰지 않는다. 배포 버튼의 image_tag 는 deploy 최신 머지 커밋의 SHA(main 과 다름 — 비우면 Use workflow from deploy 의 github.sha 와 같은 값). 0003 은 상태 행에 부분 Superseded 표기(seo/0008 ↔ 0012 전례)와 해당 줄 옆 대체 표시만 달고, deploy 푸시에서만 발행·서버 반영은 수동 버튼이라는 결정은 유효. 서버 반영은 여전히 수동(0001) — PR 머지만으로 서버는 바뀌지 않는다. 문서: ADR 0004 신설, README 두 뷰(common 인프라 3 → 4, 합계 101 → 102, 시간순 행)·폴더 수, deployment.md·CLAUDE.md·troubleshooting/deploy-cicd.md·deploy-setup.md 의 절차 문구. 검증: 바뀐 문서의 상대 링크 깨짐 0(deploy-cicd.md 안 파이썬 예제의 정규식 오탐 1건은 기존), 남은 fast-forward 언급은 0003 원문·0004 Context·최초 브랜치 생성 절차뿐(grep)."
