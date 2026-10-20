@@ -39,7 +39,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 4
-      start_period: 120s              # 런북 부팅 3회 실측 p95×2 로 확정
+      start_period: 300s              # 실측 첫 기동 303s(2026-10-17) — 짧으면 정상 부팅 중에도 unhealthy 표시
     logging:
       driver: json-file
       options:

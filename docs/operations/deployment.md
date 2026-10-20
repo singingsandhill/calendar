@@ -19,14 +19,17 @@ Actions 수동 버튼 ──► deploy.yml: 태그검증 → manifest 선검증 
 ```
 
 - **이미지 발행은 `deploy` 브랜치 푸시에서만.** main 은 빌드·테스트만 돌고 이미지를 만들지
-  않는다 — 릴리스는 `main → deploy` fast-forward 푸시
-  ([ADR 0003](../adr/common/infrastructure/0003-image-publish-on-deploy-branch.md)).
+  않는다 ([ADR 0003](../adr/common/infrastructure/0003-image-publish-on-deploy-branch.md)).
+  **릴리스는 GitHub 에서 base `deploy` ← compare `main` PR 을 "Create a merge commit" 으로 머지**
+  ([ADR 0004](../adr/common/infrastructure/0004-release-via-pr-merge.md)) — squash·rebase 머지는 다음 PR 에
+  이미 반영한 변경이 다시 나타나므로 쓰지 않고, `deploy` 에 직접 커밋하지 않는다(핫픽스도 main 경유).
   브랜치명 `deploy` 는 저장소의 `deploy/` 디렉터리와 모호하다 — `git log deploy --` 로 쓸 것.
 - **CI 는 자동, 서버 반영은 `workflow_dispatch` 수동 버튼 전용.** 실계좌 LIVE 봇 서버라
   배포마다 봇 재시작(보호전용 자동재개)·서킷브레이커 카운터 리셋이 발생한다 — 반영
   시점은 사람이 고른다.
 - 이미지: `ghcr.io/singingsandhill/calendar` — 태그는 full git SHA + `latest`.
-- 배포 입력 `image_tag`: 40자 git SHA 권장. 미입력 시 dispatch 한 **브랜치**의 SHA 가 쓰이므로
+- 배포 입력 `image_tag`: **`deploy` 최신 커밋(PR 머지 커밋)의 40자 SHA** — main 의 SHA 와 다르다.
+  미입력 시 dispatch 한 **브랜치**의 SHA 가 쓰이므로
   Actions 의 "Use workflow from" 에서 `deploy` 를 고른다 — main 을 고르면 아직 이미지가 없는
   SHA 가 될 수 있고, 그 경우 GHCR manifest 선검증에서 서버 접속 전에 실패한다.
   `latest` 도 받지만 서버에서 즉시 **다이제스트로 고정**된다.
@@ -40,13 +43,14 @@ Actions 수동 버튼 ──► deploy.yml: 태그검증 → manifest 선검증 
 | pull → 다이제스트 | 구 컨테이너 가동 중 선-pull, `RepoDigests` 로 다이제스트 고정 |
 | 가드 2 | 크립토 매분 :05 틱 회피 — 초가 20~50 구간까지 대기 (정지 직전) |
 | stop → 백업 → up | SIGTERM(graceful 30s + 스케줄러 대기 25s, grace 60s) → **정지 상태** `data/` 백업 5세대 → 새 다이제스트로 기동 |
-| 헬스 게이트 | 컨테이너 사망(exited/재시작 증가) 즉시 실패, 아니면 `/actuator/health/deploy` UP 폴링 (기본 300s — 런북 실측으로 조정) |
+| 헬스 게이트 | 컨테이너 사망(exited/재시작 증가) 즉시 실패, 아니면 `/actuator/health/deploy` UP 폴링 (기본 900s — 실측 첫 기동 303s(2026-10-17). 크래시는 즉시 실패라 이 값은 느린 부팅의 상한) |
 | 엣지 게이트 | nginx 경유 `GET /` 200 + `/trading` 리다이렉트가 `https://` 로 시작(X-Forwarded-Proto 계약) → 통과 후 nginx reload |
 | 기록·GC | `.deploy/current`/`previous` 에 다이제스트 기록, current/previous 보존 목록 기반 이미지 GC |
 
 **종료코드**: 0 성공 / 2 가드·preflight 거부 / 3 헬스 실패 + 롤백 성공(조사 필요 — Actions
 도 실패로 표시) / 4 롤백도 실패(**app 정지 상태로 종료** — 유지보수 페이지 유지, 즉시 개입)
-/ 5 pull·레지스트리 실패(**GHCR PAT 만료 여부부터 확인**).
+/ 5 pull·레지스트리 실패(패키지가 public 인 동안은 레지스트리·네트워크 장애, private 로 바꾼 뒤라면
+**GHCR PAT 만료 여부부터 확인**).
 
 ## 롤백
 
@@ -63,6 +67,9 @@ Actions 수동 버튼 ──► deploy.yml: 태그검증 → manifest 선검증 
    리스크 감시는 자동 재개된 상태이며, **신규 매매 재개는 Start 버튼 1회**
    (ADR trading/modes/0003). 서킷브레이커 연속손실 카운터는 리셋돼 있다.
 4. 주식 봇: 오픈 포지션 존재 시 보호전용 자동재개(기존 동작, ADR stock/modes/0003).
+5. **포지션이 없으면 두 봇 모두 정지 상태로 뜬다**(`resumeProtectionOnStartup` 이 포지션 0건이면 그냥 반환).
+   코인은 대시보드 Start, 주식은 거래일 08:30 KST 전에 `/stock` Start — 08:30 사전 준비 루프는 `running` 이
+   아니면 즉시 반환한다.
 
 ## GitHub Secrets
 
@@ -89,7 +96,9 @@ agent"), 이 서버는 `authorizedkeyscommand none` 이라 파일 방식이 살�
 (=MITM 방어선)을 신뢰 없는 채널로 만든다. 서버에서 `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`
 로 지문을 대조한 뒤 `echo "<호스트> $(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"`.
 
-GHCR 푸시는 `GITHUB_TOKEN` 으로 충분. **서버 pull 용 토큰은 GitHub Secret 이 아니라** 서버
+GHCR 푸시는 `GITHUB_TOKEN` 으로 충분. **현재 패키지는 public 이라 서버 pull 에 토큰이 필요 없다**
+(2026-10-17 익명 manifest 200 확인, 서버 `~/.docker/config.json` 없음). 아래는 패키지를 private 로 바꿀 때의 절차다.
+**서버 pull 용 토큰은 GitHub Secret 이 아니라** 서버
 `~/.docker/config.json` 에 1회 저장한다 (`docker login ghcr.io --password-stdin`, chmod 600).
 ★**classic PAT + `read:packages` 스코프여야 한다** — 공식 문서: "GitHub Packages only supports
 authentication using a personal access token (classic)." fine-grained 토큰은 ghcr.io 에

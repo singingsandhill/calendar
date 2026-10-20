@@ -9,6 +9,14 @@
 🔥 = 파괴적/외부 영향 — **각 단계 실행 전 사용자 확인**. 각 단계에 검증 명령과 롤백 지점 명시.
 실행 시간대: 평일 09:15~11:25 KST(주식 LIVE 창) 회피.
 
+실행 환경 (2026-10-17 실행에서 확인):
+- 배포 계정 `ourbalance_topping` 은 비밀번호·상시 sudo 가 없다. GCP 콘솔 SSH 는 임시 키(약 3분)가 살아 있는
+  동안만 `google-sudoers` 에 넣어 주므로, 새 세션을 열자마자 `sudo -i` 로 root 셸을 확보한다. root 셸에서 `~` 는
+  `/root` 다 — 배포 계정 소유여야 하는 파일은 `runuser -u ourbalance_topping --` 로 만들고 경로는 절대경로로 쓴다.
+- 아래 표의 명령에는 마크다운 이스케이프(`\|`)·자리표시(`<pid>`)가 들어 있어 칸째 복사하면 실패한다.
+- 브라우저 SSH 에 긴 블록을 붙이면 줄이 쪼개지거나 줄바꿈 지점의 공백이 사라진다. 한 줄 100자 미만으로 나누고,
+  대기 루프(`while`/`for`/`sleep`)는 블록 마지막 줄에만 둔다.
+
 ## 1. 실측 (읽기 전용 — 이후 단계의 입력값 확정)
 
 | 항목 | 명령 | 산출 |
@@ -19,8 +27,10 @@
 | 호스트 TZ | `timedatectl show -p Timezone --value` (출력 파싱보다 정확) | `.deploy/env` 의 `HOST_TZ` (무존 trading cron 시각 보존 — 추정 UTC, 단정 금지) |
 | uid/gid | `id -u; id -g` — **반드시 `ourbalance_topping` 로 로그인한 채**. `sudo id -g` 는 0(root) 이 나오고 그 값을 넣으면 컨테이너가 root 그룹으로 돈다 | `.deploy/env` 의 `APP_GID` |
 | server `.env` 실값 | `sudo cat ~/calendar/.env` | **TRADING_BOT_MODE / STOCK_BOT_MODE / RUNNER_ADMIN_PASSWORD 존재·강도** 확인. 기본값 admin123 이면 여기서 교체 |
+| DB 경로 | `grep '^DB_URL=' ~/calendar/.env` | **`jdbc:h2:file:./data/scheduledb…` 상대경로여야 한다** — deploy.sh preflight 가 `data/scheduledb.mv.db` 를 요구하고 컨테이너는 `/app` 기준이라, 이름이 다르면 매 배포 거부(exit 2), 호스트 절대경로면 볼륨 밖 경로가 된다 |
+| `.env` 값 형식 | `grep -n -E '^[A-Za-z_]+=.*["'"'"' ]' ~/calendar/.env \| cut -d= -f1` | 구 실행은 `export $(cat .env \| xargs)`, 컨테이너는 `.env` 를 properties 로 읽는다(`application.yaml` 의 `spring.config.import`). 따옴표·공백이 든 값은 둘이 다르게 해석되므로 0건이어야 한다 |
 | certbot 상태 | `sudo certbot certificates`; `sudo cat /etc/letsencrypt/renewal/datedate.site.conf`; `systemctl list-timers \| grep certbot` | authenticator/installer 확인 (8단계 입력) |
-| 크론·잔재 | `crontab -l`; `sudo crontab -l` | 10단계 정리 목록 |
+| 크론·잔재 | `crontab -l`; `sudo crontab -l` | 10단계 정리 목록 (cron 미설치면 `command not found` — 정리 대상 없음) |
 | nginx 원문 | `sudo nginx -T > ~/backup/nginx-T-before.txt` | 7단계 전환 후 diff 대조 기준 |
 | rrsync 존재·**경로** | `command -v rrsync \|\| ls /usr/share/rsync/scripts/` | 3단계 rsync 키 게이트. **PATH 에 없으면 authorized_keys2 에 절대경로로 써야 한다** — forced command 는 최소 PATH 로 실행돼 `/usr/share/rsync/scripts/rrsync` 를 못 찾는다 |
 
@@ -29,15 +39,18 @@
 - 구 프로세스 **정지 상태에서** `cp -a ~/calendar/data ~/backup/data-$(date +%F)` (H2 락 주의
   — 정지 전이면 4단계 후로 미룬다), `.env` 사본, `~/backup` 권한 700.
 - topping 최후 백업: `sudo docker exec topping_postgres pg_dumpall -U <user> | gzip > ~/backup/topping-final.sql.gz`
-  (10단계 삭제 전 필수).
+  (10단계 삭제 전 필수). 컨테이너가 `Exited` 면 `docker start topping_postgres` 후 덤프하고 다시 멈춘다.
 - 검증: 백업 파일 크기 > 0, `~/backup` 목록 기록.
 
 ## 3. 준비 (무중단 — 기존 서비스 영향 없음)
 
 1. `sudo usermod -aG docker ourbalance_topping` → 재로그인 → `docker ps` 무 sudo 동작.
 2. `mkdir -p ~/apps/calendar/{deploy,data,logs,.deploy/backup}`.
-3. `.env` 복사: `cp ~/calendar/.env ~/apps/calendar/.env && chmod 600 ~/apps/calendar/.env`
-   (현행 775 는 과다). 필요 시 `H2_CONSOLE_ENABLED` 는 **넣지 않는다**(운영 기본 비활성).
+3. `.env` 복사: `cp ~/calendar/.env ~/apps/calendar/.env && chmod 640 ~/apps/calendar/.env`
+   (현행 775 는 과다). ★**600 이 아니라 640** — 컨테이너는 `user: "10001:${APP_GID}"` 로 돌아 파일 소유자가
+   아니고 그룹(APP_GID = 배포 계정 그룹)으로만 읽는다. 600 이면 `FileNotFoundException: .env (Permission denied)`
+   로 기동 직후 exit 1 재시작 루프에 빠진다(2026-10-17 실행에서 약 25분 중단의 원인).
+   필요 시 `H2_CONSOLE_ENABLED` 는 **넣지 않는다**(운영 기본 비활성).
 4. `sudo chown -R 10001:$(id -g) ~/apps/calendar/data ~/apps/calendar/logs` (컨테이너 uid 10001).
    `$(id -g)` 는 sudo 실행 **전에** 사용자 셸이 확장하므로 이 형태는 옳다. 통째로
    `sudo bash -c '... $(id -g) ...'` 로 감싸면 0 이 들어가니 금지.
@@ -48,7 +61,9 @@
    JAVA_OPTS=-XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError
    APP_GID=<id -g 값>
    ```
-6. GHCR 로그인. ★**classic PAT 이어야 한다** — 공식 문서: "GitHub Packages only supports
+6. GHCR 로그인. **현재 패키지가 public 이라 필요 없다** — 2026-10-17 익명 토큰으로 manifest 200 을 확인했고
+   서버는 로그인 없이 `docker pull` 했다. 아래 절차는 패키지를 private 로 바꿀 때만 쓴다.
+   ★**classic PAT 이어야 한다** — 공식 문서: "GitHub Packages only supports
    authentication using a personal access token (classic)." fine-grained 토큰은 ghcr.io 에
    동작하지 않는다.
    - 발급: GitHub → Settings → Developer settings → Personal access tokens →
@@ -73,7 +88,13 @@
    rsync -az deploy/compose.yaml 서버:~/apps/calendar/compose.yaml
    ```
    맨 `ssh` 가 아직 안 뚫려 있으면 `gcloud compute scp --recurse --zone <존> deploy <인스턴스>:~/apps/calendar/`
-   로 대체. 이후 반입은 deploy.yml 이 수행한다.
+   로 대체. 서버에 구 실행용 git checkout 이 있으면 거기서 꺼내도 된다(작업 트리·구 앱 무영향, 배포 계정으로):
+   ```
+   git -C ~/calendar fetch -q https://github.com/singingsandhill/calendar.git deploy
+   git -C ~/calendar archive FETCH_HEAD deploy | tar -x -C ~/apps/calendar
+   cp ~/apps/calendar/deploy/compose.yaml ~/apps/calendar/compose.yaml
+   ```
+   이후 반입은 deploy.yml 이 수행한다.
 8. SSH 키 2개 발급 + 게이트 설치 + authorized_keys.
    - **키는 로컬에서 만든다.** 개인키를 쥐는 쪽은 Actions 러너이고 서버는 공개키만 필요하다 —
      서버에서 만들면 개인키가 서버에 남아 지우는 단계가 는다. 서버로 가는 것은 `.pub` 두 줄뿐.
@@ -97,6 +118,10 @@
      `authorizedkeysfile` 이 `.ssh/authorized_keys .ssh/authorized_keys2` 두 개를 읽고
      에이전트가 관리하는 이름은 앞쪽 하나뿐이라, 뒤쪽에 두면 sshd 는 읽고 에이전트는 안 건드린다.
      지워지면 배포 키가 통째로 사라질 뿐 게이트가 풀리지는 않는다 — 가용성 문제다.
+     **실제로 일어났다(2026-10-17)** — 콘솔 SSH 임시 키가 만료되는 순간 에이전트가 `authorized_keys` 를 비워
+     09-10 에 넣어 둔 배포 키 2줄이 사라졌다(`journalctl -u google-guest-agent`: `Removing user ourbalance_topping`).
+     ★rsync 가 아예 없을 수 있다 — 이 서버(Ubuntu 25.04)는 미설치였고 `apt-get install -y rsync` 로
+     `/usr/bin/rrsync` 가 함께 깔렸다. 서버 rsync 가 없으면 deploy.yml 의 번들 동기화도 실패한다.
      ★`rrsync` 가 PATH 에 없으면(1단계 실측) **절대경로로 쓴다** — forced command 는 최소
      PATH 로 실행돼 `/usr/share/rsync/scripts/rrsync` 를 못 찾고, 증상은 rsync 만 조용히
      실패하는 것이다. 예: `command="/usr/share/rsync/scripts/rrsync -wo /home/..."`.
@@ -126,7 +151,10 @@
 ## 4. 🔥 구 프로세스 정지
 
 - 주식 장중 회피 + 크립토 :05 틱 회피(초 20~50 구간)에서 `kill <pid>` (SIGTERM).
-- 검증: `ss -ltnp | grep 8081` 비어 있음, `~/calendar/data/*.lock.db` 부재(H2 락 해제).
+- 검증: `kill -0 <pid>` 가 실패할 때까지(프로세스 종료) 기다린 뒤 `ss -ltnp | grep 8081` 비어 있음.
+  ★포트가 비었다고 종료된 것이 아니다 — 2026-10-17 에는 kill 1초 뒤 8081 이 이미 비어 있었다. `*.lock.db` 도
+  근거가 못 된다 — MVStore(`.mv.db`) 는 실행 중에도 이 파일을 만들지 않았다. 종료 전에 5단계 복사를 하면
+  DB 를 닫는 중인 파일을 복사하게 된다.
 - 이 시점부터 사이트 다운(호스트 nginx 는 502) — 6단계까지 신속히.
 - **롤백**: 1단계에서 실측한 커맨드로 재기동.
 
@@ -148,8 +176,14 @@
 5. 호스트 nginx 가 여전히 localhost:8081 프록시 중 → `https://datedate.site` 즉시 복구 확인.
 6. 스모크: `/` `/runners` `/stock` 200, **카카오 로그인 왕복**(`/login`→카카오→`/me`),
    `admin/admin123` 로그인 **실패**, 컨테이너 내 `id` = uid 10001, `docker inspect` Memory ≠ 0.
-7. 코인 봇: 오픈 포지션 있으면 `PROTECTION-ONLY` 표시 확인 → 정상 확인 후 Start.
-- **롤백**: `docker compose stop app` + 4단계 롤백 커맨드.
+7. 코인 봇: 오픈 포지션 있으면 `PROTECTION-ONLY` 표시 확인 → 정상 확인 후 Start. 포지션이 없으면 두 봇 모두
+   정지 상태로 뜬다 — 주식 봇도 거래일 08:30 KST 전에 `/stock` 에서 Start.
+8. 정상이면 `.deploy/current` 에 같은 다이제스트를 기록한다(배포 계정 소유). deploy.sh 는 이 파일을 롤백 대상으로
+   쓰며, 없으면 첫 워크플로 배포가 실패할 때 롤백 없이 앱을 멈춘 채 끝난다(exit 4).
+- 부팅은 약 5분이다(2026-10-17 실측 303s, 스키마 변경 포함). 그 사이 `docker ps` 의 `unhealthy` 는 표시일 뿐이다.
+- **롤백**: `docker compose stop app` + 4단계 롤백 커맨드. 이 서버의 커맨드는
+  `cd ~/calendar && export $(cat .env | xargs) && nohup java -jar build/libs/calendar-0.0.1-SNAPSHOT.jar >> app.log 2>&1 &`
+  (배포 계정으로. `>` 로 쓰면 app.log 를 비운다).
 
 ## 7. 🔥 nginx 전환 (수 초 중단)
 
@@ -163,7 +197,8 @@
    404 / 카카오 로그인 재확인(X-Forwarded 계약) / `docker compose exec nginx nginx -T` 를
    1단계 덤프와 diff — TLS 프로토콜·암호군 동일(`nmap --script ssl-enum-ciphers -p 443` 전후 비교).
 6. 유지보수 페이지: `docker compose stop app` 후 `curl -i https://datedate.site` →
-   **503** + `Retry-After: 120` + 점검 문구 본문 → `up -d app` 원복.
+   **503** + `Retry-After: 300` + 점검 문구 본문 → `up -d app` 원복. (선택 — 원복에 부팅 한 번(약 5분)만큼
+   중단된다. 9단계 1번이 같은 것을 확인하므로 생략할 수 있다.)
 - **롤백**: `docker compose stop nginx && sudo systemctl start nginx` (수 초).
 
 ## 8. 🔥 certbot webroot 전환
@@ -172,14 +207,20 @@
 2. `sudo certbot reconfigure --cert-name datedate.site --authenticator webroot --webroot-path /var/www/certbot --installer null`
    (★`--installer null` 필수 — nginx installer 잔존 시 갱신이 installer 단계에서 실패).
    구버전 certbot 이면 renewal conf 의 `authenticator`/`installer` 직접 편집.
+   ★기존이 `authenticator = standalone` + `pre_hook = systemctl stop nginx` / `post_hook = systemctl start nginx`
+   이면(이 서버) reconfigure **전에** 훅 두 줄을 지운다 — 남기면 갱신 때마다 꺼 둔 호스트 nginx 를 다시 켜려 한다.
+   `sudo cp -a <conf> ~/backup/` 후 `sudo sed -i '/^pre_hook = /d; /^post_hook = /d' <conf>`.
 3. renewal conf 육안 확인: `authenticator = webroot`, `installer` 없음(또는 null).
 4. 훅 설치 — `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh` (root, 755, **절대경로만**
    — 훅은 root 로 실행돼 `~` 가 `/root` 로 확장된다):
    ```sh
    #!/bin/sh
    exec docker compose --project-directory /home/ourbalance_topping/apps/calendar \
-     -f /home/ourbalance_topping/apps/calendar/compose.yaml exec -T nginx nginx -s reload
+     -f /home/ourbalance_topping/apps/calendar/compose.yaml \
+     --env-file /home/ourbalance_topping/apps/calendar/.deploy/env exec -T nginx nginx -s reload
    ```
+   ★`--env-file` 필수 — compose 는 `exec` 에서도 파일 전체를 보간해 `APP_REF` 등 `:?` 필수 변수가 없으면 실패한다.
+   빠지면 갱신된 인증서가 nginx 에 반영되지 않고, 기존 인증서가 만료되는 시점에야 드러난다.
 5. 챌린지 경로 선검증: `echo ok | sudo tee /var/www/certbot/.well-known/acme-challenge/probe`
    → `curl http://datedate.site/.well-known/acme-challenge/probe` == ok → probe 삭제.
 6. `sudo certbot renew --dry-run` 성공 + **훅 직접 1회 실행**(dry-run 은 deploy hook 을
@@ -191,7 +232,8 @@
 
 1. Actions deploy.yml 로 동일 다이제스트 재배포 → 재시작 창에 `curl -w '%{http_code}' https://datedate.site` == 503 확인 → 완료 후 200.
 2. 거래창 시각(또는 시스템 시간 목킹)에 `--force` 없이 → exit 2 확인.
-3. 의도적 실패: `.deploy/env` 의 `JAVA_OPTS` 에 오타 → 배포 → 자동 롤백(exit 3) + 외부 200 확인 → 원복.
+3. 의도적 실패 리허설은 **`.deploy/env` 오타로 하지 않는다** — 롤백도 같은 `.deploy/env` 로 기동하므로 롤백까지
+   실패해 exit 4(앱 정지)로 끝난다. 자동 롤백(exit 3)을 시험하려면 env 는 정상인 채 기동에 실패하는 *이미지*가 필요하다.
 4. 틱 도중 SIGTERM 리허설: `docker compose stop app` 시 로그에 인터럽트 스택트레이스 없이
    루프 완주(graceful) 확인.
 

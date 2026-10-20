@@ -9,7 +9,7 @@ DEPLOY_STATE="$APP_DIR/.deploy"
 COMPOSE=(docker compose --project-directory "$APP_DIR" -f "$APP_DIR/compose.yaml" --env-file "$DEPLOY_STATE/env")
 IMAGE="ghcr.io/singingsandhill/calendar"
 HEALTH_URL="http://127.0.0.1:8081/actuator/health/deploy"
-HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-300}"   # 런북 부팅 3회 실측 p95×2 로 확정
+HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-900}"   # 실측(2026-10-17): 컨테이너 첫 기동 303s, 구 직접실행 184~259s·부하 시 810s. 크래시는 즉시 실패하므로 느린 부팅의 상한
 DOMAIN="datedate.site"
 
 log() { echo "[deploy $(date -u +%H:%M:%SZ)] $*"; }
@@ -101,7 +101,7 @@ while s=$(date +%S); (( 10#$s < 20 || 10#$s > 50 )); do sleep 1; done
 log "stopping app (SIGTERM → graceful 30s + scheduler await 25s, grace 60s)"
 "${COMPOSE[@]}" stop app || true
 
-# ---------- 정지 상태 백업 (ddl-auto 롤백 안전망, H2 ~수백 KB) — 5세대 보관 ----------
+# ---------- 정지 상태 백업 (ddl-auto 롤백 안전망, H2 ~100MB — 2026-10 실측 96MB) — 5세대 보관 ----------
 mkdir -p "$DEPLOY_STATE/backup"
 cp -a "$APP_DIR/data" "$DEPLOY_STATE/backup/data-$(date +%F-%H%M%S)"
 ls -1dt "$DEPLOY_STATE/backup"/data-* 2>/dev/null | tail -n +6 | xargs -r rm -rf
