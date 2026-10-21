@@ -724,7 +724,7 @@ git commit -m "fix(stock): KRX 휴장일 2026·2027 33일 등록 — 평일 휴�
 #   CLAUDE.md 의 main → deploy fast-forward 푸시)과 실제 관행(PR 머지 — #22 머지 커밋 ff476ee)이 다르다 — 별도 판단.
 #   deploy-setup.md(한시 문서) 마무리와 troubleshooting/deploy-cicd.md 사례 추가는 9단계 후.
 
-# Commit 203 — fix(deploy): 헬스 게이트 900s·start_period 300s(실측 303s) + 이관 런북 버그 정정
+# Commit 203 — ✅ DONE() fix(deploy): 헬스 게이트 900s·start_period 300s(실측 303s) + 이관 런북 버그 정정
 # 주의: git-commit.md 는 Commit 202 가 먼저 add 한다 — 202 를 실행하면 이 섹션 텍스트도 202 에 흡수된다. 203 의 add 는 그 뒤 변경분(없으면 무변화).
 # 주의: 201·202(stock 휴장일·메일 경고)와 파일이 겹치지 않는다. main → deploy 로 올리면 201·202 도 함께 릴리스된다.
 git add deploy/deploy.sh deploy/compose.yaml docs/operations/server-migration-runbook.md docs/operations/deployment.md docs/guides/git-commit.md

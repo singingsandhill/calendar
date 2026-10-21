@@ -13,7 +13,7 @@
 
 - 호스트 nginx 의 `sites-enabled/datedate`(datedate.site 3개 server block)가 저장소에 없어
   서버가 유일본이었다 — 설정 드리프트를 리뷰할 수 없고 서버 유실 시 재현 불가.
-- 재시작 배포(ADR 0001) 중 앱이 내려간 1~3분 동안 사용자와 크롤러가 nginx 기본 502 를
+- 재시작 배포(ADR 0001) 중 앱이 내려간 5~6분 동안 사용자와 크롤러가 nginx 기본 502 를
   받는다 — SEO 를 명시적으로 관리하는 저장소(docs/seo/, sitemap, IndexNow)에서 색인 오염 위험.
 - TLS 는 호스트 certbot(letsencrypt) 이 관리한다. nginx 를 컨테이너로 옮기면 certbot 의
   nginx 플러그인 인증·installer 가 깨진다.
@@ -27,7 +27,9 @@
   (카카오 KOE006 계약) 를 그대로 이관. HSTS 등 신규 지시어 추가 없음(행동 보존).
 - **유지보수 페이지**: `error_page 502 503 504 =503 /maintenance.html` — `=503` 명시가
   핵심이다. named location 에 코드 미지정 `=` 를 쓰면 정적 파일의 200 이 그대로 나가
-  크롤러가 점검 페이지를 정상 콘텐츠로 색인한다. `Retry-After: 120` + `internal`.
+  크롤러가 점검 페이지를 정상 콘텐츠로 색인한다. `Retry-After: 300` + `internal`.
+  > **정정 (2026-10-17, Commit 204):** 최초 `Retry-After: 120` 은 "1~3분 중단" 전제였다. 실측 중단이
+  > 5~6분이라(ADR 0001 정정) 300 으로 바꿨다.
 - **Docker DNS 재해석**: `resolver 127.0.0.11 valid=10s` + 변수 경유 `proxy_pass` —
   변수 없는 `proxy_pass http://app:8081` 은 기동 시 1회만 해석해 배포로 app 컨테이너가
   재생성되면 죽은 IP 로 영구 502 를 낸다(헬스 게이트는 localhost 직결이라 통과 —
