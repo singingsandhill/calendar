@@ -99,7 +99,8 @@ A. 저장소 — main 푸시로 CI 그린 → deploy 푸시로 GHCR 첫 이미�
 4. 저장소 Packages 에 `calendar` 패키지가 생기고 태그 `latest` + `<40자 git sha>` 두 개가
    보이는지 확인. **이 SHA 가 D 의 첫 배포 입력값이다.**
 
-이후 릴리스도 같다 — main 에서 개발하고, 내보낼 시점에 `main → deploy` fast-forward 푸시.
+이후 릴리스는 main 에서 개발하고, 내보낼 시점에 `main → deploy` PR 을 merge commit 으로 머지한다
+([ADR 0004](../adr/common/infrastructure/0004-release-via-pr-merge.md) — 위 fast-forward 는 최초 1회 브랜치 생성 절차).
 
 ### B. GitHub — Environment + 시크릿
 

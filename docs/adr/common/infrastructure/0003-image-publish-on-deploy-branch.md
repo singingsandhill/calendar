@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 단, **릴리스 절차(fast-forward 푸시)는 [0004](0004-release-via-pr-merge.md) 로 Superseded** (PR 머지. deploy 푸시에서만 발행·서버 반영은 수동 버튼이라는 결정은 유효) |
 | 날짜 | 2026-09-10 |
 | 도메인 | common |
 | 관심사 | 인프라 / 배포 |
@@ -40,7 +40,8 @@
 | `deploy.yml` 수동 버튼 | — | — | ○ |
 
 - 릴리스 절차는 `main → deploy` fast-forward 푸시. 두 ref 가 같은 커밋을 가리키면 SHA 도 같으므로
-  `deploy.yml` 의 `image_tag` 가 그대로 맞는다.
+  `deploy.yml` 의 `image_tag` 가 그대로 맞는다. → **2026-10-17 [0004](0004-release-via-pr-merge.md) 가 PR 머지로 대체**
+  (`image_tag` 는 deploy 최신 머지 커밋의 SHA).
 - `deploy.yml` 의 `image_tag` description 에 "비우면 dispatch 한 브랜치의 SHA 가 쓰이므로
   브랜치를 `deploy` 로 고를 것" 을 명시했다.
 

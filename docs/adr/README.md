@@ -15,14 +15,14 @@
 
 | 도메인 \ 관심사 | 도메인 모델 | 인프라/외부 | UX·프론트 | SEO | i18n | 관측성 | 알고리즘 | 모드 | 보안·에러 | 합계 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **common**   | — | 3 | — | 15 | 3 | — | — | — | 7 | 28 |
-| **datedate** | 13 | — | 8 | — | — | — | — | — | — | 21 |
+| **common**   | — | 4 | — | 15 | 3 | — | — | — | 7 | 29 |
+| **datedate** | 13 | — | 10 | — | — | — | — | — | — | 23 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
 | **trading**  | — | 5 | — | — | — | 3 | 16 | 3 | — | 27 |
 | **stock**    | — | 8 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 23 |
-| **합계** | 15 | 16 | 8 | 15 | 3 | 5 | 26 | 6 | 7 | **101** |
+| **합계** | 15 | 17 | 10 | 15 | 3 | 5 | 26 | 6 | 7 | **104** |
 
-총 **101개 ADR**.
+총 **104개 ADR**.
 
 ---
 
@@ -132,6 +132,9 @@
 | 2026-10-13 | datedate/domain | [0012 인기 순위 정렬 — 표수 우선, 동점은 최근 등록](datedate/domain/0012-popularity-order-votes-first.md) | AdSense 4번째 통지 진단 — 홈 인기 메뉴가 4표 > 2표 > 7표 (표시는 표수, 정렬은 표수+최근 보너스) |
 | 2026-10-14 | common/seo | [0015 운영자 GitHub 링크를 About 화면에 노출](common/seo/0015-operator-github-link-on-about.md) | AdSense 4번째 통지 — 사람 리뷰어가 볼 신원 신호 부재 (0013 의 UI 비노출 대체) |
 | 2026-10-14 | datedate/domain | [0013 모임 데이터 리포트 — 렌더 시 집계·표본 하한·집계만 공개](datedate/domain/0013-meetup-data-report.md) | AdSense 4번째 통지 — 사이트만 가진 실사용 데이터가 인기 장소·메뉴 표뿐 |
+| 2026-10-17 | common/infrastructure | [0004 릴리스는 main → deploy PR 머지](common/infrastructure/0004-release-via-pr-merge.md) | 0003 의 fast-forward 절차와 실제 PR 머지 관행 불일치 — deploy 에만 있는 머지 커밋(PR #22) 이후 FF 불가. 0003 의 릴리스 절차 한 줄 부분 대체 |
+| 2026-10-21 | datedate/ux | [0005 색 토큰 WCAG AA 대비 — 강조 #1f6fa8 / 위험 #c0392b / 다른 달 날짜 --text-light](datedate/ux/0005-wcag-aa-color-tokens.md) | 모바일 점검 — 강조색 흰 배경 3.15·#f5f5f5 2.89, 삭제 흰 글자 3.82, 다른 달 날짜 2.70 |
+| 2026-10-21 | datedate/ux | [0006 일정 페이지 액션 위계 + 모바일 저장 줄 하단 고정 + 대시보드 삭제 약화](datedate/ux/0006-schedule-action-hierarchy-sticky-save.md) | 모든 보조 액션이 같은 테두리 버튼이라 저장이 묻힘, 삭제(빨강 채움)가 보기보다 강함 |
 
 ---
 
@@ -141,10 +144,10 @@
 - [common/i18n/](common/i18n/) — 3 ADRs
 - [common/error-handling/](common/error-handling/) — 1 ADR
 - [common/security/](common/security/) — 6 ADRs
-- [common/infrastructure/](common/infrastructure/) — 3 ADRs
+- [common/infrastructure/](common/infrastructure/) — 4 ADRs
 - [datedate/domain/](datedate/domain/) — 13 ADRs
 - [datedate/frontend/](datedate/frontend/) — 4 ADRs
-- [datedate/ux/](datedate/ux/) — 4 ADRs
+- [datedate/ux/](datedate/ux/) — 6 ADRs
 - [runner/](runner/) — 2 ADRs
 - [trading/strategy/](trading/strategy/) — 10 ADRs
 - [trading/modes/](trading/modes/) — 3 ADRs
