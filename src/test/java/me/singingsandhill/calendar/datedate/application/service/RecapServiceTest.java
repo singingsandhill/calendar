@@ -103,6 +103,29 @@ class RecapServiceTest {
     }
 
     @Test
+    @DisplayName("기존 모드(weeks≠7) 일정은 인덱스를 그 달의 일자로 읽어 요일·달을 집계한다")
+    void aggregatesLegacyModeSelectionsAsDayOfMonth() {
+        stubUser();
+        when(ownerRepository.findAllByUserId(42L)).thenReturn(List.of(
+                new Owner("my-crew", LocalDateTime.of(2026, 1, 1, 0, 0), List.of(), 42L)));
+
+        // 2026-10 기존 모드: index = 일자. 1 = 10/1(목), 2 = 10/2(금), 8 = 10/8(목)
+        // (확장 모드 규칙이면 그리드 시작 9/27(일) 기준 9/27(일)·9/28(월)·10/4(일) 로 어긋난다)
+        Participant p = new Participant(1L, 12L, "민준", ParticipantColor.ofIndex(0),
+                List.of(1, 2, 8), LocalDateTime.of(2026, 9, 20, 0, 0));
+        Schedule oct2026 = new Schedule(12L, "my-crew", 2026, 10, 5,
+                LocalDateTime.of(2026, 9, 15, 0, 0), List.of(p), null);
+        when(scheduleRepository.findAllByOwnerId("my-crew")).thenReturn(List.of(oct2026));
+        when(userActivityRepository.findAllByUserIdAndOccurredAtBetween(eq(42L), any(), any()))
+                .thenReturn(List.of());
+
+        RecapDto recap = recapService.buildRecap(42L, 2026);
+
+        assertThat(recap.topWeekday()).isEqualTo("THURSDAY");
+        assertThat(recap.busiestMonth()).isEqualTo(10);
+    }
+
+    @Test
     @DisplayName("활동 계열: 참여 일정 수(distinct)·선택 날짜 합·투표 TOP3 을 집계한다")
     void aggregatesActivityLine() {
         stubUser();

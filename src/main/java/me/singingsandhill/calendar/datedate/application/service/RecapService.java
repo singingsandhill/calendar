@@ -2,7 +2,6 @@ package me.singingsandhill.calendar.datedate.application.service;
 
 import java.time.Clock;
 import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.Comparator;
@@ -29,7 +28,6 @@ import me.singingsandhill.calendar.datedate.domain.participant.Participant;
 import me.singingsandhill.calendar.datedate.domain.participant.ParticipantRepository;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.domain.schedule.ScheduleRepository;
-import me.singingsandhill.calendar.datedate.domain.schedule.YearMonth;
 import me.singingsandhill.calendar.datedate.domain.user.AppUser;
 import me.singingsandhill.calendar.datedate.domain.user.AppUserRepository;
 
@@ -92,12 +90,13 @@ public class RecapService {
             for (Participant participant : schedule.getParticipants()) {
                 companionFreq.merge(participant.getName(), 1, Integer::sum);
                 for (Integer index : participant.getSelections()) {
-                    if (index == null || index < 1 || index > YearMonth.FIXED_TOTAL_DAYS) {
+                    if (index == null) {
                         continue;
                     }
-                    LocalDate date = schedule.getYearMonth().indexToDate(index);
-                    weekdayFreq.merge(date.getDayOfWeek(), 1, Integer::sum);
-                    monthFreq.merge(date.getMonthValue(), 1, Integer::sum);
+                    schedule.getYearMonth().dateOf(index, schedule.getWeeks()).ifPresent(date -> {
+                        weekdayFreq.merge(date.getDayOfWeek(), 1, Integer::sum);
+                        monthFreq.merge(date.getMonthValue(), 1, Integer::sum);
+                    });
                 }
             }
         }
