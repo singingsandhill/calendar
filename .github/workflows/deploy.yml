@@ -35,7 +35,7 @@ jobs:
       DEPLOY_USER: ${{ secrets.DEPLOY_SSH_USER }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Validate image tag
         run: |
