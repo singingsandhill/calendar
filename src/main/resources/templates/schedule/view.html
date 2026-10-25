@@ -16,7 +16,7 @@
                  배너가 닫혀있을 때 JS가 hidden 속성을 제거해 노출.
                  noscript 케이스: 참여자 없으면 배너 자동 노출이라 토글 숨김. -->
             <button type="button"
-                    class="btn btn-outline btn-help-toggle"
+                    class="btn btn-text btn-help-toggle"
                     id="onboardingHelpToggle"
                     data-action="onboarding.show"
                     aria-controls="onboardingBanner"
@@ -33,7 +33,7 @@
         <div class="schedule-description-view" id="descriptionView">
             <div class="schedule-description-head">
                 <h3 class="schedule-description-title" th:if="${schedule.description() != null}" th:text="#{schedule.description.title}">설명</h3>
-                <button type="button" class="btn btn-outline btn-sm" data-action="description.edit"
+                <button type="button" class="btn btn-text" data-action="description.edit"
                         th:text="${schedule.description() != null} ? #{schedule.description.edit} : #{schedule.description.add}">+ 설명 추가</button>
             </div>
             <p class="schedule-description-body" th:if="${schedule.description() != null}"><th:block th:each="seg : ${schedule.descriptionSegments()}"><a th:if="${seg.url() != null}" th:href="${seg.url()}" target="_blank" rel="nofollow ugc noopener noreferrer" th:text="${seg.text()}">링크</a><th:block th:if="${seg.url() == null}" th:text="${seg.text()}">설명</th:block></th:block></p>
@@ -119,7 +119,7 @@
     </div>
 
     <div class="action-buttons">
-        <button class="btn btn-secondary" data-action="selections.reset" th:text="#{schedule.reset}">초기화</button>
+        <button class="btn btn-text" data-action="selections.reset" th:text="#{schedule.reset}">초기화</button>
         <button class="btn btn-primary" data-action="selections.save" th:text="#{schedule.save}">저장</button>
     </div>
 
@@ -305,6 +305,7 @@
             linkCopyPrompt: [[#{schedule.link.copyPrompt}]],
             voteLabel: [[#{schedule.location.vote}]],
             votesTemplate: [[#{schedule.votes('{0}')}]],
+            cellLabelTemplate: [[#{schedule.calendar.cellLabel('{0}', '{1}', '{2}')}]],
             timeDayEmpty: [[#{schedule.time.day.empty}]],
             timeEmpty: [[#{schedule.time.empty}]],
             timeRangeInvalid: [[#{schedule.alert.timeRangeInvalid}]],

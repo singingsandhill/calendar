@@ -1,4 +1,9 @@
 import { schedule, participants, selection, messages } from './state.js';
+import { dayIndexToDate } from './utils.js';
+
+// 셀 aria-label 의 날짜 — dayIndex 는 저장용 인덱스(확장 모드는 그리드 순번)라 화면 숫자와 다르다
+const cellDateFormat = new Intl.DateTimeFormat(document.documentElement.lang || 'ko',
+    { month: 'long', day: 'numeric', weekday: 'long' });
 
 export function renderCalendar() {
     const calendarBody = document.getElementById('calendarBody');
@@ -110,15 +115,20 @@ function decorateCell(cell, dayIndex) {
     }
 
     const names = available.map(p => p.name);
+    const dateLabel = cellDateFormat.format(dayIndexToDate(dayIndex));
     if (names.length > 0) {
         const tip = document.createElement('span');
         tip.className = 'cell-tooltip';
         tip.setAttribute('role', 'tooltip');
         tip.textContent = names.join(', ');
         cell.appendChild(tip);
-        cell.setAttribute('aria-label', `${dayIndex}: ${names.length} available — ${names.join(', ')}`);
+        // 이름은 사용자 입력이라 치환 문자열($& 등)로 해석되지 않게 함수로 넣는다
+        cell.setAttribute('aria-label', messages.cellLabelTemplate
+            .replace('{0}', dateLabel)
+            .replace('{1}', names.length)
+            .replace('{2}', () => names.join(', ')));
     } else {
-        cell.setAttribute('aria-label', `${dayIndex}`);
+        cell.setAttribute('aria-label', dateLabel);
     }
 }
 
@@ -135,6 +145,16 @@ function toggleDay(day, cell) {
         selection.selectedDays.add(day);
         cell.classList.add('selected');
     }
+    updateDirtyState();
+}
+
+// 고른 날짜가 저장된 값과 다르면 모바일에서 초기화·저장 줄을 화면 하단에 고정한다 (style.css .action-buttons.is-dirty)
+function updateDirtyState() {
+    const participant = participants.find(p => p.id === selection.currentParticipantId);
+    const saved = new Set(participant?.selections || []);
+    const dirty = !!participant && (saved.size !== selection.selectedDays.size
+        || [...selection.selectedDays].some(day => !saved.has(day)));
+    document.querySelector('.action-buttons')?.classList.toggle('is-dirty', dirty);
 }
 
 export function updateCalendarDisplay() {
@@ -145,6 +165,7 @@ export function updateCalendarDisplay() {
             cell.classList.add('selected');
         }
     });
+    updateDirtyState();
 }
 
 export function resetSelections() {

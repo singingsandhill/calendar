@@ -32,14 +32,14 @@
     <section class="schedules-grid" th:if="${!schedules.isEmpty()}" th:attr="aria-label=#{dashboard.new.schedule}">
         <article class="schedule-card" th:each="schedule : ${schedules}">
             <header class="schedule-card-header">
-                <h3 th:text="${schedule.formattedYearMonth()}">2025-12</h3>
+                <h3 th:text="#{dashboard.card.yearMonth(${schedule.year()}, ${schedule.month()})}">2025년 12월</h3>
             </header>
             <div class="schedule-card-body">
                 <p th:text="#{dashboard.card.participants(${schedule.participantCount()})}">0명 참여</p>
             </div>
             <footer class="schedule-card-actions">
                 <a th:href="${@localeLinks.href('/' + ownerId + '/' + schedule.year() + '/' + schedule.month())}"
-                   class="btn btn-secondary" th:text="#{dashboard.card.view}">보기</a>
+                   class="btn btn-primary" th:text="#{dashboard.card.view}">보기</a>
                 <button class="btn btn-outline copy-link-btn"
                         th:data-owner="${ownerId}"
                         th:data-year="${schedule.year()}"
@@ -47,7 +47,7 @@
                         th:text="#{dashboard.card.copy}">
                     링크 복사
                 </button>
-                <button class="btn btn-danger delete-btn"
+                <button class="btn btn-text delete-btn"
                         th:data-owner="${ownerId}"
                         th:data-year="${schedule.year()}"
                         th:data-month="${schedule.month()}"
@@ -79,7 +79,15 @@
 
 <!-- Owner data injection for external script -->
 <script th:inline="javascript">
-    window.OWNER_DATA = { ownerId: [[${ownerId}]] };
+    window.OWNER_DATA = {
+        ownerId: [[${ownerId}]],
+        messages: {
+            linkCopied: [[#{schedule.link.copied}]],
+            linkCopyPrompt: [[#{schedule.link.copyPrompt}]],
+            deleteConfirm: [[#{dashboard.card.deleteConfirm}]],
+            linkFailed: [[#{owner.link.failed}]]
+        }
+    };
 </script>
 <script defer th:src="@{/js/analytics.js}"></script>
 <script defer th:src="@{/js/create-schedule-modal.js}"></script>
@@ -119,7 +127,7 @@
                     return res.json().then(function (body) { alert(body.message); });
                 })
                 .catch(function () {
-                    alert('연결에 실패했어요. 잠시 후 다시 시도해 주세요.');
+                    alert(window.OWNER_DATA.messages.linkFailed);
                 });
         });
     })();
