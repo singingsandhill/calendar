@@ -111,7 +111,11 @@ ADR 누락 사고 방지: PR 에서 `CLAUDE.md` 가 수정됐는데 `docs/adr/` 
 ./gradlew bootRun                            # Run application (http://localhost:8081)
 ./gradlew test                               # Run all tests
 ./gradlew test --tests "*ServiceTest"       # Run pattern-matched tests
+./gradlew replay -Dreplay.db=<scheduledb 사본>  # 코인 오프라인 리플레이 — 기본 test 제외(@Tag replay), 보고서 docs/data-analysis/coin-*-replay-<날짜>.md
 ```
+
+리플레이(ADR [trading/observability/0005](docs/adr/trading/observability/0005-offline-replay-harness.md))는 운영 DB **사본**을 읽기 전용으로 열고
+캔들은 빗썸 공개 API 를 `build/replay` 에 캐시한다. `-Dreplay.db` 없이 돌리면 리밸런싱 일봉 리플레이만 실행된다(출구·레짐 필터 평가는 DB 사본 필요).
 
 트레이딩·주식 봇 페이지 CSS: `static/css/trading-tw.css` 는 커밋된 Tailwind 빌드 산출물.
 `templates/trading/`, `templates/stock/` 또는 `static/js/trading-*.js` 의 유틸리티 클래스 변경 시 재생성:
@@ -160,6 +164,8 @@ export PATH=$JAVA_HOME/bin:$PATH
   결정 근거: [ADR common/infrastructure/](docs/adr/common/infrastructure/).
 - 배포는 봇 재시작을 뜻한다 — 코인 봇은 오픈 포지션 존재 시 **보호 전용 자동재개**
   (신규 매매는 대시보드 Start 1회로 재개, [ADR trading/modes/0003](docs/adr/trading/modes/0003-protection-only-recovery-on-restart.md)).
+  오픈 포지션이 없으면 `TRADING_BOT_AUTO_START`/`STOCK_BOT_AUTO_START=true`(기본 false)일 때만 자동 시작하고, 코인 서킷브레이커
+  연속손실은 당일 청산 이력으로 복원된다 ([ADR stock/modes/0005](docs/adr/stock/modes/0005-auto-start-on-boot.md)).
 
 ## Architecture
 
@@ -213,6 +219,10 @@ Korean (`ko`, 기본값) / English (`en`) 2개 언어 지원.
 - **작은따옴표 이스케이프:** `alwaysUseMessageFormat` 은 어디에서도 설정하지 않으므로 Spring 기본값
   `false` 가 적용된다(`WebConfig.messageSource()` 는 `setBasename`/`setDefaultEncoding`/
   `setFallbackToSystemLocale(false)` 만 호출) → 인자 없는 메시지는 MessageFormat 미적용. 따옴표 `''` 이스케이프는 인자 있는 메시지(`{0}` 포함, 예: `dashboard.title`)에서만 사용. 인자 없는 일반 콘텐츠(use-case·SEO·홈 본문 등)는 `'` 1개를 그대로 쓴다 — 인자 없는 메시지에 `''` 를 쓰면 화면에 `''` 가 노출됨.
+- **API 오류 문구:** datedate 요청 DTO 의 검증 문구는 `{validation.*}` 메시지 키 — Spring Boot 의 `MessageSourceMessageInterpolator` 가
+  요청 로케일(웹은 쿠키 `lang`, 미니앱은 `Accept-Language: ko|en`)로 해석해 `VALIDATION_ERROR` 응답 `message` 에 싣는다. 하드코딩 금지
+  (`ValidationMessageKeysTest`). 웹 `api.js` 의 코드별 문구는 `fragments/scripts.html` 이 `api.error.*` 를 `window.API_ERROR_MESSAGES` 로 주입.
+  `BusinessException` 문구는 `messageKey` 가 있을 때만 로케일화된다(예: `errors.participantLimitExceeded`).
 
 ## Exception Handling (Two-Layer)
 
@@ -280,6 +290,8 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 - `UseCaseController` → `/use-cases` 허브 인덱스(`index.html`, 광고 없음) + `/use-cases/{slug}` 상세(`detail.html` — 콘텐츠 마케팅 페이지: 친구 모임, 팀 회의, 여행 계획, 스터디 그룹, 동호회). 슬러그 단일 진실원 `UseCaseSlugs.ALL` (라우팅·사이트맵·푸터 자동 반영). 슬러그별 워크드 예시(`sample.*`)로 템플릿 차별화. 미지 슬러그는 HTTP 404 ([ADR datedate/domain/0008](docs/adr/datedate/domain/0008-unknown-content-slug-404.md)). `GET /tools` 는 `/tools/date-diff` 로 영구 리다이렉트.
 - `GuidesController` → `/guides` "모임 노하우" 에디토리얼 허브(`guides/index.html`, 광고 없음) + `/guides/{slug}` 기사 12편 — **기사별 전용 템플릿**(`guides/<slug>.html`), 검색의도형 장문(분량 하한 ko 3,800자/en 1,100단어 — `GuidesLocaleRenderingTest` 가드). 단일 진실원 `GuideSlugs.ALL`(record: slug·published·modified — 사이트맵 lastmod·Article JSON-LD·바이라인 3곳의 원천, **기사 수정 시 `modified` 필수 갱신**). 미지 슬러그 404. 키 네임스페이스 `guides.*`(기존 `/guide` 페이지의 `guide.*` 와 별개) ([ADR common/seo/0011](docs/adr/common/seo/0011-guides-editorial-hub.md)). `<title>`·og:title 은 `guides.article.<slug>.metaTitle` 우선(없으면 `title`) — 색인 페이지 제목 예산 ko 35자/en 60자, 브랜드 접미 포함 (`SerpTitleBudgetTest`, [ADR common/seo/0014](docs/adr/common/seo/0014-serp-title-budget-and-meta-title.md)).
 - `/guide` 사용 가이드 6단계(5단계 = 시간 투표) — 단계별 예시 화면 스크린샷 `static/image/guide/{ko,en}/step{1..6}.webp`(UI 가 바뀌면 재촬영 — 절차는 `docs/guides/git-commit.md` Commit 199). 이미지 높이는 메시지 `guide.step{N}.imgHeight`(로케일별 실측), 폭 `guide.screenshot.width`=780. HowTo JSON-LD 단계는 화면과 같은 문구(`seo.guide.step1~6`).
+- 색 토큰(`style.css :root`): 텍스트에 쓰는 강조·위험색은 WCAG AA 대비를 흰 배경과 `#f5f5f5` 양쪽에서 통과해야 한다 — `--primary-color #1f6fa8`(4.94 on #f5f5f5), `--primary-dark #185a88`(hover, 기본색보다 진하게), `--danger-color #c0392b`, 달력 다른 달 날짜 `var(--text-light)`. 색을 바꾸면 대비를 재측정한다 ([ADR datedate/ux/0005](docs/adr/datedate/ux/0005-wcag-aa-color-tokens.md))
+- 일정 페이지 액션 위계: 채움(저장) > 테두리(링크 복사·추가) > 글자 링크(도움말·설명) > 글자 버튼(초기화, 대시보드 삭제는 빨간 글자). 고른 날짜가 저장값과 다르면 `calendar.js updateDirtyState()` 가 `.action-buttons.is-dirty` 를 켜 768px 이하에서 초기화·저장 줄이 화면 하단에 sticky 로 붙는다(같은 버튼·핸들러) ([ADR datedate/ux/0006](docs/adr/datedate/ux/0006-schedule-action-hierarchy-sticky-save.md))
 - `SeoService` — 페이지별 JSON-LD 스키마 포함 SEO 메타데이터 생성
 - `PopularityService` — 표수순(동점은 최근 등록 우선) 장소/메뉴 인기 순위 — 화면의 표수와 순서가 일치해야 한다 ([ADR 0012](docs/adr/datedate/domain/0012-popularity-order-votes-first.md)). 노출 기준: 최소 2표 + 비속어 블록리스트 — [ADR 0006](docs/adr/datedate/domain/0006-popularity-exposure-criteria.md)
 - 시간 투표: `TimeSlotService` + `TimeSlotApiController` (`POST /api/schedules/{id}/time-slots`,
@@ -313,8 +325,9 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
 |-----------|------|
 | `CandleScheduler` | 매분 :05초 트레이딩 루프; 5분마다 캔들 동기화; 자정 캔들 정리 |
 | `DailySummaryScheduler` | 5분마다 계좌 스냅샷; 00:01 일일 P&L 요약 |
+| `RegimeScheduler` | KST 00:05 일봉 레짐 갱신 ([ADR trading/risk/0007](docs/adr/trading/risk/0007-daily-regime-filter-and-rebalance-guards.md)) |
 
-`trading.bot.enabled=false`이면 트레이딩 루프·캔들 동기화·계좌 스냅샷·일일 요약이 스킵된다.
+`trading.bot.enabled=false`이면 트레이딩 루프·캔들 동기화·계좌 스냅샷·일일 요약·일봉 레짐 갱신이 스킵된다.
 단 **`CandleScheduler.cleanupOldCandles()`(자정 캔들 정리)는 가드가 없어 항상 실행**된다.
 보관 기간은 `trading.bot.candle-retention-days`(기본 **90일**) — 지표 재계산·파라미터 리플레이
 지평이며 삭제 구간은 복구 불가 ([ADR trading/infrastructure/0005](docs/adr/trading/infrastructure/0005-candle-retention-for-analysis.md)).
@@ -357,6 +370,13 @@ CORS: `/api/**` 는 앱인토스 미니앱(다른 origin)에서 호출 가능하
   fixture 시세 소스 미구현.
   **기본값 PAPER** — LIVE 는 `STOCK_BOT_MODE=LIVE` 환경변수로만 활성화
   ([ADR stock/modes/0002](docs/adr/stock/modes/0002-paper-default-mode.md)).
+  단 **PAPER/BACKTEST 사이징은 실계좌 예수금이 아니라 `PaperCashLedger`**(거래일마다 `stock.bot.paper-cash`
+  1,000만원에서 시작, 당일 SIM- 체결을 DB 에서 재계산)이고, 시뮬레이션 체결가는 슬리피지 0.2% 를 KRX
+  호가단위로 반올림한다(매수 올림·매도 내림) ([ADR stock/modes/0004](docs/adr/stock/modes/0004-paper-cash-ledger.md)).
+- **운영 모드 컬럼:** 코인 `trading_trades/positions.mode`, 주식 `stock_trades/positions.mode` 는 처음 저장할 때 어댑터가 현재
+  봇 모드를 찍는다. 손익 집계는 코인 LIVE·주식 현재 봇 모드만 본다(NULL = 백필 전 레거시 → LIVE). 백필 SQL 은
+  [ADR trading/observability/0004](docs/adr/trading/observability/0004-mode-entry-source-excursion.md)·
+  [stock/observability/0003](docs/adr/stock/observability/0003-signal-restore-and-mode.md).
 - **주문 무재시도** — 주문 POST(`/order-cash`)는 비멱등이라 재시도 없이 1회만 전송
   (`executePostNoRetry`, [ADR stock/infrastructure/0005](docs/adr/stock/infrastructure/0005-non-idempotent-order-no-retry.md));
   조회(GET) 재시도는 유지.
