@@ -13,10 +13,6 @@ public record ScheduleResponse(
         int participantCount,
         LocalDateTime createdAt
 ) {
-    public String formattedYearMonth() {
-        return String.format("%d-%02d", year, month);
-    }
-
     public static ScheduleResponse from(Schedule schedule) {
         return new ScheduleResponse(
                 schedule.getId(),

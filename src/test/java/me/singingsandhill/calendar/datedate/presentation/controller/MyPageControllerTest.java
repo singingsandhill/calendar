@@ -36,6 +36,7 @@ import me.singingsandhill.calendar.datedate.application.service.OwnerService;
 import me.singingsandhill.calendar.datedate.application.service.SeoService;
 import me.singingsandhill.calendar.datedate.domain.owner.Owner;
 import me.singingsandhill.calendar.datedate.domain.owner.OwnerRepository;
+import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 import me.singingsandhill.calendar.datedate.infrastructure.security.KakaoOAuth2UserService;
 import me.singingsandhill.calendar.runner.domain.AdminRepository;
 
@@ -104,6 +105,34 @@ class MyPageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("me/mypage"))
                 .andExpect(content().string(containsString("지수")));
+    }
+
+    @Test
+    @DisplayName("일정 페이지는 카드로 렌더되고 일정 수는 en 복수형 ChoiceFormat 으로 나온다")
+    void rendersOwnerCardsWithScheduleCount() throws Exception {
+        when(ownerService.getOwnersOf(42L)).thenReturn(List.of(
+                new Owner("my-crew", LocalDateTime.now(), List.of(new Schedule("my-crew", 2026, 10, 7)), 42L),
+                new Owner("study-club", LocalDateTime.now(), List.of(), 42L)));
+        when(seoService.getMyPageSeo()).thenReturn(SeoMetadata.builder().title("My Page").build());
+
+        mockMvc.perform(get("/me").param("lang", "en").with(kakaoUser()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("class=\"schedule-card\"")))
+                .andExpect(content().string(containsString(">1 schedule<")))
+                .andExpect(content().string(containsString(">No schedules<")));
+    }
+
+    @Test
+    @DisplayName("연결된 일정 페이지가 없으면 빈 상태 카드에 일정 만들기 버튼을 보여 준다")
+    void rendersEmptyStateWithCreateButton() throws Exception {
+        when(ownerService.getOwnersOf(42L)).thenReturn(List.of());
+        when(seoService.getMyPageSeo()).thenReturn(SeoMetadata.builder().title("마이페이지").build());
+        when(localeLinks.href("/#start-form")).thenReturn("/#start-form");
+
+        mockMvc.perform(get("/me").with(kakaoUser()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("class=\"empty-state\"")))
+                .andExpect(content().string(containsString("href=\"/#start-form\" class=\"btn btn-primary\"")));
     }
 
     @Test
