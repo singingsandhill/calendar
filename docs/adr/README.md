@@ -18,11 +18,11 @@
 | **common**   | — | 4 | — | 15 | 3 | — | — | — | 7 | 29 |
 | **datedate** | 13 | — | 10 | — | — | — | — | — | — | 23 |
 | **runner**   | 2 | — | — | — | — | — | — | — | — | 2 |
-| **trading**  | — | 5 | — | — | — | 3 | 16 | 3 | — | 27 |
-| **stock**    | — | 8 (동시성 포함) | — | — | — | 2 | 10 | 3 | — | 23 |
-| **합계** | 15 | 17 | 10 | 15 | 3 | 5 | 26 | 6 | 7 | **104** |
+| **trading**  | — | 5 | — | — | — | 5 | 18 | 3 | — | 31 |
+| **stock**    | — | 9 (동시성 포함) | — | — | — | 3 | 11 | 5 | — | 28 |
+| **합계** | 15 | 18 | 10 | 15 | 3 | 8 | 29 | 8 | 7 | **113** |
 
-총 **104개 ADR**.
+총 **113개 ADR**.
 
 ---
 
@@ -135,6 +135,15 @@
 | 2026-10-17 | common/infrastructure | [0004 릴리스는 main → deploy PR 머지](common/infrastructure/0004-release-via-pr-merge.md) | 0003 의 fast-forward 절차와 실제 PR 머지 관행 불일치 — deploy 에만 있는 머지 커밋(PR #22) 이후 FF 불가. 0003 의 릴리스 절차 한 줄 부분 대체 |
 | 2026-10-21 | datedate/ux | [0005 색 토큰 WCAG AA 대비 — 강조 #1f6fa8 / 위험 #c0392b / 다른 달 날짜 --text-light](datedate/ux/0005-wcag-aa-color-tokens.md) | 모바일 점검 — 강조색 흰 배경 3.15·#f5f5f5 2.89, 삭제 흰 글자 3.82, 다른 달 날짜 2.70 |
 | 2026-10-21 | datedate/ux | [0006 일정 페이지 액션 위계 + 모바일 저장 줄 하단 고정 + 대시보드 삭제 약화](datedate/ux/0006-schedule-action-hierarchy-sticky-save.md) | 모든 보조 액션이 같은 테두리 버튼이라 저장이 묻힘, 삭제(빨강 채움)가 보기보다 강함 |
+| 2026-10-22 | stock/modes | [0004 PAPER 가상 예수금 원장 + 체결 현실화(슬리피지·KRX 호가단위)](stock/modes/0004-paper-cash-ledger.md) | 운영 데이터 진단 P0 — 51거래일 PAPER 0체결: 사이징이 실계좌 예수금(0원)을 읽어 수량 0. 0001 의 PAPER 사이징 항목 부분 대체 |
+| 2026-10-22 | stock/infrastructure | [0009 진입(주문 단계) 실패 상태·사유 + 재시도 간격·상한](stock/infrastructure/0009-entry-failure-state-and-reason.md) | 운영 데이터 진단 P1 — 실패 종목이 ENTRY_READY 에 남아 5초마다 API 3회 반복, 사유는 로그뿐 |
+| 2026-10-22 | stock/observability | [0003 영속 시각·수치 복원 + 체결·포지션 mode 컬럼](stock/observability/0003-signal-restore-and-mode.md) | 운영 데이터 진단 P1 — /api/stock/signals·events 가 요청 시각·null, CANCELLED 가 PENDING 으로 복원, PAPER/LIVE 구분 컬럼 부재 |
+| 2026-10-22 | trading/observability | [0004 mode·진입 출처(entrySource)·MFE/MAE](trading/observability/0004-mode-entry-source-excursion.md) | 운영 데이터 진단 P1 — PAPER- 44건이 LIVE 손익에 합산, 리밸런싱 진입을 시각 매칭으로 추정, 보유 중 최저가 부재 |
+| 2026-10-22 | trading/risk | [0007 일봉 레짐 → 신호 매수 필터(기본 OFF) + 리밸런싱 기본 OFF·구멍 3개 봉인](trading/risk/0007-daily-regime-filter-and-rebalance-guards.md) | 운영 데이터 진단 P1 — 1분봉 MA60 레짐이 목표를 매번 뒤집고 6/5 이후 리밸런싱이 손절 루프(17건 -4,407원). risk/0002 매도 가드 부분 정련 |
+| 2026-10-22 | trading/strategy | [0011 출구 틱 하한(기본 ON) + 손절 방식·시간청산 모드 설정화(기본 = 현행)](trading/strategy/0011-tick-aware-exits-and-time-exit-modes.md) | 운영 데이터 진단 P1 — ADA 290원에서 트레일링 0.8% = 2.4틱·손절 1.5% = 4.4틱(호가 노이즈), 시간청산 74건이 이익을 6시간에 +0.6% 로 끊음 |
+| 2026-10-22 | trading/observability | [0005 오프라인 리플레이 하네스 — DB 사본 + 공개 캔들, 보정 게이트 통과 시에만 대안 비교](trading/observability/0005-offline-replay-harness.md) | 운영 데이터 진단 P1 — BACKTEST 모드가 PAPER 와 같아 작업 4·5 값을 정할 수단이 없었다 |
+| 2026-10-23 | stock/algorithm | [0011 상품 유형(STOCK/ETF/ETN) 저장 + 일일 리포트 분해 — ETF·ETN 제외는 보류](stock/algorithm/0011-product-type-and-deferred-etf-etn-exclusion.md) | 운영 데이터 진단 P1→보류 — 제외 초안과 반대 데이터(ETF·ETN n=16 +0.75% vs 개별주 -0.64%), 판단 근거·PAPER 호가 유형 부재 |
+| 2026-10-23 | stock/modes | [0005 재시작 후 자동 시작 옵션(기본 OFF) + 코인 서킷브레이커 연속손실 복원](stock/modes/0005-auto-start-on-boot.md) | 운영 데이터 진단 P1 — 10/20 재시작 뒤 주식 봇 STOPPED(포지션 0건이면 자동 재개 안 함), 재시작이 연속손실 카운터를 0 으로 |
 
 ---
 
@@ -149,15 +158,15 @@
 - [datedate/frontend/](datedate/frontend/) — 4 ADRs
 - [datedate/ux/](datedate/ux/) — 6 ADRs
 - [runner/](runner/) — 2 ADRs
-- [trading/strategy/](trading/strategy/) — 10 ADRs
+- [trading/strategy/](trading/strategy/) — 11 ADRs
 - [trading/modes/](trading/modes/) — 3 ADRs
-- [trading/risk/](trading/risk/) — 6 ADRs
+- [trading/risk/](trading/risk/) — 7 ADRs
 - [trading/infrastructure/](trading/infrastructure/) — 5 ADRs
-- [trading/observability/](trading/observability/) — 3 ADRs
-- [stock/algorithm/](stock/algorithm/) — 10 ADRs
-- [stock/infrastructure/](stock/infrastructure/) — 8 ADRs
-- [stock/modes/](stock/modes/) — 3 ADRs
-- [stock/observability/](stock/observability/) — 2 ADRs
+- [trading/observability/](trading/observability/) — 5 ADRs
+- [stock/algorithm/](stock/algorithm/) — 11 ADRs
+- [stock/infrastructure/](stock/infrastructure/) — 9 ADRs
+- [stock/modes/](stock/modes/) — 5 ADRs
+- [stock/observability/](stock/observability/) — 3 ADRs
 
 ---
 
