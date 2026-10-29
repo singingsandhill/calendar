@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.datedate.presentation.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -7,6 +8,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -111,6 +113,20 @@ class RecapControllerTest {
         mockMvc.perform(get("/recap/2026").with(kakaoUser()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("recap/recap"));
+    }
+
+    @Test
+    @DisplayName("공유 링크가 준비되면 공통 입력·버튼 스타일과 복사 완료 문구를 렌더한다")
+    void rendersShareUrlWithCopyFeedback() throws Exception {
+        when(recapService.buildRecap(42L, 2026)).thenReturn(sampleRecap());
+        when(seoService.getRecapSeo(2026)).thenReturn(SeoMetadata.builder().title("리캡").build());
+
+        mockMvc.perform(get("/recap/2026").param("lang", "en").with(kakaoUser())
+                        .flashAttr("shareUrl", "https://datedate.site/recap/share/abc-token"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("class=\"recap-share-url form-group\"")))
+                .andExpect(content().string(containsString("id=\"copyShareUrl\" class=\"btn btn-outline\"")))
+                .andExpect(content().string(containsString("var copiedMessage = \"Link copied\";")));
     }
 
     @Test

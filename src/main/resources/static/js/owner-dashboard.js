@@ -3,7 +3,7 @@
  * Owner dashboard 카드 액션 (복사 / 삭제).
  *
  * 모달 열기·생성 폼 처리는 create-schedule-modal.js 가 담당.
- * Requires: window.OWNER_DATA = { ownerId } 가 사전 정의되어야 함.
+ * Requires: window.OWNER_DATA = { ownerId, messages } 가 사전 정의되어야 함 (문구는 메시지 키 — dashboard.html).
  */
 
 (function() {
@@ -28,7 +28,7 @@
 
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(url)
-                .then(() => alert('링크가 클립보드에 복사되었습니다!'))
+                .then(() => alert(window.OWNER_DATA.messages.linkCopied))
                 .catch(() => fallbackCopy(url));
         } else {
             fallbackCopy(url);
@@ -44,15 +44,15 @@
         textarea.select();
         try {
             document.execCommand('copy');
-            alert('링크가 클립보드에 복사되었습니다!');
+            alert(window.OWNER_DATA.messages.linkCopied);
         } catch (err) {
-            prompt('아래 링크를 복사하세요:', text);
+            prompt(window.OWNER_DATA.messages.linkCopyPrompt, text);
         }
         document.body.removeChild(textarea);
     }
 
     async function deleteSchedule(ownerId, year, month) {
-        if (!confirm('이 일정을 삭제하시겠습니까?')) {
+        if (!confirm(window.OWNER_DATA.messages.deleteConfirm)) {
             return;
         }
         try {
