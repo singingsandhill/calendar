@@ -1,14 +1,20 @@
 package me.singingsandhill.calendar.stock.application;
 
 import me.singingsandhill.calendar.stock.application.concurrency.StockCodeLocks;
+import me.singingsandhill.calendar.stock.application.service.PaperCashLedger;
 import me.singingsandhill.calendar.stock.application.service.StockPositionService;
 import me.singingsandhill.calendar.stock.domain.position.StockCloseReason;
 import me.singingsandhill.calendar.stock.domain.position.StockPosition;
 import me.singingsandhill.calendar.stock.domain.position.StockPositionRepository;
+import me.singingsandhill.calendar.stock.domain.position.StockPositionStatus;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignalRepository;
+import me.singingsandhill.calendar.stock.domain.stock.EntryOutcome;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
 import me.singingsandhill.calendar.stock.domain.stock.StockRepository;
+import me.singingsandhill.calendar.stock.domain.stock.StockState;
 import me.singingsandhill.calendar.stock.domain.trade.StockTrade;
+import me.singingsandhill.calendar.stock.domain.trade.StockTradeMode;
 import me.singingsandhill.calendar.stock.domain.trade.StockTradeRepository;
 import me.singingsandhill.calendar.stock.domain.trade.StockTradeStatus;
 import me.singingsandhill.calendar.stock.infrastructure.api.KoreaInvestmentApiClient;
@@ -20,7 +26,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,8 +65,14 @@ class StockPositionServiceTest {
     private StockPositionService serviceInMode(StockProperties.Bot.Mode mode) {
         StockProperties props = new StockProperties();
         props.getBot().setMode(mode);
+        return serviceWith(props);
+    }
+
+    private StockPositionService serviceWith(StockProperties props) {
+        // 원장은 실물(PaperCashLedger) — 거래 저장소 mock 이 비어 있으면 paper-cash 전액이 가용액이다.
         return new StockPositionService(positionRepository, tradeRepository, stockRepository,
-            signalRepository, kisApiClient, props, new StockCodeLocks());
+            signalRepository, kisApiClient, props, new StockCodeLocks(),
+            new PaperCashLedger(tradeRepository, props, Clock.systemDefaultZone()));
     }
 
     private StockPosition positionWithRemaining40() {
@@ -116,7 +130,7 @@ class StockPositionServiceTest {
         when(kisApiClient.getTodayOrders()).thenReturn(orderHistoryWith("ODNO-1", 10, "100500"));
 
         StockPosition position = serviceInMode(StockProperties.Bot.Mode.LIVE)
-            .openPosition(entryReadyStock());
+            .openPosition(entryReadyStock()).position();
 
         // 주문 전 시세(100000)가 아니라 실체결 평균가(100500)가 진입가여야 한다
         assertThat(position).isNotNull();
@@ -127,16 +141,164 @@ class StockPositionServiceTest {
     @Test
     void openPosition_inSimulatedModeSkipsBrokerFillLookup() {
         // PAPER/BACKTEST 는 주문이 시뮬레이션(SIM-...)이라 브로커 원장에 존재하지 않는다.
-        // 조회를 시도하면 매 진입마다 "체결 확인 불가" WARN 만 남는다 — 요청가가 곧 체결가.
+        // 조회를 시도하면 매 진입마다 "체결 확인 불가" WARN 만 남는다 — 체결가는 시뮬레이션이 정한다
+        // (요청가 + 슬리피지 0.2%, 호가단위 올림 — ADR stock/modes/0004).
         stubFundingFor(new BigDecimal("100000"));
         when(kisApiClient.buyMarket(eq("005930"), anyInt()))
             .thenReturn(KisOrderResponse.simulated("SIM-1"));
 
-        StockPosition position = service.openPosition(entryReadyStock());
+        StockPosition position = service.openPosition(entryReadyStock()).position();
 
         verify(kisApiClient, never()).getTodayOrders();
         assertThat(position).isNotNull();
-        assertThat(position.getEntryPrice()).isEqualByComparingTo("100000");
+        assertThat(position.getEntryPrice()).isEqualByComparingTo("100200");
+    }
+
+    // ===== PAPER 가상 예수금 원장 + 체결 현실화 (ADR stock/modes/0004) =====
+
+    private static StockTrade filledSimBuy(int qty, String price, String fee) {
+        StockTrade t = StockTrade.createBuyOrder("SIM-0", "000660", qty, new BigDecimal(price), true);
+        t.markFilled(new BigDecimal(price), qty, new BigDecimal(fee));
+        return t;
+    }
+
+    @Test
+    void openPosition_inPaperMode_sizesFromLedgerWithoutTouchingRealAccount() {
+        // 51거래일 0체결 사고: PAPER 사이징이 실계좌 예수금(0원)을 읽어 수량 0 이었다.
+        stubFundingFor(new BigDecimal("100000"));
+        when(kisApiClient.getAvailableCash()).thenReturn(BigDecimal.ZERO);   // 실계좌는 비어 있다
+        when(kisApiClient.buyMarket(eq("005930"), anyInt()))
+            .thenReturn(KisOrderResponse.simulated("SIM-1"));
+        // 당일 다른 종목에 5,000,000 + 750 을 이미 썼다 → 가용 4,999,250 → 10% = 499,925 → 4주
+        when(tradeRepository.findByOrderedAtBetween(any(), any()))
+            .thenReturn(List.of(filledSimBuy(50, "100000", "750")));
+
+        StockPosition position = service.openPosition(entryReadyStock()).position();
+
+        assertThat(position).isNotNull();
+        assertThat(position.getEntryQuantity()).isEqualTo(4);
+        verify(kisApiClient, never()).getAvailableCash();
+        verify(kisApiClient, never()).getBuyableQuantity(anyString(), any());
+    }
+
+    @Test
+    void openPosition_inPaperMode_capsQuantityToLedgerCash() {
+        // getBuyableQuantity 의 PAPER 대응 — 체결가(슬리피지 포함)·매수 수수료로 원장 가용액을 넘지 않는다.
+        StockProperties props = new StockProperties();
+        props.getBot().setPaperCash(new BigDecimal("1000000"));
+        props.getRisk().setPositionSizeRatio(BigDecimal.ONE);
+        stubFundingFor(new BigDecimal("100000"));
+        when(kisApiClient.buyMarket(eq("005930"), anyInt()))
+            .thenReturn(KisOrderResponse.simulated("SIM-1"));
+
+        StockPosition position = serviceWith(props).openPosition(entryReadyStock()).position();
+
+        // 목표 10주(1,000,000 / 100,000) 이지만 체결가 100,200 × (1 + 0.015%) 로는 9주까지만 산다
+        assertThat(position.getEntryQuantity()).isEqualTo(9);
+    }
+
+    @Test
+    void openPosition_inLiveMode_stillSizesFromBrokerAccount() {
+        stubFundingFor(new BigDecimal("100000"));
+        when(kisApiClient.buyMarket(eq("005930"), anyInt()))
+            .thenReturn(KisOrderResponse.simulated("ODNO-1"));
+        when(kisApiClient.getTodayOrders()).thenReturn(orderHistoryWith("ODNO-1", 10, "100000"));
+
+        serviceInMode(StockProperties.Bot.Mode.LIVE).openPosition(entryReadyStock()).position();
+
+        verify(kisApiClient).getAvailableCash();
+        verify(kisApiClient).getBuyableQuantity(eq("005930"), any());
+        verify(tradeRepository, never()).findByOrderedAtBetween(any(), any());
+    }
+
+    @Test
+    void openPosition_inPaperMode_fillsAtSlippedPriceRoundedUpToTick() {
+        // 6,730 × 1.002 = 6,743.46 → 5,000~20,000 구간 호가단위 10원 올림 = 6,750
+        stubFundingFor(new BigDecimal("6730"));
+        when(kisApiClient.buyMarket(eq("005930"), anyInt()))
+            .thenReturn(KisOrderResponse.simulated("SIM-1"));
+
+        StockPosition position = service.openPosition(entryReadyStock()).position();
+
+        assertThat(position.getEntryPrice()).isEqualByComparingTo("6750");
+        ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
+        verify(tradeRepository, atLeastOnce()).save(captor.capture());
+        StockTrade filled = captor.getAllValues().stream()
+            .filter(t -> t.getExecutedPrice() != null).findFirst().orElseThrow();
+        assertThat(filled.getExecutedPrice()).isEqualByComparingTo("6750");
+    }
+
+    @Test
+    void openPosition_inPaperMode_usesTheEtfTickTable() {
+        // ADR stock/algorithm/0011 — ETF 는 2,000원 이상 5원: 6,743.46 → 6,745 (주식 표면 6,750)
+        stubFundingFor(new BigDecimal("6730"));
+        when(kisApiClient.buyMarket(eq("005930"), anyInt()))
+            .thenReturn(KisOrderResponse.simulated("SIM-1"));
+        Stock etf = entryReadyStock();
+        etf.setProductType(StockProductType.ETF);
+
+        StockPosition position = service.openPosition(etf).position();
+
+        assertThat(position.getEntryPrice()).isEqualByComparingTo("6745");
+    }
+
+    @Test
+    void partialExit_inPaperMode_usesTheStocksProductType() {
+        // 10,300 × 0.998 = 10,279.4 → ETF 5원 내림 10,275 (주식 표 10원이면 10,270)
+        Stock etf = new Stock("069500", "KODEX 200", LocalDate.of(2026, 7, 24));
+        etf.setId(9L);
+        etf.setProductType(StockProductType.ETF);
+        when(stockRepository.findById(9L)).thenReturn(Optional.of(etf));
+        StockPosition p = StockPosition.open("069500", LocalDate.of(2026, 7, 24),
+            new BigDecimal("10000"), 100, new BigDecimal("9800"), new BigDecimal("10300"));
+        p.setStockId(9L);
+        when(kisApiClient.sellMarket(eq("069500"), eq(60)))
+            .thenReturn(KisOrderResponse.simulated("SIM-S"));
+        when(tradeRepository.save(any(StockTrade.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(positionRepository.save(any(StockPosition.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.executePartialExit(p, 60, new BigDecimal("10300"), StockCloseReason.TP2);
+
+        ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
+        verify(tradeRepository).save(captor.capture());
+        assertThat(captor.getValue().getExecutedPrice()).isEqualByComparingTo("10275");
+    }
+
+    @Test
+    void partialExit_inPaperMode_fillsAtSlippedPriceRoundedDownToTick() {
+        // 103,000 × 0.998 = 102,794 → 50,000~200,000 구간 호가단위 100원 내림 = 102,700
+        StockPosition p = StockPosition.open("005930", LocalDate.of(2026, 7, 24),
+            new BigDecimal("100000"), 100, new BigDecimal("98000"), new BigDecimal("103000"));
+        when(kisApiClient.sellMarket(eq("005930"), eq(60)))
+            .thenReturn(KisOrderResponse.simulated("SIM-S"));
+        when(tradeRepository.save(any(StockTrade.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(positionRepository.save(any(StockPosition.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.executePartialExit(p, 60, new BigDecimal("103000"), StockCloseReason.TP2);
+
+        ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
+        verify(tradeRepository).save(captor.capture());
+        assertThat(captor.getValue().getExecutedPrice()).isEqualByComparingTo("102700");
+        // 102,700 × 60 × (0.00015 + 0.0020) = 13,248.3
+        assertThat(captor.getValue().getFee()).isEqualByComparingTo("13248.3");
+        assertThat(p.getAverageExitPrice()).isEqualByComparingTo("102700");
+    }
+
+    @Test
+    void partialExit_inLiveMode_recordsRequestedPrice() {
+        StockPosition p = StockPosition.open("005930", LocalDate.of(2026, 7, 24),
+            new BigDecimal("100000"), 100, new BigDecimal("98000"), new BigDecimal("103000"));
+        when(kisApiClient.sellMarket(eq("005930"), eq(60)))
+            .thenReturn(KisOrderResponse.simulated("ODNO-S"));
+        when(tradeRepository.save(any(StockTrade.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(positionRepository.save(any(StockPosition.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        serviceInMode(StockProperties.Bot.Mode.LIVE)
+            .executePartialExit(p, 60, new BigDecimal("103000"), StockCloseReason.TP2);
+
+        ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
+        verify(tradeRepository).save(captor.capture());
+        assertThat(captor.getValue().getExecutedPrice()).isEqualByComparingTo("103000");
     }
 
     @Test
@@ -146,7 +308,7 @@ class StockPositionServiceTest {
             .thenReturn(KisOrderResponse.simulated("ODNO-1"));
         when(kisApiClient.getTodayOrders()).thenReturn(orderHistoryWith("ODNO-1", 10, "100000"));
 
-        serviceInMode(StockProperties.Bot.Mode.LIVE).openPosition(entryReadyStock());
+        serviceInMode(StockProperties.Bot.Mode.LIVE).openPosition(entryReadyStock()).position();
 
         ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
         verify(tradeRepository, atLeastOnce()).save(captor.capture());
@@ -171,7 +333,7 @@ class StockPositionServiceTest {
             BigDecimal.ONE, BigDecimal.ONE, "00", "Y", "00", "N");
         when(kisApiClient.getQuote("005930")).thenReturn(halted);
 
-        StockPosition position = service.openPosition(entryReadyStock());
+        StockPosition position = service.openPosition(entryReadyStock()).position();
 
         assertThat(position).isNull();
         verify(kisApiClient, never()).buyMarket(anyString(), anyInt());
@@ -182,7 +344,7 @@ class StockPositionServiceTest {
         stubFundingFor(new BigDecimal("100000"));
         when(kisApiClient.buyMarket(eq("005930"), anyInt())).thenReturn(null); // 응답 유실
 
-        StockPosition position = service.openPosition(entryReadyStock());
+        StockPosition position = service.openPosition(entryReadyStock()).position();
 
         // 주문 접수 여부 불명 — 포지션은 만들지 않되 흔적(PENDING 거래)은 남아야 스윕이 수습한다
         assertThat(position).isNull();
@@ -199,10 +361,155 @@ class StockPositionServiceTest {
             .thenReturn(KisOrderResponse.simulated("ODNO-1"));
         when(kisApiClient.getTodayOrders()).thenReturn(orderHistoryWith("ODNO-1", 10, "100000"));
 
-        StockPosition position = service.openPosition(entryReadyStock());
+        StockPosition position = service.openPosition(entryReadyStock()).position();
 
         // 풀백저가 99800 × 0.99 = 98802 (진입가 대비 -1.198%), 캡(-2% → 98000)보다 타이트
         assertThat(position.getStopLossPrice()).isEqualByComparingTo("98802");
+    }
+
+    // ===== 진입 결과 사유 (ADR stock/infrastructure/0009) =====
+
+    @Test
+    void openPosition_reportsQuoteUnavailable() {
+        when(kisApiClient.getQuote("005930")).thenReturn(null);
+
+        StockPositionService.OpenResult result = service.openPosition(entryReadyStock());
+
+        assertThat(result.outcome()).isEqualTo(EntryOutcome.QUOTE_UNAVAILABLE);
+        assertThat(result.position()).isNull();
+    }
+
+    @Test
+    void openPosition_reportsNotTradable() {
+        KisQuoteResponse halted = new KisQuoteResponse("005930", new BigDecimal("100000"),
+            new BigDecimal("98000"), new BigDecimal("101000"), new BigDecimal("97000"),
+            new BigDecimal("97500"), BigDecimal.ZERO, BigDecimal.ZERO, 1L, BigDecimal.ONE,
+            BigDecimal.ONE, BigDecimal.ONE, "00", "Y", "00", "N");
+        when(kisApiClient.getQuote("005930")).thenReturn(halted);
+
+        assertThat(service.openPosition(entryReadyStock()).outcome()).isEqualTo(EntryOutcome.NOT_TRADABLE);
+    }
+
+    @Test
+    void openPosition_reportsSizeZero() {
+        // 51거래일 0체결의 실제 사유 — 이제는 로그가 아니라 결과로 돌아와 Stock 에 남는다.
+        StockProperties props = new StockProperties();
+        props.getBot().setPaperCash(BigDecimal.ZERO);
+        stubFundingFor(new BigDecimal("100000"));
+
+        StockPositionService.OpenResult result = serviceWith(props).openPosition(entryReadyStock());
+
+        assertThat(result.outcome()).isEqualTo(EntryOutcome.SIZE_ZERO);
+        verify(kisApiClient, never()).buyMarket(anyString(), anyInt());
+    }
+
+    @Test
+    void openPosition_reportsOrderUnconfirmed() {
+        stubFundingFor(new BigDecimal("100000"));
+        when(kisApiClient.buyMarket(eq("005930"), anyInt())).thenReturn(null);
+
+        assertThat(service.openPosition(entryReadyStock()).outcome()).isEqualTo(EntryOutcome.ORDER_UNCONFIRMED);
+    }
+
+    @Test
+    void openPosition_reportsErrorInsteadOfThrowing() {
+        // 예외가 트랜잭션 프록시를 넘으면 그 틱 전체(다른 종목의 청산 기록 포함)가 롤백 전용이 된다.
+        when(kisApiClient.getQuote("005930")).thenThrow(new IllegalStateException("KIS down"));
+
+        StockPositionService.OpenResult result = service.openPosition(entryReadyStock());
+
+        assertThat(result.outcome()).isEqualTo(EntryOutcome.ERROR);
+    }
+
+    @Test
+    void openPosition_reportsOpenedWithPosition() {
+        stubFundingFor(new BigDecimal("100000"));
+        when(kisApiClient.buyMarket(eq("005930"), anyInt()))
+            .thenReturn(KisOrderResponse.simulated("SIM-1"));
+
+        StockPositionService.OpenResult result = service.openPosition(entryReadyStock());
+
+        assertThat(result.outcome()).isEqualTo(EntryOutcome.OPENED);
+        assertThat(result.position()).isNotNull();
+    }
+
+    @Test
+    void recordEntryFailure_persistsReasonAndMovesToEntryFailedAtMax() {
+        StockProperties props = new StockProperties();
+        props.getEntry().setMaxOpenAttempts(2);
+        Stock stock = entryReadyStock();
+        LocalDateTime now = LocalDateTime.of(2026, 7, 24, 9, 40);
+
+        serviceWith(props).recordEntryFailure(stock, EntryOutcome.SIZE_ZERO, now);
+        serviceWith(props).recordEntryFailure(stock, EntryOutcome.SIZE_ZERO, now.plusSeconds(30));
+
+        ArgumentCaptor<Stock> captor = ArgumentCaptor.forClass(Stock.class);
+        verify(stockRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        Stock saved = captor.getValue();
+        assertThat(saved.getEntryFailCount()).isEqualTo(2);
+        assertThat(saved.getLastEntryFailReason()).isEqualTo(EntryOutcome.SIZE_ZERO);
+        assertThat(saved.getState()).isEqualTo(StockState.ENTRY_FAILED);
+    }
+
+    @Test
+    void unconfirmedBuyStockCodes_listsOnlyPendingBrokerUnknownBuys() {
+        StockTrade pending = StockTrade.createBuyOrder(StockTrade.PENDING_ORDER_ID_PREFIX + "1",
+            "005930", 10, new BigDecimal("100000"), true);
+        StockTrade confirmed = StockTrade.createBuyOrder("0000123", "000660", 10, new BigDecimal("50000"), true);
+        confirmed.markFilled(new BigDecimal("50000"), 10, new BigDecimal("75"));
+        when(tradeRepository.findTodayTrades()).thenReturn(List.of(pending, confirmed));
+
+        assertThat(service.unconfirmedBuyStockCodes()).containsExactly("005930");
+    }
+
+    // ===== 운영 모드 필터 (ADR stock/observability/0003) =====
+
+    private static StockPosition closedIn(StockTradeMode mode, String code) {
+        return StockPosition.reconstitute(1L, null, code, LocalDate.of(2026, 10, 21),
+            StockPositionStatus.CLOSED, new BigDecimal("10000"), 10, new BigDecimal("100000"),
+            LocalDateTime.of(2026, 10, 21, 9, 40), 0, new BigDecimal("10100"),
+            false, true, false, null, new BigDecimal("9800"), null, null, false,
+            new BigDecimal("700"), new BigDecimal("0.7"), new BigDecimal("101000"), 10,
+            StockCloseReason.TP2, LocalDateTime.of(2026, 10, 21, 10, 0),
+            LocalDateTime.of(2026, 10, 21, 9, 40), null, mode);
+    }
+
+    @Test
+    void closedPositions_showOnlyCurrentBotMode() {
+        // PAPER 실측(ADR modes/0004)이 쌓이면 대시보드·손익 요약이 두 모드를 합산하게 된다.
+        when(positionRepository.findClosedPositions(any())).thenReturn(List.of(
+            closedIn(StockTradeMode.PAPER, "111111"), closedIn(StockTradeMode.LIVE, "222222"),
+            closedIn(null, "333333")));
+
+        assertThat(service.getClosedPositions(LocalDate.of(2026, 10, 21)))
+            .extracting(StockPosition::getStockCode).containsExactly("111111");
+    }
+
+    @Test
+    void closedPositions_inLiveModeTreatLegacyNullAsLive() {
+        when(positionRepository.findClosedPositions(any())).thenReturn(List.of(
+            closedIn(StockTradeMode.PAPER, "111111"), closedIn(StockTradeMode.LIVE, "222222"),
+            closedIn(null, "333333")));
+
+        assertThat(serviceInMode(StockProperties.Bot.Mode.LIVE).getClosedPositions(LocalDate.of(2026, 10, 21)))
+            .extracting(StockPosition::getStockCode).containsExactly("222222", "333333");
+    }
+
+    @Test
+    void positionsInRangeAndOpenAndAllAreModeFilteredToo() {
+        when(positionRepository.findByTradingDateBetween(any(), any())).thenReturn(List.of(
+            closedIn(StockTradeMode.PAPER, "111111"), closedIn(StockTradeMode.LIVE, "222222")));
+        when(positionRepository.findByTradingDate(any())).thenReturn(List.of(
+            closedIn(StockTradeMode.PAPER, "111111"), closedIn(StockTradeMode.LIVE, "222222")));
+        when(positionRepository.findOpenPositions(any())).thenReturn(List.of(
+            closedIn(StockTradeMode.LIVE, "222222")));
+        LocalDate day = LocalDate.of(2026, 10, 21);
+
+        assertThat(service.getPositionsInRange(day, day)).extracting(StockPosition::getStockCode)
+            .containsExactly("111111");
+        assertThat(service.getAllPositions(day)).extracting(StockPosition::getStockCode)
+            .containsExactly("111111");
+        assertThat(service.getOpenPositions(day)).isEmpty();
     }
 
     // ===== 고아 체결 스윕 (2026-07-24 리뷰 §3-④ / P1-1) =====
@@ -295,7 +602,9 @@ class StockPositionServiceTest {
         when(tradeRepository.save(any(StockTrade.class))).thenAnswer(inv -> inv.getArgument(0));
         when(positionRepository.save(any(StockPosition.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.executePartialExit(p, 40, new BigDecimal("105000"), StockCloseReason.TP1);
+        // LIVE: 매도 체결가 = 요청가 (PAPER 슬리피지 체결은 partialExit_inPaperMode_* 가 본다)
+        serviceInMode(StockProperties.Bot.Mode.LIVE)
+            .executePartialExit(p, 40, new BigDecimal("105000"), StockCloseReason.TP1);
 
         ArgumentCaptor<StockTrade> captor = ArgumentCaptor.forClass(StockTrade.class);
         verify(tradeRepository, atLeastOnce()).save(captor.capture());

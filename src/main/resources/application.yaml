@@ -185,6 +185,8 @@ trading:
     # 운영 모드 (P0-1): LIVE / PAPER / BACKTEST. 기본값 PAPER — 실주문은 서버 환경변수
     # TRADING_BOT_MODE=LIVE 로만 명시적 opt-in (P1-8, ADR trading/modes/0002).
     mode: ${TRADING_BOT_MODE:PAPER}
+    # 재시작 후 자동 시작 (ADR stock/modes/0005) — 기본 false. 오픈 포지션이 있으면 보호 전용 복구가 우선한다.
+    auto-start: ${TRADING_BOT_AUTO_START:false}
     market: KRW-ADA
     max-positions: 2
     order-ratio: 0.25
@@ -194,6 +196,12 @@ trading:
     # 1분봉 × 1시장 = 1,440행/일 → 90일 ≈ 129,600행 (H2 파일 증가분 20MB 미만).
     # ADR trading/infrastructure/0005.
     candle-retention-days: 90
+    # 정체 포지션 시간청산 (ADR trading/risk/0003, strategy/0011). maxHold 를 넘긴 이익 포지션 처리 — BREAKEVEN_CLOSE(현행, 즉시 청산) /
+    # TIGHTEN_TRAIL(청산 대신 트레일링 즉시 활성화) / SIGNAL_GATED(최신 신호 점수 <= 0 일 때만 청산). 값은 리플레이(작업 6-A)로 정한다.
+    max-hold-minutes: 360
+    time-exit-mode: BREAKEVEN_CLOSE
+    # 손실 포지션 시간청산 — maxHold 경과 + 손익률 >= 이 값(음수 비율)이면 청산. 키 없음(기본) = 비활성.
+    # time-exit-loss-threshold: -0.005
   indicators:
     ma-short: 5
     ma-mid: 20
@@ -231,8 +239,24 @@ trading:
     circuit-breaker-enabled: true
     max-consecutive-losses: 3
     max-daily-loss-pct: -0.05
+    # 틱 하한 (ADR trading/strategy/0011) — 손절·트레일링이 호가 노이즈(N틱)보다 좁아지지 않게 하는 하한. 기본 ON, 0 = 끔.
+    # ADA 290원(1틱 = 0.34%): 손절 -1.5% → -1.72%, 트레일링 0.8%(2.4틱) → 고점 - 5원.
+    min-stop-ticks: 5
+    min-trailing-ticks: 5
+    # 손절 방식 — PERCENT(stop-loss) / ATR(-atr-multiplier x atr-bar-minutes 분 집계봉 ATR%, 계산 불가면 PERCENT). 틱 하한은 둘 다 적용.
+    stop-mode: PERCENT
+    atr-period: 14
+    atr-multiplier: 2.0
+    atr-bar-minutes: 15
   rebalancing:
-    enabled: true
+    # 기본 OFF (ADR trading/risk/0007) — 수익 원천은 신호 매수→신호 매도뿐이고, 6/5 포지션화 뒤 리밸런싱은 손절 루프가
+    # 됐다(10/11~10/20 진입 17건 -4,407원). 엔진은 비교 대상으로 남긴다. 재활성화는 2년 일봉 리플레이(작업 6-C)가
+    # "KRW 보유"·"단순 보유"를 위험조정 수익(총수익÷MDD)으로 모두 이길 때만.
+    enabled: false
+    # 목표 비중 레짐 — DAILY(일봉 레짐, trading.regime.*) / MINUTE_MA60(레거시: 현재가 vs 1분봉 MA60=60분 평균)
+    regime-source: DAILY
+    # 엔진이 켜져 있을 때 REBALANCE 포지션은 장중 SL/TP/트레일링/시간청산 대신 이 비상 손절만 받는다(수수료차감 손익률)
+    catastrophic-stop-pct: -0.15
     default-ratio: 0.50
     bull-ratio: 0.70
     bear-ratio: 0.30
@@ -242,6 +266,17 @@ trading:
     slippage-buffer: 0.005             # 0.5% 슬리피지 버퍼
     skip-when-data-insufficient: true  # MA60 데이터 부족 시 스킵
     min-sell-pnl-pct: 0.0             # [P1-4] -3%→0%: 리밸런싱 매도는 평균 손익 ≥ 0% 일 때만 (ADR-0003 정합, 적자 청산 방지)
+  # 일봉 레짐 (ADR trading/risk/0007) — 종가 vs SMA(ma-days), MA±hysteresis-pct 밴드를 벗어나야 전환, 전환 후 min-days 유지.
+  # 형성 중인 당일봉 제외, KST 00:05 이후 하루 1회 갱신. GET /api/trading/bot/status 의 regime.
+  regime:
+    ma-days: 20
+    hysteresis-pct: 0.02
+    min-days: 3
+    # 신호 매수 필터 — OFF / BLOCK_BEAR(BEAR 면 신호 매수 차단) / SCALE_BEAR(BEAR 면 비중 x bear-size-multiplier).
+    # 기본 OFF: 작업 6-B 리플레이에서 1/4~6/4 와 6/5 이후 두 구간 모두 나아질 때만 켠다. 진입에만 적용.
+    filter-mode: ${TRADING_REGIME_FILTER_MODE:OFF}
+    unknown-policy: BLOCK        # 필터가 켜져 있는데 레짐을 모르면 차단 (ALLOW 로 통과 가능)
+    bear-size-multiplier: 0.5
 
 # Stock Trading Bot Configuration (Gap & Pullback Strategy)
 stock:
@@ -261,6 +296,15 @@ stock:
     mode: ${STOCK_BOT_MODE:PAPER}
     max-positions: 5
     max-position-size: 5000000
+    # PAPER/BACKTEST 가상 예수금(원) — 거래일마다 이 금액에서 시작해 당일 SIM- 체결로 재계산 (ADR stock/modes/0004).
+    # PAPER 가 실계좌 예수금(0원)을 읽어 51거래일 0체결이던 문제의 수정. LIVE 는 무시.
+    paper-cash: ${STOCK_BOT_PAPER_CASH:10000000}
+    # 재시작 후 자동 시작 (ADR stock/modes/0005) — 기본 false. 오픈 포지션이 있으면 보호 전용 복구가 우선한다.
+    auto-start: ${STOCK_BOT_AUTO_START:false}
+  paper:
+    # PAPER 체결가를 요청가보다 이만큼(%) 불리하게 — 매수 올림·매도 내림 후 KRX 호가단위 반올림.
+    # risk.slippage-buffer(0.002) 와 같은 비용 가정 (ADR stock/algorithm/0008, stock/modes/0004).
+    slippage-percent: 0.2
   screening:
     min-gap-percent: 1.0
     max-gap-percent: 10.0
@@ -295,6 +339,11 @@ stock:
     entry-min-strength: 100
     entry-min-imbalance: 1.0
     soft-entry-validation: true
+    # 주문 단계 진입 실패(시세 불가·거래 불가·수량 0·예외) 후 같은 종목 재시도 간격과 최대 횟수 —
+    # 도달하면 ENTRY_FAILED 로 그날 재시도를 멈춘다. ORDER_UNCONFIRMED 는 스윕이 판정하므로 세지 않는다
+    # (ADR stock/infrastructure/0009).
+    open-retry-interval-seconds: 30
+    max-open-attempts: 3
   exit:
     tp1-percent: 5.0
     tp1-ratio: 0.5
@@ -400,6 +449,10 @@ stock:
       - "161390"
     # KIS 거래량순위(FHPST01710000) 상위 N 을 그날의 동적 유니버스로 사용. 0 이면 비활성(폴백만).
     rank-api-top: 30
+    # 스크리닝에서 뺄 상품 유형(STOCK/ETF/ETN, KIS 증권그룹 scty_grp_id_cd). 기본 빈 목록 — ETF·ETN 제외는 데이터가 반대
+    # 방향이라 보류(ETF·ETN n=16 +0.75% vs 개별주 n=123 -0.64%), PAPER 체결 100건 이상 쌓이면 일일 리포트 유형별 분해로 재평가
+    # (ADR stock/algorithm/0011). 유형을 모르는 종목은 빼지 않는다.
+    excluded-product-types: []
   trading:
     pre-market-start: "08:30"
     market-open: "09:00"

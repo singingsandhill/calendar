@@ -5,6 +5,7 @@ import me.singingsandhill.calendar.stock.application.service.GapPullbackBotServi
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -38,7 +39,9 @@ public class StockBotApiController {
             status.lastTradingTickAt(),
             status.lastScreeningResult(),
             status.apiCallsLast5min(),
-            status.startedAt()
+            status.startedAt(),
+            status.mode(),
+            status.paperAvailableCash()
         ));
     }
 
@@ -114,6 +117,10 @@ public class StockBotApiController {
         Instant lastTradingTickAt,
         StockBotMetrics.ScreeningSnapshot lastScreeningResult,
         int apiCallsLast5min,
-        LocalDateTime startedAt
+        LocalDateTime startedAt,
+        /** 운영 모드 (LIVE / PAPER / BACKTEST) */
+        String mode,
+        /** PAPER/BACKTEST 가상 가용 예수금 — LIVE 면 null (ADR stock/modes/0004) */
+        BigDecimal paperAvailableCash
     ) {}
 }

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Closeable;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -57,6 +59,7 @@ public class GapPullbackBotService {
     private final StockBotMetrics metrics;
     private final UniverseBuilder universeBuilder;
     private final Clock clock;
+    private final PaperCashLedger paperCashLedger;
 
     private LocalDateTime startedAt;
     private LocalDate currentTradingDate;
@@ -70,7 +73,8 @@ public class GapPullbackBotService {
                                   StockMailService mailService,
                                   StockBotMetrics metrics,
                                   UniverseBuilder universeBuilder,
-                                  Clock clock) {
+                                  Clock clock,
+                                  PaperCashLedger paperCashLedger) {
         this.screeningService = screeningService;
         this.pullbackDetectionService = pullbackDetectionService;
         this.positionService = positionService;
@@ -81,11 +85,14 @@ public class GapPullbackBotService {
         this.metrics = metrics;
         this.universeBuilder = universeBuilder;
         this.clock = clock;
+        this.paperCashLedger = paperCashLedger;
     }
 
     /**
      * 기동 시 보호 전용 자동 재개 — 오픈 포지션이 있는데 봇이 멈춰 있으면 손절·트레일링·
      * 11:20 강제청산이 전부 죽는다. 리스크 루프만 살리고 신규 진입은 차단한다.
+     * 오픈 포지션이 없으면 {@code bot.auto-start}(기본 false)일 때만 완전 시작한다 — 있으면 보호 복구가 이긴다
+     * (ADR stock/modes/0005).
      */
     @EventListener(ApplicationReadyEvent.class)
     public void resumeProtectionOnStartup() {
@@ -95,6 +102,14 @@ public class GapPullbackBotService {
         LocalDate today = LocalDate.now(clock);
         int openPositions = positionService.countOpenPositions(today);
         if (openPositions == 0) {
+            if (stockProperties.getBot().isAutoStart()) {
+                boolean started = start();
+                log.info("stock.bot.auto-start — 재시작 후 자동 시작 {}", started ? "완료" : "실패(KIS 미설정 등)");
+                TradeEvents.event("BOT_AUTO_STARTED")
+                    .with("tradingDate", today)
+                    .with("started", started)
+                    .log();
+            }
             return;
         }
 
@@ -197,6 +212,7 @@ public class GapPullbackBotService {
 
         Instant lastTick = metrics.getLastTradingTickAt();
         StockBotMetrics.ScreeningSnapshot lastScreening = metrics.getLastScreeningResult();
+        StockProperties.Bot.Mode mode = stockProperties.getBot().getMode();
 
         return new BotStatus(
             running.get(),
@@ -208,7 +224,9 @@ public class GapPullbackBotService {
             lastTick,
             lastScreening,
             metrics.apiCallsLast5min(),
-            startedAt
+            startedAt,
+            mode.name(),
+            mode == StockProperties.Bot.Mode.LIVE ? null : paperCashLedger.availableToday()
         );
     }
 
@@ -372,15 +390,31 @@ public class GapPullbackBotService {
 
         // 진입 준비 종목 조회
         List<Stock> entryReadyStocks = pullbackDetectionService.getEntryReadyStocks(currentTradingDate);
+        if (entryReadyStocks.isEmpty()) {
+            return;
+        }
+
+        // 진입 실패 재시도 간격 + 미확인 주문 대기 (ADR stock/infrastructure/0009)
+        LocalDateTime now = LocalDateTime.now(clock);
+        int retryIntervalSeconds = stockProperties.getEntry().getOpenRetryIntervalSeconds();
+        Set<String> awaitingSweep = positionService.unconfirmedBuyStockCodes();
 
         for (Stock stock : entryReadyStocks) {
             if (currentPositions >= maxPositions) {
                 break;
             }
+            if (!stock.isEntryRetryDue(now, retryIntervalSeconds)) {
+                continue;
+            }
+            if (awaitingSweep.contains(stock.getStockCode())) {
+                log.debug("{} — 미확인 매수 주문이 스윕 판정 대기 중, 재주문 보류", stock.getStockCode());
+                continue;
+            }
 
             try (Closeable ignored = TradeEvents.stockCode(stock.getStockCode())) {
-                StockPosition position = positionService.openPosition(stock);
-                if (position != null) {
+                StockPositionService.OpenResult result = positionService.openPosition(stock);
+                if (result.isOpened()) {
+                    StockPosition position = result.position();
                     currentPositions++;
                     log.info("Position opened for {}", stock.getStockCode());
                     TradeEvents.event("POSITION_OPENED")
@@ -392,7 +426,9 @@ public class GapPullbackBotService {
                 } else {
                     TradeEvents.event("POSITION_OPEN_FAILED")
                         .with("stockCode", stock.getStockCode())
+                        .with("reason", result.outcome())
                         .log();
+                    positionService.recordEntryFailure(stock, result.outcome(), now);
                 }
             } catch (Exception e) {
                 log.error("Error opening position for {}: {}", stock.getStockCode(), e.getMessage());
@@ -439,6 +475,10 @@ public class GapPullbackBotService {
         Instant lastTradingTickAt,
         StockBotMetrics.ScreeningSnapshot lastScreeningResult,
         int apiCallsLast5min,
-        LocalDateTime startedAt
+        LocalDateTime startedAt,
+        /** 운영 모드 (LIVE / PAPER / BACKTEST) */
+        String mode,
+        /** PAPER/BACKTEST 가상 가용 예수금 (LIVE 면 null — ADR stock/modes/0004) */
+        BigDecimal paperAvailableCash
     ) {}
 }

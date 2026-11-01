@@ -2,6 +2,7 @@ package me.singingsandhill.calendar.stock.application;
 
 import me.singingsandhill.calendar.stock.application.observability.StockBotMetrics;
 import me.singingsandhill.calendar.stock.application.service.GapPullbackBotService;
+import me.singingsandhill.calendar.stock.application.service.PaperCashLedger;
 import me.singingsandhill.calendar.stock.application.service.PullbackDetectionService;
 import me.singingsandhill.calendar.stock.application.service.ScreeningService;
 import me.singingsandhill.calendar.stock.application.service.StockMailService;
@@ -52,7 +53,8 @@ class GapPullbackBotRecoveryTest {
 
     private GapPullbackBotService botWith(StockProperties props, Clock clock) {
         return new GapPullbackBotService(screeningService, pullbackDetectionService, positionService,
-            riskService, kisApiClient, props, mailService, metrics, universeBuilder, clock);
+            riskService, kisApiClient, props, mailService, metrics, universeBuilder, clock,
+            mock(PaperCashLedger.class));
     }
 
     private StockProperties enabledProps() {
@@ -81,6 +83,54 @@ class GapPullbackBotRecoveryTest {
         bot.resumeProtectionOnStartup();
 
         assertThat(bot.getStatus().running()).isFalse();
+    }
+
+    // ===== 재시작 후 자동 시작 (ADR stock/modes/0005) — 기본 OFF, 오픈 포지션이 있으면 보호 복구가 이긴다 =====
+
+    @Test
+    void autoStart_startsFullyWhenNoOpenPositions() {
+        when(positionService.countOpenPositions(any())).thenReturn(0);
+        when(kisApiClient.isConfigured()).thenReturn(true);
+        StockProperties props = enabledProps();
+        props.getBot().setAutoStart(true);
+        GapPullbackBotService bot = botWith(props, TRADING_HOURS);
+
+        bot.resumeProtectionOnStartup();
+
+        assertThat(bot.getStatus().running()).isTrue();
+        assertThat(bot.getStatus().recoveryMode()).isFalse();
+    }
+
+    @Test
+    void autoStart_yieldsToProtectionRecoveryWhenPositionsAreOpen() {
+        when(positionService.countOpenPositions(any())).thenReturn(2);
+        when(kisApiClient.isConfigured()).thenReturn(true);
+        StockProperties props = enabledProps();
+        props.getBot().setAutoStart(true);
+        GapPullbackBotService bot = botWith(props, TRADING_HOURS);
+
+        bot.resumeProtectionOnStartup();
+
+        assertThat(bot.getStatus().running()).isTrue();
+        assertThat(bot.getStatus().recoveryMode()).isTrue();
+    }
+
+    @Test
+    void autoStart_needsTheBotEnabled() {
+        when(positionService.countOpenPositions(any())).thenReturn(0);
+        when(kisApiClient.isConfigured()).thenReturn(true);
+        StockProperties props = new StockProperties();
+        props.getBot().setAutoStart(true);
+        GapPullbackBotService bot = botWith(props, TRADING_HOURS);
+
+        bot.resumeProtectionOnStartup();
+
+        assertThat(bot.getStatus().running()).isFalse();
+    }
+
+    @Test
+    void autoStart_isOffByDefault() {
+        assertThat(new StockProperties().getBot().isAutoStart()).isFalse();
     }
 
     @Test

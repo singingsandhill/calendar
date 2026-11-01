@@ -30,6 +30,9 @@ PULLBACK      -> Price >= PullbackLow x (1 + bounce-threshold-percent: 0.2%) -> 
                  (+ 진입 검증 2/3 통과 — 체결강도·호가 불균형·풀백 지속 3~15분,
                     풀백 시작시각 미기록은 FAIL — 데이터 부족 ≠ 통과)
 ENTRY_READY   -> Buy order executed                                      -> ENTERED
+ENTRY_READY   -> 주문 단계 실패 entry.max-open-attempts(3)회               -> ENTRY_FAILED (비활성·종결)
+                 (실패 후 open-retry-interval-seconds 30초 안엔 재시도 안 함, ORDER_UNCONFIRMED 는
+                  세지 않고 미확인 매수가 스윕에 판정될 때까지 재주문 보류 — ADR infrastructure/0009)
 ENTERED       -> All exits completed                                     -> EXITED
 
 PULLBACK      -> Price < High x (1 - pullback-max-percent: 5.0%)         -> FILTERED_OUT (too deep)
@@ -58,8 +61,9 @@ TP1·TP2·TP3 는 *독립 트리거* (선행 의존 제거). 강한 트리거 �
 레거시 `risk.stop-loss-percent` 는 손절 계산에 사용되지 않는다(키만 보존).
 
 Time-decay take profit: minimum profit threshold decreases linearly from
-`risk.min-profit-threshold` (0.5%) at `trading.trading-loop-start` (09:20) to 0 at
-`exit.final-exit-time` (11:20), making TP triggers easier to hit later in the session.
+`risk.min-profit-threshold` (0.5%) at `trading.trading-loop-start` (09:20) toward
+`risk.min-profit-threshold-late` (0.1%) just before `exit.final-exit-time` (11:20), and is 0 from 11:20,
+making TP triggers easier to hit later in the session (`StockRiskService.calculateTimeDecayThreshold`).
 **종점은 설정에서 유도한다** — 상수 09:10/15:15 시절엔 봇 운영 창이 곡선의 약 36% 만
 지나가 후반 구간이 도달 불가였다 (ADR algorithm/0001·0009·0010). `Clock` 빈으로 시간
 의존 코드 결정성 테스트 가능.
@@ -85,6 +89,12 @@ Time-decay take profit: minimum profit threshold decreases linearly from
   LIVE 는 `STOCK_BOT_MODE=LIVE` 로만 opt-in (ADR stock/modes/0002). 주문 POST 는 비멱등이라
   무재시도(`executePostNoRetry`, ADR stock/infrastructure/0005), 봇 제어 API 는
   `POST /api/stock/bot/**` ADMIN 전용 (ADR common/security/0005).
+- **PAPER 가상 예수금·체결** ([ADR stock/modes/0004](../../../../../../../docs/adr/stock/modes/0004-paper-cash-ledger.md)) —
+  PAPER/BACKTEST 사이징은 실계좌가 아니라 `PaperCashLedger` 를 쓴다: 거래일마다 `bot.paper-cash`(기본 1,000만원,
+  env `STOCK_BOT_PAPER_CASH`)에서 시작해 당일 `SIM-` 체결(매수 금액+수수료 차감, 매도 금액−수수료·세금 가산)을
+  **DB 에서 매번 재계산**(재시작 정합). `getAvailableCash()`·`getBuyableQuantity()` 는 LIVE 에서만 호출.
+  시뮬레이션 체결가 = 요청가 ± `paper.slippage-percent`(0.2%) 를 `KrxTickSize`(주식 7단계 / ETF·ETN 2,000원
+  미만 1원·이상 5원)로 매수 올림·매도 내림. `GET /api/stock/bot/status` 의 `mode`·`paperAvailableCash`(LIVE 면 null).
 - **`Semaphore(8, fair)` (KisRestClient)** + **`StockCodeLocks` (per-symbol ReentrantLock)** + **`ThreadPoolTaskScheduler(pool=4)`** 동시성 3-레이어.
 - **체결강도 데이터 소스** — 시세 TR(FHKST01010100, inquire-price)에는 체결강도 필드가 없다.
   스크리닝 Floor 3·진입 검증의 체결강도는 주식현재가 체결(FHKST01010300, inquire-ccnl)의
@@ -92,9 +102,13 @@ Time-decay take profit: minimum profit threshold decreases linearly from
   데이터 부족 처리 ([ADR stock/infrastructure/0007](../../../../../../../docs/adr/stock/infrastructure/0007-trade-strength-source-inquire-ccnl.md)).
 - **종목명 데이터 소스** — 스크리닝이 쓰는 시세·체결·호가 TR 3종에는 종목명 필드가 없다.
   `Stock.stockName` 은 Floor 통과 종목에 한해 주식기본조회(CTPF1002R, `search-stock-info`, 실전 전용)의
-  `prdt_abrv_name`(없으면 `prdt_name`)을 `KisRestClient.getStockName()` 으로 조회해 채우고, 실패/필드 부재 시
+  `prdt_abrv_name`(없으면 `prdt_name`)을 `KisRestClient.getStockInfo()` 로 조회해 채우고, 실패/필드 부재 시
   null → 종목코드로 대체(종전 동작) + `ScreeningStats.nameUnresolved` 요약 WARN·`SCREENING_SUMMARY` 키
   ([ADR stock/infrastructure/0008](../../../../../../../docs/adr/stock/infrastructure/0008-stock-name-source-search-stock-info.md)).
+  같은 응답의 `scty_grp_id_cd` 로 **`Stock.productType`**(ST·KN → STOCK, EF·FE → ETF, EN → ETN, 그 밖·부재 =
+  null 모름)을 채운다 — PAPER 호가단위·일일 리포트 "상품 유형별" 분해에 쓰고, `universe.excluded-product-types`(기본 `[]`)에 든 유형은
+  스크리닝에서 뺀다(모르는 유형은 안 뺌). ETF·ETN 제외는 데이터가 반대 방향이라 보류
+  ([ADR stock/algorithm/0011](../../../../../../../docs/adr/stock/algorithm/0011-product-type-and-deferred-etf-etn-exclusion.md)).
 - **주문 신뢰성** ([ADR stock/infrastructure/0006](../../../../../../../docs/adr/stock/infrastructure/0006-order-pre-persistence-and-fill-backfill.md)) —
   매수는 주문 *전* `PENDING` 거래 선영속화 → 응답 성공 시 ODNO 부착 + 당일주문체결조회로
   **실체결가·수수료 backfill**(포지션 진입가도 실체결 기준). 응답 유실분은 트레이딩 루프
@@ -103,6 +117,8 @@ Time-decay take profit: minimum profit threshold decreases linearly from
 - **재시작 복구** ([ADR stock/modes/0003](../../../../../../../docs/adr/stock/modes/0003-protection-only-recovery-on-restart.md)) —
   기동 시 오픈 포지션이 있으면 `recoveryMode` 로 자동 재개: 리스크 루프·시간청산은 동작하되
   **신규 진입은 차단**. 관리자 `start()` 시 해제. `BotStatus.recoveryMode` 로 노출.
+  오픈 포지션이 없으면 `bot.auto-start`(기본 false, env `STOCK_BOT_AUTO_START`)일 때만 기동 시 `start()`
+  (`BOT_AUTO_STARTED`, [ADR stock/modes/0005](../../../../../../../docs/adr/stock/modes/0005-auto-start-on-boot.md)).
 - **`TradeEvents` 로거** + **KST 자정 회전** + **`BotStatus.{recoveryMode, lastTradingTickAt, lastScreeningResult, apiCallsLast5min}`** 메트릭.
 - **`StockBotConfigValidator`** — 기동 시(`ApplicationReadyEvent`) 유효 설정 1줄 요약 + 위험/부정합(LIVE 모드, 빈 유니버스, floor>entry, 메일 미설정) WARN. 진단 전용, 동작 불변.
 - **스크리닝 침묵 실패 가드** — 유니버스가 있는데 `Selected: 0` 이면 탈락 버킷을 WARN.
@@ -119,10 +135,16 @@ Time-decay take profit: minimum profit threshold decreases linearly from
   `KisQuoteResponse.isTradable()` 판정. 스크리닝 Floor 0번 + **진입 직전 재확인**.
   필드 부재는 거래 가능으로 간주(무회귀)하되 전 종목 부재 시 WARN.
 - **일일 실적 리포트** ([ADR observability/0002](../../../../../../../docs/adr/stock/observability/0002-daily-performance-report.md)) —
-  11:40 cron 으로 승률·실현손익·청산 사유·진입 거절 사유를 집계해 메일 + `DAILY_REPORT` 이벤트.
+  11:40 cron 으로 승률·실현손익·청산 사유·진입 거절 사유·상품 유형별 분해를 집계해 메일 + `DAILY_REPORT` 이벤트.
   PAPER 실측(LIVE 전환 전제조건)의 데이터원.
 - **영속성/외부호출 효율** ([ADR stock/infrastructure/0004](../../../../../../../docs/adr/stock/infrastructure/0004-n-plus-one-and-batch-candle.md)) —
   N+1 조회 제거 + `CandleService` 배치 처리 + KIS 조회 재시도.
+- **복원·운영 모드** ([ADR stock/observability/0003](../../../../../../../docs/adr/stock/observability/0003-signal-restore-and-mode.md)) —
+  어댑터는 저장된 값을 그대로 되돌린다(`StockSignal.restore`·`StockTrade.restore`·`StockCandle.restore`·
+  `Stock.restoreAuditTimestamps`, `StockPosition.reconstitute` 의 createdAt·누적 청산 total_exit_*). 생성자·팩토리로 복원하면
+  시각이 조회 시각이 되고 CANCELLED 가 PENDING 으로 되살아났다. `stock_trades.mode`·`stock_positions.mode` 는 처음 저장할 때
+  어댑터가 현재 `stock.bot.mode` 를 찍고, `StockPositionService` 의 표시·집계 조회(open/closed/all/range)와 11:40 리포트는
+  **현재 봇 모드** 행만 본다(NULL = 백필 전 레거시 → LIVE 취급). 리스크 루프·최종청산·`countOpenPositions` 는 필터하지 않는다.
 
 ## Presentation (`/api/stock/**` · `/stock*`)
 
@@ -137,6 +159,7 @@ Time-decay take profit: minimum profit threshold decreases linearly from
 | `StockEventApiController` | `/api/stock/events` — 진입/청산 + 풀백·고점형성 시그널을 시각순으로 병합한 이벤트 스트림 |
 | `StockSignalApiController` | `/api/stock/signals/{stockCode}` |
 | `StockTradeApiController` | `/api/stock/trades/{stockCode}` |
+| `StockEntryAttemptApiController` | `/api/stock/entry-attempts?date=` — 검증 단계(EntryAttempt) + 주문 단계 실패(Stock 사유·횟수·시각) (ADR infrastructure/0009) |
 | `StockDashboardController` | `/stock`, `/stock/history`, `/stock/settings` (Thymeleaf) |
 
 > `domain/candle` (`StockCandle`, `CandleInterval`, `StockCandleRepository`) 는 현재

@@ -10,9 +10,13 @@ import me.singingsandhill.calendar.stock.domain.position.StockPositionStatus;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignal;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignalRepository;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignalType;
+import me.singingsandhill.calendar.stock.domain.stock.EntryOutcome;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
 import me.singingsandhill.calendar.stock.domain.stock.StockRepository;
+import me.singingsandhill.calendar.stock.domain.trade.KrxTickSize;
 import me.singingsandhill.calendar.stock.domain.trade.StockTrade;
+import me.singingsandhill.calendar.stock.domain.trade.StockTradeMode;
 import me.singingsandhill.calendar.stock.domain.trade.StockTradeRepository;
 import me.singingsandhill.calendar.stock.infrastructure.api.KoreaInvestmentApiClient;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.KisOrderDetailResponse;
@@ -27,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -57,6 +62,7 @@ public class StockPositionService {
     private final KoreaInvestmentApiClient kisApiClient;
     private final StockProperties stockProperties;
     private final StockCodeLocks stockCodeLocks;
+    private final PaperCashLedger paperCashLedger;
 
     public StockPositionService(StockPositionRepository positionRepository,
                                  StockTradeRepository tradeRepository,
@@ -64,7 +70,8 @@ public class StockPositionService {
                                  StockSignalRepository signalRepository,
                                  KoreaInvestmentApiClient kisApiClient,
                                  StockProperties stockProperties,
-                                 StockCodeLocks stockCodeLocks) {
+                                 StockCodeLocks stockCodeLocks,
+                                 PaperCashLedger paperCashLedger) {
         this.positionRepository = positionRepository;
         this.tradeRepository = tradeRepository;
         this.stockRepository = stockRepository;
@@ -72,17 +79,43 @@ public class StockPositionService {
         this.kisApiClient = kisApiClient;
         this.stockProperties = stockProperties;
         this.stockCodeLocks = stockCodeLocks;
+        this.paperCashLedger = paperCashLedger;
+    }
+
+    /** 진입 시도 결과 — 실패 사유를 호출측이 Stock 에 남길 수 있게 돌려준다 (ADR stock/infrastructure/0009). */
+    public record OpenResult(EntryOutcome outcome, StockPosition position) {
+        public static OpenResult opened(StockPosition position) {
+            return new OpenResult(EntryOutcome.OPENED, position);
+        }
+
+        public static OpenResult failed(EntryOutcome outcome) {
+            return new OpenResult(outcome, null);
+        }
+
+        public boolean isOpened() {
+            return outcome == EntryOutcome.OPENED;
+        }
     }
 
     /**
-     * 새 포지션 오픈 (시장가 매수)
+     * 새 포지션 오픈 (시장가 매수).
+     *
+     * 예외는 여기서 ERROR 결과로 바꾼다 — 예외가 이 @Transactional 프록시를 넘으면 트레이딩 루프의
+     * 바깥 트랜잭션이 롤백 전용으로 표시돼 같은 틱의 다른 기록(청산 등)까지 커밋되지 않는다.
      */
     @Transactional
-    public StockPosition openPosition(Stock stock) {
-        return stockCodeLocks.withLock(stock.getStockCode(), () -> doOpenPosition(stock));
+    public OpenResult openPosition(Stock stock) {
+        return stockCodeLocks.withLock(stock.getStockCode(), () -> {
+            try {
+                return doOpenPosition(stock);
+            } catch (RuntimeException e) {
+                log.error("Error opening position for {}: {}", stock.getStockCode(), e.getMessage(), e);
+                return OpenResult.failed(EntryOutcome.ERROR);
+            }
+        });
     }
 
-    private StockPosition doOpenPosition(Stock stock) {
+    private OpenResult doOpenPosition(Stock stock) {
         String stockCode = stock.getStockCode();
         LocalDate tradingDate = stock.getTradingDate();
 
@@ -92,7 +125,7 @@ public class StockPositionService {
         KisQuoteResponse quote = kisApiClient.getQuote(stockCode);
         if (quote == null) {
             log.error("Failed to get quote for {}", stockCode);
-            return null;
+            return OpenResult.failed(EntryOutcome.QUOTE_UNAVAILABLE);
         }
 
         // 진입 직전 거래 가능 상태 재확인 — 스크리닝(09:20) 이후 VI·거래정지가 걸릴 수 있다
@@ -103,16 +136,16 @@ public class StockPositionService {
                 .with("stockCode", stockCode)
                 .with("reason", quote.tradabilityReason())
                 .log();
-            return null;
+            return OpenResult.failed(EntryOutcome.NOT_TRADABLE);
         }
 
         BigDecimal currentPrice = quote.currentPrice();
 
         // 포지션 사이즈 계산
-        int quantity = calculatePositionSize(stockCode, currentPrice);
+        int quantity = calculatePositionSize(stockCode, currentPrice, tradingDate, stock.getProductType());
         if (quantity <= 0) {
             log.warn("Calculated position size is 0 for {}", stockCode);
-            return null;
+            return OpenResult.failed(EntryOutcome.SIZE_ZERO);
         }
 
         // 주문 선영속화: 응답이 유실돼도 "이 시각에 이 종목을 이만큼 주문했다"는 흔적을 남겨
@@ -131,13 +164,13 @@ public class StockPositionService {
                 .with("quantity", quantity)
                 .with("tradeId", trade.getId())
                 .log();
-            return null;
+            return OpenResult.failed(EntryOutcome.ORDER_UNCONFIRMED);
         }
 
         trade.assignBrokerOrderId(orderResponse.getOrderId());
 
         // 실체결가·수량 backfill (조회 실패 시 요청가 폴백 + WARN)
-        Fill fill = resolveBuyFill(stockCode, orderResponse.getOrderId(), currentPrice, quantity);
+        Fill fill = resolveBuyFill(stockCode, orderResponse.getOrderId(), currentPrice, quantity, stock.getProductType());
         trade.markFilled(fill.price(), fill.quantity(), buyFee(fill));
         trade = tradeRepository.save(trade);
 
@@ -170,7 +203,38 @@ public class StockPositionService {
         log.info("Position opened for {}: {} shares @ {} (요청가 {}), SL={}",
             stockCode, fill.quantity(), fill.price(), currentPrice, stopLossPrice);
 
-        return position;
+        return OpenResult.opened(position);
+    }
+
+    /**
+     * 주문 단계 진입 실패를 Stock 에 남긴다 — 사유·시각·횟수, 최대 횟수 도달 시 ENTRY_FAILED
+     * (ADR stock/infrastructure/0009). {@code now} 는 재시도 간격 판정과 같은 시계(stock Clock)여야 한다.
+     */
+    @Transactional
+    public void recordEntryFailure(Stock stock, EntryOutcome outcome, LocalDateTime now) {
+        boolean failedForDay = stock.recordEntryFailure(
+            outcome, now, stockProperties.getEntry().getMaxOpenAttempts());
+        stockRepository.save(stock);
+        if (failedForDay) {
+            log.warn("ENTRY_FAILED: {} — 주문 단계 실패 {}회 (마지막 사유 {}), 당일 재시도 중단",
+                stock.getStockCode(), stock.getEntryFailCount(), outcome);
+            TradeEvents.event("ENTRY_FAILED")
+                .with("stockCode", stock.getStockCode())
+                .with("attempts", stock.getEntryFailCount())
+                .with("lastReason", outcome)
+                .log();
+        }
+    }
+
+    /**
+     * 접수 여부가 아직 미확인(PENDING-·PENDING)인 매수가 남아 있는 종목코드 — 스윕이 판정하기 전에 같은
+     * 종목으로 다시 주문하면 응답만 유실된 체결 위에 중복 매수가 쌓인다.
+     */
+    public Set<String> unconfirmedBuyStockCodes() {
+        return tradeRepository.findTodayTrades().stream()
+            .filter(t -> t.isBuy() && t.isPending() && t.isUnconfirmedOrder())
+            .map(StockTrade::getStockCode)
+            .collect(Collectors.toSet());
     }
 
     /**
@@ -295,15 +359,16 @@ public class StockPositionService {
      * 조회 실패/미발견이면 요청가로 폴백하되 WARN — 장부가 픽션임을 로그로 드러낸다.
      *
      * PAPER/BACKTEST 는 주문이 인메모리 시뮬레이션이라 브로커 원장에 존재하지 않는다.
-     * 조회를 시도하면 진입마다 "체결 확인 불가" WARN 만 쌓이므로 건너뛴다 —
-     * 시뮬레이션에서는 요청가가 곧 체결가다.
+     * 조회를 시도하면 진입마다 "체결 확인 불가" WARN 만 쌓이므로 건너뛰고, 체결가는
+     * 요청가 + 슬리피지를 호가단위로 올린 값으로 잡는다 (ADR stock/modes/0004).
      */
-    private Fill resolveBuyFill(String stockCode, String orderId,
-                                 BigDecimal requestedPrice, int requestedQuantity) {
-        if (stockProperties.getBot().getMode() != StockProperties.Bot.Mode.LIVE) {
-            log.debug("[{}] {} 모드 — 시뮬레이션 체결가 {} 로 기록",
-                stockCode, stockProperties.getBot().getMode(), requestedPrice);
-            return new Fill(requestedPrice, requestedQuantity, true);
+    private Fill resolveBuyFill(String stockCode, String orderId, BigDecimal requestedPrice, int requestedQuantity,
+                                 StockProductType productType) {
+        if (!isLiveMode()) {
+            BigDecimal simulated = simulatedBuyPrice(requestedPrice, productType);
+            log.debug("[{}] {} 모드 — 시뮬레이션 체결가 {} (요청가 {})",
+                stockCode, stockProperties.getBot().getMode(), simulated, requestedPrice);
+            return new Fill(simulated, requestedQuantity, true);
         }
         try {
             KisOrderDetailResponse history = kisApiClient.getTodayOrders();
@@ -330,11 +395,19 @@ public class StockPositionService {
     }
 
     /**
-     * 포지션 사이즈 계산
+     * 포지션 사이즈 계산.
+     *
+     * LIVE 는 실계좌 예수금·매수가능수량을, PAPER/BACKTEST 는 가상 예수금 원장을 쓴다 — PAPER 가
+     * 실계좌(0원)를 읽어 51거래일 동안 수량 0 이었다 (ADR stock/modes/0004).
      */
-    private int calculatePositionSize(String stockCode, BigDecimal price) {
+    private int calculatePositionSize(String stockCode, BigDecimal price, LocalDate tradingDate,
+                                      StockProductType productType) {
+        boolean live = isLiveMode();
+
         // 가용 현금 조회
-        BigDecimal availableCash = kisApiClient.getAvailableCash();
+        BigDecimal availableCash = live
+            ? kisApiClient.getAvailableCash()
+            : paperCashLedger.available(tradingDate);
         if (availableCash == null || availableCash.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
@@ -352,11 +425,42 @@ public class StockPositionService {
         // 수량 계산
         int quantity = orderAmount.divide(price, 0, RoundingMode.DOWN).intValue();
 
-        // 매수 가능 수량 확인
-        int buyableQty = kisApiClient.getBuyableQuantity(stockCode, price);
+        // 매수 가능 수량 확인 — PAPER 는 원장 가용액을 시뮬레이션 체결가·매수 수수료로 나눈 값
+        int buyableQty = live
+            ? kisApiClient.getBuyableQuantity(stockCode, price)
+            : availableCash.divide(simulatedBuyPrice(price, productType).multiply(
+                    BigDecimal.ONE.add(stockProperties.getRisk().getCommissionRate())),
+                0, RoundingMode.DOWN).intValue();
         quantity = Math.min(quantity, buyableQty);
 
         return quantity;
+    }
+
+    private boolean isLiveMode() {
+        return stockProperties.getBot().getMode() == StockProperties.Bot.Mode.LIVE;
+    }
+
+    /** PAPER 매수 체결가 — 요청가 + 슬리피지, 상품 유형의 호가단위로 올림 (유형 모름은 주식 표). */
+    private BigDecimal simulatedBuyPrice(BigDecimal requestedPrice, StockProductType productType) {
+        return KrxTickSize.roundUp(requestedPrice.multiply(BigDecimal.ONE.add(paperSlippageRate())), productType);
+    }
+
+    /** PAPER 매도 체결가 — 요청가 − 슬리피지, 상품 유형의 호가단위로 내림. */
+    private BigDecimal simulatedSellPrice(BigDecimal requestedPrice, StockProductType productType) {
+        return KrxTickSize.roundDown(requestedPrice.multiply(BigDecimal.ONE.subtract(paperSlippageRate())), productType);
+    }
+
+    /** 포지션 종목의 상품 유형 (ADR stock/algorithm/0011) — 종목 행이 없으면 모름. */
+    private StockProductType productTypeOf(StockPosition position) {
+        if (position.getStockId() == null) {
+            return null;
+        }
+        return stockRepository.findById(position.getStockId()).map(Stock::getProductType).orElse(null);
+    }
+
+    private BigDecimal paperSlippageRate() {
+        return stockProperties.getPaper().getSlippagePercent()
+            .divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);
     }
 
     /**
@@ -391,6 +495,9 @@ public class StockPositionService {
             return;
         }
 
+        // 체결가: LIVE 는 종전대로 요청가, PAPER/BACKTEST 는 슬리피지·호가단위 내림 (ADR stock/modes/0004)
+        BigDecimal fillPrice = isLiveMode() ? price : simulatedSellPrice(price, productTypeOf(position));
+
         // 거래 기록 저장
         StockTrade trade = StockTrade.createSellOrder(
             orderResponse.getOrderId(),
@@ -405,13 +512,13 @@ public class StockPositionService {
         // 0 으로 남기면 원장 기반 수수료 집계가 매도측을 통째로 누락한다.
         BigDecimal commissionRate = stockProperties.getRisk().getCommissionRate();
         BigDecimal sellTaxRate = stockProperties.getRisk().getSellTaxRate();
-        BigDecimal sellFee = price.multiply(BigDecimal.valueOf(quantity))
+        BigDecimal sellFee = fillPrice.multiply(BigDecimal.valueOf(quantity))
             .multiply(commissionRate.add(sellTaxRate));
-        trade.markFilled(price, quantity, sellFee);
+        trade.markFilled(fillPrice, quantity, sellFee);
         tradeRepository.save(trade);
 
         // 포지션 업데이트 (수수료 포함)
-        position.executePartialExit(quantity, price, reason, commissionRate, sellTaxRate);
+        position.executePartialExit(quantity, fillPrice, reason, commissionRate, sellTaxRate);
         positionRepository.save(position);
 
         // 시그널 저장
@@ -437,7 +544,7 @@ public class StockPositionService {
             .with("stockCode", stockCode)
             .with("positionId", position.getId())
             .with("reason", reason)
-            .with("price", price)
+            .with("price", fillPrice)
             .with("quantity", quantity)
             .with("remaining", position.getRemainingQuantity())
             .with("realizedPnl", position.getRealizedPnl())
@@ -473,11 +580,17 @@ public class StockPositionService {
         return true;
     }
 
+    /*
+     * 아래 표시·집계용 조회는 현재 봇 모드의 포지션만 돌려준다 — PAPER 실측과 LIVE 손익을 대시보드·손익 요약·
+     * 히스토리에서 합산하지 않는다 (ADR stock/observability/0003). 리스크 루프·최종청산·countOpenPositions 는
+     * 저장소를 직접 써서 필터하지 않는다(보호 대상은 모드와 무관).
+     */
+
     /**
      * 오픈 포지션 목록 조회
      */
     public List<StockPosition> getOpenPositions(LocalDate tradingDate) {
-        return positionRepository.findOpenPositions(tradingDate);
+        return inCurrentMode(positionRepository.findOpenPositions(tradingDate));
     }
 
     /**
@@ -491,20 +604,25 @@ public class StockPositionService {
      * 청산된 포지션 목록 조회
      */
     public List<StockPosition> getClosedPositions(LocalDate tradingDate) {
-        return positionRepository.findClosedPositions(tradingDate);
+        return inCurrentMode(positionRepository.findClosedPositions(tradingDate));
     }
 
     /**
      * 모든 포지션 조회
      */
     public List<StockPosition> getAllPositions(LocalDate tradingDate) {
-        return positionRepository.findByTradingDate(tradingDate);
+        return inCurrentMode(positionRepository.findByTradingDate(tradingDate));
     }
 
     /**
      * 기간 내 포지션 조회 (history용)
      */
     public List<StockPosition> getPositionsInRange(LocalDate from, LocalDate to) {
-        return positionRepository.findByTradingDateBetween(from, to);
+        return inCurrentMode(positionRepository.findByTradingDateBetween(from, to));
+    }
+
+    private List<StockPosition> inCurrentMode(List<StockPosition> positions) {
+        StockTradeMode current = StockTradeMode.valueOf(stockProperties.getBot().getMode().name());
+        return positions.stream().filter(p -> current.includes(p.getMode())).toList();
     }
 }

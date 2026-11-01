@@ -234,6 +234,7 @@ Floor 필터를 통과한 종목에 대해 0~100점 점수를 계산한다:
 | HIGH_FORMED·PULLBACK → FILTERED_OUT | 현재가 < 고점 × 0.950 | -5% 초과 하락 → 단순 눌림목이 아니라 하락 추세로 판단 |
 | PULLBACK → ENTRY_READY | 저점 × 1.002 이상 반등 + 진입 검증 통과 | 반등 확인 + 매수 압력 확인 |
 | ENTRY_READY → ENTERED | 매수 주문 체결 | 실제 포지션 진입 |
+| ENTRY_READY → ENTRY_FAILED | 주문 단계 실패(시세 불가·거래 불가·수량 0·예외)가 `entry.max-open-attempts`(3)회. 실패 후 `entry.open-retry-interval-seconds`(30초) 안에는 재시도 안 함, 주문 응답 유실(ORDER_UNCONFIRMED)은 세지 않고 미확인 주문 스윕 판정까지 재주문 보류 | 5초마다 같은 실패를 반복하던 API 낭비 차단, 사유는 Stock·`/api/stock/entry-attempts`·11:40 리포트에 남음 (ADR stock/infrastructure/0009) |
 | ENTERED → EXITED | 청산 조건 (섹션 7) | 수익 실현 또는 손실 제한 |
 
 ---
@@ -274,13 +275,16 @@ ENTRY_READY 전환 시 3가지 조건을 검증한다.
 ENTRY_READY 로 전환된 종목의 매수 주문을 넣기 직전, 매 진입마다 아래 순서로 수량을 계산한다.
 
 ```
-가용현금 = 잔고조회(inquire-balance) 의 익일정산금액(nxdy_excc_amt)
-          — PAPER/LIVE 모드와 무관하게 항상 실제 계좌를 조회한다 (아래 경고 참고)
+가용현금 = LIVE          : 잔고조회(inquire-balance) 의 익일정산금액(nxdy_excc_amt)
+           PAPER/BACKTEST: PaperCashLedger — bot.paper-cash(기본 1,000만원) − 당일 SIM- 매수(금액+수수료)
+                           + 당일 SIM- 매도(금액−수수료·세금). 거래일마다 DB 에서 다시 계산 (아래 참고)
 
 목표금액 = 가용현금 × risk.position-size-ratio     (기본 10%)
 주문금액 = min(목표금액, bot.max-position-size)     (기본 500만원)
 수량     = floor(주문금액 / 현재가)
-수량     = min(수량, 매수가능조회(inquire-psbl-order) 상 최대수량)
+수량     = min(수량, 매수가능수량)
+           LIVE: 매수가능조회(inquire-psbl-order) 상 최대수량
+           PAPER: floor(가용현금 / (시뮬레이션 체결가 × (1 + 수수료율)))
 ```
 
 **종목당 매수 예산 = min(가용현금의 10%, 500만원)** — 둘 중 작은 쪽이 항상 이긴다.
@@ -309,25 +313,25 @@ WATCHING 상태 등록일 뿐이고, 실제 자금이 들어가려면 섹션 4 �
 계좌가 충분히 커서 500만원 캡이 항상 바인딩된다고 가정하면, 이론상 동시 투입액 상한은
 5 × 500만원 = **2,500만원**이다.
 
-### ⚠️ PAPER 모드에서는 "가용현금"이 봇의 매수로 줄지 않는다
+### PAPER 모드의 가용현금은 가상 예수금 원장이다
 
 매수·매도 주문은 `bot.mode` 가 LIVE 가 아니면 브로커에 아무것도 보내지 않고 즉시 체결된
 것으로 간주하는 인메모리 시뮬레이션으로 처리된다 — PAPER 가 운영 기본값이고 LIVE 는
-`STOCK_BOT_MODE=LIVE` 로만 명시 활성화된다(ADR stock/modes/0002). 반면 위 계산식이 쓰는
-잔고조회·매수가능조회는 **모드 분기가 없다** — 시세·호가·잔고 조회는 PAPER 에서도 항상
-실제 KIS 계좌를 그대로 읽는다.
+`STOCK_BOT_MODE=LIVE` 로만 명시 활성화된다(ADR stock/modes/0002). 사이징의 가용현금은
+PAPER/BACKTEST 에서 **실계좌가 아니라 `PaperCashLedger`** 다 (ADR stock/modes/0004):
 
-즉 PAPER(운영 기본값, `STOCK_BOT_MODE` 미설정 시 적용)에서는 시뮬레이션 매수가 예수금을
-실제로 차감하지 않으므로, 3번째·4번째·5번째 포지션을 열어도 매번 "직전 매수로 줄어든
-잔고의 10%"가 아니라 **거의 동일한 실계좌 잔고의 10%**가 반복 계산된다. 포지션
-진입금액 합계는 장부상 최대 5×10%(계좌의 50%) 또는 5×500만원(2,500만원)까지 쌓일 수
-있는데, 이는 자금이 순차 차감된 결과가 아니라 매번 같은 분모에서 다시 계산된 결과라는
-뜻이다.
+- 거래일마다 `bot.paper-cash`(기본 1,000만원, env `STOCK_BOT_PAPER_CASH`)에서 시작한다.
+- 당일 시뮬레이션 체결(`SIM-` 주문번호)만 센다 — 매수는 체결금액 + 매수 수수료 차감, 매도는
+  체결금액 − 매도 수수료·세금 가산. 잔고를 메모리에 두지 않고 매번 DB 에서 계산해 재시작해도 같다.
+- 시뮬레이션 체결가는 요청가 ± `paper.slippage-percent`(0.2%) 를 KRX 호가단위로 반올림한다
+  (매수 올림·매도 내림, 주식 7단계 / ETF·ETN 2,000원 미만 1원·이상 5원 — 종목의 상품 유형은 주식기본조회
+  `scty_grp_id_cd` 로 저장, 모르면 주식 표. ADR stock/algorithm/0011).
+- 현재 가용액은 `GET /api/stock/bot/status` 의 `paperAvailableCash`(LIVE 면 null)와 기동 로그
+  `[StockBot] mode=PAPER, paperCash=…, paperAvailableCash=…` 로 본다.
 
-LIVE로 전환하면 실주문이 실제로 예수금을 깎으므로 2번째 이후 포지션은 줄어든 잔고
-기준 10%가 적용되어 총 노출이 복리로 더 작아진다 — 일일 실적 리포트(11:40 발송)로
-쌓는 PAPER 실측 데이터를 LIVE 전환 판단에 쓸 때, 승률·손익률은 참고할 수 있어도
-**포지션 크기 자체는 PAPER 결과가 LIVE 를 그대로 대표하지 않는다.**
+따라서 PAPER 에서도 2번째 이후 포지션은 직전 매수로 줄어든 가상 예수금의 10% 를 받아 LIVE 와 같은
+복리 축소가 일어난다. 2026-10 이전에는 PAPER 사이징이 실계좌 예수금을 읽어, 예수금이 0원인 계좌에서
+51거래일 동안 수량 0 → 0체결이었다.
 
 ---
 
@@ -669,10 +673,8 @@ stock:
   grep "mail" logs/stock-trading.log
 ```
 
-### "PAPER 모드인데 포지션 진입금액 합계가 계좌 잔고보다 커 보여요"
+### "PAPER 모드인데 포지션 진입금액이 실계좌 잔고와 무관해요"
 
-PAPER(운영 기본값)에서는 시뮬레이션 매수가 실제 예수금을 차감하지 않는다. 반면 종목당
-예산 계산은 매번 실제 계좌 잔고를 그대로 조회하므로, 포지션을 여러 개 열어도 잔고가
-줄어든 것으로 계산되지 않는다 — 3~5번째 포지션도 1번째와 거의 같은 잔고 기준 10%를
-받는다. 버그가 아니라 PAPER 시뮬레이션의 구조적 특성이다 (섹션 6 참고). LIVE 에서는
-실주문이 예수금을 실제로 깎으므로 이런 누적이 일어나지 않는다.
+정상이다. PAPER/BACKTEST 사이징은 실계좌가 아니라 가상 예수금 원장(`bot.paper-cash`, 기본 1,000만원)을
+쓴다 — 거래일마다 그 금액에서 시작해 당일 SIM- 체결로 줄고 늘어난다 (섹션 6, ADR stock/modes/0004).
+현재 가용액은 `GET /api/stock/bot/status` 의 `paperAvailableCash` 로 확인한다.

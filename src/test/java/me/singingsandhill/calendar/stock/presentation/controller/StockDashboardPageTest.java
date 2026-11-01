@@ -68,7 +68,7 @@ class StockDashboardPageTest {
     @BeforeEach
     void setUp() {
         when(botService.getStatus()).thenReturn(new GapPullbackBotService.BotStatus(
-                false, false, false, 0, 0, "IDLE", null, null, 0, null));
+                false, false, false, 0, 0, "IDLE", null, null, 0, null, "PAPER", null));
     }
 
     @Test

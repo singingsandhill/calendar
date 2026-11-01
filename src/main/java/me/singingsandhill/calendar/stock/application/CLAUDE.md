@@ -41,9 +41,11 @@ rank 성공 스냅샷은 그대로 유지(거래일 1회 스냅샷 정합성). �
    - Spread score (inverse, 0~0.5%)
    - Market cap score (log scale, 500억~10조)
 3. Sort by score descending → 위 선정 규칙 통과분만 최대 `max-watchlist-size` 까지
-4. Floor 통과 종목만 `getStockName()`(search-stock-info `prdt_abrv_name`→`prdt_name`)으로 종목명 조회 →
-   `Stock.stockName`; null 이면 종목코드 대체 + `nameUnresolved` 집계(선정 무영향,
-   [ADR infrastructure/0008](../../../../../../../../docs/adr/stock/infrastructure/0008-stock-name-source-search-stock-info.md))
+4. Floor 통과 종목만 `getStockInfo()`(search-stock-info `prdt_abrv_name`→`prdt_name`, `scty_grp_id_cd`)로 종목명·상품 유형 조회 →
+   `Stock.stockName`·`productType`; 이름이 null 이면 종목코드 대체 + `nameUnresolved` 집계(선정 무영향,
+   [ADR infrastructure/0008](../../../../../../../../docs/adr/stock/infrastructure/0008-stock-name-source-search-stock-info.md)).
+   `universe.excluded-product-types`(기본 빈 목록)에 든 유형은 여기서 빠진다(`productTypeExcluded`,
+   [ADR algorithm/0011](../../../../../../../../docs/adr/stock/algorithm/0011-product-type-and-deferred-etf-etn-exclusion.md))
 
 **Legacy mode** (`scoring.enabled=false`): sequential hard-cut filters (gap, market cap, trade value, strength, spread).
 
@@ -73,12 +75,16 @@ TP1·TP2·TP3 는 *독립 트리거* — 선행 의존 X. `checkTakeProfitLevels
 
 - **`GapPullbackBotService`** — 메인 오케스트레이터. 프리마켓·스크리닝·트레이딩 루프·최종
   청산 진입점, `recoveryMode`(재시작 시 신규 진입만 차단), 빈 유니버스 시
-  `SCREENING_SKIPPED` 이벤트 + 조기 리턴.
-- **`StockPositionService`** — 포지션 사이징, 주문 *전* `PENDING` 선영속화 →
-  실체결가·수수료 backfill, `reconcileUnconfirmedOrders()` (응답 유실분을 원장과 대조,
-  12틱 내 미발견이면 CANCELLED).
+  `SCREENING_SKIPPED` 이벤트 + 조기 리턴. 진입 시 `openPosition` 의 `OpenResult` 사유를
+  `recordEntryFailure` 로 Stock 에 남기고, 재시도 간격 안의 종목·미확인 매수가 남은 종목은 건너뛴다
+  ([ADR infrastructure/0009](../../../../../../../../docs/adr/stock/infrastructure/0009-entry-failure-state-and-reason.md)).
+- **`StockPositionService`** — 포지션 사이징(LIVE 는 실계좌, PAPER/BACKTEST 는 `PaperCashLedger`),
+  주문 *전* `PENDING` 선영속화 → 실체결가·수수료 backfill(PAPER 는 슬리피지·호가단위 시뮬레이션 체결가),
+  `reconcileUnconfirmedOrders()` (응답 유실분을 원장과 대조, 12틱 내 미발견이면 CANCELLED).
+- **`PaperCashLedger`** — PAPER 가상 예수금. 거래일 단위로 `paper-cash` − 당일 SIM- 매수 + 매도를
+  DB 에서 매번 계산 ([ADR modes/0004](../../../../../../../../docs/adr/stock/modes/0004-paper-cash-ledger.md)).
 - **`StockMailService`** — 09:20 스크리닝 결과 HTML 메일. 첨부 로그는 발송 시점까지의
   스냅샷(`stock-screening-snapshot-YYYY-MM-DD.log`).
-- **`DailyPerformanceReportService`** — 11:40 승률·실현손익·청산 사유·진입 거절 사유 집계
-  → 메일 + `DAILY_REPORT` 이벤트
+- **`DailyPerformanceReportService`** — 11:40 승률·실현손익·청산 사유·진입 거절 사유·
+  주문 단계 진입 실패 사유(종목별 마지막 사유)·상품 유형별(STOCK/ETF/ETN/UNKNOWN) 감시·시도·청산·손익 집계 → 메일 + `DAILY_REPORT` 이벤트
   ([ADR observability/0002](../../../../../../../../docs/adr/stock/observability/0002-daily-performance-report.md)).

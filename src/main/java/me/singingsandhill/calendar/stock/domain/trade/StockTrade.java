@@ -13,6 +13,9 @@ public class StockTrade {
     /** 주문 전송 전 선영속화 시 부여하는 임시 주문번호 접두사 (브로커 번호 확보 시 교체). */
     public static final String PENDING_ORDER_ID_PREFIX = "PENDING-";
 
+    /** PAPER/BACKTEST 인메모리 시뮬레이션 주문번호 접두사 — 가상 예수금 원장이 이 거래만 센다. */
+    public static final String SIMULATED_ORDER_ID_PREFIX = "SIM-";
+
     private Long id;
     private String orderId;
     private Long positionId;
@@ -32,8 +35,18 @@ public class StockTrade {
     private LocalDateTime executedAt;
     private final LocalDateTime createdAt;
 
+    /** 처음 저장될 때 어댑터가 현재 봇 모드를 찍는다 — 새 객체는 null (ADR stock/observability/0003). */
+    private StockTradeMode mode;
+
     private StockTrade(String orderId, String stockCode, StockTradeType tradeType,
                        StockOrderType orderType, Integer quantity, BigDecimal orderPrice) {
+        this(orderId, stockCode, tradeType, orderType, quantity, orderPrice,
+            LocalDateTime.now(), LocalDateTime.now());
+    }
+
+    private StockTrade(String orderId, String stockCode, StockTradeType tradeType,
+                       StockOrderType orderType, Integer quantity, BigDecimal orderPrice,
+                       LocalDateTime orderedAt, LocalDateTime createdAt) {
         this.orderId = orderId;
         this.stockCode = stockCode;
         this.tradeType = tradeType;
@@ -41,8 +54,8 @@ public class StockTrade {
         this.quantity = quantity;
         this.orderPrice = orderPrice;
         this.status = StockTradeStatus.PENDING;
-        this.orderedAt = LocalDateTime.now();
-        this.createdAt = LocalDateTime.now();
+        this.orderedAt = orderedAt;
+        this.createdAt = createdAt;
     }
 
     /**
@@ -80,6 +93,31 @@ public class StockTrade {
     }
 
     /**
+     * 저장소에서 불러온 거래를 그대로 복원 (인프라 어댑터 전용). 팩토리 + markFilled 로 복원하면 시각이 조회
+     * 시각으로 바뀌고 CANCELLED 가 PENDING 으로 되살아났다 (ADR stock/observability/0003).
+     */
+    public static StockTrade restore(Long id, String orderId, Long positionId, String stockCode,
+                                     StockTradeType tradeType, StockOrderType orderType,
+                                     Integer quantity, BigDecimal orderPrice,
+                                     Integer executedQuantity, BigDecimal executedPrice, BigDecimal fee,
+                                     StockTradeStatus status, StockCloseReason exitReason,
+                                     LocalDateTime orderedAt, LocalDateTime executedAt,
+                                     LocalDateTime createdAt, StockTradeMode mode) {
+        StockTrade t = new StockTrade(orderId, stockCode, tradeType, orderType, quantity, orderPrice,
+            orderedAt, createdAt != null ? createdAt : orderedAt);
+        t.id = id;
+        t.positionId = positionId;
+        t.executedQuantity = executedQuantity;
+        t.executedPrice = executedPrice;
+        t.fee = fee;
+        t.status = status != null ? status : StockTradeStatus.PENDING;
+        t.exitReason = exitReason;
+        t.executedAt = executedAt;
+        t.mode = mode;
+        return t;
+    }
+
+    /**
      * 브로커 주문번호(ODNO) 부착 — 선영속화된 PENDING 거래에 응답 도착 후 부여.
      */
     public void assignBrokerOrderId(String brokerOrderId) {
@@ -91,6 +129,11 @@ public class StockTrade {
     /** 주문번호가 아직 브로커 값으로 교체되지 않은(=접수 여부 미확인) 거래인지. */
     public boolean isUnconfirmedOrder() {
         return orderId != null && orderId.startsWith(PENDING_ORDER_ID_PREFIX);
+    }
+
+    /** PAPER/BACKTEST 시뮬레이션 주문으로 체결된 거래인지. */
+    public boolean isSimulated() {
+        return orderId != null && orderId.startsWith(SIMULATED_ORDER_ID_PREFIX);
     }
 
     public boolean isPending() {
@@ -159,4 +202,5 @@ public class StockTrade {
     public LocalDateTime getOrderedAt() { return orderedAt; }
     public LocalDateTime getExecutedAt() { return executedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public StockTradeMode getMode() { return mode; }
 }

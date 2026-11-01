@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.stock.infrastructure.api;
 
+import me.singingsandhill.calendar.stock.domain.trade.StockTrade;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.*;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.slf4j.Logger;
@@ -116,11 +117,12 @@ public class KoreaInvestmentApiClient {
     }
 
     /**
-     * 종목명 조회 — 주식기본조회(CTPF1002R, search-stock-info)의 prdt_abrv_name(없으면 prdt_name).
-     * 스크리닝 TR 3종에는 종목명 필드가 없다 (ADR stock/infrastructure/0008). 실패 시 null.
+     * 종목 기본정보 — 주식기본조회(CTPF1002R, search-stock-info)의 종목명(prdt_abrv_name, 없으면 prdt_name)과
+     * 상품 유형(scty_grp_id_cd). 스크리닝 TR 3종에는 종목명 필드가 없다 (ADR stock/infrastructure/0008·algorithm/0011).
+     * 조회 실패 시 null.
      */
-    public String getStockName(String stockCode) {
-        return restClient.getStockName(stockCode);
+    public KisStockInfo getStockInfo(String stockCode) {
+        return restClient.getStockInfo(stockCode);
     }
 
     /**
@@ -242,7 +244,7 @@ public class KoreaInvestmentApiClient {
      * 항상 즉시 체결된 것으로 간주하고 주문 ID 만 픽션으로 만들어 반환한다.
      */
     private KisOrderResponse simulateOrder(String stockCode, int quantity, BigDecimal price, String label) {
-        String orderId = "SIM-" + System.nanoTime();
+        String orderId = StockTrade.SIMULATED_ORDER_ID_PREFIX + System.nanoTime();
         log.info("[{}] {} simulated: {} x {} @ {}",
             stockProperties.getBot().getMode(), label, stockCode, quantity, price);
         return KisOrderResponse.simulated(orderId);

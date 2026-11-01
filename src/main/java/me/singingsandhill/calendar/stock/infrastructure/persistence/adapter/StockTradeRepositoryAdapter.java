@@ -2,6 +2,7 @@ package me.singingsandhill.calendar.stock.infrastructure.persistence.adapter;
 
 import me.singingsandhill.calendar.stock.domain.position.StockCloseReason;
 import me.singingsandhill.calendar.stock.domain.trade.*;
+import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import me.singingsandhill.calendar.stock.infrastructure.persistence.entity.StockTradeJpaEntity;
 import me.singingsandhill.calendar.stock.infrastructure.persistence.repository.StockTradeJpaRepository;
 import org.springframework.stereotype.Repository;
@@ -19,9 +20,11 @@ import java.util.stream.Collectors;
 public class StockTradeRepositoryAdapter implements StockTradeRepository {
 
     private final StockTradeJpaRepository jpaRepository;
+    private final StockProperties stockProperties;
 
-    public StockTradeRepositoryAdapter(StockTradeJpaRepository jpaRepository) {
+    public StockTradeRepositoryAdapter(StockTradeJpaRepository jpaRepository, StockProperties stockProperties) {
         this.jpaRepository = jpaRepository;
+        this.stockProperties = stockProperties;
     }
 
     @Override
@@ -104,11 +107,18 @@ public class StockTradeRepositoryAdapter implements StockTradeRepository {
             trade.getQuantity(),
             trade.getOrderPrice()
         );
+        entity.setOrderedAt(trade.getOrderedAt());
+        entity.setCreatedAt(trade.getCreatedAt());
+        // insert 시점의 봇 모드를 찍는다 — 모드는 프로세스 수명 동안 바뀌지 않는다 (ADR stock/observability/0003)
+        entity.setMode(trade.getMode() != null ? trade.getMode().name() : stockProperties.getBot().getMode().name());
         updateEntity(entity, trade);
         return entity;
     }
 
     private void updateEntity(StockTradeJpaEntity entity, StockTrade trade) {
+        // 선영속화(PENDING-) 뒤 assignBrokerOrderId 로 바뀐 주문번호 — 빠지면 DB 의 매수 주문번호가 영원히
+        // PENDING- 로 남아 가상 예수금 원장·미확인 주문 스윕이 체결 매수를 알아보지 못한다 (ADR stock/modes/0004).
+        entity.setOrderId(trade.getOrderId());
         entity.setPositionId(trade.getPositionId());
         entity.setExecutedQuantity(trade.getExecutedQuantity());
         entity.setExecutedPrice(trade.getExecutedPrice());
@@ -120,36 +130,29 @@ public class StockTradeRepositoryAdapter implements StockTradeRepository {
         entity.setExecutedAt(trade.getExecutedAt());
     }
 
+    /**
+     * 저장된 값을 그대로 복원한다. 팩토리 + markFilled 로 복원하면 시각이 조회 시각이 되고 CANCELLED 가 PENDING 으로
+     * 되살아났다 (ADR stock/observability/0003).
+     */
     private StockTrade toDomain(StockTradeJpaEntity entity) {
-        StockTrade trade;
-        if ("BUY".equals(entity.getTradeType())) {
-            trade = StockTrade.createBuyOrder(
-                entity.getOrderId(),
-                entity.getStockCode(),
-                entity.getQuantity(),
-                entity.getOrderPrice(),
-                "MARKET".equals(entity.getOrderType())
-            );
-        } else {
-            StockCloseReason reason = entity.getExitReason() != null
-                ? StockCloseReason.valueOf(entity.getExitReason())
-                : null;
-            trade = StockTrade.createSellOrder(
-                entity.getOrderId(),
-                entity.getStockCode(),
-                entity.getQuantity(),
-                entity.getOrderPrice(),
-                "MARKET".equals(entity.getOrderType()),
-                reason
-            );
-        }
-        trade.setId(entity.getId());
-        trade.setPositionId(entity.getPositionId());
-
-        if (entity.getExecutedQuantity() != null && entity.getExecutedQuantity() > 0) {
-            trade.markFilled(entity.getExecutedPrice(), entity.getExecutedQuantity(), entity.getFee());
-        }
-
-        return trade;
+        return StockTrade.restore(
+            entity.getId(),
+            entity.getOrderId(),
+            entity.getPositionId(),
+            entity.getStockCode(),
+            StockTradeType.valueOf(entity.getTradeType()),
+            StockOrderType.valueOf(entity.getOrderType()),
+            entity.getQuantity(),
+            entity.getOrderPrice(),
+            entity.getExecutedQuantity(),
+            entity.getExecutedPrice(),
+            entity.getFee(),
+            entity.getStatus() != null ? StockTradeStatus.valueOf(entity.getStatus()) : null,
+            entity.getExitReason() != null ? StockCloseReason.valueOf(entity.getExitReason()) : null,
+            entity.getOrderedAt(),
+            entity.getExecutedAt(),
+            entity.getCreatedAt(),
+            StockTradeMode.fromName(entity.getMode())
+        );
     }
 }

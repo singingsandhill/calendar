@@ -6,7 +6,10 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.math.BigDecimal;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -100,9 +103,22 @@ class StockBotApiSecurityTest {
     @DisplayName("봇 상태 조회(GET)는 공개 대시보드 위젯을 위해 무인증 접근을 유지한다")
     void statusRemainsPubliclyReadable() throws Exception {
         when(botService.getStatus()).thenReturn(new GapPullbackBotService.BotStatus(
-            false, false, false, 0, 0, "MARKET_CLOSED", null, null, 0, null));
+            false, false, false, 0, 0, "MARKET_CLOSED", null, null, 0, null, "PAPER", null));
 
         mockMvc.perform(get("/api/stock/bot/status"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("봇 상태는 운영 모드와 PAPER 가용 예수금을 내려준다 (ADR stock/modes/0004)")
+    void statusExposesModeAndPaperAvailableCash() throws Exception {
+        when(botService.getStatus()).thenReturn(new GapPullbackBotService.BotStatus(
+            true, false, false, 3, 1, "TRADING", null, null, 0, null,
+            "PAPER", new BigDecimal("8997849.70")));
+
+        mockMvc.perform(get("/api/stock/bot/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mode").value("PAPER"))
+                .andExpect(jsonPath("$.paperAvailableCash").value(8997849.70));
     }
 }

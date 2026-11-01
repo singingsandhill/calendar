@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.stock.infrastructure.config;
 
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,7 @@ public class StockProperties {
     private Risk risk = new Risk();
     private Trading trading = new Trading();
     private Universe universe = new Universe();
+    private Paper paper = new Paper();
 
     public static class Kis {
         private String baseUrl = "https://openapi.koreainvestment.com:9443";
@@ -71,6 +73,17 @@ public class StockProperties {
          *              예약된 값이다. 실측에는 PAPER 를 사용할 것.
          */
         private Mode mode = Mode.PAPER;
+        /**
+         * PAPER/BACKTEST 가상 예수금(원). 거래일마다 이 금액에서 시작하고, 그날의 시뮬레이션 체결을
+         * DB 에서 다시 계산해 가용액을 낸다 (PaperCashLedger, ADR stock/modes/0004).
+         * 10% 비율이면 포지션당 100만원 — 최고가대 종목도 수 주 매수 가능하고 max-position-size 에 안 걸린다.
+         */
+        private BigDecimal paperCash = new BigDecimal("10000000");
+        /**
+         * 재시작 후 자동 시작 (ADR stock/modes/0005) — 기본 false(종전: 오픈 포지션이 없으면 관리자 start 필요).
+         * true + enabled 면 기동 시 start(). 오픈 포지션이 있으면 보호 전용 복구(modes/0003)가 우선한다.
+         */
+        private boolean autoStart = false;
 
         public enum Mode { LIVE, PAPER, BACKTEST }
 
@@ -82,6 +95,24 @@ public class StockProperties {
         public void setMaxPositionSize(BigDecimal maxPositionSize) { this.maxPositionSize = maxPositionSize; }
         public Mode getMode() { return mode; }
         public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.PAPER; }
+        public BigDecimal getPaperCash() { return paperCash; }
+        public void setPaperCash(BigDecimal paperCash) { this.paperCash = paperCash; }
+        public boolean isAutoStart() { return autoStart; }
+        public void setAutoStart(boolean autoStart) { this.autoStart = autoStart; }
+    }
+
+    /**
+     * PAPER/BACKTEST 체결 시뮬레이션 (ADR stock/modes/0004).
+     */
+    public static class Paper {
+        /**
+         * 시뮬레이션 체결가를 요청가보다 이만큼(%) 불리하게 잡는다 — 매수는 올리고 매도는 내린 뒤
+         * KRX 호가단위로 반올림(매수 올림·매도 내림). 0.2 = risk.slippage-buffer(0.002) 와 같은 비용 가정.
+         */
+        private BigDecimal slippagePercent = new BigDecimal("0.2");
+
+        public BigDecimal getSlippagePercent() { return slippagePercent; }
+        public void setSlippagePercent(BigDecimal slippagePercent) { this.slippagePercent = slippagePercent; }
     }
 
     public static class Screening {
@@ -211,6 +242,10 @@ public class StockProperties {
         private BigDecimal entryMinStrength = new BigDecimal("100");
         private BigDecimal entryMinImbalance = new BigDecimal("1.0");
         private boolean softEntryValidation = true;
+        /** 주문 단계 진입 실패 후 같은 종목 재시도까지의 최소 간격(초) — 5초 틱마다 API 3회 반복 방지 (ADR infrastructure/0009). */
+        private int openRetryIntervalSeconds = 30;
+        /** 주문 단계 진입 실패 최대 횟수 — 도달하면 ENTRY_FAILED (ORDER_UNCONFIRMED 는 세지 않음). */
+        private int maxOpenAttempts = 3;
 
         public BigDecimal getHighThresholdPercent() { return highThresholdPercent; }
         public void setHighThresholdPercent(BigDecimal highThresholdPercent) { this.highThresholdPercent = highThresholdPercent; }
@@ -230,6 +265,10 @@ public class StockProperties {
         public void setEntryMinImbalance(BigDecimal entryMinImbalance) { this.entryMinImbalance = entryMinImbalance; }
         public boolean isSoftEntryValidation() { return softEntryValidation; }
         public void setSoftEntryValidation(boolean softEntryValidation) { this.softEntryValidation = softEntryValidation; }
+        public int getOpenRetryIntervalSeconds() { return openRetryIntervalSeconds; }
+        public void setOpenRetryIntervalSeconds(int openRetryIntervalSeconds) { this.openRetryIntervalSeconds = openRetryIntervalSeconds; }
+        public int getMaxOpenAttempts() { return maxOpenAttempts; }
+        public void setMaxOpenAttempts(int maxOpenAttempts) { this.maxOpenAttempts = maxOpenAttempts; }
     }
 
     public static class Exit {
@@ -328,6 +367,11 @@ public class StockProperties {
          * KIS 거래량순위(FHPST01710000) 결과 상위 N 을 동적 유니버스로 사용. 0 이면 비활성.
          */
         private int rankApiTop = 0;
+        /**
+         * 스크리닝에서 뺄 상품 유형 (ADR stock/algorithm/0011). 기본 빈 목록 — 데이터가 반대 방향이라 제외는 보류,
+         * PAPER 체결 100건 이상 쌓이면 유형별 리포트로 재평가. 유형을 모르는(null) 종목은 빼지 않는다.
+         */
+        private List<StockProductType> excludedProductTypes = Collections.emptyList();
 
         public List<String> getPinned() { return pinned; }
         public void setPinned(List<String> pinned) {
@@ -339,6 +383,10 @@ public class StockProperties {
         }
         public int getRankApiTop() { return rankApiTop; }
         public void setRankApiTop(int rankApiTop) { this.rankApiTop = rankApiTop; }
+        public List<StockProductType> getExcludedProductTypes() { return excludedProductTypes; }
+        public void setExcludedProductTypes(List<StockProductType> excludedProductTypes) {
+            this.excludedProductTypes = excludedProductTypes != null ? excludedProductTypes : Collections.emptyList();
+        }
     }
 
     public static class Trading {
@@ -418,4 +466,6 @@ public class StockProperties {
     public void setRisk(Risk risk) { this.risk = risk; }
     public Trading getTrading() { return trading; }
     public void setTrading(Trading trading) { this.trading = trading; }
+    public Paper getPaper() { return paper; }
+    public void setPaper(Paper paper) { this.paper = paper; }
 }
