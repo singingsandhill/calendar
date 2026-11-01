@@ -1,18 +1,5 @@
-const errorMessages = {
-    'VALIDATION_ERROR': '입력값이 올바르지 않습니다',
-    'INVALID_ARGUMENT': '잘못된 요청입니다',
-    'INVALID_OWNER_ID': '사용자 ID 형식이 올바르지 않습니다',
-    'OWNER_NOT_FOUND': '사용자를 찾을 수 없습니다',
-    'SCHEDULE_NOT_FOUND': '일정을 찾을 수 없습니다',
-    'DUPLICATE_SCHEDULE': '이미 존재하는 일정입니다',
-    'PARTICIPANT_NOT_FOUND': '참여자를 찾을 수 없습니다',
-    'DUPLICATE_PARTICIPANT': '이미 같은 이름의 참여자가 있습니다',
-    'LOCATION_NOT_FOUND': '장소를 찾을 수 없습니다',
-    'DUPLICATE_LOCATION': '이미 같은 장소가 있습니다',
-    'MENU_NOT_FOUND': '메뉴를 찾을 수 없습니다',
-    'DUPLICATE_MENU': '이미 같은 메뉴가 있습니다',
-    'INTERNAL_ERROR': '서버 오류가 발생했습니다'
-};
+// 오류 코드별 로케일 문구 — fragments/scripts.html 이 메시지 키 api.error.* 로 주입한다
+const errorMessages = window.API_ERROR_MESSAGES;
 
 const api = {
     async request(url, options = {}) {
@@ -25,11 +12,11 @@ const api = {
         const response = await fetch(url, { ...defaultOptions, ...options });
 
         if (!response.ok) {
-            const error = await response.json().catch(() => ({ code: 'UNKNOWN', message: '오류가 발생했습니다' }));
-            const koreanMessage = (error.code === 'VALIDATION_ERROR' && error.message)
+            const error = await response.json().catch(() => ({ code: 'UNKNOWN' }));
+            const message = (error.code === 'VALIDATION_ERROR' && error.message)
                 ? error.message
-                : (errorMessages[error.code] || error.message || '오류가 발생했습니다');
-            throw new Error(koreanMessage);
+                : (errorMessages[error.code] || error.message || errorMessages.UNKNOWN);
+            throw new Error(message);
         }
 
         if (response.status === 204) {
