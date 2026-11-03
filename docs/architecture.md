@@ -517,12 +517,13 @@ WATCHING ──────► HIGH_FORMED ──────► PULLBACK ──
 | `ENTERED` | 포지션 보유 중 | 매수 주문 체결 |
 | `EXITED` | 포지션 청산 완료 | 익절/손절/시간청산 |
 | `FILTERED_OUT` | 감시 제외 | 고점 대비 5.0% 초과 하락 (`entry.pullback-max-percent`) |
+| `ENTRY_FAILED` | 진입 실패 — 당일 재시도 중단 | ENTRY_READY 에서 주문 단계 실패(시세 불가·거래 불가·수량 0·예외)가 `entry.max-open-attempts`(3)회 — 실패 간 재시도 간격 `entry.open-retry-interval-seconds`(30초), ORDER_UNCONFIRMED 는 세지 않음 (ADR stock/infrastructure/0009) |
 
 **헬퍼 메서드**:
 - `isActive()`: WATCHING, HIGH_FORMED, PULLBACK, ENTRY_READY
 - `canEnter()`: ENTRY_READY만
 - `isHolding()`: ENTERED만
-- `isTerminal()`: EXITED, FILTERED_OUT
+- `isTerminal()`: EXITED, FILTERED_OUT, ENTRY_FAILED
 
 ### 시그널 타입
 

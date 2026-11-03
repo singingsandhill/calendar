@@ -44,7 +44,13 @@ public class Stock {
     private LocalDateTime pullbackStartAt;
     private BigDecimal entryPrice;
 
-    private final LocalDateTime createdAt;
+    // 진입(주문 단계) 실패 추적 — ADR stock/infrastructure/0009
+    private int entryFailCount;
+    private EntryOutcome lastEntryFailReason;
+    private LocalDateTime lastEntryFailAt;
+    private StockProductType productType;
+
+    private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public Stock(String stockCode, String stockName, LocalDate tradingDate) {
@@ -280,6 +286,54 @@ public class Stock {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * 진입(주문 단계) 실패 기록 (ADR stock/infrastructure/0009).
+     *
+     * 사유·시각은 매번 남기고, 재시도 횟수는 {@link EntryOutcome#countsAsAttempt()} 인 실패만 센다 —
+     * ORDER_UNCONFIRMED 는 접수 여부 판정을 미확인 주문 스윕이 하므로 횟수·상태를 건드리지 않는다.
+     * 센 횟수가 maxAttempts 에 닿으면 ENTRY_READY → ENTRY_FAILED (그날 재시도 중단).
+     *
+     * @return 이번 기록으로 ENTRY_FAILED 로 전이했으면 true
+     */
+    public boolean recordEntryFailure(EntryOutcome reason, LocalDateTime at, int maxAttempts) {
+        this.lastEntryFailReason = reason;
+        this.lastEntryFailAt = at;
+        this.updatedAt = LocalDateTime.now();
+        if (!reason.countsAsAttempt()) {
+            return false;
+        }
+        this.entryFailCount++;
+        if (entryFailCount >= maxAttempts && state == StockState.ENTRY_READY) {
+            this.state = StockState.ENTRY_FAILED;
+            return true;
+        }
+        return false;
+    }
+
+    /** 직전 실패로부터 재시도 간격이 지났는지 — 실패 이력이 없으면 항상 true. */
+    public boolean isEntryRetryDue(LocalDateTime now, int retryIntervalSeconds) {
+        return lastEntryFailAt == null || !now.isBefore(lastEntryFailAt.plusSeconds(retryIntervalSeconds));
+    }
+
+    /**
+     * 영속화된 생성·수정 시각 복원 (인프라 어댑터 전용) — 다른 복원·상태 갱신이 updatedAt 을 now 로 바꾸므로
+     * 마지막에 부른다. 빠지면 감시 종목 createdAt 이 매 조회 시각이 된다 (ADR stock/observability/0003).
+     */
+    public void restoreAuditTimestamps(LocalDateTime createdAt, LocalDateTime updatedAt) {
+        if (createdAt != null) {
+            this.createdAt = createdAt;
+        }
+        this.updatedAt = updatedAt != null ? updatedAt : this.createdAt;
+    }
+
+    /** 영속화된 진입 실패 추적 필드 복원 (인프라 어댑터 전용). */
+    public void restoreEntryFailure(int entryFailCount, EntryOutcome lastEntryFailReason,
+                                    LocalDateTime lastEntryFailAt) {
+        this.entryFailCount = entryFailCount;
+        this.lastEntryFailReason = lastEntryFailReason;
+        this.lastEntryFailAt = lastEntryFailAt;
+    }
+
     // ========== Price Updates ==========
 
     /**
@@ -340,6 +394,11 @@ public class Stock {
     public BigDecimal getPullbackLow() { return pullbackLow; }
     public LocalDateTime getPullbackStartAt() { return pullbackStartAt; }
     public BigDecimal getEntryPrice() { return entryPrice; }
+    public int getEntryFailCount() { return entryFailCount; }
+    public EntryOutcome getLastEntryFailReason() { return lastEntryFailReason; }
+    public LocalDateTime getLastEntryFailAt() { return lastEntryFailAt; }
+    public StockProductType getProductType() { return productType; }
+    public void setProductType(StockProductType productType) { this.productType = productType; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

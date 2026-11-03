@@ -147,6 +147,18 @@ public class StockMailService {
 
         appendCountTable(sb, "청산 사유", r.closeReasonCounts());
         appendCountTable(sb, "진입 거절 사유", r.rejectReasonCounts());
+        appendCountTable(sb, "진입 실패(주문 단계)", r.entryFailureCounts());
+
+        // 상품 유형별 (ADR stock/algorithm/0011) — ETF·ETN 제외 재평가의 근거
+        if (!r.productTypeBreakdown().isEmpty()) {
+            sb.append("<h3>상품 유형별</h3><table border='1' cellpadding='4' style='border-collapse:collapse;'>");
+            sb.append("<tr><th>유형</th><th>감시</th><th>진입 시도</th><th>청산</th><th>승</th><th>실현손익</th></tr>");
+            r.productTypeBreakdown().forEach((type, b) -> sb.append("<tr><td>").append(type)
+                .append("</td><td>").append(b.watched()).append("</td><td>").append(b.attempts())
+                .append("</td><td>").append(b.closed()).append("</td><td>").append(b.wins())
+                .append("</td><td>").append(formatWon(b.realizedPnl())).append("원</td></tr>"));
+            sb.append("</table>");
+        }
 
         if (!r.pnlByStock().isEmpty()) {
             sb.append("<h3>종목별 실현손익</h3><ul>");

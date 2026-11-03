@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.stock.infrastructure.persistence;
 
+import me.singingsandhill.calendar.stock.domain.stock.EntryOutcome;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
 import me.singingsandhill.calendar.stock.domain.stock.StockState;
 import me.singingsandhill.calendar.stock.infrastructure.persistence.adapter.StockRepositoryAdapter;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,5 +53,25 @@ class StockRepositoryAdapterTest {
         assertThat(reloaded.getPullbackLow()).isEqualByComparingTo("70700");
         assertThat(reloaded.getPullbackStartAt()).isEqualTo(stock.getPullbackStartAt());
         assertThat(reloaded.getEntryPrice()).isEqualByComparingTo("70900");
+    }
+
+    @Test
+    void saveRoundTripPreservesEntryFailureFields() {
+        // ADR stock/infrastructure/0009 — 5초 틱마다 재로딩되므로 복원이 빠지면 재시도 간격·횟수가 매 틱 초기화된다.
+        Stock stock = new Stock("000660", "SK하이닉스", LocalDate.of(2026, 10, 21));
+        stock.markEntryReady();
+        LocalDateTime failedAt = LocalDateTime.of(2026, 10, 21, 9, 41, 5);
+        stock.recordEntryFailure(EntryOutcome.SIZE_ZERO, failedAt.minusSeconds(30), 2);
+        stock.recordEntryFailure(EntryOutcome.QUOTE_UNAVAILABLE, failedAt, 2);
+
+        when(jpaRepository.save(any(StockJpaEntity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Stock reloaded = adapter.save(stock);
+
+        assertThat(reloaded.getState()).isEqualTo(StockState.ENTRY_FAILED);
+        assertThat(reloaded.getEntryFailCount()).isEqualTo(2);
+        assertThat(reloaded.getLastEntryFailReason()).isEqualTo(EntryOutcome.QUOTE_UNAVAILABLE);
+        assertThat(reloaded.getLastEntryFailAt()).isEqualTo(failedAt);
     }
 }

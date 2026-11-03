@@ -86,6 +86,20 @@ public class StockJpaEntity {
     @Column(name = "entry_price", precision = 15, scale = 2)
     private BigDecimal entryPrice;
 
+    // 진입(주문 단계) 실패 추적 — nullable 추가 컬럼 (ADR stock/infrastructure/0009)
+    @Column(name = "entry_fail_count")
+    private Integer entryFailCount;
+
+    @Column(name = "last_entry_fail_reason", length = 30)
+    private String lastEntryFailReason;
+
+    @Column(name = "last_entry_fail_at")
+    private LocalDateTime lastEntryFailAt;
+
+    /** STOCK / ETF / ETN — nullable, 과거 행·조회 실패는 null (ADR stock/algorithm/0011). */
+    @Column(name = "product_type", length = 10)
+    private String productType;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -155,6 +169,14 @@ public class StockJpaEntity {
     public void setPullbackStartAt(LocalDateTime pullbackStartAt) { this.pullbackStartAt = pullbackStartAt; }
     public BigDecimal getEntryPrice() { return entryPrice; }
     public void setEntryPrice(BigDecimal entryPrice) { this.entryPrice = entryPrice; }
+    public Integer getEntryFailCount() { return entryFailCount; }
+    public void setEntryFailCount(Integer entryFailCount) { this.entryFailCount = entryFailCount; }
+    public String getLastEntryFailReason() { return lastEntryFailReason; }
+    public void setLastEntryFailReason(String lastEntryFailReason) { this.lastEntryFailReason = lastEntryFailReason; }
+    public LocalDateTime getLastEntryFailAt() { return lastEntryFailAt; }
+    public void setLastEntryFailAt(LocalDateTime lastEntryFailAt) { this.lastEntryFailAt = lastEntryFailAt; }
+    public String getProductType() { return productType; }
+    public void setProductType(String productType) { this.productType = productType; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

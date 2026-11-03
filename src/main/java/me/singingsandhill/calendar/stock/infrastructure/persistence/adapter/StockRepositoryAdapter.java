@@ -1,6 +1,8 @@
 package me.singingsandhill.calendar.stock.infrastructure.persistence.adapter;
 
+import me.singingsandhill.calendar.stock.domain.stock.EntryOutcome;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
 import me.singingsandhill.calendar.stock.domain.stock.StockRepository;
 import me.singingsandhill.calendar.stock.domain.stock.StockState;
 import me.singingsandhill.calendar.stock.infrastructure.persistence.entity.StockJpaEntity;
@@ -144,6 +146,11 @@ public class StockRepositoryAdapter implements StockRepository {
         entity.setPullbackLow(stock.getPullbackLow());
         entity.setPullbackStartAt(stock.getPullbackStartAt());
         entity.setEntryPrice(stock.getEntryPrice());
+        entity.setEntryFailCount(stock.getEntryFailCount());
+        entity.setLastEntryFailReason(stock.getLastEntryFailReason() != null
+            ? stock.getLastEntryFailReason().name() : null);
+        entity.setLastEntryFailAt(stock.getLastEntryFailAt());
+        entity.setProductType(stock.getProductType() != null ? stock.getProductType().name() : null);
     }
 
     private Stock toDomain(StockJpaEntity entity) {
@@ -165,6 +172,13 @@ public class StockRepositoryAdapter implements StockRepository {
         stock.updateState(StockState.valueOf(entity.getState()));
         stock.restorePersistedState(entity.getHighAfterOpen(), entity.getHighFormedAt(),
             entity.getPullbackLow(), entity.getPullbackStartAt(), entity.getEntryPrice());
+        stock.restoreEntryFailure(
+            entity.getEntryFailCount() != null ? entity.getEntryFailCount() : 0,
+            entity.getLastEntryFailReason() != null ? EntryOutcome.valueOf(entity.getLastEntryFailReason()) : null,
+            entity.getLastEntryFailAt());
+        stock.setProductType(entity.getProductType() != null ? StockProductType.valueOf(entity.getProductType()) : null);
+        // 마지막에 — 위 updateState 가 updatedAt 을 now 로 바꾼다 (ADR stock/observability/0003)
+        stock.restoreAuditTimestamps(entity.getCreatedAt(), entity.getUpdatedAt());
         return stock;
     }
 }

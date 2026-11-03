@@ -4,6 +4,7 @@ import jakarta.mail.Multipart;
 import jakarta.mail.Part;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
+import me.singingsandhill.calendar.stock.application.service.DailyPerformanceReportService;
 import me.singingsandhill.calendar.stock.application.service.StockMailService;
 import me.singingsandhill.calendar.stock.application.service.UniverseBuilder;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
@@ -18,6 +19,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -148,6 +150,51 @@ class StockMailServiceTest {
         assertThat(html).contains(">삼성전자</td>");
         // 종목명 칸까지 코드였던 회귀는 코드 셀 2회 등장으로 드러난다
         assertThat(html).containsOnlyOnce(">005930</td>");
+    }
+
+    /**
+     * ADR stock/infrastructure/0009 — 주문 단계 진입 실패 사유가 리포트 메일에 보여야 0체결 원인을
+     * 로그 없이 바로 안다 (51거래일 0체결은 SIZE_ZERO 였다).
+     */
+    @Test
+    void dailyReportListsOrderStageEntryFailures() throws Exception {
+        when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
+        StockMailService service = new StockMailService(mailSender, mailEnabledProps());
+        DailyPerformanceReportService.DailyReport report = new DailyPerformanceReportService.DailyReport(
+            LocalDate.of(2026, 10, 21), 0, 0, 0, 0, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, 3,
+            Map.of(), Map.of(), Map.of("SIZE_ZERO", 2L), Map.of(), Map.of());
+
+        service.sendDailyPerformanceReport(report);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender).send(captor.capture());
+        MimeMessage message = captor.getValue();
+        message.saveChanges();
+        StringBuilder html = new StringBuilder();
+        collect(message, new ArrayList<>(), html);
+        assertThat(html.toString()).contains("진입 실패(주문 단계)").contains("SIZE_ZERO: 2건");
+    }
+
+    /** ADR stock/algorithm/0011 — 상품 유형별 감시·시도·청산·손익이 메일에 보여야 ETF·ETN 제외 재평가 근거가 쌓인다. */
+    @Test
+    void dailyReportBreaksDownByProductType() throws Exception {
+        when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
+        StockMailService service = new StockMailService(mailSender, mailEnabledProps());
+        DailyPerformanceReportService.DailyReport report = new DailyPerformanceReportService.DailyReport(
+            LocalDate.of(2026, 10, 23), 1, 0, 1, 0, new java.math.BigDecimal("100"), new java.math.BigDecimal("4900"), 1,
+            Map.of(), Map.of(), Map.of(), Map.of(), Map.of("ETF",
+                new DailyPerformanceReportService.ProductTypeBreakdown(3, 1, 1, 1, new java.math.BigDecimal("4900"))));
+
+        service.sendDailyPerformanceReport(report);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender).send(captor.capture());
+        MimeMessage message = captor.getValue();
+        message.saveChanges();
+        StringBuilder html = new StringBuilder();
+        collect(message, new ArrayList<>(), html);
+        assertThat(html.toString()).contains("상품 유형별").contains("<td>ETF</td><td>3</td><td>1</td><td>1</td><td>1</td>")
+            .contains("<td>4900원</td>");
     }
 
     private static void collect(Part part, List<String> fileNames, StringBuilder html) throws Exception {

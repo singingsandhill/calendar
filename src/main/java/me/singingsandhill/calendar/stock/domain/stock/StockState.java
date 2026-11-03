@@ -5,6 +5,7 @@ package me.singingsandhill.calendar.stock.domain.stock;
  *
  * WATCHING → HIGH_FORMED → PULLBACK → ENTRY_READY → ENTERED → EXITED
  *                                ↘ FILTERED_OUT (조건 미달)
+ *                                              ↘ ENTRY_FAILED (주문 단계 실패 max-open-attempts 회)
  */
 public enum StockState {
 
@@ -41,7 +42,13 @@ public enum StockState {
     /**
      * 조건 미달로 제외 (고점 대비 -5.0% 초과 하락 등)
      */
-    FILTERED_OUT("제외");
+    FILTERED_OUT("제외"),
+
+    /**
+     * 진입 실패 — 주문 단계 실패가 stock.entry.max-open-attempts 회에 도달해 당일 재시도를 멈춤
+     * (ADR stock/infrastructure/0009). 활성 감시 대상이 아니다.
+     */
+    ENTRY_FAILED("진입실패");
 
     private final String displayName;
 
@@ -78,6 +85,6 @@ public enum StockState {
      * 종료 상태 여부
      */
     public boolean isTerminal() {
-        return this == EXITED || this == FILTERED_OUT;
+        return this == EXITED || this == FILTERED_OUT || this == ENTRY_FAILED;
     }
 }

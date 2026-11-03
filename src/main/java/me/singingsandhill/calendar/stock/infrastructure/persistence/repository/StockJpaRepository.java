@@ -22,6 +22,7 @@ public interface StockJpaRepository extends JpaRepository<StockJpaEntity, Long> 
 
     List<StockJpaEntity> findByTradingDateOrderByGapPercentDesc(LocalDate tradingDate);
 
+    // StockState.isActive() 와 같은 집합 — ENTRY_FAILED(진입 실패, ADR stock/infrastructure/0009)는 활성이 아니다.
     @Query("SELECT s FROM StockJpaEntity s WHERE s.tradingDate = :tradingDate " +
            "AND s.state IN ('WATCHING', 'HIGH_FORMED', 'PULLBACK', 'ENTRY_READY')")
     List<StockJpaEntity> findActiveStocks(@Param("tradingDate") LocalDate tradingDate);

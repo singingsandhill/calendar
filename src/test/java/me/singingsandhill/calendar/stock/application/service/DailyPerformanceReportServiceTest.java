@@ -5,6 +5,12 @@ import me.singingsandhill.calendar.stock.domain.position.StockPosition;
 import me.singingsandhill.calendar.stock.domain.position.StockPositionRepository;
 import me.singingsandhill.calendar.stock.domain.screening.EntryAttempt;
 import me.singingsandhill.calendar.stock.domain.screening.EntryAttemptRepository;
+import me.singingsandhill.calendar.stock.domain.stock.EntryOutcome;
+import me.singingsandhill.calendar.stock.domain.stock.Stock;
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
+import me.singingsandhill.calendar.stock.domain.stock.StockRepository;
+import me.singingsandhill.calendar.stock.domain.trade.StockTradeMode;
+import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -33,13 +39,26 @@ class DailyPerformanceReportServiceTest {
     private final StockPositionRepository positionRepository = mock(StockPositionRepository.class);
     private final EntryAttemptRepository entryAttemptRepository = mock(EntryAttemptRepository.class);
     private final StockMailService mailService = mock(StockMailService.class);
+    private final StockRepository stockRepository = mock(StockRepository.class);
 
-    private final DailyPerformanceReportService service =
-        new DailyPerformanceReportService(positionRepository, entryAttemptRepository, mailService);
+    private final StockProperties properties = new StockProperties();   // 기본 모드 PAPER
+
+    private final DailyPerformanceReportService service = new DailyPerformanceReportService(
+        positionRepository, entryAttemptRepository, mailService, stockRepository, properties);
 
     private StockPosition closedPosition(String code, String entry, String exit, StockCloseReason reason) {
-        StockPosition p = StockPosition.open(code, TODAY, new BigDecimal(entry), 10,
+        return closedPosition(code, entry, exit, reason, StockTradeMode.PAPER);
+    }
+
+    private StockPosition closedPosition(String code, String entry, String exit, StockCloseReason reason,
+                                         StockTradeMode mode) {
+        StockPosition opened = StockPosition.open(code, TODAY, new BigDecimal(entry), 10,
             new BigDecimal(entry).multiply(new BigDecimal("0.98")), new BigDecimal(entry));
+        StockPosition p = StockPosition.reconstitute(null, null, code, TODAY, opened.getStatus(),
+            opened.getEntryPrice(), opened.getEntryQuantity(), opened.getEntryAmount(), opened.getEnteredAt(),
+            opened.getRemainingQuantity(), null, false, false, false, opened.getDayHighPrice(),
+            opened.getStopLossPrice(), null, null, false, BigDecimal.ZERO, null, null, null,
+            null, null, null, null, mode);
         p.closeRemaining(new BigDecimal(exit), reason, FEE, TAX);
         return p;
     }
@@ -70,6 +89,36 @@ class DailyPerformanceReportServiceTest {
                 .add(closedPosition("035420", "100000", "100500", StockCloseReason.TIME_EXIT).getRealizedPnl()));
     }
 
+    /** ADR stock/algorithm/0011 — ETF·ETN 제외 판단(보류)의 근거를 매일 쌓는다. 유형 모름은 UNKNOWN. */
+    @Test
+    void breaksDownByProductType() {
+        Stock stock = new Stock("005930", "삼성전자", TODAY);
+        stock.setProductType(StockProductType.STOCK);
+        Stock etf = new Stock("069500", "KODEX 200", TODAY);
+        etf.setProductType(StockProductType.ETF);
+        when(stockRepository.findByTradingDate(TODAY)).thenReturn(List.of(stock, etf, new Stock("088980", "맥쿼리인프라", TODAY)));
+        when(positionRepository.findByTradingDate(TODAY)).thenReturn(List.of(
+            closedPosition("005930", "100000", "98800", StockCloseReason.STOP_LOSS),
+            closedPosition("069500", "10000", "10500", StockCloseReason.TP1)));
+        when(entryAttemptRepository.findByTradingDate(TODAY)).thenReturn(List.of(
+            rejected("069500", "strength"), rejected("088980", "imbalance")));
+
+        DailyPerformanceReportService.DailyReport report = service.buildReport(TODAY);
+
+        assertThat(report.productTypeBreakdown()).containsOnlyKeys("STOCK", "ETF", "UNKNOWN");
+        DailyPerformanceReportService.ProductTypeBreakdown stocks = report.productTypeBreakdown().get("STOCK");
+        assertThat(stocks.watched()).isEqualTo(1);
+        assertThat(stocks.attempts()).isZero();
+        assertThat(stocks.closed()).isEqualTo(1);
+        assertThat(stocks.wins()).isZero();
+        assertThat(stocks.realizedPnl()).isNegative();
+        DailyPerformanceReportService.ProductTypeBreakdown etfs = report.productTypeBreakdown().get("ETF");
+        assertThat(etfs.attempts()).isEqualTo(1);
+        assertThat(etfs.wins()).isEqualTo(1);
+        assertThat(etfs.realizedPnl()).isPositive();
+        assertThat(report.productTypeBreakdown().get("UNKNOWN").attempts()).isEqualTo(1);
+    }
+
     @Test
     void groupsCloseReasonsAndRejectReasons() {
         when(positionRepository.findByTradingDate(TODAY)).thenReturn(List.of(
@@ -97,6 +146,43 @@ class DailyPerformanceReportServiceTest {
         service.sendDailyReport(TODAY);
 
         verify(mailService).sendDailyPerformanceReport(any());
+    }
+
+    @Test
+    void countsOrderStageEntryFailuresByLastReason() {
+        // ADR stock/infrastructure/0009 — 0체결 원인(SIZE_ZERO 등)을 리포트에서 바로 본다.
+        when(positionRepository.findByTradingDate(TODAY)).thenReturn(List.of());
+        when(entryAttemptRepository.findByTradingDate(TODAY)).thenReturn(List.of());
+        when(stockRepository.findByTradingDate(TODAY)).thenReturn(List.of(
+            failedStock("111111", EntryOutcome.SIZE_ZERO), failedStock("222222", EntryOutcome.SIZE_ZERO),
+            failedStock("333333", EntryOutcome.QUOTE_UNAVAILABLE),
+            new Stock("444444", "무실패", TODAY)));
+
+        DailyPerformanceReportService.DailyReport report = service.buildReport(TODAY);
+
+        assertThat(report.entryFailureCounts()).containsEntry("SIZE_ZERO", 2L)
+            .containsEntry("QUOTE_UNAVAILABLE", 1L).hasSize(2);
+        assertThat(report.hasActivity()).isTrue();
+    }
+
+    private Stock failedStock(String code, EntryOutcome reason) {
+        Stock stock = new Stock(code, code, TODAY);
+        stock.recordEntryFailure(reason, TODAY.atTime(9, 40), 3);
+        return stock;
+    }
+
+    @Test
+    void reportsOnlyPositionsOfCurrentBotMode() {
+        // ADR stock/observability/0003 — PAPER 실측과 LIVE 손익을 한 리포트에 합산하지 않는다.
+        when(positionRepository.findByTradingDate(TODAY)).thenReturn(List.of(
+            closedPosition("005930", "100000", "105000", StockCloseReason.TP1, StockTradeMode.PAPER),
+            closedPosition("000660", "100000", "98800", StockCloseReason.STOP_LOSS, StockTradeMode.LIVE)));
+        when(entryAttemptRepository.findByTradingDate(TODAY)).thenReturn(List.of());
+
+        DailyPerformanceReportService.DailyReport report = service.buildReport(TODAY);
+
+        assertThat(report.closedCount()).isEqualTo(1);
+        assertThat(report.winCount()).isEqualTo(1);
     }
 
     @Test
