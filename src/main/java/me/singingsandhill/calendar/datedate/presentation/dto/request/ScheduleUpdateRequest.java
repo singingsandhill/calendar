@@ -6,12 +6,12 @@ import jakarta.validation.constraints.Size;
 import me.singingsandhill.calendar.datedate.domain.schedule.Schedule;
 
 public record ScheduleUpdateRequest(
-        @Min(value = 4, message = "주 수는 4에서 6 사이여야 합니다")
-        @Max(value = 6, message = "주 수는 4에서 6 사이여야 합니다")
+        @Min(value = 4, message = "{validation.schedule.weeks.updateRange}")
+        @Max(value = 6, message = "{validation.schedule.weeks.updateRange}")
         Integer weeks,
 
         // null = 그대로, "" = 지우기 (ADR datedate/domain/0011)
-        @Size(max = Schedule.MAX_DESCRIPTION_LENGTH, message = "설명은 500자 이내로 입력해주세요")
+        @Size(max = Schedule.MAX_DESCRIPTION_LENGTH, message = "{validation.schedule.description.size}")
         String description
 ) {
 }

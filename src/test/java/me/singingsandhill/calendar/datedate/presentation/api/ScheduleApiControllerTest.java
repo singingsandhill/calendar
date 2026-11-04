@@ -165,4 +165,25 @@ class ScheduleApiControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
+
+    @Test
+    @DisplayName("검증 오류 문구는 요청 로케일을 따른다 — en 은 영어, ko 는 기존 한국어 그대로")
+    void updateSchedule_descriptionTooLong_messageFollowsLocale() throws Exception {
+        when(ownerRepository.existsById("test-user")).thenReturn(true);
+        String body = "{\"description\": \"" + "가".repeat(Schedule.MAX_DESCRIPTION_LENGTH + 1) + "\"}";
+
+        mockMvc.perform(patch("/api/owners/test-user/schedules/2025/12")
+                        .header("Accept-Language", "en")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Description must be 500 characters or fewer"));
+
+        mockMvc.perform(patch("/api/owners/test-user/schedules/2025/12")
+                        .header("Accept-Language", "ko")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("설명은 500자 이내로 입력해주세요"));
+    }
 }
