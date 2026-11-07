@@ -4,11 +4,14 @@ import me.singingsandhill.calendar.trading.domain.account.AccountSnapshot;
 import me.singingsandhill.calendar.trading.domain.account.AccountSnapshotRepository;
 import me.singingsandhill.calendar.trading.domain.event.TradingEventLevel;
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
+import me.singingsandhill.calendar.trading.domain.position.EntrySource;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
+import me.singingsandhill.calendar.trading.domain.regime.MarketRegime;
 import me.singingsandhill.calendar.trading.domain.signal.Signal;
 import me.singingsandhill.calendar.trading.domain.signal.SignalType;
 import me.singingsandhill.calendar.trading.domain.trade.Trade;
+import me.singingsandhill.calendar.trading.domain.trade.TradeMode;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.domain.trade.TradeStatus;
 import me.singingsandhill.calendar.trading.domain.trade.TradeType;
@@ -76,6 +79,9 @@ public class TradingBotService {
     private final AccountSnapshotRepository accountSnapshotRepository;
     // P0-3: 영속화만 짧은 트랜잭션으로 감싼다. 주문 HTTP/sleep 은 트랜잭션 밖.
     private final TransactionTemplate txTemplate;
+    private final DailyRegimeService dailyRegimeService;
+    /** 레짐 필터 차단·축소 이벤트는 같은 사유당 1시간에 1회로 요약 (ADR trading/risk/0007). */
+    private final EventThrottle regimeEventThrottle = new EventThrottle(Duration.ofHours(1));
 
     public TradingBotService(CandleService candleService,
                              SignalService signalService,
@@ -89,8 +95,10 @@ public class TradingBotService {
                              TradingEventService tradingEventService,
                              TradingCircuitBreaker circuitBreaker,
                              AccountSnapshotRepository accountSnapshotRepository,
-                             PlatformTransactionManager transactionManager) {
+                             PlatformTransactionManager transactionManager,
+                             DailyRegimeService dailyRegimeService) {
         this.txTemplate = new TransactionTemplate(transactionManager);
+        this.dailyRegimeService = dailyRegimeService;
         this.candleService = candleService;
         this.signalService = signalService;
         this.indicatorService = indicatorService;
@@ -108,6 +116,8 @@ public class TradingBotService {
     /**
      * 기동 시 보호 전용 자동 재개 — 오픈 포지션이 있는데 봇이 멈춰 있으면 손절·익절·트레일링
      * 감시가 전부 죽는다. 리스크 루프·스윕만 살리고 신규 매매는 차단한다 (ADR trading/modes/0003).
+     * 먼저 서킷브레이커 연속손실을 당일 청산 이력으로 복원하고, 오픈 포지션이 없으면 {@code bot.auto-start}
+     * (기본 false)일 때만 완전 시작한다 — 오픈 포지션이 있으면 보호 복구가 이긴다 (ADR stock/modes/0005).
      */
     @EventListener(ApplicationReadyEvent.class)
     public void resumeProtectionOnStartup() {
@@ -115,8 +125,16 @@ public class TradingBotService {
             return;
         }
         String market = tradingProperties.getBot().getMarket();
+        int restoredLosses = restoreCircuitBreaker(market);
         long openPositions = positionRepository.countByMarketAndStatus(market, PositionStatus.OPEN);
         if (openPositions == 0) {
+            if (tradingProperties.getBot().isAutoStart()) {
+                log.info("trading.bot.auto-start — 재시작 후 자동 시작 (서킷브레이커 연속손실 {}회 복원)", restoredLosses);
+                tradingEventService.record(TradingEventLevel.NOTICE, "BOT_AUTO_STARTED", market,
+                        String.format("재시작 후 자동 시작 (trading.bot.auto-start) — 서킷브레이커 연속손실 %d회 복원(당일 청산 이력)",
+                                restoredLosses));
+                start();
+            }
             return;
         }
 
@@ -126,10 +144,10 @@ public class TradingBotService {
         recoveryMode.set(true);
 
         log.warn("오픈 포지션 {}건 발견 — 보호 전용 모드로 자동 재개 (리스크 관리·스윕만, "
-                + "신규 매매는 관리자 start() 필요). 서킷브레이커 연속손실 카운터는 재시작으로 리셋됨", openPositions);
+                + "신규 매매는 관리자 start() 필요). 서킷브레이커 연속손실 {}회 복원(당일 청산 이력)", openPositions, restoredLosses);
         tradingEventService.record(TradingEventLevel.WARNING, "RECOVERY_RESUMED", market,
                 String.format("재시작 복구 — 보호 전용 자동 재개 (오픈 포지션 %d건). "
-                        + "신규 매매는 start() 필요. 서킷브레이커 연속손실 카운터 리셋됨", openPositions));
+                        + "신규 매매는 start() 필요. 서킷브레이커 연속손실 %d회 복원(당일 청산 이력)", openPositions, restoredLosses));
 
         // §8-G 기동 스윕 미러 — 재시작 공백 동안 발생한 미결(SUBMITTED) 갭 복구.
         // 캔들 초기화는 여기서 하지 않는다: ApplicationReadyEvent 리스너는 동기 실행이라 느린
@@ -140,6 +158,23 @@ public class TradingBotService {
         } catch (Exception e) {
             log.error("Recovery submitted-order sweep failed", e);
         }
+    }
+
+    /**
+     * 당일(JVM 날짜 — 일일 손실 가드와 같은 창) 청산 포지션 중 현재 모드 것을 청산 시각 순으로 서킷브레이커에 다시 센다
+     * (ADR stock/modes/0005). 자정을 넘긴 스트릭은 복원하지 않는다.
+     */
+    private int restoreCircuitBreaker(String market) {
+        TradeMode mode = TradeMode.fromName(tradingProperties.getBot().getMode().name());
+        List<BigDecimal> outcomes = positionRepository.findByMarketAndStatusAndClosedAtBetween(
+                        market, PositionStatus.CLOSED, LocalDate.now().atStartOfDay(), LocalDateTime.now())
+                .stream()
+                .filter(p -> p.getClosedAt() != null && mode.includes(p.getMode()))
+                .sorted(Comparator.comparing(Position::getClosedAt))
+                .map(Position::getRealizedPnl)
+                .toList();
+        circuitBreaker.restoreFrom(outcomes);
+        return circuitBreaker.getConsecutiveLosses();
     }
 
     /**
@@ -219,6 +254,7 @@ public class TradingBotService {
      * 봇 상태 조회
      */
     public BotStatus getStatus() {
+        MarketRegime regime = dailyRegimeService != null ? dailyRegimeService.currentRegime() : null;
         return new BotStatus(
                 running.get(),
                 paused.get(),
@@ -226,7 +262,8 @@ public class TradingBotService {
                 tradingProperties.getBot().getMarket(),
                 lastLoopAt,
                 lastTradeTime,
-                lastError
+                lastError,
+                (regime != null ? regime : MarketRegime.UNKNOWN).name()
         );
     }
 
@@ -461,6 +498,12 @@ public class TradingBotService {
             return;
         }
 
+        // 일봉 레짐 필터 (ADR trading/risk/0007) — 신호 매수에만. 기본 OFF 면 레짐을 조회하지도 않는다.
+        double regimeSizeMultiplier = regimeSizeMultiplier(market);
+        if (regimeSizeMultiplier <= 0) {
+            return;
+        }
+
         BithumbAccountResponse krwAccount = bithumbApiClient.getKrwBalance();
         if (krwAccount == null) {
             log.warn("Cannot get KRW balance");
@@ -497,8 +540,8 @@ public class TradingBotService {
             return;
         }
 
-        // ATR 기반 동적 비율 계산 (변동성에 따라 15~35% 조정)
-        double orderRatio = calculateDynamicOrderRatio(market);
+        // ATR 기반 동적 비율 계산 (변동성에 따라 15~35% 조정), BEAR 축소 모드면 레짐 배수 적용
+        double orderRatio = calculateDynamicOrderRatio(market) * regimeSizeMultiplier;
         BigDecimal orderAmount = availableKrw.multiply(BigDecimal.valueOf(orderRatio))
                 .setScale(0, RoundingMode.DOWN);
         // 실제 적용된 비중을 Trade 에 남긴다 — 보간값은 double 이라 0.30000000000000004 로 나오므로
@@ -591,6 +634,7 @@ public class TradingBotService {
             Position position = Position.open(
                     market, entryPrice, volume, stopLossPrice, takeProfitPrice, fee
             );
+            position.setEntrySource(EntrySource.SIGNAL);   // ADR trading/observability/0004
 
             // P0-3: 영속화만 짧은 트랜잭션 (Trade+Position 원자적 저장). 주문 HTTP/sleep 은 이미 위에서 완료.
             final Trade tradeToPersist = trade;
@@ -616,6 +660,47 @@ public class TradingBotService {
             tradingEventService.record(TradingEventLevel.WARNING, "BUY_FAILED", market,
                     "매수 실패: " + e.getClass().getSimpleName() + " " + e.getMessage());
         }
+    }
+
+    /**
+     * 일봉 레짐 필터 (ADR trading/risk/0007, 4-B) — 신호 매수 비중 배수. 0 이면 이번 매수 차단.
+     * OFF: 1 (레짐 미조회). BLOCK_BEAR: BEAR 면 0. SCALE_BEAR: BEAR 면 bear-size-multiplier.
+     * 필터가 켜져 있는데 레짐을 모르면 unknown-policy(기본 BLOCK)를 따른다 — ADR risk/0005 의 fail-safe 진입 가드와 같은 원칙.
+     */
+    private double regimeSizeMultiplier(String market) {
+        TradingProperties.Regime config = tradingProperties.getRegime();
+        if (config.getFilterMode() == TradingProperties.Regime.FilterMode.OFF) {
+            return 1.0;
+        }
+        MarketRegime regime = dailyRegimeService.currentRegime();
+        if (regime == null || regime == MarketRegime.UNKNOWN) {
+            if (config.getUnknownPolicy() == TradingProperties.Regime.UnknownPolicy.ALLOW) {
+                return 1.0;
+            }
+            recordRegimeFilterEvent("REGIME_FILTER_BLOCKED", market,
+                    "일봉 레짐 판정 불가(UNKNOWN) — 신호 매수 차단 (unknown-policy=BLOCK)");
+            return 0.0;
+        }
+        if (regime != MarketRegime.BEAR) {
+            return 1.0;
+        }
+        if (config.getFilterMode() == TradingProperties.Regime.FilterMode.BLOCK_BEAR) {
+            recordRegimeFilterEvent("REGIME_FILTER_BLOCKED", market, "일봉 레짐 BEAR — 신호 매수 차단 (BLOCK_BEAR)");
+            return 0.0;
+        }
+        recordRegimeFilterEvent("REGIME_FILTER_SCALED", market,
+                String.format("일봉 레짐 BEAR — 신호 매수 비중 x%s (SCALE_BEAR)", config.getBearSizeMultiplier()));
+        return config.getBearSizeMultiplier();
+    }
+
+    private void recordRegimeFilterEvent(String eventType, String market, String message) {
+        log.info("Regime filter {}: {}", eventType, message);
+        int skipped = regimeEventThrottle.tryRecord(eventType + "|" + message, Instant.now());
+        if (skipped < 0) {
+            return;
+        }
+        tradingEventService.record(TradingEventLevel.NOTICE, eventType, market,
+                skipped > 0 ? message + " (직전 기록 이후 " + skipped + "회 같은 사유 생략)" : message);
     }
 
     /**
@@ -722,6 +807,8 @@ public class TradingBotService {
             position = Position.open(trade.getMarket(), executedPrice, executedVolume,
                     riskManagementService.calculateStopLossPrice(executedPrice),
                     riskManagementService.calculateTakeProfitPrice(executedPrice), fee);
+            // 스윕이 체결을 확인해 만든 포지션 — 원 주문의 신호는 Trade.signalId 로 남는다 (ADR trading/observability/0004)
+            position.setEntrySource(EntrySource.RECOVERY);
         }
 
         final Position positionToPersist = position;
@@ -1056,6 +1143,7 @@ public class TradingBotService {
             Trade trade = Trade.createBuyOrder(uuid, market, entryPrice, amount, "market", null, "Manual buy");
             trade.markExecuted(entryPrice, volume, fee);
             Position position = Position.open(market, entryPrice, volume, stopLoss, takeProfit, fee);
+            position.setEntrySource(EntrySource.MANUAL);   // ADR trading/observability/0004
 
             // executeBuy 와 같은 순서 — Position id 를 받아 Trade 에 연결 (미연결이면 분석이 신호 진입으로 오분류)
             txTemplate.executeWithoutResult(status -> {
@@ -1307,11 +1395,13 @@ public class TradingBotService {
             String market,
             Instant lastLoopAt,
             Instant lastTradeAt,
-            String lastError
+            String lastError,
+            /** 일봉 레짐 BULL / BEAR / UNKNOWN (ADR trading/risk/0007) */
+            String regime
     ) {
         // 기존 3파라미터 호환용
         public BotStatus(boolean running, boolean paused, String market) {
-            this(running, paused, false, market, null, null, null);
+            this(running, paused, false, market, null, null, null, MarketRegime.UNKNOWN.name());
         }
     }
 }

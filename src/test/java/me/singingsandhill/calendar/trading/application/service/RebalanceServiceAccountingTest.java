@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.trading.application.service;
 
+import me.singingsandhill.calendar.trading.domain.position.EntrySource;
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
@@ -49,7 +50,7 @@ class RebalanceServiceAccountingTest {
                                      RiskManagementService risk, TradeRepository tradeRepo) {
         TradingProperties props = new TradingProperties();
         return new RebalanceService(api, null, props, tradeRepo, posRepo,
-                mock(TradingEventService.class), risk, mock(PlatformTransactionManager.class));
+                mock(TradingEventService.class), risk, mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
     }
 
     @Test
@@ -150,6 +151,8 @@ class RebalanceServiceAccountingTest {
         assertThat(saved.getStopLossPrice()).isEqualByComparingTo("970");
         assertThat(saved.getTakeProfitPrice()).isEqualByComparingTo("1150");
         assertThat(saved.getEntryVolume()).isEqualByComparingTo("50"); // 50000 / 1000
+        // ADR trading/observability/0004 — 진입 출처 (작업 4-C 의 리밸런싱 출구 규칙이 이 값을 쓴다)
+        assertThat(saved.getEntrySource()).isEqualTo(EntrySource.REBALANCE);
         verify(tradeRepo).save(any(Trade.class));
     }
 

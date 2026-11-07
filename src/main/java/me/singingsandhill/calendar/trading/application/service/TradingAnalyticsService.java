@@ -9,6 +9,7 @@ import me.singingsandhill.calendar.trading.domain.signal.SignalRepository;
 import me.singingsandhill.calendar.trading.domain.signal.SignalSample;
 import me.singingsandhill.calendar.trading.domain.signal.SignalType;
 import me.singingsandhill.calendar.trading.domain.trade.Trade;
+import me.singingsandhill.calendar.trading.domain.trade.TradeMode;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.domain.trade.TradeType;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
@@ -109,10 +110,13 @@ public class TradingAnalyticsService {
         String market = tradingProperties.getBot().getMarket();
         long startedAt = System.nanoTime();
 
+        // LIVE 포지션·체결만 분석한다 — PAPER 실측이 섞이면 신호 품질 통계가 오염된다 (ADR trading/observability/0004)
         Loaded loaded = txTemplate.execute(status -> new Loaded(
                 signalRepository.findSamplesByMarketAndSignalTimeBetween(market, from, to),
-                positionRepository.findByMarketAndStatusAndClosedAtBetween(market, PositionStatus.CLOSED, from, to),
-                tradeRepository.findByMarketAndCreatedAtBetween(market, from, to)));
+                positionRepository.findByMarketAndStatusAndClosedAtBetween(market, PositionStatus.CLOSED, from, to)
+                        .stream().filter(p -> TradeMode.LIVE.includes(p.getMode())).toList(),
+                tradeRepository.findByMarketAndCreatedAtBetween(market, from, to)
+                        .stream().filter(t -> TradeMode.LIVE.includes(t.getMode())).toList()));
 
         AnalyticsReport report = buildReport(market, from, to, loaded.samples(), loaded.closed(), loaded.trades());
         log.debug("Analytics for {} [{} ~ {}]: {} signals, {} closed positions",

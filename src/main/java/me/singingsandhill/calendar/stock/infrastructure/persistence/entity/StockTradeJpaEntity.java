@@ -62,6 +62,10 @@ public class StockTradeJpaEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    // 저장 시점의 봇 운영 모드 — nullable 추가 컬럼, 기존 행은 백필 SQL (ADR stock/observability/0003)
+    @Column(name = "mode", length = 10)
+    private String mode;
+
     protected StockTradeJpaEntity() {}
 
     public StockTradeJpaEntity(String orderId, String stockCode, String tradeType,
@@ -110,4 +114,6 @@ public class StockTradeJpaEntity {
     public void setExecutedAt(LocalDateTime executedAt) { this.executedAt = executedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getMode() { return mode; }
+    public void setMode(String mode) { this.mode = mode; }
 }

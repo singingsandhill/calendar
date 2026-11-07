@@ -30,11 +30,42 @@ public class StockSignal {
     private final LocalDateTime createdAt;
 
     public StockSignal(String stockCode, StockSignalType signalType) {
+        this(stockCode, signalType, LocalDateTime.now(), LocalDateTime.now());
+    }
+
+    private StockSignal(String stockCode, StockSignalType signalType,
+                        LocalDateTime signalTime, LocalDateTime createdAt) {
         this.stockCode = stockCode;
         this.signalType = signalType;
-        this.signalTime = LocalDateTime.now();
+        this.signalTime = signalTime;
         this.executed = false;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = createdAt;
+    }
+
+    /**
+     * 저장소에서 불러온 신호를 그대로 복원 (인프라 어댑터 전용). 생성자로 복원하면 signalTime·createdAt 이 조회
+     * 시각이 되고 수치가 전부 null 이었다 — /api/stock/signals·/events (ADR stock/observability/0003).
+     */
+    public static StockSignal restore(Long id, String stockCode, StockSignalType signalType,
+                                      LocalDateTime signalTime,
+                                      BigDecimal gapPercent, BigDecimal marketCap,
+                                      BigDecimal tradeValue, BigDecimal tradeStrength,
+                                      BigDecimal highPrice, BigDecimal pullbackPercent,
+                                      BigDecimal bouncePercent, BigDecimal currentPrice,
+                                      boolean executed, LocalDateTime createdAt) {
+        StockSignal s = new StockSignal(stockCode, signalType, signalTime,
+            createdAt != null ? createdAt : signalTime);
+        s.id = id;
+        s.gapPercent = gapPercent;
+        s.marketCap = marketCap;
+        s.tradeValue = tradeValue;
+        s.tradeStrength = tradeStrength;
+        s.highPrice = highPrice;
+        s.pullbackPercent = pullbackPercent;
+        s.bouncePercent = bouncePercent;
+        s.currentPrice = currentPrice;
+        s.executed = executed;
+        return s;
     }
 
     public static StockSignal gapDetected(String stockCode, BigDecimal gapPercent,

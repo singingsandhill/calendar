@@ -96,18 +96,30 @@ public class StockSignalRepositoryAdapter implements StockSignalRepository {
         entity.setBouncePercent(signal.getBouncePercent());
         entity.setCurrentPrice(signal.getCurrentPrice());
         entity.setExecuted(signal.isExecuted());
+        entity.setCreatedAt(signal.getCreatedAt());
         return entity;
     }
 
+    /**
+     * 저장된 시각·수치를 그대로 복원한다 — 생성자로 복원하면 signalTime·createdAt 이 조회 시각, 수치가 전부 null
+     * 이었다 (ADR stock/observability/0003).
+     */
     private StockSignal toDomain(StockSignalJpaEntity entity) {
-        StockSignal signal = new StockSignal(
+        return StockSignal.restore(
+            entity.getId(),
             entity.getStockCode(),
-            StockSignalType.valueOf(entity.getSignalType())
+            StockSignalType.valueOf(entity.getSignalType()),
+            entity.getSignalTime(),
+            entity.getGapPercent(),
+            entity.getMarketCap(),
+            entity.getTradeValue(),
+            entity.getTradeStrength(),
+            entity.getHighPrice(),
+            entity.getPullbackPercent(),
+            entity.getBouncePercent(),
+            entity.getCurrentPrice(),
+            Boolean.TRUE.equals(entity.getExecuted()),
+            entity.getCreatedAt()
         );
-        signal.setId(entity.getId());
-        if (entity.getExecuted()) {
-            signal.markExecuted();
-        }
-        return signal;
     }
 }

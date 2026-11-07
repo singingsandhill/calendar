@@ -78,6 +78,10 @@ public class TradeJpaEntity {
     @Column(name = "order_ratio", precision = 10, scale = 4)
     private BigDecimal orderRatio;
 
+    // 저장 시점의 봇 운영 모드 — nullable 추가 컬럼, 기존 행은 백필 SQL (ADR trading/observability/0004)
+    @Column(name = "mode", length = 10)
+    private String mode;
+
     protected TradeJpaEntity() {}
 
     public TradeJpaEntity(String uuid, Long positionId, String market, String tradeType, String orderType,
@@ -145,4 +149,6 @@ public class TradeJpaEntity {
     public void setSignalId(Long signalId) { this.signalId = signalId; }
     public BigDecimal getOrderRatio() { return orderRatio; }
     public void setOrderRatio(BigDecimal orderRatio) { this.orderRatio = orderRatio; }
+    public String getMode() { return mode; }
+    public void setMode(String mode) { this.mode = mode; }
 }

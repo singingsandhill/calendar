@@ -1,9 +1,12 @@
 package me.singingsandhill.calendar.trading.infrastructure.persistence.adapter;
 
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
+import me.singingsandhill.calendar.trading.domain.position.EntrySource;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
+import me.singingsandhill.calendar.trading.domain.trade.TradeMode;
+import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
 import me.singingsandhill.calendar.trading.infrastructure.persistence.entity.PositionJpaEntity;
 import me.singingsandhill.calendar.trading.infrastructure.persistence.repository.PositionJpaRepository;
 import org.springframework.data.domain.PageRequest;
@@ -19,14 +22,20 @@ import java.util.Optional;
 public class PositionRepositoryAdapter implements PositionRepository {
 
     private final PositionJpaRepository jpaRepository;
+    private final TradingProperties tradingProperties;
 
-    public PositionRepositoryAdapter(PositionJpaRepository jpaRepository) {
+    public PositionRepositoryAdapter(PositionJpaRepository jpaRepository, TradingProperties tradingProperties) {
         this.jpaRepository = jpaRepository;
+        this.tradingProperties = tradingProperties;
     }
 
     @Override
     @Transactional
     public Position save(Position position) {
+        // 처음 저장할 때 현재 봇 모드를 찍는다 — 이미 모드가 있는 행은 그대로 (ADR trading/observability/0004)
+        if (position.getMode() == null) {
+            position.setMode(TradeMode.valueOf(tradingProperties.getBot().getMode().name()));
+        }
         PositionJpaEntity entity = toEntity(position);
         PositionJpaEntity saved = jpaRepository.save(entity);
         position.setId(saved.getId());
@@ -91,6 +100,11 @@ public class PositionRepositoryAdapter implements PositionRepository {
         return jpaRepository.countByMarketAndStatus(market, status.name());
     }
 
+    @Override
+    public Optional<Position> findLatestClosedByMarketAndCloseReason(String market, CloseReason closeReason) {
+        return jpaRepository.findLatestClosedByMarketAndCloseReason(market, closeReason.name()).map(this::toDomain);
+    }
+
     private PositionJpaEntity toEntity(Position position) {
         PositionJpaEntity entity = new PositionJpaEntity(
                 position.getMarket(),
@@ -123,6 +137,9 @@ public class PositionRepositoryAdapter implements PositionRepository {
         entity.setClosingAttempted(position.isClosingAttempted());
         entity.setLastCloseAttemptAt(position.getLastCloseAttemptAt());
         entity.setCloseAttemptCount(position.getCloseAttemptCount());
+        entity.setEntrySource(position.getEntrySource() != null ? position.getEntrySource().name() : null);
+        entity.setLowWaterMark(position.getLowWaterMark());
+        entity.setMode(position.getMode() != null ? position.getMode().name() : null);
         return entity;
     }
 
@@ -156,6 +173,9 @@ public class PositionRepositoryAdapter implements PositionRepository {
         position.setClosingAttempted(entity.isClosingAttempted() != null && entity.isClosingAttempted());
         position.setLastCloseAttemptAt(entity.getLastCloseAttemptAt());
         position.setCloseAttemptCount(entity.getCloseAttemptCount() != null ? entity.getCloseAttemptCount() : 0);
+        position.setEntrySource(entity.getEntrySource() != null ? EntrySource.valueOf(entity.getEntrySource()) : null);
+        position.setLowWaterMark(entity.getLowWaterMark());
+        position.setMode(TradeMode.fromName(entity.getMode()));
         return position;
     }
 }

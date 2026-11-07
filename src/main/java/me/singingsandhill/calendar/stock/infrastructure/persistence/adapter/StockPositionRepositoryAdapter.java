@@ -4,6 +4,8 @@ import me.singingsandhill.calendar.stock.domain.position.StockCloseReason;
 import me.singingsandhill.calendar.stock.domain.position.StockPosition;
 import me.singingsandhill.calendar.stock.domain.position.StockPositionRepository;
 import me.singingsandhill.calendar.stock.domain.position.StockPositionStatus;
+import me.singingsandhill.calendar.stock.domain.trade.StockTradeMode;
+import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import me.singingsandhill.calendar.stock.infrastructure.persistence.entity.StockPositionJpaEntity;
 import me.singingsandhill.calendar.stock.infrastructure.persistence.repository.StockPositionJpaRepository;
 import org.springframework.stereotype.Repository;
@@ -19,9 +21,11 @@ import java.util.stream.Collectors;
 public class StockPositionRepositoryAdapter implements StockPositionRepository {
 
     private final StockPositionJpaRepository jpaRepository;
+    private final StockProperties stockProperties;
 
-    public StockPositionRepositoryAdapter(StockPositionJpaRepository jpaRepository) {
+    public StockPositionRepositoryAdapter(StockPositionJpaRepository jpaRepository, StockProperties stockProperties) {
         this.jpaRepository = jpaRepository;
+        this.stockProperties = stockProperties;
     }
 
     @Override
@@ -114,6 +118,10 @@ public class StockPositionRepositoryAdapter implements StockPositionRepository {
             position.getTradingDate(),
             position.getStatus().name()
         );
+        entity.setCreatedAt(position.getCreatedAt());
+        // insert 시점의 봇 모드를 찍는다 (ADR stock/observability/0003)
+        entity.setMode(position.getMode() != null ? position.getMode().name()
+            : stockProperties.getBot().getMode().name());
         updateEntity(entity, position);
         return entity;
     }
@@ -137,6 +145,9 @@ public class StockPositionRepositoryAdapter implements StockPositionRepository {
         entity.setTrailingActive(position.isTrailingActive());
         entity.setRealizedPnl(position.getRealizedPnl());
         entity.setRealizedPnlPercent(position.getRealizedPnlPercent());
+        // 누적 청산 — 빠지면 재로딩 후 평균 청산가·실현손익률이 마지막 청산분만으로 계산된다
+        entity.setTotalExitAmount(position.getTotalExitAmount());
+        entity.setTotalExitQuantity(position.getTotalExitQuantity());
         if (position.getCloseReason() != null) {
             entity.setCloseReason(position.getCloseReason().name());
         }
@@ -172,10 +183,13 @@ public class StockPositionRepositoryAdapter implements StockPositionRepository {
             Boolean.TRUE.equals(entity.getTrailingActive()),
             entity.getRealizedPnl(),
             entity.getRealizedPnlPercent(),
+            entity.getTotalExitAmount(),
+            entity.getTotalExitQuantity(),
             closeReason,
             entity.getClosedAt(),
             entity.getCreatedAt(),
-            entity.getUpdatedAt()
+            entity.getUpdatedAt(),
+            StockTradeMode.fromName(entity.getMode())
         );
     }
 }

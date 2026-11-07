@@ -1,9 +1,11 @@
 package me.singingsandhill.calendar.trading.infrastructure.persistence.adapter;
 
 import me.singingsandhill.calendar.trading.domain.trade.Trade;
+import me.singingsandhill.calendar.trading.domain.trade.TradeMode;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.domain.trade.TradeStatus;
 import me.singingsandhill.calendar.trading.domain.trade.TradeType;
+import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
 import me.singingsandhill.calendar.trading.infrastructure.persistence.entity.TradeJpaEntity;
 import me.singingsandhill.calendar.trading.infrastructure.persistence.repository.TradeJpaRepository;
 import org.springframework.data.domain.PageRequest;
@@ -19,14 +21,21 @@ import java.util.Optional;
 public class TradeRepositoryAdapter implements TradeRepository {
 
     private final TradeJpaRepository jpaRepository;
+    private final TradingProperties tradingProperties;
 
-    public TradeRepositoryAdapter(TradeJpaRepository jpaRepository) {
+    public TradeRepositoryAdapter(TradeJpaRepository jpaRepository, TradingProperties tradingProperties) {
         this.jpaRepository = jpaRepository;
+        this.tradingProperties = tradingProperties;
     }
 
     @Override
     @Transactional
     public Trade save(Trade trade) {
+        // 처음 저장할 때 현재 봇 모드를 찍는다 — 모드는 프로세스 수명 동안 바뀌지 않고, 생성 지점(8곳)마다
+        // 설정하면 하나만 빠져도 LIVE 집계에 섞인다. 이미 모드가 있는 행은 그대로 (ADR trading/observability/0004).
+        if (trade.getMode() == null) {
+            trade.setMode(TradeMode.valueOf(tradingProperties.getBot().getMode().name()));
+        }
         TradeJpaEntity entity = toEntity(trade);
         TradeJpaEntity saved = jpaRepository.save(entity);
         trade.setId(saved.getId());
@@ -107,6 +116,7 @@ public class TradeRepositoryAdapter implements TradeRepository {
         // 선택적 값이라 4개 정적 팩토리 전부의 시그니처를 넓히지 않는다 (ADR trading/observability/0002).
         entity.setSignalId(trade.getSignalId());
         entity.setOrderRatio(trade.getOrderRatio());
+        entity.setMode(trade.getMode() != null ? trade.getMode().name() : null);
         return entity;
     }
 
@@ -133,6 +143,7 @@ public class TradeRepositoryAdapter implements TradeRepository {
         );
         trade.setSignalId(entity.getSignalId());
         trade.setOrderRatio(entity.getOrderRatio());
+        trade.setMode(TradeMode.fromName(entity.getMode()));
         return trade;
     }
 }

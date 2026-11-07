@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.trading.application.service;
 
+import me.singingsandhill.calendar.trading.domain.position.EntrySource;
 import me.singingsandhill.calendar.trading.domain.account.AccountSnapshotRepository;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
@@ -50,7 +51,7 @@ class TradingBotServiceManualTest {
         AccountSnapshotRepository snapRepo = mock(AccountSnapshotRepository.class);
         when(snapRepo.findFirstByMarketAndDateRange(any(), any(), any())).thenReturn(Optional.empty());
         return new TradingBotService(null, null, null, risk, null, api, tradeRepo, posRepo,
-                props, mock(TradingEventService.class), breaker, snapRepo, mock(PlatformTransactionManager.class));
+                props, mock(TradingEventService.class), breaker, snapRepo, mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
     }
 
     private Position posOpenedAt(LocalDateTime openedAt, String entryPrice, String volume) {
@@ -80,6 +81,8 @@ class TradingBotServiceManualTest {
         verify(posRepo).save(cap.capture());
         assertThat(cap.getValue().getStopLossPrice()).isEqualByComparingTo("985");
         assertThat(cap.getValue().getTakeProfitPrice()).isEqualByComparingTo("1030");
+        // ADR trading/observability/0004 — 진입 출처
+        assertThat(cap.getValue().getEntrySource()).isEqualTo(EntrySource.MANUAL);
     }
 
     @Test

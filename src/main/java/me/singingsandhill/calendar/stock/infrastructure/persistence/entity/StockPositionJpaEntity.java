@@ -94,6 +94,10 @@ public class StockPositionJpaEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // 저장 시점의 봇 운영 모드 — nullable 추가 컬럼, 기존 행은 백필 SQL (ADR stock/observability/0003)
+    @Column(name = "mode", length = 10)
+    private String mode;
+
     protected StockPositionJpaEntity() {}
 
     public StockPositionJpaEntity(String stockCode, LocalDate tradingDate, String status) {
@@ -162,6 +166,8 @@ public class StockPositionJpaEntity {
     public void setClosedAt(LocalDateTime closedAt) { this.closedAt = closedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getMode() { return mode; }
+    public void setMode(String mode) { this.mode = mode; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

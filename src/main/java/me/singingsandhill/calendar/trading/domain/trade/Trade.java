@@ -31,6 +31,8 @@ public class Trade {
     private Long signalId;
     // 분석용 — 이 매수에 실제로 적용된 동적 주문 비중(ATR 기반). 매수에만 채워진다.
     private BigDecimal orderRatio;
+    // 저장 시점의 봇 운영 모드 — 처음 저장할 때 어댑터가 찍는다 (ADR trading/observability/0004)
+    private TradeMode mode;
 
     public Trade(Long id, String uuid, Long positionId, String market,
                  TradeType tradeType, String orderType, BigDecimal price, BigDecimal volume,
@@ -168,4 +170,6 @@ public class Trade {
     public void setSignalId(Long signalId) { this.signalId = signalId; }
     public BigDecimal getOrderRatio() { return orderRatio; }
     public void setOrderRatio(BigDecimal orderRatio) { this.orderRatio = orderRatio; }
+    public TradeMode getMode() { return mode; }
+    public void setMode(TradeMode mode) { this.mode = mode; }
 }

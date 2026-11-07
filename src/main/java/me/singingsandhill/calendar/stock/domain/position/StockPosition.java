@@ -1,5 +1,7 @@
 package me.singingsandhill.calendar.stock.domain.position;
 
+import me.singingsandhill.calendar.stock.domain.trade.StockTradeMode;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -51,7 +53,14 @@ public class StockPosition {
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    /** 처음 저장될 때 어댑터가 현재 봇 모드를 찍는다 — 새 객체는 null (ADR stock/observability/0003). */
+    private StockTradeMode mode;
+
     private StockPosition(String stockCode, LocalDate tradingDate) {
+        this(stockCode, tradingDate, LocalDateTime.now());
+    }
+
+    private StockPosition(String stockCode, LocalDate tradingDate, LocalDateTime createdAt) {
         this.stockCode = stockCode;
         this.tradingDate = tradingDate;
         this.status = StockPositionStatus.OPEN;
@@ -62,7 +71,7 @@ public class StockPosition {
         this.realizedPnl = BigDecimal.ZERO;
         this.totalExitAmount = BigDecimal.ZERO;
         this.totalExitQuantity = 0;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = createdAt;
         this.updatedAt = this.createdAt;
     }
 
@@ -115,6 +124,9 @@ public class StockPosition {
 
     /**
      * 저장소에서 불러온 엔티티를 도메인 객체로 복원. 인프라 레이어 전용.
+     *
+     * createdAt·누적 청산(totalExitAmount/Quantity)·mode 도 되돌린다 — 누적 청산을 버리면 5초 틱마다 재로딩된
+     * 포지션의 평균 청산가·실현손익률이 마지막 청산분만으로 계산됐다 (ADR stock/observability/0003).
      */
     public static StockPosition reconstitute(
             Long id, Long stockId, String stockCode, LocalDate tradingDate,
@@ -125,9 +137,11 @@ public class StockPosition {
             BigDecimal dayHighPrice, BigDecimal stopLossPrice,
             BigDecimal trailingHigh, BigDecimal trailingStopPrice, boolean trailingActive,
             BigDecimal realizedPnl, BigDecimal realizedPnlPercent,
+            BigDecimal totalExitAmount, Integer totalExitQuantity,
             StockCloseReason closeReason, LocalDateTime closedAt,
-            LocalDateTime createdAt, LocalDateTime updatedAt) {
-        StockPosition p = new StockPosition(stockCode, tradingDate);
+            LocalDateTime createdAt, LocalDateTime updatedAt, StockTradeMode mode) {
+        StockPosition p = new StockPosition(stockCode, tradingDate,
+            createdAt != null ? createdAt : LocalDateTime.now());
         p.id = id;
         p.stockId = stockId;
         p.status = status != null ? status : StockPositionStatus.OPEN;
@@ -147,9 +161,12 @@ public class StockPosition {
         p.trailingActive = trailingActive;
         p.realizedPnl = realizedPnl != null ? realizedPnl : BigDecimal.ZERO;
         p.realizedPnlPercent = realizedPnlPercent;
+        p.totalExitAmount = totalExitAmount != null ? totalExitAmount : BigDecimal.ZERO;
+        p.totalExitQuantity = totalExitQuantity != null ? totalExitQuantity : 0;
         p.closeReason = closeReason;
         p.closedAt = closedAt;
         p.updatedAt = updatedAt != null ? updatedAt : p.createdAt;
+        p.mode = mode;
         return p;
     }
 
@@ -471,4 +488,7 @@ public class StockPosition {
     public LocalDateTime getClosedAt() { return closedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public BigDecimal getTotalExitAmount() { return totalExitAmount; }
+    public Integer getTotalExitQuantity() { return totalExitQuantity; }
+    public StockTradeMode getMode() { return mode; }
 }

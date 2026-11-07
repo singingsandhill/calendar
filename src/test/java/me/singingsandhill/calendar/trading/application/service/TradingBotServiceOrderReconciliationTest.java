@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.trading.application.service;
 
+import me.singingsandhill.calendar.trading.domain.position.EntrySource;
 import me.singingsandhill.calendar.trading.domain.account.AccountSnapshotRepository;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
@@ -72,7 +73,7 @@ class TradingBotServiceOrderReconciliationTest {
         PlatformTransactionManager txm = mock(PlatformTransactionManager.class);
 
         svc = new TradingBotService(candles, signals, indicators, risk, rebalance, api, tradeRepo, posRepo,
-                new TradingProperties(), mock(TradingEventService.class), breaker, snapRepo, txm);
+                new TradingProperties(), mock(TradingEventService.class), breaker, snapRepo, txm, mock(DailyRegimeService.class));
 
         // 서킷브레이커·잔고·가드 통과 (ExecutedVolumeTest 하네스와 동일)
         when(breaker.isEntryBlocked(any(), any())).thenReturn(false);
@@ -175,6 +176,8 @@ class TradingBotServiceOrderReconciliationTest {
         assertThat(pos.getValue().getEntryVolume()).isEqualByComparingTo("248");
         assertThat(pos.getValue().getStopLossPrice()).isEqualByComparingTo("985");
         assertThat(pos.getValue().getTakeProfitPrice()).isEqualByComparingTo("1030");
+        // ADR trading/observability/0004 — 신호 매수의 진입 출처
+        assertThat(pos.getValue().getEntrySource()).isEqualTo(EntrySource.SIGNAL);
     }
 
     @Test
@@ -254,6 +257,8 @@ class TradingBotServiceOrderReconciliationTest {
         assertThat(pos.getValue().getStopLossPrice()).isEqualByComparingTo("985");
         assertThat(pos.getValue().getTakeProfitPrice()).isEqualByComparingTo("1030");
         assertThat(pos.getValue().getEntryFee()).isEqualByComparingTo("12.5");
+        // ADR trading/observability/0004 — 스윕이 체결을 확인해 만든 포지션은 RECOVERY
+        assertThat(pos.getValue().getEntrySource()).isEqualTo(EntrySource.RECOVERY);
     }
 
     @Test

@@ -2,9 +2,13 @@ package me.singingsandhill.calendar.trading.application.service;
 
 import me.singingsandhill.calendar.trading.domain.event.TradingEventLevel;
 import me.singingsandhill.calendar.trading.domain.position.CloseReason;
+import me.singingsandhill.calendar.trading.domain.position.EntrySource;
+import me.singingsandhill.calendar.trading.domain.position.ExitThresholds;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
+import me.singingsandhill.calendar.trading.domain.signal.SignalRepository;
+import me.singingsandhill.calendar.trading.domain.trade.BithumbTickSize;
 import me.singingsandhill.calendar.trading.domain.trade.Trade;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
@@ -34,6 +38,8 @@ public class RiskManagementService {
     private final TradingProperties tradingProperties;
     private final TradingEventService tradingEventService;
     private final TradingCircuitBreaker circuitBreaker;
+    private final IndicatorService indicatorService;   // ATR 손절 모드 (ADR strategy/0011)
+    private final SignalRepository signalRepository;   // SIGNAL_GATED 시간청산
     // P0-3b: 영속화만 짧은 트랜잭션. 주문 HTTP/sleep 은 트랜잭션 밖.
     private final TransactionTemplate txTemplate;
 
@@ -43,13 +49,17 @@ public class RiskManagementService {
                                   TradingProperties tradingProperties,
                                   TradingEventService tradingEventService,
                                   TradingCircuitBreaker circuitBreaker,
-                                  PlatformTransactionManager transactionManager) {
+                                  PlatformTransactionManager transactionManager,
+                                  IndicatorService indicatorService,
+                                  SignalRepository signalRepository) {
         this.positionRepository = positionRepository;
         this.tradeRepository = tradeRepository;
         this.bithumbApiClient = bithumbApiClient;
         this.tradingProperties = tradingProperties;
         this.tradingEventService = tradingEventService;
         this.circuitBreaker = circuitBreaker;
+        this.indicatorService = indicatorService;
+        this.signalRepository = signalRepository;
         this.txTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -111,10 +121,31 @@ public class RiskManagementService {
         log.debug("Risk check - Position {}: Entry={}, Current={}, PnL%={} (fee-adjusted)",
                 position.getId(), position.getEntryPrice(), currentPrice, pnlPct);
 
-        // 1. 손절 체크 (stop-loss, 기본 -1.5% — P1-1)
-        double stopLoss = tradingProperties.getRisk().getStopLoss();
+        // 0. 보유 중 최저가(MAE) — 손절 판정 *전에* 갱신한다. 손절이 걸리는 틱의 가격이 곧 최저가라 판정 뒤에 두면
+        //    손절된 포지션의 MAE 가 체계적으로 빠진다 (ADR trading/observability/0004). 저장은 아래 청산·8단계 저장이 한다.
+        position.updateLowWaterMark(currentPrice);
+
+        // 리밸런싱 포지션 (ADR trading/risk/0007, 4-C) — 엔진이 켜져 있으면 장중 SL/TP/트레일링/시간청산 대상이 아니고
+        // 재난 대비 비상 손절만 받는다(자산 30~70% 를 -1.5% 손절에 태우던 손절 루프 차단). 엔진이 꺼져 있으면 그 포지션을
+        // 관리할 주체가 없으므로 아래 일반 출구를 그대로 받는다.
+        if (position.getEntrySource() == EntrySource.REBALANCE && tradingProperties.getRebalancing().isEnabled()) {
+            position.updateHighWaterMark(currentPrice);
+            double catastrophic = tradingProperties.getRebalancing().getCatastrophicStopPct();
+            if (pnlPct.compareTo(BigDecimal.valueOf(catastrophic * 100)) <= 0) {
+                log.warn("Catastrophic stop triggered for rebalance position {}! PnL: {}%", position.getId(), pnlPct);
+                closePosition(position, currentPrice, CloseReason.CATASTROPHIC_STOP);
+                return CloseReason.CATASTROPHIC_STOP;
+            }
+            positionRepository.save(position);
+            return null;
+        }
+
+        // 1. 손절 체크 (stop-loss, 기본 -1.5% — P1-1). 유효 손절 = min(손절, -min-stop-ticks 틱/진입가) — 290원이면
+        //    -1.5%(4.4틱) → -1.72%(5틱). stop-mode=ATR 이면 손절 = -atr-multiplier × 집계봉 ATR% (ADR strategy/0011)
+        double stopLoss = effectiveStopLoss(position.getMarket(), position.getEntryPrice());
         if (pnlPct.compareTo(BigDecimal.valueOf(stopLoss * 100)) <= 0) {
-            log.warn("Stop-loss triggered for position {}! PnL: {}%", position.getId(), pnlPct);
+            log.warn("Stop-loss triggered for position {}! PnL: {}% (stop: {}%)", position.getId(), pnlPct,
+                    BigDecimal.valueOf(stopLoss * 100).setScale(3, RoundingMode.HALF_UP));
             closePosition(position, currentPrice, CloseReason.STOP_LOSS);
             return CloseReason.STOP_LOSS;
         }
@@ -122,33 +153,30 @@ public class RiskManagementService {
         // 2. High Water Mark 업데이트
         position.updateHighWaterMark(currentPrice);
 
-        // 3. 트레일링 스탑 활성화 체크 (trailing-activation, 기본 +1.5% 도달 시 — P1-2)
+        // 3. 트레일링 스탑 활성화 체크 (trailing-activation, 기본 +1.5% 도달 시 — P1-2).
+        //    time-exit-mode=TIGHTEN_TRAIL 이면 maxHold 를 넘긴 이익 포지션도 시간청산 대신 여기서 활성화 (ADR strategy/0011)
         double trailingActivation = tradingProperties.getRisk().getTrailingActivation();
+        boolean tightenOnStale = tradingProperties.getBot().getTimeExitMode() == TradingProperties.Bot.TimeExitMode.TIGHTEN_TRAIL
+                && pnlPct.signum() >= 0 && isStale(position);
         if (!position.isTrailingStopActive() &&
-            pnlPct.compareTo(BigDecimal.valueOf(trailingActivation * 100)) >= 0) {
+            (pnlPct.compareTo(BigDecimal.valueOf(trailingActivation * 100)) >= 0 || tightenOnStale)) {
 
-            // 트레일링 스탑 가격 설정 (trailing-stop, 기본 -0.8% 추적 — P1-2)
-            double trailingPct = tradingProperties.getRisk().getTrailingStop();
-            BigDecimal trailingStopPrice = currentPrice.multiply(
-                    BigDecimal.ONE.subtract(BigDecimal.valueOf(trailingPct)))
-                    .setScale(0, RoundingMode.DOWN);
+            // 트레일링 스탑 가격 설정 (trailing-stop, 기본 -0.8% 추적 — P1-2, 폭은 최소 min-trailing-ticks 틱)
+            BigDecimal trailingStopPrice = trailingStopPrice(currentPrice);
             position.activateTrailingStop(trailingStopPrice);
-            log.info("Trailing stop activated for position {}: {} (current: {}, PnL: {}%)",
-                    position.getId(), trailingStopPrice, currentPrice, pnlPct);
+            log.info("Trailing stop activated for position {}: {} (current: {}, PnL: {}%{})",
+                    position.getId(), trailingStopPrice, currentPrice, pnlPct,
+                    tightenOnStale ? ", maxHold 경과 TIGHTEN_TRAIL" : "");
         }
 
         // 4. 트레일링 스탑 가격 업데이트 (상승만, 손익분기점 보장)
         if (position.isTrailingStopActive()) {
-            double trailingPct = tradingProperties.getRisk().getTrailingStop();
-            BigDecimal newTrailingStop = position.getHighWaterMark().multiply(
-                    BigDecimal.ONE.subtract(BigDecimal.valueOf(trailingPct)))
-                    .setScale(0, RoundingMode.DOWN);
+            BigDecimal newTrailingStop = trailingStopPrice(position.getHighWaterMark());
 
-            // 손익분기점 보장: 진입가 + 왕복 수수료(0.5%)
+            // 손익분기점 보장: 진입가 + 왕복 수수료(0.5%), 호가 격자로 올림
             double takerFeeRate = tradingProperties.getRisk().getTakerFeeRate();
-            BigDecimal breakEvenPrice = position.getEntryPrice()
-                    .multiply(BigDecimal.valueOf(1 + takerFeeRate * 2))
-                    .setScale(0, RoundingMode.UP);
+            BigDecimal breakEvenPrice = BithumbTickSize.roundUp(position.getEntryPrice()
+                    .multiply(BigDecimal.valueOf(1 + takerFeeRate * 2)));
 
             // 트레일링 스탑이 손익분기점 아래로 내려가지 않도록
             if (newTrailingStop.compareTo(breakEvenPrice) < 0) {
@@ -176,7 +204,7 @@ public class RiskManagementService {
             return CloseReason.TAKE_PROFIT;
         }
 
-        // 7. P2-8: 정체 포지션 시간 청산 (maxHold 초과 + 손익분기 이상 → 자본 회수)
+        // 7. P2-8: 정체 포지션 시간 청산 (maxHold 초과 + 손익분기 이상 → 자본 회수, 모드별 — ADR strategy/0011)
         if (shouldTimeExit(position, pnlPct)) {
             log.info("Time-exit triggered for position {} (stale > maxHold, PnL: {}%)", position.getId(), pnlPct);
             closePosition(position, currentPrice, CloseReason.TIME_EXIT);
@@ -259,6 +287,7 @@ public class RiskManagementService {
                 case TAKE_PROFIT -> TradingEventLevel.OK;
                 case TRAILING_STOP -> TradingEventLevel.NOTICE;
                 case STOP_LOSS -> TradingEventLevel.WARNING;
+                case CATASTROPHIC_STOP -> TradingEventLevel.CRITICAL;
                 default -> TradingEventLevel.NOTICE;
             };
             tradingEventService.record(level, "POSITION_CLOSED_" + reason.name(),
@@ -370,27 +399,69 @@ public class RiskManagementService {
     }
 
     /**
-     * P2-8: 정체 포지션 시간 청산 판정.
-     * maxHoldMinutes 초과 + 수수료차감 PnL ≥ 0%(손익분기) 이면 자본 회수 청산.
-     * (적자 포지션은 손절(-1.5%)이 처리 — 시간 청산으로 손실 강제 안 함.)
+     * P2-8: 정체 포지션 시간 청산 판정 (모드별 — ADR trading/strategy/0011).
+     * maxHoldMinutes 초과 + 수수료차감 PnL ≥ 0%(손익분기) 이면 time-exit-mode 에 따라:
+     * BREAKEVEN_CLOSE(기본) 청산 / TIGHTEN_TRAIL 청산 안 함(3단계에서 트레일링 활성화) / SIGNAL_GATED 최신 신호 점수 ≤ 0 일 때만.
+     * 적자 포지션은 손절이 처리 — time-exit-loss-threshold(기본 null)가 있을 때만 손익률 ≥ 그 값인 작은 손실을 청산.
      */
     boolean shouldTimeExit(Position position, BigDecimal pnlPct) {
-        long maxHold = tradingProperties.getBot().getMaxHoldMinutes();
-        if (maxHold <= 0 || position.getOpenedAt() == null || pnlPct == null) {
+        if (pnlPct == null || !isStale(position)) {
             return false;
         }
-        long ageMinutes = ChronoUnit.MINUTES.between(position.getOpenedAt(), LocalDateTime.now());
-        // 정체(maxHold 초과) + 손익분기 이상(net) → 자본 회수 청산. 적자는 손절이 처리.
-        return ageMinutes >= maxHold && pnlPct.signum() >= 0;
+        if (pnlPct.signum() < 0) {
+            Double lossThreshold = tradingProperties.getBot().getTimeExitLossThreshold();
+            return lossThreshold != null && pnlPct.compareTo(BigDecimal.valueOf(lossThreshold * 100)) >= 0;
+        }
+        return switch (tradingProperties.getBot().getTimeExitMode()) {
+            case BREAKEVEN_CLOSE -> true;
+            case TIGHTEN_TRAIL -> false;
+            // 신호가 없으면 판정할 근거가 없으므로 현행(BREAKEVEN_CLOSE)처럼 청산
+            case SIGNAL_GATED -> signalRepository.findLatestByMarket(position.getMarket())
+                    .map(signal -> signal.getTotalScore() <= 0)
+                    .orElse(true);
+        };
+    }
+
+    /** maxHoldMinutes 경과 여부 (0 = 시간청산 비활성). */
+    private boolean isStale(Position position) {
+        long maxHold = tradingProperties.getBot().getMaxHoldMinutes();
+        if (maxHold <= 0 || position.getOpenedAt() == null) {
+            return false;
+        }
+        return ChronoUnit.MINUTES.between(position.getOpenedAt(), LocalDateTime.now()) >= maxHold;
+    }
+
+    /** 트레일링 스탑 가격 = 기준가 - max(기준가 × trailing-stop, min-trailing-ticks 틱), 호가 격자로 내림. */
+    private BigDecimal trailingStopPrice(BigDecimal reference) {
+        TradingProperties.Risk risk = tradingProperties.getRisk();
+        return ExitThresholds.trailingStopPrice(reference, risk.getTrailingStop(), risk.getMinTrailingTicks());
+    }
+
+    /** 틱 하한 적용 전 손절(음수 비율) — PERCENT: stop-loss / ATR: -atr-multiplier × 집계봉 ATR% (계산 불가면 stop-loss). */
+    private double baseStopLoss(String market) {
+        TradingProperties.Risk risk = tradingProperties.getRisk();
+        if (risk.getStopMode() != TradingProperties.Risk.StopMode.ATR) {
+            return risk.getStopLoss();
+        }
+        BigDecimal atrPct = indicatorService.calculateAggregatedATRPercent(market, risk.getAtrBarMinutes(), risk.getAtrPeriod());
+        if (atrPct == null) {
+            log.warn("ATR stop unavailable for {} — falling back to stop-loss {}", market, risk.getStopLoss());
+            return risk.getStopLoss();
+        }
+        return -risk.getAtrMultiplier() * atrPct.doubleValue() / 100;
+    }
+
+    /** 유효 손절(음수 비율) = min(baseStopLoss, -min-stop-ticks 틱 / 진입가). */
+    private double effectiveStopLoss(String market, BigDecimal entryPrice) {
+        return ExitThresholds.effectiveStopLoss(baseStopLoss(market), tradingProperties.getRisk().getMinStopTicks(), entryPrice);
     }
 
     /**
-     * 손절가 계산
+     * 손절가 계산 — 리스크 루프와 같은 유효 손절(틱 하한·ATR 모드)을 가격으로 (판정은 수수료차감 손익률, 이 값은 표시용).
      */
     public BigDecimal calculateStopLossPrice(BigDecimal entryPrice) {
-        double stopLoss = tradingProperties.getRisk().getStopLoss();
-        return entryPrice.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(stopLoss)))
-                .setScale(0, RoundingMode.DOWN);
+        return ExitThresholds.stopLossPrice(entryPrice, baseStopLoss(tradingProperties.getBot().getMarket()),
+                tradingProperties.getRisk().getMinStopTicks());
     }
 
     /**

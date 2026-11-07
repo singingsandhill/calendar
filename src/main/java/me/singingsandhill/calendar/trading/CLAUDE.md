@@ -18,6 +18,13 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 - Stop-loss: -1.5% (P1-1: TP +3% 와 1:2 R:R)
 - Take-profit: +3% (P1-2)
 - Trailing stop: activates at +1.5%, trails -0.8%, floor = 진입가+왕복수수료 (P1-2)
+- **틱 하한 (기본 ON, [ADR strategy/0011](../../../../../../../docs/adr/trading/strategy/0011-tick-aware-exits-and-time-exit-modes.md))** —
+  `risk.min-stop-ticks`·`min-trailing-ticks`(5, 0 = 끔): 유효 손절 = min(손절, -5틱/진입가), 트레일링 스탑 = HWM - max(HWM × 0.8%, 5틱).
+  ADA 290원(1틱 = 0.34%)이면 손절 -1.72%·트레일링 고점 - 5원. 호가단위 `BithumbTickSize`, 계산 `ExitThresholds`(리플레이 공용),
+  스탑·손절가는 격자 내림, 손익분기는 격자 올림. 표시용 `stopLossPrice` 도 유효 손절.
+- 손절 방식 `risk.stop-mode` **기본 PERCENT** / ATR(-`atr-multiplier` 2.0 × `atr-bar-minutes` 15분 집계봉 ATR%(`atr-period` 14),
+  계산 불가면 PERCENT). 시간청산 `bot.time-exit-mode` **기본 BREAKEVEN_CLOSE** / TIGHTEN_TRAIL(청산 대신 트레일링 즉시 활성화) /
+  SIGNAL_GATED(최신 신호 점수 ≤ 0 일 때만), 손실 시간청산 `bot.time-exit-loss-threshold` 기본 null. 값은 리플레이(작업 6-A)로 정한다.
 - Fee rate: 0.25% (taker = maker; 0.04% 쿠폰 보유 시 `taker-fee-rate: 0.0004`)
 - Min profit threshold: 0.1% (순수 net 마진 — 왕복 수수료/슬리피지는 PnL 계산에서 이미 차감, P1-8 이중계상 제거)
 
@@ -28,16 +35,24 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
 - MA convergence suppression: |MA5-MA20|/MA20 < 0.2% → MA cross score = 0
 - Min agreeing indicators: 3 (out of 8 score components)
 
-## Rebalancing
+## 일봉 레짐 · Rebalancing ([ADR risk/0007](../../../../../../../docs/adr/trading/risk/0007-daily-regime-filter-and-rebalance-guards.md))
 
-- Bullish (price > MA60): 70% coins / 30% KRW
-- Bearish (price < MA60): 30% coins / 70% KRW
-- Trigger: 10% deviation from target
-- Cooldown: 8 hours between rebalances
-- Min sell PnL: 0% (`min-sell-pnl-pct: 0.0`)
-- **회계 정합 (P1-3):** 리밸런스 매수는 추적 `Position`(SL/TP 포함) 생성, 매도는 OPEN
-  포지션을 FIFO 청산하되 포지션별 수수료차감 PnL ≥ 0% 인 것만 (적자 청산 방지).
-  → 모든 코인이 리스크 루프 보호를 받고 추적 Position ↔ 실잔고 정합. [ADR risk/0002].
+- **일봉 레짐 `DailyRegimeService`** — 빗썸 `/v1/candles/days`(KST 자정 경계, 첫 원소 = 형성 중 당일봉 제외) 확정 종가 vs
+  SMA(`trading.regime.ma-days` 20), MA±`hysteresis-pct`(2%) 밴드를 벗어나야 전환, 전환 후 `min-days`(3) 유지 → BULL/BEAR/UNKNOWN.
+  판정은 도메인 순수 함수 `RegimeCalculator`(리플레이 공용). KST 00:05 `RegimeScheduler` + 조회 시 지연 갱신, 실패 시 직전 판정 유지·
+  10분 뒤 재시도, 조회 실패면 보관 1분봉 일별 종가로 대체. 전환 시 `REGIME_CHANGED` 이벤트, 상태 API `regime`.
+- **신호 매수 필터** `trading.regime.filter-mode` **기본 OFF** — BLOCK_BEAR(BEAR 면 `executeBuy` 차단) / SCALE_BEAR(비중 ×
+  `bear-size-multiplier` 0.5). 필터가 켜져 있는데 UNKNOWN 이면 `unknown-policy`(기본 BLOCK). 진입에만 적용, 이벤트는 사유당 1시간 1회.
+- **리밸런싱 엔진 기본 OFF** (`rebalancing.enabled: false`, 엔진 코드는 비교 대상으로 남김). 켜면:
+  - 목표: BULL 70% / BEAR 30% (`regime-source: DAILY`; `MINUTE_MA60` = 레거시 현재가 vs 1분봉 MA60), 편차 10%, 쿨다운 8시간.
+  - `entrySource=REBALANCE` 포지션은 장중 SL/TP/트레일링/시간청산 대신 비상 손절 `catastrophic-stop-pct`(-15%)만
+    (`CATASTROPHIC_STOP`). 엔진이 꺼져 있으면 일반 출구.
+  - 매도는 REBALANCE 포지션부터 FIFO, 다른 레짐에서 산 REBALANCE 포지션(레짐 전환 매도)은 `min-sell-pnl-pct` 가드 무시.
+    같은 레짐 편차 매도·신호 포지션은 가드 유지.
+  - 마지막 비상 손절 이후 일봉 레짐이 바뀌기 전까지 리밸런싱 매수 차단(DB + 레짐 이력으로 재시작 후 복원).
+  - 같은 사유 `REBALANCE_SKIPPED` 는 60분 1회. ⚠️ 단일 알트에 자산 최대 70% 노출.
+- **회계 정합 (P1-3):** 리밸런스 매수는 추적 `Position`(SL/TP 포함, `entrySource=REBALANCE`) 생성, 매도는 위 규칙으로
+  FIFO 청산 → 추적 Position ↔ 실잔고 정합. [ADR risk/0002].
 - Safety details: see `application/CLAUDE.md`
 
 ## ATR-based Dynamic Order Ratio
@@ -69,8 +84,10 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
   신호 기록은 돌고 **신규 매매(강신호·리밸런싱·일반 신호)는 차단**. `manualBuy`/`manualSell`/
   `emergencyClose` 는 불변. 대시보드 **Start 1회**로 완전 재개(stop 불요 — `start()` 가 CAS 앞
   해제 분기를 가진다). `BotStatusDto.recoveryMode` → 대시보드 `PROTECTION-ONLY` 표시.
-  ⚠️ 재시작은 서킷브레이커 연속손실 카운터(인메모리)를 리셋한다 — `RECOVERY_RESUMED`
-  이벤트에 명기. 회귀 가드: `TradingBotRecoveryTest`(7).
+  기동 시 서킷브레이커 연속손실(인메모리)을 당일 청산 이력(현재 모드, 청산 순)으로 **복원**한다 — `RECOVERY_RESUMED`
+  문구 "연속손실 N회 복원". 오픈 포지션이 없으면 `bot.auto-start`(기본 false, env `TRADING_BOT_AUTO_START`)일 때만
+  완전 시작(`BOT_AUTO_STARTED`) ([ADR stock/modes/0005](../../../../../../../docs/adr/stock/modes/0005-auto-start-on-boot.md)).
+  회귀 가드: `TradingBotRecoveryTest`(7), `TradingBotAutoStartTest`(5).
 - **스케줄러 풀** — `spring.task.scheduling.pool.size=4` 로 트레이딩 루프와 캔들 동기화/
   요약 잡 병렬화(느린 루프가 다른 잡을 굶기지 않도록).
   ⚠️ `trading.bot.enabled=false` 는 `executeTradeLoop`·`syncCandles`·계좌 스냅샷·일일 요약만
@@ -100,8 +117,9 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
   이므로 `BithumbApiClient.withFills` 가 `GET /v1/order` 를 최대 3회(300ms 선형 백오프) 재조회해 trades 가
   채워진 상세를 반환(못 찾으면 원 응답). 조회만 반복, 주문 재전송 없음. 이전에는 모든 경로의 수수료가 0 으로,
   리밸런싱 진입가가 호가 mid 로 기록됐다 (2026-09-27 실적 대조 L2·L3).
-- **포지션 리스크 가드 (P2)** — `maxHoldMinutes`(360) 정체 포지션 손익분기 이상이면
-  `TIME_EXIT` 청산 / `blockAveragingDown`(true) 손실 포지션 보유 중 추가 매수 차단 /
+- **포지션 리스크 가드 (P2)** — (리밸런싱 엔진이 켜져 있을 때의 REBALANCE 포지션 제외, 위 일봉 레짐 절)
+  `maxHoldMinutes`(360) 정체 포지션 손익분기 이상이면
+  `TIME_EXIT` 청산(`time-exit-mode` 기본 BREAKEVEN_CLOSE, ADR strategy/0011) / `blockAveragingDown`(true) 손실 포지션 보유 중 추가 매수 차단 /
   `maxCoinExposurePct`(0.8) 코인 비중 상한 초과 시 신규 매수 스킵 [ADR risk/0003].
   현재가 조회 실패 시 가드 평가 불가 → 신규 매수(자동·수동 공통) 차단 — fail-open 아님
   ([ADR risk/0005](../../../../../../../docs/adr/trading/risk/0005-fail-safe-entry-guard-on-price-unavailable.md)).
@@ -146,6 +164,17 @@ Bithumb API -> Candles -> Indicators -> Divergences -> Signals -> Trade Executio
   `trading_trades(position_id)`·`(market, created_at)`. `trading_signals` 는 매 분 insert 가
   들어오므로 인덱스 1개만큼 쓰기 비용이 늘지만, 무인덱스 범위 스캔이 더 나쁘다.
 - **`TradingAnalyticsService`** — 신호 품질 분석. 상세는 `application/CLAUDE.md`.
+- **오프라인 리플레이** ([ADR observability/0005](../../../../../../../docs/adr/trading/observability/0005-offline-replay-harness.md)) —
+  `src/test/.../trading/replay`, `./gradlew replay -Dreplay.db=<DB 사본>`(기본 test 제외). A 출구(보정 게이트 통과 모델만 144 그리드)·
+  B 레짐 필터·C 리밸런싱 일봉. 판정 부품은 운영과 공용(`ExitThresholds`·`BithumbTickSize`·`RegimeCalculator`·
+  `Position.calculateUnrealizedPnlPctWithFee`) — **출구 판정을 바꾸면 `ExitReplayParityTest` 가 깨진다, 엔진도 같이 고친다.**
+- **운영 모드·진입 출처·MFE/MAE** ([ADR observability/0004](../../../../../../../docs/adr/trading/observability/0004-mode-entry-source-excursion.md)) —
+  `trading_trades.mode`·`trading_positions.mode` 는 **처음 저장할 때 어댑터가 현재 `trading.bot.mode` 를 찍는다**(이미 있으면
+  유지). 손익 요약·오늘 요약·일별 요약 생성·신호 품질 분석은 **LIVE 만** 집계(NULL = 백필 전 레거시 → LIVE 취급,
+  `/api/trading/profit/summary`·`/today` 는 `?mode=` 로 변경). `trading_positions.entry_source` 는 생성 지점에서 설정 —
+  `executeBuy`=SIGNAL, 리밸런싱=REBALANCE, 수동·test-order=MANUAL, §8-B 스윕 생성=RECOVERY, 과거분 null(추정 백필 금지).
+  `low_water_mark` 는 리스크 루프가 **손절 판정 전에** 갱신, `/api/trading/positions` 에 `mfePct`·`maePct`.
+  백필 SQL 은 ADR 에(코인 거래의 주문 식별자 컬럼은 `uuid`).
 
 ## Presentation (`/api/trading/**` · `/trading*`)
 

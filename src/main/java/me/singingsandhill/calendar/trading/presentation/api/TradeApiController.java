@@ -5,6 +5,7 @@ import me.singingsandhill.calendar.trading.domain.account.DailySummary;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.trade.Trade;
+import me.singingsandhill.calendar.trading.domain.trade.TradeMode;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
 import org.springframework.http.ResponseEntity;
@@ -53,7 +54,8 @@ public class TradeApiController {
                         t.getVolume() != null ? t.getVolume().doubleValue() : null,
                         t.getTotalAmount() != null ? t.getTotalAmount().doubleValue() : null,
                         t.getStatus().name(),
-                        t.getCreatedAt().toString()
+                        t.getCreatedAt().toString(),
+                        t.getMode() != null ? t.getMode().name() : null
                 ))
                 .toList();
 
@@ -61,11 +63,12 @@ public class TradeApiController {
     }
 
     /**
-     * 손익 요약 조회
+     * 손익 요약 조회 — 기본 LIVE, ?mode=PAPER|BACKTEST 로 다른 모드 (ADR trading/observability/0004)
      */
     @GetMapping("/profit/summary")
-    public ResponseEntity<ProfitSummaryDto> getProfitSummary() {
-        ProfitService.ProfitSummary summary = profitService.getProfitSummary();
+    public ResponseEntity<ProfitSummaryDto> getProfitSummary(
+            @RequestParam(defaultValue = "LIVE") TradeMode mode) {
+        ProfitService.ProfitSummary summary = profitService.getProfitSummary(mode);
 
         BigDecimal totalValue = summary.totalValue();
         BigDecimal coinValue = summary.coinBalance().multiply(summary.currentPrice());
@@ -95,8 +98,9 @@ public class TradeApiController {
      * 오늘 요약 (글로벌 상태바 / Today P&L 카드용)
      */
     @GetMapping("/today")
-    public ResponseEntity<TodaySummaryDto> getTodaySummary() {
-        ProfitService.TodaySummary t = profitService.getTodaySummary();
+    public ResponseEntity<TodaySummaryDto> getTodaySummary(
+            @RequestParam(defaultValue = "LIVE") TradeMode mode) {
+        ProfitService.TodaySummary t = profitService.getTodaySummary(mode);
         double winRate = t.closedPositions() > 0
                 ? (double) t.wins() / t.closedPositions() * 100
                 : 0.0;
@@ -156,7 +160,11 @@ public class TradeApiController {
                         p.getRealizedPnlPct() != null ? p.getRealizedPnlPct().doubleValue() : null,
                         p.getCloseReason() != null ? p.getCloseReason().name() : null,
                         p.getOpenedAt() != null ? p.getOpenedAt().toString() : null,
-                        p.getClosedAt() != null ? p.getClosedAt().toString() : null
+                        p.getClosedAt() != null ? p.getClosedAt().toString() : null,
+                        p.getMode() != null ? p.getMode().name() : null,
+                        p.getEntrySource() != null ? p.getEntrySource().name() : null,
+                        p.maxFavorableExcursionPct() != null ? p.maxFavorableExcursionPct().doubleValue() : null,
+                        p.maxAdverseExcursionPct() != null ? p.maxAdverseExcursionPct().doubleValue() : null
                 ))
                 .toList();
 
@@ -173,7 +181,9 @@ public class TradeApiController {
             Double volume,
             Double amount,
             String status,
-            String createdAt
+            String createdAt,
+            /** 저장 시점 운영 모드 — null 은 백필 전 레거시 (ADR trading/observability/0004) */
+            String mode
     ) {}
 
     public record ProfitSummaryDto(
@@ -223,6 +233,14 @@ public class TradeApiController {
             Double realizedPnlPct,
             String closeReason,
             String openedAt,
-            String closedAt
+            String closedAt,
+            /** 저장 시점 운영 모드 — null 은 백필 전 레거시 */
+            String mode,
+            /** SIGNAL / REBALANCE / MANUAL / RECOVERY — null 은 2026-10-22 이전 포지션 */
+            String entrySource,
+            /** 최대 유리 폭 % = (HWM/진입가 − 1)×100 */
+            Double mfePct,
+            /** 최대 불리 폭 % = (LWM/진입가 − 1)×100 — LWM 없는 과거분 null */
+            Double maePct
     ) {}
 }

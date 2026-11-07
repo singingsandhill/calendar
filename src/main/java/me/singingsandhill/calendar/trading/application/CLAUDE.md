@@ -41,18 +41,20 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
   제외할지. OFF 이므로 현재 계산에는 형성봉이 포함된다 (ADR strategy/0009).
 - ATR/ATR% 도 여기서 계산 → 동적 주문 비중에 사용 (모듈 `CLAUDE.md` 참고).
 
-## Rebalancing Safety
+## Rebalancing Safety (엔진 기본 OFF — [ADR risk/0007](../../../../../../../../docs/adr/trading/risk/0007-daily-regime-filter-and-rebalance-guards.md))
 
 - Cooldown: 8h between rebalances
 - Min order: 5,000 KRW (skip smaller)
 - Slippage: 0.5% buffer on market orders
-- MA60 data insufficient: `skip-when-data-insufficient`(기본 `true`) 면 스킵. `false` 면
-  `default-ratio`(0.50) 로 폴백. `price == MA60` 인 NEUTRAL 구간도 `default-ratio` 사용
-  (`RebalanceService:226-244`).
-- **회계 정합 (P1-3):** 리밸런스 매수 → 추적 `Position`(SL/TP) 생성; 매도 → OPEN 포지션
-  FIFO 청산, 포지션별 수수료차감 PnL ≥ `min-sell-pnl-pct`(0%) 인 것만, 목표량 도달 시 중단.
-  청산은 `RiskManagementService.closePosition(…, REBALANCE)` 재사용. 추적 Position ↔ 실잔고
-  정합 + 전 코인 SL/TP 보호 — [ADR risk/0002](../../../../../../../../docs/adr/trading/risk/0002-rebalance-position-accounting.md). ADR-0003 의 적자 청산 방지 의도를 포지션별로 정련.
+- 목표 레짐 `regime-source`: DAILY(기본, `DailyRegimeService`) 면 UNKNOWN 일 때, MINUTE_MA60(레거시) 면 MA60 부족일 때
+  `skip-when-data-insufficient`(기본 `true`) 로 스킵, `false` 면 `default-ratio`(0.50). 레거시의 `price == MA60` NEUTRAL 도
+  `default-ratio`.
+- **회계 정합 (P1-3):** 리밸런스 매수 → 추적 `Position`(SL/TP, `entrySource=REBALANCE`) 생성; 매도 → OPEN 포지션
+  FIFO 청산(DAILY 면 REBALANCE 포지션 먼저), 포지션별 수수료차감 PnL ≥ `min-sell-pnl-pct`(0%) 인 것만, 목표량 도달 시 중단.
+  단 DAILY 에서 다른 레짐에서 산 REBALANCE 포지션(레짐 전환 매도)은 이 가드를 무시한다(구멍 1).
+  청산은 `RiskManagementService.closePosition(…, REBALANCE)` 재사용 — [ADR risk/0002](../../../../../../../../docs/adr/trading/risk/0002-rebalance-position-accounting.md).
+- 엔진이 켜져 있으면 REBALANCE 포지션의 출구는 비상 손절(`catastrophic-stop-pct` -15%)뿐, 마지막 비상 손절 이후 레짐이 바뀌기
+  전까지 리밸런싱 매수 차단(구멍 2, `PositionRepository.findLatestClosedByMarketAndCloseReason` + 레짐 이력).
 - 강한 신호 매도는 평가손익 ≥ -2% 일 때만 (작은 손실 시 강한 신호로 매도 안 함).
 - 트레일링 스탑은 진입가 + 왕복 수수료(0.5%) *아래로* 내려가지 않게 floor.
 
@@ -65,7 +67,7 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
   `DailySummaryScheduler` 두 잡의 실제 구현체.
 - **`TradingAnalyticsService`** — 신호 품질 분석 7개 섹션. `/trading/analytics` 가 요청 시점에
   호출한다 ([ADR observability/0001](../../../../../../../../docs/adr/trading/observability/0001-signal-quality-analytics-page.md)).
-  주의할 점 다섯 가지:
+  주의할 점 여섯 가지:
   1. **전방수익은 캔들이 아니라 `trading_signals.current_price` 로 계산한다** — 신호가 매 분
      기록되므로 그 테이블 자체가 1분 가격 시계열이고, 점수 입력과 가격 원천이 같아 기준가
      불일치가 없다. 목표 시각 ±90초 안의 최근접 행만 쓰고 없으면 결측 처리 —
@@ -83,6 +85,9 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
      인접 신호에 타임스탬프로 붙어 신호 진입으로 둔갑했다(운영 30일 66건). 신호 매수의 연결은
      2026-07-12 부터라 그 이전 신호 포지션도 빠진다(오염 대신 과소집계). 리밸런싱·수동 매수도 이제
      `executeBuy` 와 같은 순서(Position 저장 → `setPositionId` → Trade 저장)로 연결한다.
+  6. **LIVE 포지션·체결만 읽는다** — `mode` 가 PAPER/BACKTEST 인 행은 로드 직후 걸러낸다(NULL 은 백필 전 레거시로 LIVE
+     취급, [ADR observability/0004](../../../../../../../../docs/adr/trading/observability/0004-mode-entry-source-excursion.md)).
+     진입 출처는 이제 `trading_positions.entry_source` 로 직접 가를 수 있지만(2026-10-22 이후분) ⑥ 은 종전 연결 규칙 그대로다.
 
 ## Circuit Breaker (P0-2)
 
@@ -91,7 +96,8 @@ MA Cross: ±25 (이벤트) 또는 MA State ±5 (둘 중 하나만) | MA Trend: �
 `executeSell`/`closePosition` 에서 집계, 진입 차단은 `executeBuy` 진입부에서 판정.
 근거: [ADR](../../../../../../../../docs/adr/trading/risk/0001-circuit-breaker-daily-and-consecutive-loss.md).
 
-재시작 시 `consecutiveLosses`(인메모리)는 0 으로 리셋된다. 보호 전용 자동재개
+재시작 시 `consecutiveLosses`(인메모리)는 기동 리스너가 당일 청산 이력(현재 모드, 청산 순)으로 `restoreFrom` 해 복원한다
+(자정을 넘긴 스트릭은 복원 안 함, [ADR stock/modes/0005](../../../../../../../../docs/adr/stock/modes/0005-auto-start-on-boot.md)). 보호 전용 자동재개
 ([ADR modes/0003](../../../../../../../../docs/adr/trading/modes/0003-protection-only-recovery-on-restart.md))의
 `executeTradeLoop` recovery 게이트는 신호 기록(3) 직후·매매 단계(4~6) 앞 — 리스크 체크
 우선 불변식(`riskCheckRunsBeforeSignalGeneration`)과 청산 틱 신호 기록(ADR observability/0003)을

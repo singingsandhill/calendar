@@ -1,5 +1,7 @@
 package me.singingsandhill.calendar.trading.domain.position;
 
+import me.singingsandhill.calendar.trading.domain.trade.TradeMode;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -34,6 +36,11 @@ public class Position {
     private boolean closingAttempted;
     private LocalDateTime lastCloseAttemptAt;
     private int closeAttemptCount;
+
+    // ADR trading/observability/0004 — 진입 출처·보유 중 최저가·저장 시점 운영 모드 (도입 전 포지션은 null)
+    private EntrySource entrySource;
+    private BigDecimal lowWaterMark;
+    private TradeMode mode;
 
     public Position(Long id, String market, PositionStatus status,
                     BigDecimal entryPrice, BigDecimal entryVolume, BigDecimal entryAmount,
@@ -80,12 +87,14 @@ public class Position {
     public static Position open(String market, BigDecimal entryPrice, BigDecimal entryVolume,
                                  BigDecimal stopLossPrice, BigDecimal takeProfitPrice, BigDecimal entryFee) {
         BigDecimal entryAmount = entryPrice.multiply(entryVolume);
-        return new Position(null, market, PositionStatus.OPEN,
+        Position position = new Position(null, market, PositionStatus.OPEN,
                 entryPrice, entryVolume, entryAmount,
                 null, null, null, null, null,
                 stopLossPrice, takeProfitPrice, null, entryPrice, false, null,
                 LocalDateTime.now(), null, LocalDateTime.now(),
                 entryFee != null ? entryFee : BigDecimal.ZERO, null, null);
+        position.lowWaterMark = entryPrice;   // HWM 과 같이 진입가에서 출발
+        return position;
     }
 
     public void close(BigDecimal exitPrice, BigDecimal exitVolume, CloseReason reason) {
@@ -237,6 +246,31 @@ public class Position {
         }
     }
 
+    /** 보유 중 최저가 갱신 (리스크 루프가 손절 판정 전에 호출 — ADR trading/observability/0004). */
+    public void updateLowWaterMark(BigDecimal currentPrice) {
+        if (this.lowWaterMark == null || currentPrice.compareTo(this.lowWaterMark) < 0) {
+            this.lowWaterMark = currentPrice;
+        }
+    }
+
+    /** 최대 유리 폭(MFE, %) = (HWM / 진입가 − 1) × 100. 수수료 미차감 가격 폭. */
+    public BigDecimal maxFavorableExcursionPct() {
+        return excursionPct(highWaterMark);
+    }
+
+    /** 최대 불리 폭(MAE, %) = (LWM / 진입가 − 1) × 100. LWM 이 없는 과거 포지션은 null. */
+    public BigDecimal maxAdverseExcursionPct() {
+        return excursionPct(lowWaterMark);
+    }
+
+    private BigDecimal excursionPct(BigDecimal mark) {
+        if (mark == null || entryPrice == null || entryPrice.signum() == 0) {
+            return null;
+        }
+        return mark.divide(entryPrice, 8, RoundingMode.HALF_UP).subtract(BigDecimal.ONE)
+                .multiply(BigDecimal.valueOf(100)).setScale(4, RoundingMode.HALF_UP);
+    }
+
     public void activateTrailingStop(BigDecimal trailingStopPrice) {
         this.trailingStopActive = true;
         this.trailingStopPrice = trailingStopPrice;
@@ -288,4 +322,11 @@ public class Position {
     public void setClosingAttempted(boolean closingAttempted) { this.closingAttempted = closingAttempted; }
     public void setLastCloseAttemptAt(LocalDateTime lastCloseAttemptAt) { this.lastCloseAttemptAt = lastCloseAttemptAt; }
     public void setCloseAttemptCount(int closeAttemptCount) { this.closeAttemptCount = closeAttemptCount; }
+
+    public EntrySource getEntrySource() { return entrySource; }
+    public void setEntrySource(EntrySource entrySource) { this.entrySource = entrySource; }
+    public BigDecimal getLowWaterMark() { return lowWaterMark; }
+    public void setLowWaterMark(BigDecimal lowWaterMark) { this.lowWaterMark = lowWaterMark; }
+    public TradeMode getMode() { return mode; }
+    public void setMode(TradeMode mode) { this.mode = mode; }
 }

@@ -108,7 +108,7 @@ public class StockCandleRepositoryAdapter implements StockCandleRepository {
     }
 
     private StockCandle toDomain(StockCandleJpaEntity entity) {
-        StockCandle candle = StockCandle.of(
+        StockCandle candle = StockCandle.restore(
             entity.getStockCode(),
             entity.getCandleDatetime(),
             CandleInterval.valueOf(entity.getIntervalType()),
@@ -117,7 +117,8 @@ public class StockCandleRepositoryAdapter implements StockCandleRepository {
             entity.getLowPrice(),
             entity.getClosePrice(),
             entity.getVolume(),
-            entity.getTradeValue()
+            entity.getTradeValue(),
+            entity.getCreatedAt()
         );
         candle.setId(entity.getId());
         return candle;

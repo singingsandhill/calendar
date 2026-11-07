@@ -23,6 +23,13 @@ public class StockCandle {
     private StockCandle(String stockCode, LocalDateTime candleDateTime, CandleInterval interval,
                         BigDecimal openPrice, BigDecimal highPrice, BigDecimal lowPrice,
                         BigDecimal closePrice, Long volume, BigDecimal tradeValue) {
+        this(stockCode, candleDateTime, interval, openPrice, highPrice, lowPrice, closePrice, volume, tradeValue,
+            LocalDateTime.now());
+    }
+
+    private StockCandle(String stockCode, LocalDateTime candleDateTime, CandleInterval interval,
+                        BigDecimal openPrice, BigDecimal highPrice, BigDecimal lowPrice,
+                        BigDecimal closePrice, Long volume, BigDecimal tradeValue, LocalDateTime createdAt) {
         this.stockCode = stockCode;
         this.candleDateTime = candleDateTime;
         this.interval = interval;
@@ -32,7 +39,15 @@ public class StockCandle {
         this.closePrice = closePrice;
         this.volume = volume;
         this.tradeValue = tradeValue;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = createdAt;
+    }
+
+    /** 저장소에서 불러온 캔들 복원 (인프라 어댑터 전용) — createdAt 을 조회 시각으로 바꾸지 않는다. */
+    public static StockCandle restore(String stockCode, LocalDateTime dateTime, CandleInterval interval,
+                                      BigDecimal open, BigDecimal high, BigDecimal low, BigDecimal close,
+                                      Long volume, BigDecimal tradeValue, LocalDateTime createdAt) {
+        return new StockCandle(stockCode, dateTime, interval, open, high, low, close, volume, tradeValue,
+            createdAt != null ? createdAt : LocalDateTime.now());
     }
 
     public static StockCandle of(String stockCode, LocalDateTime dateTime, CandleInterval interval,

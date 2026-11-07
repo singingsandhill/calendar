@@ -8,6 +8,7 @@ import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
 import me.singingsandhill.calendar.trading.domain.trade.Trade;
+import me.singingsandhill.calendar.trading.domain.trade.TradeMode;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.domain.trade.TradeStatus;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
@@ -52,9 +53,16 @@ public class ProfitService {
     }
 
     /**
-     * 현재 손익 요약 조회
+     * 현재 손익 요약 조회 — LIVE 체결만 (PAPER 실측을 섞지 않는다, ADR trading/observability/0004)
      */
     public ProfitSummary getProfitSummary() {
+        return getProfitSummary(TradeMode.LIVE);
+    }
+
+    /**
+     * 현재 손익 요약 조회 — 지정 모드의 포지션만 집계. NULL(백필 전 레거시)은 LIVE 로 본다.
+     */
+    public ProfitSummary getProfitSummary(TradeMode mode) {
         String market = tradingProperties.getBot().getMarket();
 
         // 현재 잔고 조회
@@ -70,7 +78,7 @@ public class ProfitService {
         BigDecimal totalValue = krwBalance.add(coinBalance.multiply(currentPriceBD));
 
         // 미실현 손익 (모든 OPEN 포지션 합산)
-        List<Position> openPositions = positionRepository.findOpenPositionsByMarket(market);
+        List<Position> openPositions = inMode(positionRepository.findOpenPositionsByMarket(market), mode);
         BigDecimal unrealizedPnl = BigDecimal.ZERO;
         BigDecimal unrealizedPnlPct = BigDecimal.ZERO;
 
@@ -82,7 +90,8 @@ public class ProfitService {
         }
 
         // 실현 손익 (청산된 포지션)
-        List<Position> closedPositions = positionRepository.findByMarketAndStatus(market, PositionStatus.CLOSED);
+        List<Position> closedPositions = inMode(
+                positionRepository.findByMarketAndStatus(market, PositionStatus.CLOSED), mode);
         BigDecimal realizedPnl = closedPositions.stream()
                 .map(Position::getRealizedPnl)
                 .filter(p -> p != null)
@@ -158,8 +167,9 @@ public class ProfitService {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
 
-        List<Position> dailyClosedPositions = positionRepository.findByMarketAndStatusAndClosedAtBetween(
-                market, PositionStatus.CLOSED, startOfDay, endOfDay);
+        // 일별 요약은 LIVE 만 (ADR trading/observability/0004) — trading_daily_summaries 에는 모드 컬럼이 없다
+        List<Position> dailyClosedPositions = inMode(positionRepository.findByMarketAndStatusAndClosedAtBetween(
+                market, PositionStatus.CLOSED, startOfDay, endOfDay), TradeMode.LIVE);
 
         int tradeCount = dailyClosedPositions.size();
         int winCount = (int) dailyClosedPositions.stream()
@@ -207,12 +217,17 @@ public class ProfitService {
      * 봇이 돌아간 정상 결과(체결 수·실현 손익)와 비정상(실패·미실현) 분리해서 반환.
      */
     public TodaySummary getTodaySummary() {
+        return getTodaySummary(TradeMode.LIVE);
+    }
+
+    /** 오늘 요약 — 지정 모드의 체결·포지션만 (ADR trading/observability/0004). */
+    public TodaySummary getTodaySummary(TradeMode mode) {
         String market = tradingProperties.getBot().getMarket();
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime now = LocalDateTime.now();
 
-        List<Position> closedToday = positionRepository.findByMarketAndStatusAndClosedAtBetween(
-                market, PositionStatus.CLOSED, startOfDay, now);
+        List<Position> closedToday = inMode(positionRepository.findByMarketAndStatusAndClosedAtBetween(
+                market, PositionStatus.CLOSED, startOfDay, now), mode);
 
         BigDecimal realizedPnl = closedToday.stream()
                 .map(Position::getRealizedPnl)
@@ -223,13 +238,15 @@ public class ProfitService {
                 .filter(p -> p.getRealizedPnl() != null && p.getRealizedPnl().compareTo(BigDecimal.ZERO) > 0)
                 .count();
 
-        List<Trade> tradesToday = tradeRepository.findByMarketAndCreatedAtBetween(market, startOfDay, now);
+        List<Trade> tradesToday = tradeRepository.findByMarketAndCreatedAtBetween(market, startOfDay, now).stream()
+                .filter(t -> mode.includes(t.getMode()))
+                .toList();
         long doneCount = tradesToday.stream().filter(t -> t.getStatus() == TradeStatus.DONE).count();
         long failedCount = tradesToday.stream()
                 .filter(t -> t.getStatus() == TradeStatus.FAILED || t.getStatus() == TradeStatus.CANCEL)
                 .count();
 
-        long openPositionCount = positionRepository.countByMarketAndStatus(market, PositionStatus.OPEN);
+        long openPositionCount = inMode(positionRepository.findByMarketAndStatus(market, PositionStatus.OPEN), mode).size();
 
         return new TodaySummary(
                 realizedPnl,
@@ -239,6 +256,10 @@ public class ProfitService {
                 (int) failedCount,
                 (int) openPositionCount
         );
+    }
+
+    private static List<Position> inMode(List<Position> positions, TradeMode mode) {
+        return positions.stream().filter(p -> mode.includes(p.getMode())).toList();
     }
 
     /**

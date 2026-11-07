@@ -1,5 +1,6 @@
 package me.singingsandhill.calendar.trading.presentation.api;
 
+import me.singingsandhill.calendar.trading.domain.position.EntrySource;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
@@ -311,6 +312,7 @@ public class TradingVerificationApiController {
                         takeProfitPrice,
                         fee != null ? fee : BigDecimal.ZERO
                 );
+                position.setEntrySource(EntrySource.MANUAL);   // 운영자가 낸 검증 주문 (ADR trading/observability/0004)
                 position = positionRepository.save(position);
                 result.put("positionIdCreated", position.getId());
                 result.put("positionStatus", position.getStatus().name());

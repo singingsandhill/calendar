@@ -92,6 +92,17 @@ public class PositionJpaEntity {
     @Column(name = "close_attempt_count")
     private Integer closeAttemptCount;
 
+    // ADR trading/observability/0004 — nullable 추가 컬럼. entry_source·low_water_mark 는 과거분 null 유지(추정 백필 금지),
+    // mode 는 백필 SQL.
+    @Column(name = "entry_source", length = 20)
+    private String entrySource;
+
+    @Column(name = "low_water_mark", precision = 20, scale = 8)
+    private BigDecimal lowWaterMark;
+
+    @Column(name = "mode", length = 10)
+    private String mode;
+
     protected PositionJpaEntity() {}
 
     public PositionJpaEntity(String market, String status, BigDecimal entryPrice, BigDecimal entryVolume,
@@ -180,4 +191,11 @@ public class PositionJpaEntity {
     public void setLastCloseAttemptAt(LocalDateTime lastCloseAttemptAt) { this.lastCloseAttemptAt = lastCloseAttemptAt; }
     public Integer getCloseAttemptCount() { return closeAttemptCount; }
     public void setCloseAttemptCount(Integer closeAttemptCount) { this.closeAttemptCount = closeAttemptCount; }
+
+    public String getEntrySource() { return entrySource; }
+    public void setEntrySource(String entrySource) { this.entrySource = entrySource; }
+    public BigDecimal getLowWaterMark() { return lowWaterMark; }
+    public void setLowWaterMark(BigDecimal lowWaterMark) { this.lowWaterMark = lowWaterMark; }
+    public String getMode() { return mode; }
+    public void setMode(String mode) { this.mode = mode; }
 }

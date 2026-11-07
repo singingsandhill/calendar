@@ -4,6 +4,7 @@ import me.singingsandhill.calendar.trading.domain.position.CloseReason;
 import me.singingsandhill.calendar.trading.domain.position.Position;
 import me.singingsandhill.calendar.trading.domain.position.PositionRepository;
 import me.singingsandhill.calendar.trading.domain.position.PositionStatus;
+import me.singingsandhill.calendar.trading.domain.signal.SignalRepository;
 import me.singingsandhill.calendar.trading.domain.trade.TradeRepository;
 import me.singingsandhill.calendar.trading.infrastructure.api.BithumbApiClient;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
@@ -37,7 +38,8 @@ class RiskManagementServiceTriggerTest {
 
     private final RiskManagementService service = new RiskManagementService(
         positionRepository, tradeRepository, bithumbApiClient, props(),
-        tradingEventService, circuitBreaker, mock(PlatformTransactionManager.class));
+        tradingEventService, circuitBreaker, mock(PlatformTransactionManager.class),
+        mock(IndicatorService.class), mock(SignalRepository.class));
 
     private static TradingProperties props() {
         TradingProperties props = new TradingProperties();
@@ -128,5 +130,26 @@ class RiskManagementServiceTriggerTest {
 
         assertThat(reason).isEqualTo(CloseReason.TRAILING_STOP);
         assertThat(pos.getTrailingStopPrice()).isEqualByComparingTo("1005");
+    }
+
+    @Test
+    void lowWaterMark_isRecordedEvenOnTheStopLossTick() {
+        // ADR trading/observability/0004 — 손절이 걸리는 틱의 가격이 곧 최저가다. LWM 을 손절 판정 뒤에
+        // 갱신하면 손절된 포지션의 MAE 가 체계적으로 빠진다.
+        Position pos = position(new BigDecimal("1000"), false);
+
+        tick(pos, 990.0);
+
+        assertThat(pos.getLowWaterMark()).isEqualByComparingTo("990");
+    }
+
+    @Test
+    void lowWaterMark_followsNewLowsWhileHolding() {
+        Position pos = position(new BigDecimal("1000"), false);
+
+        tick(pos, 995.0);
+        tick(pos, 998.0);
+
+        assertThat(pos.getLowWaterMark()).isEqualByComparingTo("995");
     }
 }
