@@ -72,7 +72,7 @@ class TradingBotServiceExecutedVolumeTest {
 
         TradingBotService svc = new TradingBotService(
                 null, null, indicators, risk, rebalance, api, tradeRepo, posRepo,
-                new TradingProperties(), mock(TradingEventService.class), breaker, snapRepo, txm);
+                new TradingProperties(), mock(TradingEventService.class), breaker, snapRepo, txm, mock(DailyRegimeService.class));
 
         Signal signal = mock(Signal.class);
         when(signal.getTotalScore()).thenReturn(50);

@@ -93,6 +93,11 @@ public class CandleRepositoryAdapter implements CandleRepository {
     }
 
     @Override
+    public Optional<Candle> findLatestByMarketBefore(String market, LocalDateTime before) {
+        return jpaRepository.findLatestByMarketBefore(market, before).map(this::toDomain);
+    }
+
+    @Override
     public long countByMarket(String market) {
         return jpaRepository.countByMarket(market);
     }

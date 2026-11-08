@@ -62,7 +62,7 @@ class TradingBotServiceLoopSignalRecordingTest {
         service = new TradingBotService(
                 candleService, signalService, null, riskManagementService, rebalanceService,
                 bithumbApiClient, tradeRepository, null, properties, tradingEventService,
-                null, null, mock(PlatformTransactionManager.class));
+                null, null, mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
 
         // 기동 스윕(§8-G)과 틱 스윕이 미결 주문을 찾지 않도록 비운다.
         when(tradeRepository.findByStatus(TradeStatus.SUBMITTED)).thenReturn(List.of());

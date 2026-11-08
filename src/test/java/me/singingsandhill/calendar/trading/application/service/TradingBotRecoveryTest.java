@@ -62,7 +62,7 @@ class TradingBotRecoveryTest {
         return new TradingBotService(candleService, signalService, indicatorService,
                 riskManagementService, rebalanceService, bithumbApiClient, tradeRepository,
                 positionRepository, properties, tradingEventService, circuitBreaker,
-                accountSnapshotRepository, mock(PlatformTransactionManager.class));
+                accountSnapshotRepository, mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
     }
 
     @Test

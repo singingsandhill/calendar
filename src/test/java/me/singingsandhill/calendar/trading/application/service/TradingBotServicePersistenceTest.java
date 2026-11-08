@@ -42,7 +42,7 @@ class TradingBotServicePersistenceTest {
                                       PositionRepository posRepo, TradingCircuitBreaker breaker) {
         PlatformTransactionManager txm = mock(PlatformTransactionManager.class);
         return new TradingBotService(null, null, null, null, null, api, tradeRepo, posRepo,
-                new TradingProperties(), mock(TradingEventService.class), breaker, null, txm);
+                new TradingProperties(), mock(TradingEventService.class), breaker, null, txm, mock(DailyRegimeService.class));
     }
 
     @Test

@@ -18,6 +18,7 @@ public class TradingProperties {
     private Thresholds thresholds = new Thresholds();
     private Risk risk = new Risk();
     private Rebalancing rebalancing = new Rebalancing();
+    private Regime regime = new Regime();
 
     @PostConstruct
     public void validateConfiguration() {
@@ -93,6 +94,12 @@ public class TradingProperties {
         private boolean blockAveragingDown = true;// P2-10: 손실 포지션 보유 중 추가 매수 차단(물타기 방지)
         private Mode mode = Mode.PAPER;            // 운영 모드. LIVE 는 TRADING_BOT_MODE=LIVE 명시적 opt-in (ADR modes/0002)
         private int candleRetentionDays = 90;      // 캔들 보관 일수. 신호 품질 분석의 지표 재계산 지평 (ADR infrastructure/0005)
+        /** maxHold 를 넘긴 이익 포지션 처리 — 기본 BREAKEVEN_CLOSE(현행). 값은 리플레이(작업 6-A)로 정한다 (ADR strategy/0011). */
+        private TimeExitMode timeExitMode = TimeExitMode.BREAKEVEN_CLOSE;
+        /** 손실 포지션 시간청산 — maxHold 를 넘기고 손익률 ≥ 이 값(음수 비율, 예 -0.005)이면 청산. null(기본) = 비활성. */
+        private Double timeExitLossThreshold;
+        /** 재시작 후 자동 시작 (ADR stock/modes/0005) — 기본 false. 오픈 포지션이 있으면 보호 전용 복구(modes/0003)가 우선. */
+        private boolean autoStart = false;
 
         /**
          * 봇 운영 모드.
@@ -101,6 +108,14 @@ public class TradingProperties {
          * - BACKTEST: 저장된 캔들 리플레이용 (현재 PAPER 와 동일하게 실주문만 차단 — 리플레이 미구현)
          */
         public enum Mode { LIVE, PAPER, BACKTEST }
+
+        /**
+         * maxHold 를 넘긴 이익(수수료차감 손익 ≥ 0) 포지션 처리 (ADR trading/strategy/0011).
+         * - BREAKEVEN_CLOSE: 즉시 TIME_EXIT 청산 (현행)
+         * - TIGHTEN_TRAIL: 청산 대신 트레일링을 max(손익분기, HWM - 트레일링 폭) 로 즉시 활성화
+         * - SIGNAL_GATED: 최신 신호 점수 ≤ 0 일 때만 청산 (신호가 없으면 청산)
+         */
+        public enum TimeExitMode { BREAKEVEN_CLOSE, TIGHTEN_TRAIL, SIGNAL_GATED }
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -128,6 +143,14 @@ public class TradingProperties {
         public void setMode(Mode mode) { this.mode = mode != null ? mode : Mode.PAPER; }
         public int getCandleRetentionDays() { return candleRetentionDays; }
         public void setCandleRetentionDays(int candleRetentionDays) { this.candleRetentionDays = candleRetentionDays; }
+        public TimeExitMode getTimeExitMode() { return timeExitMode; }
+        public void setTimeExitMode(TimeExitMode timeExitMode) {
+            this.timeExitMode = timeExitMode != null ? timeExitMode : TimeExitMode.BREAKEVEN_CLOSE;
+        }
+        public Double getTimeExitLossThreshold() { return timeExitLossThreshold; }
+        public void setTimeExitLossThreshold(Double timeExitLossThreshold) { this.timeExitLossThreshold = timeExitLossThreshold; }
+        public boolean isAutoStart() { return autoStart; }
+        public void setAutoStart(boolean autoStart) { this.autoStart = autoStart; }
     }
 
     public static class Indicators {
@@ -224,6 +247,17 @@ public class TradingProperties {
         private boolean circuitBreakerEnabled = true;// P0-2: 서킷브레이커 on/off
         private double maxDailyLossPct = -0.05;      // P0-2: 일일 실현손익이 시작자본 대비 이 비율 이하면 신규 진입 차단
         private int maxConsecutiveLosses = 3;        // P0-2: 연속 손실 횟수 도달 시 신규 진입 차단
+        // 틱 하한 (ADR strategy/0011) — 유효 트레일링 폭 = max(HWM × trailing-stop, N틱), 유효 손절 = min(손절, -N틱/진입가).
+        // 최적화가 아니라 "호가 노이즈 미만 임계값 금지" 하한이라 기본 ON. 0 = 끔.
+        private int minTrailingTicks = 5;
+        private int minStopTicks = 5;
+        // 손절 방식 — PERCENT(기본, stop-loss) / ATR(-atr-multiplier × atr-bar-minutes 분 집계봉 ATR%, 계산 불가면 PERCENT). 틱 하한은 둘 다 적용.
+        private StopMode stopMode = StopMode.PERCENT;
+        private int atrPeriod = 14;
+        private double atrMultiplier = 2.0;
+        private int atrBarMinutes = 15;
+
+        public enum StopMode { PERCENT, ATR }
 
         public double getStopLoss() { return stopLoss; }
         public void setStopLoss(double stopLoss) { this.stopLoss = stopLoss; }
@@ -247,10 +281,28 @@ public class TradingProperties {
         public void setMaxDailyLossPct(double maxDailyLossPct) { this.maxDailyLossPct = maxDailyLossPct; }
         public int getMaxConsecutiveLosses() { return maxConsecutiveLosses; }
         public void setMaxConsecutiveLosses(int maxConsecutiveLosses) { this.maxConsecutiveLosses = maxConsecutiveLosses; }
+        public int getMinTrailingTicks() { return minTrailingTicks; }
+        public void setMinTrailingTicks(int minTrailingTicks) { this.minTrailingTicks = minTrailingTicks; }
+        public int getMinStopTicks() { return minStopTicks; }
+        public void setMinStopTicks(int minStopTicks) { this.minStopTicks = minStopTicks; }
+        public StopMode getStopMode() { return stopMode; }
+        public void setStopMode(StopMode stopMode) { this.stopMode = stopMode != null ? stopMode : StopMode.PERCENT; }
+        public int getAtrPeriod() { return atrPeriod; }
+        public void setAtrPeriod(int atrPeriod) { this.atrPeriod = atrPeriod; }
+        public double getAtrMultiplier() { return atrMultiplier; }
+        public void setAtrMultiplier(double atrMultiplier) { this.atrMultiplier = atrMultiplier; }
+        public int getAtrBarMinutes() { return atrBarMinutes; }
+        public void setAtrBarMinutes(int atrBarMinutes) { this.atrBarMinutes = atrBarMinutes; }
     }
 
     public static class Rebalancing {
-        private boolean enabled = true;
+        // 기본 OFF — 수익 원천은 신호 매수→신호 매도뿐이고 리밸런싱은 6/5 포지션화 뒤 손절 루프가 됐다 (ADR risk/0007).
+        // 엔진 코드는 비교 대상으로 남긴다. 재활성화 기준은 2년 일봉 리플레이(작업 6-C).
+        private boolean enabled = false;
+        /** 목표 비중을 정하는 레짐 — DAILY(일봉 레짐 서비스, 기본) / MINUTE_MA60(레거시: 현재가 vs 1분봉 MA60 = 60분 평균). */
+        private RegimeSource regimeSource = RegimeSource.DAILY;
+        /** REBALANCE 포지션의 재난 대비 비상 손절(수수료차감 손익률). 엔진이 켜져 있으면 장중 SL/TP/트레일링/시간청산 대신 이것만. */
+        private double catastrophicStopPct = -0.15;
         private double defaultRatio = 0.50;
         private double bullRatio = 0.70;
         private double bearRatio = 0.30;
@@ -281,6 +333,48 @@ public class TradingProperties {
         public void setSkipWhenDataInsufficient(boolean skipWhenDataInsufficient) { this.skipWhenDataInsufficient = skipWhenDataInsufficient; }
         public double getMinSellPnlPct() { return minSellPnlPct; }
         public void setMinSellPnlPct(double minSellPnlPct) { this.minSellPnlPct = minSellPnlPct; }
+        public RegimeSource getRegimeSource() { return regimeSource; }
+        public void setRegimeSource(RegimeSource regimeSource) {
+            this.regimeSource = regimeSource != null ? regimeSource : RegimeSource.DAILY;
+        }
+        public double getCatastrophicStopPct() { return catastrophicStopPct; }
+        public void setCatastrophicStopPct(double catastrophicStopPct) { this.catastrophicStopPct = catastrophicStopPct; }
+
+        public enum RegimeSource { DAILY, MINUTE_MA60 }
+    }
+
+    /**
+     * 일봉 레짐 (ADR trading/risk/0007) — 종가 vs SMA(ma-days), MA±hysteresis 밴드, 최소 유지 min-days.
+     * 신호 매수 필터와 리밸런싱(regime-source=DAILY)이 같은 판정을 쓴다.
+     */
+    public static class Regime {
+        private int maDays = 20;
+        private double hysteresisPct = 0.02;
+        private int minDays = 3;
+        /** 신호 매수 필터 — 기본 OFF(작업 6-B 리플레이로 결정). 진입에만 적용, 매도·손절·수동 주문은 무관. */
+        private FilterMode filterMode = FilterMode.OFF;
+        /** 필터가 켜져 있을 때 레짐을 모르면(데이터 부족·조회 실패) — 기본 BLOCK (ADR risk/0005 fail-safe 원칙). */
+        private UnknownPolicy unknownPolicy = UnknownPolicy.BLOCK;
+        /** SCALE_BEAR 에서 BEAR 레짐 매수 비중에 곱하는 배수. */
+        private double bearSizeMultiplier = 0.5;
+
+        public enum FilterMode { OFF, BLOCK_BEAR, SCALE_BEAR }
+        public enum UnknownPolicy { BLOCK, ALLOW }
+
+        public int getMaDays() { return maDays; }
+        public void setMaDays(int maDays) { this.maDays = maDays; }
+        public double getHysteresisPct() { return hysteresisPct; }
+        public void setHysteresisPct(double hysteresisPct) { this.hysteresisPct = hysteresisPct; }
+        public int getMinDays() { return minDays; }
+        public void setMinDays(int minDays) { this.minDays = minDays; }
+        public FilterMode getFilterMode() { return filterMode; }
+        public void setFilterMode(FilterMode filterMode) { this.filterMode = filterMode != null ? filterMode : FilterMode.OFF; }
+        public UnknownPolicy getUnknownPolicy() { return unknownPolicy; }
+        public void setUnknownPolicy(UnknownPolicy unknownPolicy) {
+            this.unknownPolicy = unknownPolicy != null ? unknownPolicy : UnknownPolicy.BLOCK;
+        }
+        public double getBearSizeMultiplier() { return bearSizeMultiplier; }
+        public void setBearSizeMultiplier(double bearSizeMultiplier) { this.bearSizeMultiplier = bearSizeMultiplier; }
     }
 
     public Bithumb getBithumb() { return bithumb; }
@@ -295,4 +389,6 @@ public class TradingProperties {
     public void setRisk(Risk risk) { this.risk = risk; }
     public Rebalancing getRebalancing() { return rebalancing; }
     public void setRebalancing(Rebalancing rebalancing) { this.rebalancing = rebalancing; }
+    public Regime getRegime() { return regime; }
+    public void setRegime(Regime regime) { this.regime = regime; }
 }

@@ -30,7 +30,8 @@ public class BotControlApiController {
                 status.market(),
                 status.lastLoopAt() != null ? status.lastLoopAt().toString() : null,
                 status.lastTradeAt() != null ? status.lastTradeAt().toString() : null,
-                status.lastError()
+                status.lastError(),
+                status.regime()
         ));
     }
 
@@ -126,7 +127,9 @@ public class BotControlApiController {
             String market,
             String lastLoopAt,
             String lastTradeAt,
-            String lastError
+            String lastError,
+            /** 일봉 레짐 BULL / BEAR / UNKNOWN (ADR trading/risk/0007) */
+            String regime
     ) {}
 
     public record ManualOrderRequest(Double amount, Double volume) {}

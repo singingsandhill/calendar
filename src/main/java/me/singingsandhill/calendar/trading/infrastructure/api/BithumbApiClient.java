@@ -68,6 +68,13 @@ public class BithumbApiClient {
     }
 
     /**
+     * 일 캔들 조회 (최신순, 첫 원소는 형성 중인 당일봉) — 일봉 레짐 (ADR trading/risk/0007)
+     */
+    public List<BithumbDayCandleResponse> getDayCandles(String market, int count) {
+        return publicApi.getDayCandles(market, null, count);
+    }
+
+    /**
      * 최근 체결 내역 조회
      */
     public List<BithumbTradeResponse> getTrades(int count) {

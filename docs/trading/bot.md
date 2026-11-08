@@ -78,7 +78,8 @@ MA 크로스가 매수 신호를 내더라도 RSI가 과매수이고 거래량 �
              └─ 캔들 업데이트 → 리스크 체크 → 신호 생성 → 매매
 5분마다      캔들 동기화 (최신 200개 재확인, 누락 보정)
 자정 00:00   캔들 정리 (candle-retention-days 이전 데이터 삭제, 기본 90일)
-수동/조건    리밸런싱 (마지막 실행 후 최소 8시간 경과 + 편차 10% 초과)
+00:05 KST    일봉 레짐 갱신 (전날 일봉 확정 후 BULL/BEAR 판정, 전환 시 REGIME_CHANGED)
+수동/조건    리밸런싱 (기본 OFF — 켜면 마지막 실행 후 최소 8시간 경과 + 편차 10% 초과)
 ──────────────────────────────────────────────────────────────
 ```
 
@@ -268,8 +269,9 @@ ATR%    주문 비율    계산 예시 (KRW 잔고 1,000,000원)
 
 ```
 [1단계] 손절 체크
-    손익률 ≤ -1.5% → 즉시 전량 청산 (이유: STOP_LOSS)
-    └─ 더 이상 기다리지 않고 손실 확정
+    손익률 ≤ 유효 손절 → 즉시 전량 청산 (이유: STOP_LOSS)
+    └─ 유효 손절 = min(-1.5%, -5틱/진입가) — 틱 하한(min-stop-ticks 5, 0 = 끔). ADA 290원이면 -1.72%
+       stop-mode: ATR 이면 -1.5% 대신 -(atr-multiplier × 15분 집계봉 ATR%) (ADR trading/strategy/0011)
 
 [2단계] 고점(High Water Mark) 갱신
     현재가 > 지금까지의 최고가 → 최고가 업데이트
@@ -277,20 +279,25 @@ ATR%    주문 비율    계산 예시 (KRW 잔고 1,000,000원)
 
 [3단계] 추적손절 활성화 체크
     손익률 ≥ +1.5% 이고, 추적손절이 아직 비활성화 상태이면:
-    └─ 추적손절 시작가 = 현재가 × 0.992 (0.8% 아래)
+    └─ 추적손절 시작가 = 현재가 - max(현재가 × 0.8%, 5틱) (호가 격자 내림 — 틱 하한 min-trailing-ticks 5)
+    (time-exit-mode: TIGHTEN_TRAIL 이면 보유 ≥ max-hold-minutes 인 이익 포지션도 여기서 활성화)
 
 [4단계] 추적손절 갱신 & 청산 체크
     추적손절 작동 중이면:
-      추적손절가 = max(현재 추적손절가, 최고가 × 0.992)
-      안전장치: 추적손절가 ≥ 진입가 × 1.005 (왕복 수수료 0.5% — 손해 보고 추적손절되지 않도록)
+      추적손절가 = max(현재 추적손절가, 최고가 - max(최고가 × 0.8%, 5틱))
+      안전장치: 추적손절가 ≥ 진입가 × 1.005 (왕복 수수료 0.5%, 격자 올림 — 손해 보고 추적손절되지 않도록)
       현재가 ≤ 추적손절가 → 즉시 전량 청산 (이유: TRAILING_STOP)
 
 [5단계] 익절 체크
     손익률 ≥ +3% → 즉시 전량 청산 (이유: TAKE_PROFIT)
 
 [6단계] 시간 청산 체크
-    보유 시간 ≥ max-hold-minutes(기본 360분) 이고 손익률 ≥ 0% → 청산 (이유: TIME_EXIT)
-    └─ 적자 정체는 손절이 처리한다. max-hold-minutes = 0 이면 비활성
+    보유 시간 ≥ max-hold-minutes(기본 360분) 이고 손익률 ≥ 0% → time-exit-mode 에 따라
+      BREAKEVEN_CLOSE(기본): 청산 (이유: TIME_EXIT)
+      TIGHTEN_TRAIL: 청산 안 함 (3단계에서 추적손절을 켰다)
+      SIGNAL_GATED: 최신 신호 점수 ≤ 0 일 때만 청산 (신호가 없으면 청산)
+    └─ 적자 정체는 손절이 처리한다. time-exit-loss-threshold(기본 없음)를 주면 손익률 ≥ 그 값인 작은 손실만 청산.
+       max-hold-minutes = 0 이면 비활성
 
 [7단계] 상태 저장
     추적손절 상태(고점, 추적손절가) DB에 저장
@@ -334,16 +341,20 @@ Bithumb 수수료 (taker): 0.25%
 
 ### 목적
 
-매매 신호가 없더라도 **시장 추세에 맞게 코인/KRW 비율을 유지**한다.
+매매 신호가 없더라도 **시장 추세에 맞게 코인/KRW 비율을 유지**한다. **기본 OFF**(`rebalancing.enabled: false`) —
+수익 원천은 신호 매수→신호 매도뿐이고, 6/5 포지션화 뒤 리밸런싱은 손절 루프가 됐다(ADR trading/risk/0007).
+엔진은 비교 대상으로 남아 있고, 재활성화는 2년 일봉 리플레이가 "KRW 보유"·"단순 보유"를 위험조정 수익으로 모두 이길 때만.
 
 ### 목표 비율
 
 ```
-시장 상태 판단 기준: 현재가 vs MA60 (60분 이동평균)
+시장 상태 판단 기준 (regime-source):
+  DAILY(기본)  — 일봉 레짐: 확정 일봉 종가 vs SMA20, MA±2% 밴드를 벗어나야 전환, 전환 후 최소 3일 유지
+  MINUTE_MA60 — 레거시: 현재가 vs 1분봉 MA60 (= 60분 평균) — 10/11~10/20 목표를 70%↔30% 로 매번 뒤집었다
 
-현재가 > MA60 (상승 추세) → 코인 70% / KRW 30% (공격적 보유)
-현재가 < MA60 (하락 추세) → 코인 30% / KRW 70% (방어적 현금화)
-MA60 데이터 부족          → 리밸런싱 건너뜀 (skipWhenDataInsufficient)
+BULL → 코인 70% / KRW 30%
+BEAR → 코인 30% / KRW 70%
+UNKNOWN(데이터 부족·조회 실패) → 리밸런싱 건너뜀 (skipWhenDataInsufficient)
 ```
 
 ### 리밸런싱 실행 조건
@@ -353,10 +364,22 @@ MA60 데이터 부족          → 리밸런싱 건너뜀 (skipWhenDataInsuffici
 ② 마지막 리밸런싱 후 8시간 경과
 ③ 현재 비율과 목표 비율의 차이 ≥ 10%
 ④ 최소 주문금액 5,000원 이상
+⑤ (매수) 마지막 비상 손절(CATASTROPHIC_STOP) 이후 일봉 레짐이 한 번이라도 바뀌었을 것 — 재진입 루프 방지
 
-매도 리밸런싱 추가 조건:
-   오픈 포지션의 평균 수익률 ≥ 0% (손해 보는 포지션을 억지로 팔지 않음)
+매도 리밸런싱:
+   REBALANCE 포지션부터 FIFO. 다른 레짐에서 산 REBALANCE 포지션(= 레짐 전환 매도)은 수익 가드를 무시하고 청산,
+   같은 레짐 안의 편차 매도와 신호 포지션은 포지션별 수수료차감 손익 ≥ 0% 일 때만 (손해 보는 포지션을 억지로 팔지 않음)
+
+엔진이 켜져 있을 때 REBALANCE 포지션의 출구:
+   장중 손절·익절·트레일링·시간청산 대상이 아니고 비상 손절(catastrophic-stop-pct -15%)만 받는다
+   — 엔진이 꺼져 있으면 일반 포지션과 같은 출구
 ```
+
+### 일봉 레짐 신호 매수 필터
+
+`trading.regime.filter-mode`(기본 **OFF**) — `BLOCK_BEAR` 면 BEAR 레짐에서 신호 매수를 막고, `SCALE_BEAR` 면 매수 비중에
+`bear-size-multiplier`(0.5)를 곱한다. 필터가 켜져 있는데 레짐을 모르면 `unknown-policy`(기본 BLOCK). 진입에만 적용하며
+매도·손절·수동 주문은 무관하다. 현재 레짐은 `GET /api/trading/bot/status` 의 `regime`, 전환은 `REGIME_CHANGED` 이벤트.
 
 ### 강한 신호 우선순위
 
@@ -404,7 +427,7 @@ MA60 데이터 부족          → 리밸런싱 건너뜀 (skipWhenDataInsuffici
               │ No                                                        │
               ▼                                                           │
      [리밸런싱 필요한가?]                                                 │
-     (편차≥10%, 8시간 쿨다운, MA60 데이터 충분)                          │
+     (기본 OFF. 편차≥10%, 8시간 쿨다운, 일봉 레짐 판정 가능)            │
               │ Yes → [리밸런싱 실행] → 종료                             │
               │ No                                                        │
               ▼                                                           │
@@ -430,6 +453,9 @@ trading:
     minHoldingMinutes: 30             # 매수 후 최소 보유 시간 (분)
     candle-retention-days: 90         # 캔들 보관 일수 = 지표 재계산·리플레이 지평. 삭제분은 복구 불가
                                       # (ADR trading/infrastructure/0005). 실제 yaml 키 표기 그대로.
+    maxHoldMinutes: 360               # 정체 포지션 시간청산 기준 (분, 0 = 비활성)
+    timeExitMode: BREAKEVEN_CLOSE     # BREAKEVEN_CLOSE / TIGHTEN_TRAIL / SIGNAL_GATED (ADR trading/strategy/0011)
+    # timeExitLossThreshold: -0.005   # 손실 시간청산 — 기본 없음(비활성)
 
   indicators:
     maShort: 5                        # 단기 이동평균 기간
@@ -460,16 +486,21 @@ trading:
     takeProfit: 0.03                  # 익절 기준 (+3%)
     trailingStop: 0.008               # 추적손절 폭 (0.8%)
     trailingActivation: 0.015         # 추적손절 활성화 기준 (+1.5%)
+    minStopTicks: 5                   # 틱 하한 — 유효 손절 = min(stopLoss, -5틱/진입가), 0 = 끔
+    minTrailingTicks: 5               # 틱 하한 — 추적손절 폭 = max(최고가 × trailingStop, 5틱), 0 = 끔
+    stopMode: PERCENT                 # PERCENT / ATR (atrPeriod 14, atrMultiplier 2.0, atrBarMinutes 15)
     takerFeeRate: 0.0025              # Bithumb taker 수수료 (0.25%)
     minProfitThreshold: 0.001         # 매도 게이트 최소 순수익 (0.1%, 수수료·슬리피지는 손익률에 이미 반영)
     strongSignalMaxLoss: -0.02        # 강한 매도 신호 시 허용 최대 손실 (-2%)
     slippageBuffer: 0.005             # 슬리피지 버퍼 (0.5%)
 
   rebalancing:
-    enabled: true
+    enabled: false                    # 기본 OFF (ADR trading/risk/0007)
+    regimeSource: DAILY               # DAILY(일봉 레짐) / MINUTE_MA60(레거시)
+    catastrophicStopPct: -0.15        # 엔진이 켜져 있을 때 REBALANCE 포지션의 유일한 손절
     bullRatio: 0.70                   # 상승 추세 코인 목표 비율 (70%)
     bearRatio: 0.30                   # 하락 추세 코인 목표 비율 (30%)
-    defaultRatio: 0.50                # MA60 데이터 부족 시 기본값 (50%)
+    defaultRatio: 0.50                # 레짐 판정 불가 + skip 비활성 시 기본값 (50%)
     deviationTrigger: 0.10            # 리밸런싱 발동 편차 기준 (10%)
     cooldownMinutes: 480              # 리밸런싱 쿨다운 (8시간)
     minOrderAmount: 5000              # 최소 주문금액 (5,000원)
@@ -508,7 +539,8 @@ trading:
 ① rebalancing.enabled = true?
 ② 마지막 리밸런싱 후 8시간 지났는가?
 ③ 현재 코인/KRW 비율과 목표 비율 차이가 10% 이상인가?
-④ MA60 데이터가 충분히 쌓였는가? (캔들 60개 이상)
+④ 일봉 레짐이 BULL/BEAR 인가? (UNKNOWN 이면 건너뜀 — 상태 API 의 regime)
+⑤ 매수라면: 비상 손절 뒤 레짐이 바뀌었는가? (REBALANCE_SKIPPED 이벤트에 차단 사유)
 ```
 
 ---
@@ -547,3 +579,27 @@ trading:
 판정불가가 0이 된다.
 
 근거: [ADR trading/observability/0001](../adr/trading/observability/0001-signal-quality-analytics-page.md).
+
+---
+
+## 14. 오프라인 리플레이 (`./gradlew replay`)
+
+설정값(출구 규칙·레짐 필터·리밸런싱)을 과거 데이터로 비교하는 도구. 운영 DB 에 접속하지 않고 **내려받은 H2 사본**을 읽기 전용으로 연다.
+
+```bash
+./gradlew replay -Dreplay.db=<scheduledb 사본 경로>     # 6-A 출구 · 6-B 레짐 필터 · 6-C 리밸런싱
+./gradlew replay                                       # 사본 없이: 6-C(공개 일봉)만
+```
+
+| 리플레이 | 입력 | 보고서 (`docs/data-analysis/`) |
+|---|---|---|
+| A 출구 | 2026-07-01~ 실제 진입 + 공개 1분봉 + DB 신호 | `coin-exit-replay-<날짜>.md` — 보정 게이트(현행 설정이 실제 총손익 ±15%·손절 ±10% 재현) 통과 모델만 144개 설정 비교 |
+| B 레짐 필터 | 2026-01-04~ 실제 청산 포지션 + 공개 일봉 | `coin-regime-replay-<날짜>.md` — 1/4~6/4 · 6/5~ 구간별 BLOCK/SCALE 가상 결과 |
+| C 리밸런싱 | 2024-10-01~ 공개 일봉 | 같은 파일 — KRW 보유·단순 보유 대비 총수익·MDD |
+
+- DB 시각대는 1분봉 저장 시각으로 자동 추정(`-Dreplay.db-zone=UTC` 로 지정 가능), PAPER 체결이 연결된 포지션은 뺀다.
+- 손익 수수료 `-Dreplay.fee`(기본 0.04% 실측), 판정 수수료 `-Dreplay.decision-fee`(기본 0.25% = 운영 `taker-fee-rate`).
+- 캔들 캐시 `build/replay/` — 지난 날짜만 저장, 지우면 다시 받는다.
+- 결과는 **한 기간 표본**이라 과최적화 위험이 크다. 보고서의 분할 검증(앞 구간으로 고른 설정의 뒤 구간 순위)을 먼저 본다.
+
+근거: [ADR trading/observability/0005](../adr/trading/observability/0005-offline-replay-harness.md).

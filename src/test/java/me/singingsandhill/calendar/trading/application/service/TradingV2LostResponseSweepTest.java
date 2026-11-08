@@ -92,7 +92,7 @@ class TradingV2LostResponseSweepTest {
         PlatformTransactionManager txm = mock(PlatformTransactionManager.class);
 
         svc = new TradingBotService(null, null, indicators, risk, rebalance, api, tradeRepo, posRepo,
-                props, mock(TradingEventService.class), breaker, snapRepo, txm);
+                props, mock(TradingEventService.class), breaker, snapRepo, txm, mock(DailyRegimeService.class));
 
         // 가드 통과 셋업
         when(breaker.isEntryBlocked(any(), any())).thenReturn(false);

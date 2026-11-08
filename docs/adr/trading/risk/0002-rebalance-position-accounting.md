@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 상태 | Accepted |
+| 상태 | Accepted — 매도 가드(포지션별 PnL ≥ 0%)는 레짐 전환 매도의 REBALANCE 포지션에서 [risk/0007](0007-daily-regime-filter-and-rebalance-guards.md) 로 정련(가드 무시), 리밸런싱 자체는 0007 로 기본 OFF |
 | 날짜 | 2026-05-30 |
 | 도메인 | trading (코인) |
 | 관심사 | 알고리즘 / 리스크 / 회계 정합 |

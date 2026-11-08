@@ -30,6 +30,9 @@ public interface CandleRepository {
 
     long countByMarket(String market);
 
+    /** before 직전의 가장 최근 캔들 — 일봉 레짐의 보조 소스(일별 종가 집계)용 (ADR trading/risk/0007). */
+    Optional<Candle> findLatestByMarketBefore(String market, LocalDateTime before);
+
     /**
      * 배치 조회: 주어진 시간 목록 중 이미 존재하는 캔들의 시간만 반환
      * N+1 쿼리 문제 해결을 위한 메서드

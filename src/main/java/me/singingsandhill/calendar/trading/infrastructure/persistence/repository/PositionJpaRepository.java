@@ -36,4 +36,9 @@ public interface PositionJpaRepository extends JpaRepository<PositionJpaEntity, 
             @Param("end") LocalDateTime end);
 
     long countByMarketAndStatus(String market, String status);
+
+    @Query("SELECT p FROM PositionJpaEntity p WHERE p.market = :market AND p.status = 'CLOSED' " +
+           "AND p.closeReason = :closeReason ORDER BY p.closedAt DESC LIMIT 1")
+    Optional<PositionJpaEntity> findLatestClosedByMarketAndCloseReason(@Param("market") String market,
+                                                                     @Param("closeReason") String closeReason);
 }

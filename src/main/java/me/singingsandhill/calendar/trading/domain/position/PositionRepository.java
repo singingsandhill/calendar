@@ -24,4 +24,7 @@ public interface PositionRepository {
                                                             LocalDateTime start, LocalDateTime end);
 
     long countByMarketAndStatus(String market, PositionStatus status);
+
+    /** 해당 사유로 가장 최근에 청산된 포지션 — 비상 손절 뒤 리밸런싱 재매수 차단을 재시작 후에도 복원 (ADR risk/0007). */
+    Optional<Position> findLatestClosedByMarketAndCloseReason(String market, CloseReason closeReason);
 }

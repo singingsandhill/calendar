@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.trading.infrastructure.api;
 
 import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbCandleResponse;
+import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbDayCandleResponse;
 import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbOrderbookResponse;
 import me.singingsandhill.calendar.trading.infrastructure.api.dto.BithumbTradeResponse;
 import me.singingsandhill.calendar.trading.infrastructure.config.TradingProperties;
@@ -86,6 +87,39 @@ public class BithumbPublicApi {
                 })
                 .onErrorResume(Exception.class, e -> {
                     log.error("Error fetching candles (to={}): {}", to, e.getMessage());
+                    return Mono.just(Collections.emptyList());
+                })
+                .block();
+    }
+
+    /**
+     * 일(Day) 캔들 조회 — 최신순, 첫 원소는 형성 중인 당일봉 (ADR trading/risk/0007 일봉 레짐).
+     * @param market 마켓 코드
+     * @param to 마지막 캔들 시각 (exclusive, KST yyyy-MM-ddTHH:mm:ss) — null 이면 최신부터
+     * @param count 캔들 개수 (최대 200)
+     */
+    public List<BithumbDayCandleResponse> getDayCandles(String market, String to, int count) {
+        log.debug("Fetching day candles for {} until {} (count: {})", market, to, count);
+
+        return webClient.get()
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/v1/candles/days")
+                            .queryParam("market", market)
+                            .queryParam("count", count);
+                    if (to != null) {
+                        uriBuilder.queryParam("to", to);
+                    }
+                    return uriBuilder.build();
+                })
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<BithumbDayCandleResponse>>() {})
+                .timeout(TIMEOUT)
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    log.error("API error fetching day candles: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+                    return Mono.just(Collections.emptyList());
+                })
+                .onErrorResume(Exception.class, e -> {
+                    log.error("Error fetching day candles: {}", e.getMessage());
                     return Mono.just(Collections.emptyList());
                 })
                 .block();

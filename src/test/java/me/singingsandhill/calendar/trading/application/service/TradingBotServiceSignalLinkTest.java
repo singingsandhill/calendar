@@ -94,7 +94,7 @@ class TradingBotServiceSignalLinkTest {
         TradingBotService svc = new TradingBotService(
                 null, null, indicators, risk, mock(RebalanceService.class), api, tradeRepo, posRepo,
                 new TradingProperties(), mock(TradingEventService.class), breaker, snapRepo,
-                mock(PlatformTransactionManager.class));
+                mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
 
         svc.executeBuy(MARKET, signal);
 
@@ -145,7 +145,7 @@ class TradingBotServiceSignalLinkTest {
         TradingBotService svc = new TradingBotService(
                 null, null, null, null, null, api, tradeRepo, posRepo,
                 new TradingProperties(), mock(TradingEventService.class),
-                mock(TradingCircuitBreaker.class), null, mock(PlatformTransactionManager.class));
+                mock(TradingCircuitBreaker.class), null, mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
 
         Position pos = Position.open(MARKET, new BigDecimal("1000"), new BigDecimal("10"),
                 new BigDecimal("970"), new BigDecimal("1150"));
@@ -176,7 +176,7 @@ class TradingBotServiceSignalLinkTest {
         TradingBotService svc = new TradingBotService(
                 null, null, null, null, null, api, tradeRepo, posRepo,
                 properties, mock(TradingEventService.class),
-                mock(TradingCircuitBreaker.class), null, mock(PlatformTransactionManager.class));
+                mock(TradingCircuitBreaker.class), null, mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
 
         svc.manualSell(new BigDecimal("10"));
 

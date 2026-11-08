@@ -42,7 +42,7 @@ class TradingBotServiceManualGuardTest {
         return new TradingBotService(null, null, null, risk, null, api,
                 mock(me.singingsandhill.calendar.trading.domain.trade.TradeRepository.class), posRepo,
                 props, mock(TradingEventService.class), breaker, snapRepo,
-                mock(PlatformTransactionManager.class));
+                mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
     }
 
     private BithumbAccountResponse acct(String balance) {

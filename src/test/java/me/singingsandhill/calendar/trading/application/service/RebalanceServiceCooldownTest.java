@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RebalanceServiceCooldownTest {
 
     private RebalanceService service() {
-        return new RebalanceService(null, null, new TradingProperties(), null, null, null, null, null);
+        return new RebalanceService(null, null, new TradingProperties(), null, null, null, null, null, null);
     }
 
     private boolean cooldownElapsed(RebalanceService svc) throws Exception {

@@ -19,7 +19,7 @@ class TradingBotServiceEntryGuardTest {
 
     private TradingBotService service(TradingProperties props) {
         return new TradingBotService(null, null, null, null, null, null, null, null,
-                props, null, null, null, mock(PlatformTransactionManager.class));
+                props, null, null, null, mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
     }
 
     private Position posEntry(String entryPrice) {

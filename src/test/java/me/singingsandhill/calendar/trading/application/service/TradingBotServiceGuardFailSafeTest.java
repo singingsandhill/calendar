@@ -42,7 +42,7 @@ class TradingBotServiceGuardFailSafeTest {
                 mock(IndicatorService.class), mock(RiskManagementService.class),
                 mock(RebalanceService.class), api, tradeRepo, posRepo,
                 new TradingProperties(), mock(TradingEventService.class), breaker, snapRepo,
-                mock(PlatformTransactionManager.class));
+                mock(PlatformTransactionManager.class), mock(DailyRegimeService.class));
     }
 
     @Test

@@ -23,6 +23,11 @@ public interface CandleJpaRepository extends JpaRepository<CandleJpaEntity, Long
 
     Optional<CandleJpaEntity> findByMarketAndCandleDateTime(String market, LocalDateTime candleDateTime);
 
+    @Query("SELECT c FROM CandleJpaEntity c WHERE c.market = :market AND c.candleDateTime < :before " +
+           "ORDER BY c.candleDateTime DESC LIMIT 1")
+    Optional<CandleJpaEntity> findLatestByMarketBefore(@Param("market") String market,
+                                                      @Param("before") LocalDateTime before);
+
     List<CandleJpaEntity> findByMarketAndCandleDateTimeBetween(String market, LocalDateTime from, LocalDateTime to);
 
     @Modifying
