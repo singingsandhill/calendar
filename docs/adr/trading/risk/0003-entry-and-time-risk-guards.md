@@ -46,6 +46,9 @@
 - **비용:** `executeBuy` 에 `getCurrentPrice`/`getCoinBalance` 호출 추가(매수 신호 시에만).
 - **상호작용:** 물타기 차단으로 `maxPositions=2` 의 2차 진입은 *1차가 이익 중일 때만* 발생.
   시간 청산은 stop/TP/trailing 다음 우선순위(그것들이 먼저 트리거).
+- 2026-10-22 정련 — [strategy/0011](../strategy/0011-tick-aware-exits-and-time-exit-modes.md): 이익 포지션 처리를
+  `bot.time-exit-mode`(기본 `BREAKEVEN_CLOSE` = 이 ADR 의 동작, `TIGHTEN_TRAIL`·`SIGNAL_GATED` 옵션)로, 손실 포지션 시간청산은
+  `bot.time-exit-loss-threshold`(기본 null = 이 ADR 처럼 강제 안 함) 옵션으로만 둔다.
 - 신호/리스크 동작 변경이므로 **LIVE 전 PAPER 백테스트 권장**.
 
 ## References

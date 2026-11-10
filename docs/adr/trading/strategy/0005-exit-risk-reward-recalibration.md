@@ -46,6 +46,8 @@ ADA 기준 권장값으로 재보정(전부 `risk.*` 설정값 — 코드 로직
   LIVE 이므로 PAPER 백테스트로 +EV·트립 빈도 확인 후 확정 강력 권장** (`TRADING_BOT_MODE=PAPER`).
 - `strongSignalMaxLoss(−2%)` 는 손절(−1.5%)이 먼저 발동해 실질 무영향(허용 가드라 무해).
 - 후속: ATR 배수 동적 임계(MA-convergence 도 ATR% 상대화) 검토 — 페어/변동성 변화 대응.
+  → 2026-10-22 [ADR 0011](0011-tick-aware-exits-and-time-exit-modes.md): 값은 그대로 두고 틱 하한(5틱, 기본 ON)을 더했다
+  (290원에서 손절 -1.72%·트레일링 5원). ATR 손절은 옵션(`stop-mode: ATR`, 기본 PERCENT).
 
 ## References
 

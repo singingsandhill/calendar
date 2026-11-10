@@ -18,7 +18,7 @@ class RiskManagementServiceTimeExitTest {
     private RiskManagementService service(long maxHoldMinutes) {
         TradingProperties props = new TradingProperties();
         props.getBot().setMaxHoldMinutes(maxHoldMinutes);
-        return new RiskManagementService(null, null, null, props, null, null, null);
+        return new RiskManagementService(null, null, null, props, null, null, null, null, null);
     }
 
     private Position posOpenedAt(LocalDateTime openedAt) {

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -330,5 +331,44 @@ public class IndicatorService {
         // ATR / 현재가 * 100 = ATR%
         return atr.divide(currentPrice, 6, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
+    }
+
+    /**
+     * N분 집계봉 ATR% — ATR 손절 모드용 (ADR trading/strategy/0011). 1분봉 ATR 은 호가 노이즈라 손절 폭으로 쓰기엔 너무 좁다.
+     * 최신 1분봉부터 barMinutes 개씩 묶어(형성 중 봉 포함, 벽시계 정렬 아님 — 결측 분이 있으면 그만큼 긴 봉) 고가 최대·
+     * 저가 최소·종가 = 묶음의 최신 봉으로 집계하고, 집계봉 period 개로 ATR 을 잰다. 계산 불가면 null.
+     *
+     * @return ATR% (예: 1.5 = 1.5%)
+     */
+    public BigDecimal calculateAggregatedATRPercent(String market, int barMinutes, int period) {
+        if (barMinutes < 1 || period < 1) {
+            return null;
+        }
+        List<Candle> minutes = candleRepository.findByMarketOrderByDateTimeDesc(market, (period + 1) * barMinutes);
+        int barCount = minutes.size() / barMinutes;
+        if (barCount < period + 1) {
+            return null;
+        }
+
+        List<Candle> bars = new ArrayList<>(barCount);
+        for (int b = 0; b < barCount; b++) {
+            List<Candle> group = minutes.subList(b * barMinutes, (b + 1) * barMinutes);
+            BigDecimal high = group.get(0).getHighPrice();
+            BigDecimal low = group.get(0).getLowPrice();
+            for (Candle c : group) {
+                high = high.max(c.getHighPrice());
+                low = low.min(c.getLowPrice());
+            }
+            Candle newest = group.get(0);
+            bars.add(new Candle(null, market, newest.getCandleDateTime(), group.get(group.size() - 1).getOpeningPrice(),
+                    high, low, newest.getTradePrice(), BigDecimal.ZERO, null, newest.getCreatedAt()));
+        }
+
+        BigDecimal atr = calculateATR(bars, period);
+        BigDecimal close = bars.get(0).getTradePrice();
+        if (atr == null || close.signum() == 0) {
+            return null;
+        }
+        return atr.divide(close, 6, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
     }
 }
