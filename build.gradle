@@ -60,7 +60,31 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		// 오프라인 리플레이는 운영 DB 사본·공개 API 가 필요해 기본 test 에서 뺀다 (ADR trading/observability/0005)
+		excludeTags 'replay'
+	}
+}
+
+// 코인 리플레이 6-A·6-B·6-C: ./gradlew replay -Dreplay.db=<scheduledb 사본> — 보고서는 docs/data-analysis/coin-*-replay-<날짜>.md
+tasks.register('replay', Test) {
+	description = 'Offline coin replay (exit / regime filter / rebalancing) over a production DB copy'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'replay'
+	}
+	System.properties.each { key, value ->
+		if (key.toString().startsWith('replay.')) {
+			systemProperty key.toString(), value
+		}
+	}
+	outputs.upToDateWhen { false }
+	testLogging {
+		showStandardStreams = true
+		events 'passed', 'skipped', 'failed'
+	}
 }
 
 springBoot {
