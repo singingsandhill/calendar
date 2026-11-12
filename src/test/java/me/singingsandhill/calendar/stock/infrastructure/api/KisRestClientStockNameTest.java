@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.stock.infrastructure.api;
 
 import me.singingsandhill.calendar.stock.application.observability.StockBotMetrics;
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -35,7 +36,8 @@ class KisRestClientStockNameTest {
     /** 약칭과 정식명을 다르게 두어 어느 필드를 썼는지 판별한다. */
     private static final String INFO_BODY = "{\"rt_cd\":\"0\",\"msg_cd\":\"MCA00000\",\"msg1\":\"정상처리 되었습니다!\","
         + "\"output\":{\"pdno\":\"000000005930\",\"prdt_type_cd\":\"300\",\"std_pdno\":\"KR7005930003\","
-        + "\"prdt_name\":\"삼성전자보통주\",\"prdt_abrv_name\":\"삼성전자\",\"prdt_eng_name\":\"SamsungElectronics\"}}";
+        + "\"prdt_name\":\"삼성전자보통주\",\"prdt_abrv_name\":\"삼성전자\",\"prdt_eng_name\":\"SamsungElectronics\","
+        + "\"scty_grp_id_cd\":\"ST\"}}";
 
     private MockWebServer server;
     private KisAuthService authService;
@@ -91,7 +93,7 @@ class KisRestClientStockNameTest {
 
     @Test
     void stockName_comesFromSearchStockInfoAbbreviatedName() {
-        String name = apiClient.getStockName("005930");
+        String name = apiClient.getStockInfo("005930").name();
 
         // 약칭(prdt_abrv_name) 우선 — 정식명(prdt_name)이 아니다
         assertThat(name).isEqualTo("삼성전자");
@@ -102,19 +104,34 @@ class KisRestClientStockNameTest {
         assertThat(lastInfoPath).contains("PDNO=005930").contains("PRDT_TYPE_CD=300");
     }
 
+    /** 상품 유형은 같은 응답의 scty_grp_id_cd(증권그룹ID코드) — 추가 호출 없음 (ADR stock/algorithm/0011). */
+    @Test
+    void productType_comesFromTheSameResponsesSecurityGroupCode() {
+        assertThat(apiClient.getStockInfo("005930").productType()).isEqualTo(StockProductType.STOCK);
+
+        infoBody = "{\"rt_cd\":\"0\",\"output\":{\"pdno\":\"000000069500\",\"prdt_abrv_name\":\"KODEX 200\","
+            + "\"scty_grp_id_cd\":\"EF\"}}";
+        assertThat(apiClient.getStockInfo("069500").productType()).isEqualTo(StockProductType.ETF);
+
+        infoBody = "{\"rt_cd\":\"0\",\"output\":{\"pdno\":\"Q530107\",\"prdt_abrv_name\":\"삼성 인버스 2X\","
+            + "\"scty_grp_id_cd\":\"EN\"}}";
+        assertThat(apiClient.getStockInfo("Q530107").productType()).isEqualTo(StockProductType.ETN);
+        assertThat(infoRequests.get()).isEqualTo(3);
+    }
+
     @Test
     void stockName_fallsBackToPrdtNameWhenAbbreviationBlank() {
         infoBody = "{\"rt_cd\":\"0\",\"output\":{\"pdno\":\"000000005930\","
             + "\"prdt_name\":\"삼성전자보통주\",\"prdt_abrv_name\":\"\"}}";
 
-        assertThat(apiClient.getStockName("005930")).isEqualTo("삼성전자보통주");
+        assertThat(apiClient.getStockInfo("005930").name()).isEqualTo("삼성전자보통주");
     }
 
     @Test
     void stockName_retriesOn5xxLikeOtherGets() {
         infoFailuresBeforeSuccess = 1;
 
-        String name = apiClient.getStockName("005930");
+        String name = apiClient.getStockInfo("005930").name();
 
         // 멱등 조회는 기존 재시도 정책 유지 — 500 후 재시도로 총 2회
         assertThat(name).isEqualTo("삼성전자");
@@ -125,7 +142,7 @@ class KisRestClientStockNameTest {
     void stockName_returnsNullWhenRtCdNotZero() {
         infoBody = "{\"rt_cd\":\"1\",\"msg_cd\":\"EGW00123\",\"msg1\":\"기간이 만료된 token 입니다.\",\"output\":{}}";
 
-        assertThat(apiClient.getStockName("005930")).isNull();
+        assertThat(apiClient.getStockInfo("005930")).isNull();
     }
 
     @Test
@@ -133,14 +150,15 @@ class KisRestClientStockNameTest {
         // 스펙 미검증 필드 매핑 사고(ADR 0007 의 cttr) 경로 — 값이 없으면 null, 호출측이 코드로 대체
         infoBody = "{\"rt_cd\":\"0\",\"output\":{\"pdno\":\"000000005930\",\"std_pdno\":\"KR7005930003\"}}";
 
-        assertThat(apiClient.getStockName("005930")).isNull();
+        assertThat(apiClient.getStockInfo("005930").name()).isNull();
+        assertThat(apiClient.getStockInfo("005930").productType()).isNull();
     }
 
     @Test
     void stockName_returnsNullAfterRetryExhaustionOn5xx() {
         infoFailuresBeforeSuccess = Integer.MAX_VALUE;
 
-        assertThat(apiClient.getStockName("005930")).isNull();
+        assertThat(apiClient.getStockInfo("005930")).isNull();
         // 백오프 총량이 전체 timeout(10s) 안에 들어오지 않을 수 있어 정확 횟수는 단언하지 않는다
         assertThat(infoRequests.get()).isGreaterThanOrEqualTo(2);
     }
@@ -149,7 +167,7 @@ class KisRestClientStockNameTest {
     void stockName_skipsWhenNotConfigured() {
         when(authService.isConfigured()).thenReturn(false);
 
-        assertThat(apiClient.getStockName("005930")).isNull();
+        assertThat(apiClient.getStockInfo("005930")).isNull();
         assertThat(infoRequests.get()).isZero();
     }
 }

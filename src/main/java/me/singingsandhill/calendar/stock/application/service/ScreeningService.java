@@ -5,11 +5,13 @@ import me.singingsandhill.calendar.stock.application.observability.TradeEvents;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignal;
 import me.singingsandhill.calendar.stock.domain.signal.StockSignalRepository;
 import me.singingsandhill.calendar.stock.domain.stock.Stock;
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
 import me.singingsandhill.calendar.stock.domain.stock.StockRepository;
 import me.singingsandhill.calendar.stock.domain.stock.StockState;
 import me.singingsandhill.calendar.stock.infrastructure.api.KoreaInvestmentApiClient;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.KisQuoteResponse;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.KisOrderbookResponse;
+import me.singingsandhill.calendar.stock.infrastructure.api.dto.KisStockInfo;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,8 +257,13 @@ public class ScreeningService {
             .add(spreadScore).add(marketCapScore)
             .setScale(1, RoundingMode.HALF_UP);
 
-        // Stock 엔티티 생성
-        Stock stock = new Stock(stockCode, resolveStockName(stockCode, stats), tradingDate);
+        // Stock 엔티티 생성 — 종목명·상품 유형은 같은 기본정보 응답 1회
+        KisStockInfo info = kisApiClient.getStockInfo(stockCode);
+        if (isExcludedProductType(stockCode, info, stats)) {
+            return null;
+        }
+        Stock stock = new Stock(stockCode, resolveStockName(stockCode, info, stats), tradingDate);
+        stock.setProductType(info != null ? info.productType() : null);
         stock.setPrevClosePrice(quote.prevClosePrice());
         stock.setOpenPrice(quote.openPrice());
         stock.setCurrentPrice(quote.currentPrice());
@@ -286,16 +293,30 @@ public class ScreeningService {
     }
 
     /**
-     * 종목명 조회 — Floor 통과 종목에만 호출한다(콜 예산, ADR stock/infrastructure/0008).
+     * 종목명 — 기본정보 조회는 Floor 통과 종목에만 한다(콜 예산, ADR stock/infrastructure/0008).
      * 실패/부재는 종목코드로 대체(종전 동작)하고 요약 카운터에만 남긴다 — 선정에는 영향 없음.
      */
-    private String resolveStockName(String stockCode, ScreeningStats stats) {
-        String name = kisApiClient.getStockName(stockCode);
+    private String resolveStockName(String stockCode, KisStockInfo info, ScreeningStats stats) {
+        String name = info != null ? info.name() : null;
         if (name == null || name.isBlank()) {
             stats.nameUnresolved++;
             return stockCode;
         }
         return name;
+    }
+
+    /**
+     * {@code universe.excluded-product-types}(기본 빈 목록)에 든 유형이면 뺀다 (ADR stock/algorithm/0011).
+     * 유형을 모르면(조회 실패·미매핑) 빼지 않는다 — 모름을 근거로 후보를 잃지 않는다.
+     */
+    private boolean isExcludedProductType(String stockCode, KisStockInfo info, ScreeningStats stats) {
+        StockProductType type = info != null ? info.productType() : null;
+        if (type != null && stockProperties.getUniverse().getExcludedProductTypes().contains(type)) {
+            stats.productTypeExcluded++;
+            log.debug("[{}] 상품 유형 제외: {}", stockCode, type);
+            return true;
+        }
+        return false;
     }
 
     // ========== Score Normalization Methods ==========
@@ -391,6 +412,10 @@ public class ScreeningService {
         if (stats.nameUnresolved > 0) {
             log.warn("종목명 미확보 {}건 — search-stock-info(CTPF1002R) 실패/필드 부재로 종목코드 대체. "
                 + "KisRestClient WARN 의 outputKeys 확인 필요.", stats.nameUnresolved);
+        }
+        if (stats.productTypeExcluded > 0) {
+            log.info("상품 유형 제외 {}건 (universe.excluded-product-types={})", stats.productTypeExcluded,
+                stockProperties.getUniverse().getExcludedProductTypes());
         }
 
         // 계측: 상태 필드가 전 종목에서 비어 있으면 거래정지 가드가 사실상 무력화된 것.
@@ -565,7 +590,12 @@ public class ScreeningService {
             }
         }
 
-        Stock stock = new Stock(stockCode, resolveStockName(stockCode, stats), tradingDate);
+        KisStockInfo info = kisApiClient.getStockInfo(stockCode);
+        if (isExcludedProductType(stockCode, info, stats)) {
+            return null;
+        }
+        Stock stock = new Stock(stockCode, resolveStockName(stockCode, info, stats), tradingDate);
+        stock.setProductType(info != null ? info.productType() : null);
         stock.setPrevClosePrice(quote.prevClosePrice());
         stock.setOpenPrice(quote.openPrice());
         stock.setCurrentPrice(quote.currentPrice());
@@ -596,6 +626,10 @@ public class ScreeningService {
         if (stats.nameUnresolved > 0) {
             log.warn("종목명 미확보 {}건 — search-stock-info(CTPF1002R) 실패/필드 부재로 종목코드 대체. "
                 + "KisRestClient WARN 의 outputKeys 확인 필요.", stats.nameUnresolved);
+        }
+        if (stats.productTypeExcluded > 0) {
+            log.info("상품 유형 제외 {}건 (universe.excluded-product-types={})", stats.productTypeExcluded,
+                stockProperties.getUniverse().getExcludedProductTypes());
         }
     }
 
@@ -631,6 +665,8 @@ public class ScreeningService {
         int tradabilityFieldsMissing = 0;
         /** 종목명 미확보(search-stock-info 실패/필드 부재) — 종목코드로 대체된 건수. 선정에는 영향 없음. */
         int nameUnresolved = 0;
+        /** universe.excluded-product-types 로 뺀 건수 (ADR stock/algorithm/0011). */
+        int productTypeExcluded = 0;
         int floorPassed = 0;
         int passed = 0;
 

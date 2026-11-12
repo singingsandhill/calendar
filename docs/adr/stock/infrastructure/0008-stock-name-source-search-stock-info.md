@@ -65,6 +65,8 @@
 - **부정:** 09:20 스크리닝 시 Floor 통과 종목당 KIS GET +1(1회성, Semaphore 8 내 — 시세·체결강도·호가에
   이어 4번째 콜). 실전투자 전용 TR 이라 `stock.kis.production=false` 환경에서는 항상 null → 코드 대체
   (별도 분기 없음 — fail-soft 로 충분).
+- **확장 (2026-10-23):** 같은 응답의 `scty_grp_id_cd` 로 상품 유형도 읽는다(`getStockName` → `getStockInfo`, 호출 수 불변) —
+  [algorithm/0011](../algorithm/0011-product-type-and-deferred-etf-etn-exclusion.md).
 - **미검증 가정:** 필드명 `prdt_abrv_name`/`prdt_name` 과 `PRDT_TYPE_CD=300` 은 공식 스펙 기준이며
   실API 로는 아직 확인 전이다. 첫 거래일 `SCREENING_SUMMARY.nameUnresolved` 가 `floorPassed` 와
   같으면(전 종목 미확보) TR/필드 매핑을 재검토한다. `stock_name` 컬럼 100자 vs 스펙 String(60) 은

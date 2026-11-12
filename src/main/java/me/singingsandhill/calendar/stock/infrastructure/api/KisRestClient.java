@@ -1,6 +1,7 @@
 package me.singingsandhill.calendar.stock.infrastructure.api;
 
 import me.singingsandhill.calendar.stock.application.observability.StockBotMetrics;
+import me.singingsandhill.calendar.stock.domain.stock.StockProductType;
 import me.singingsandhill.calendar.stock.infrastructure.api.dto.*;
 import me.singingsandhill.calendar.stock.infrastructure.config.StockProperties;
 import org.slf4j.Logger;
@@ -284,17 +285,18 @@ public class KisRestClient {
     }
 
     /**
-     * 종목명 조회 (주식기본조회, CTPF1002R) - 재시도 포함. 실전투자 전용 TR.
+     * 종목 기본정보 조회 (주식기본조회, CTPF1002R) - 재시도 포함. 실전투자 전용 TR.
      *
      * 스크리닝이 쓰는 시세(inquire-price)·체결(inquire-ccnl)·호가 TR 에는 종목명 필드가 없어
      * {@code Stock.stockName} 에 종목코드가 들어가던 문제의 데이터 소스
-     * (ADR stock/infrastructure/0008). output 은 단일 객체 — {@code prdt_abrv_name}(약칭) 우선,
-     * 없으면 {@code prdt_name}. 실패/rt_cd≠0/필드 부재는 null 을 반환하고 호출측이 종목코드로
-     * 대체한다(종전 동작). 스펙 미검증 필드 매핑 사고 전력(ADR 0007)이 있어 필드 부재 시
+     * (ADR stock/infrastructure/0008). output 은 단일 객체 — 종목명은 {@code prdt_abrv_name}(약칭) 우선,
+     * 없으면 {@code prdt_name}. 같은 응답의 {@code scty_grp_id_cd}(증권그룹ID코드)로 상품 유형을 정한다
+     * (ADR stock/algorithm/0011 — 추가 호출 없음). 실패/rt_cd≠0 는 null, 필드 부재는 해당 값만 null —
+     * 호출측이 종목코드로 대체한다(종전 동작). 스펙 미검증 필드 매핑 사고 전력(ADR 0007)이 있어 필드 부재 시
      * output 키 목록을 WARN 으로 남긴다.
      */
-    public String getStockName(String stockCode) {
-        log.debug("Fetching stock name for {}", stockCode);
+    public KisStockInfo getStockInfo(String stockCode) {
+        log.debug("Fetching stock info for {}", stockCode);
 
         if (!authService.isConfigured()) {
             log.warn("KIS API not configured, skipping stock name fetch");
@@ -303,7 +305,7 @@ public class KisRestClient {
 
         Map<String, String> headers = authService.buildAuthHeaders("CTPF1002R");
 
-        Map<String, Object> response = executeGetWithRetry("getStockName(" + stockCode + ")",
+        Map<String, Object> response = executeGetWithRetry("getStockInfo(" + stockCode + ")",
             client -> client.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/uapi/domestic-stock/v1/quotations/search-stock-info")
@@ -328,9 +330,16 @@ public class KisRestClient {
         if (name == null || name.isBlank()) {
             // 필드명 불일치 판별용 계측 (getTradeStrength 의 firstRowKeys 와 같은 목적).
             log.warn("[{}] 종목명(prdt_abrv_name/prdt_name) 부재 — outputKeys={}", stockCode, output.keySet());
-            return null;
+            name = null;
         }
-        return name;
+        String groupCode = asString(output.get("scty_grp_id_cd"));
+        StockProductType productType = StockProductType.fromSecurityGroupCode(groupCode);
+        if (groupCode == null || groupCode.isBlank()) {
+            log.warn("[{}] 상품 유형(scty_grp_id_cd) 부재 — outputKeys={}", stockCode, output.keySet());
+        } else if (productType == null) {
+            log.debug("[{}] 미매핑 증권그룹 {} — 상품 유형 모름", stockCode, groupCode);
+        }
+        return new KisStockInfo(name, productType);
     }
 
     private String asString(Object value) {
