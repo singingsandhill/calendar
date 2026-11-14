@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 /**
  * P0-2: 트레이딩 서킷브레이커.
@@ -68,6 +69,17 @@ public class TradingCircuitBreaker {
         }
 
         return false;
+    }
+
+    /**
+     * 재시작 복원 (ADR stock/modes/0005) — 카운터는 인메모리라 재시작하면 0 이 되어, 연속손실로 막혀 있던 신규 진입이
+     * 재시작 한 번에 풀렸다. 청산 시각 순 실현손익을 {@link #recordOutcome} 과 같은 규칙으로 처음부터 다시 센다.
+     */
+    public void restoreFrom(List<BigDecimal> realizedPnlsInCloseOrder) {
+        consecutiveLosses = 0;
+        realizedPnlsInCloseOrder.forEach(this::recordOutcome);
+        log.info("Circuit breaker restored: consecutive losses = {} (from {} closed positions)",
+                consecutiveLosses, realizedPnlsInCloseOrder.size());
     }
 
     public int getConsecutiveLosses() {

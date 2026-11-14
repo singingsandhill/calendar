@@ -82,6 +82,9 @@
 - 회귀 가드: `TradingBotRecoveryTest`(7) — 자동재개 3 + 게이트(happy-path 전체 스텁으로
   게이트 부재 시 실주문 도달을 증명) + start 해제 2경로 + 게이트 해제 대조.
 
+- 2026-10-23 정련 — [stock/modes/0005](../../stock/modes/0005-auto-start-on-boot.md): 오픈 포지션이 없으면 `bot.auto-start`(기본 false)일 때만
+  자동 시작(포지션이 있으면 이 ADR 의 보호 복구가 이긴다). 코인은 서킷브레이커 연속손실을 당일 청산 이력으로 복원한다.
+
 ## References
 
 - `trading/application/service/TradingBotService.java` (`resumeProtectionOnStartup`, `recoveryMode`, `executeTradeLoop` 게이트, `start()` 해제 분기)

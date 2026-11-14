@@ -28,6 +28,19 @@ class TradingCircuitBreakerTest {
         breaker = new TradingCircuitBreaker(props);
     }
 
+    /** 재시작 복원 (ADR stock/modes/0005) — recordOutcome 과 같은 규칙으로 청산 순서대로 다시 센다. */
+    @Test
+    void restoreReplaysOutcomesInCloseOrder() {
+        breaker.recordOutcome(new BigDecimal("-1"));   // 복원 전 값은 버린다
+
+        breaker.restoreFrom(java.util.Arrays.asList(new BigDecimal("-100"), new BigDecimal("50"),
+                new BigDecimal("-100"), new BigDecimal("-100")));
+        assertThat(breaker.getConsecutiveLosses()).isEqualTo(2);
+
+        breaker.restoreFrom(java.util.Arrays.asList(new BigDecimal("-100"), null));
+        assertThat(breaker.getConsecutiveLosses()).isZero();
+    }
+
     @Test
     void belowConsecutiveLossThreshold_doesNotBlock() {
         breaker.recordOutcome(new BigDecimal("-100"));

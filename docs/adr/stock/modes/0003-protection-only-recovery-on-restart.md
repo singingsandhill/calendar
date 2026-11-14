@@ -58,6 +58,9 @@
 - 메일 미설정 환경에서는 알림이 WARN 로그로만 남는다.
 - 회귀 가드: `GapPullbackBotRecoveryTest`(5), `StockRiskServiceTimeExitTest`(4).
 
+- 2026-10-23 정련 — [stock/modes/0005](0005-auto-start-on-boot.md): 오픈 포지션이 없으면 `bot.auto-start`(기본 false)일 때만
+  자동 시작(포지션이 있으면 이 ADR 의 보호 복구가 이긴다).
+
 ## References
 
 - `stock/application/service/GapPullbackBotService.java` (`resumeProtectionOnStartup`, `recoveryMode`)

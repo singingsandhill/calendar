@@ -65,11 +65,13 @@ Actions 수동 버튼 ──► deploy.yml: 태그검증 → manifest 선검증 
 2. `https://datedate.site` 200, 카카오 로그인 왕복(마이그레이션·nginx 변경 시).
 3. **코인 봇**: 오픈 포지션이 있었다면 대시보드가 `PROTECTION-ONLY` 로 표시된다 —
    리스크 감시는 자동 재개된 상태이며, **신규 매매 재개는 Start 버튼 1회**
-   (ADR trading/modes/0003). 서킷브레이커 연속손실 카운터는 리셋돼 있다.
+   (ADR trading/modes/0003). 서킷브레이커 연속손실은 당일 청산 이력으로 복원돼 있다(이벤트 문구 "연속손실 N회 복원",
+   ADR stock/modes/0005).
 4. 주식 봇: 오픈 포지션 존재 시 보호전용 자동재개(기존 동작, ADR stock/modes/0003).
-5. **포지션이 없으면 두 봇 모두 정지 상태로 뜬다**(`resumeProtectionOnStartup` 이 포지션 0건이면 그냥 반환).
-   코인은 대시보드 Start, 주식은 거래일 08:30 KST 전에 `/stock` Start — 08:30 사전 준비 루프는 `running` 이
-   아니면 즉시 반환한다.
+5. **포지션이 없으면 두 봇 모두 정지 상태로 뜬다**(`resumeProtectionOnStartup` 이 포지션 0건이면 그냥 반환) —
+   단 서버 `.env` 에 `TRADING_BOT_AUTO_START=true`·`STOCK_BOT_AUTO_START=true` 면 그 봇은 완전 시작한다(기본 false,
+   이벤트 `BOT_AUTO_STARTED`, ADR stock/modes/0005). 자동 시작이 꺼져 있으면 코인은 대시보드 Start, 주식은 거래일
+   08:30 KST 전에 `/stock` Start — 08:30 사전 준비 루프는 `running` 이 아니면 즉시 반환한다.
 
 ## GitHub Secrets
 
